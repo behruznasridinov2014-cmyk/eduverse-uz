@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "EDUVERSE UZ"
+description = "A responsive educational platform demonstration for Uzbekistan schools, with role-specific dashboards, a Grade 7 sample textbook reader, interactive lesson tools, exercises, homework review, and clearly labeled local demo data."
+version = "1.0.0"
+id = "artifacts/eduverse-uz"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19063
+
+[services.development]
+run = "pnpm --filter @workspace/eduverse-uz run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/eduverse-uz", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/eduverse-uz/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19063"
+BASE_PATH = "/"

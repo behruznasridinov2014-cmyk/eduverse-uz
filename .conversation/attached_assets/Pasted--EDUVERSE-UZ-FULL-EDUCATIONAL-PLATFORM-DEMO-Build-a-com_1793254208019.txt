@@ -1,0 +1,210 @@
+# EDUVERSE UZ — FULL EDUCATIONAL PLATFORM DEMO
+
+Build a complete, interactive, professional demonstration of **EDUVERSE UZ**, a digital education platform for public schools in Uzbekistan. This must be a working frontend prototype, not a static landing page.
+
+## 1. Design system — STRICT REQUIREMENTS
+
+Create a mature, premium educational interface inspired by professional academic software.
+
+- Main colors: warm white, graphite, slate gray and restrained deep blue.
+- Use subtle borders, soft shadows, carefully controlled blur and clean typography.
+- Use a consistent spacing system, aligned grids, compact navigation and elegant cards.
+- Add smooth transitions, subtle loading states and tasteful page animations.
+- Support desktop, mobile, tablet and interactive whiteboard screens.
+- Use a collapsible sidebar, clear page hierarchy and realistic educational dashboards.
+
+**Do NOT use:** neon colors, glowing borders, cyberpunk effects, excessive gradients, cartoon illustrations, childish icons, giant rounded cards or unnecessary decorative animations.
+
+The interface must look credible enough to demonstrate to school directors and education officials.
+
+## 2. Languages and accounts
+
+Provide Uzbek, Russian and English language switching.
+
+Create functional demo role switching for:
+- Student
+- Teacher
+- Parent
+- School director
+- Central administrator
+
+Each role must have its own dashboard, navigation and relevant permissions. Clearly label demo accounts and simulated information.
+
+## 3. Digital textbooks
+
+Build a full-featured digital textbook reader for Grade 7.
+
+Include:
+- Textbook library by subject, language, author and academic year.
+- Book cover, contents, chapters, page navigation and page thumbnails.
+- Search within a book, bookmarks, notes, highlighting and zoom.
+- Full-screen reading mode and interactive whiteboard mode.
+- Exercises, illustrations, formulas, tables and end-of-chapter tests.
+- Teacher annotations and links between lessons and exercises.
+- Save reading progress and restore the last opened page.
+
+Subjects should include mathematics, algebra, biology, physics, chemistry, history, Uzbek, Russian and English.
+
+**Textbook content requirements:** Use complete original textbook files only where the relevant rights and permissions have been confirmed for the intended use. Preserve the authorized content accurately and provide attribution where required. Support importing authorized PDF and EPUB files and managing their metadata. Do not invent missing textbook pages or falsely label sample material as an official textbook.
+
+If a permitted textbook file is not yet available, include a clearly labelled sample book with original demonstration content.
+
+## 4. Interactive teacher whiteboard
+
+Create a powerful smartboard workspace with:
+- Open textbook and navigate pages.
+- Pen, highlighter, eraser, text, shapes and color selection.
+- Undo, redo, clear canvas and save lesson notes.
+- Zoom, fullscreen and presentation mode.
+- Interactive questions, polls, timers and quizzes.
+- Display student responses and class results.
+- Switch between textbook, board and exercises without losing progress.
+
+The whiteboard must be usable with a mouse, touch screen or interactive display.
+
+## 5. Live lesson demonstration
+
+Create a lesson room with a join code, participant list, lesson title and teacher controls.
+
+Include:
+- Ask a question and collect student answers.
+- Multiple-choice questions and short written responses.
+- Live response counters and class result charts.
+- Teacher feedback and lesson completion summary.
+
+If a real backend is unavailable, implement a convincing local simulation and explicitly identify it as demo mode. Do not pretend that responses are being sent to real students.
+
+## 6. Student learning area
+
+Build a student dashboard showing:
+- Today's lessons and learning tasks.
+- Continue reading the last textbook.
+- Homework and deadlines.
+- Practice exercises and quizzes.
+- Learning progress by subject.
+- Teacher feedback and items requiring revision.
+
+Practice must be interactive: students answer questions, receive feedback and can retry exercises. Include explanations for incorrect answers rather than showing only a score.
+
+## 7. Notebook photo analysis with AI
+
+Create a complete demonstration workflow for handwritten homework:
+
+1. Select the subject and assignment.
+2. Upload or take a photo of a notebook page.
+3. Preview, rotate and crop the image.
+4. Submit it for analysis.
+5. Show recognized text, solution steps, possible errors and learning recommendations.
+6. Allow the student to correct recognition mistakes or ask the teacher to review the work.
+
+If the image is blurry or handwriting cannot be read reliably, ask for a clearer photo instead of inventing an answer.
+
+If no AI service is connected, use clearly labelled sample analysis. Never claim that a real AI model processed a photo when it did not. AI feedback must not automatically become an official school grade.
+
+## 8. Teacher workspace
+
+Include:
+- Create and organize lessons.
+- Select textbook chapters and exercises.
+- Assign homework to a class.
+- Build quizzes with multiple question types.
+- Review student submissions and notebook photos.
+- Provide feedback and request corrections.
+- View class progress and identify topics needing revision.
+- Present lessons on the interactive board.
+
+Homework statuses: Assigned, In Progress, Submitted, Under Review, Needs Revision and Checked.
+
+## 9. Parent and school dashboards
+
+Parent dashboard:
+- View assigned homework, teacher feedback and learning progress.
+- See attendance and lesson schedules using clearly identified demo data.
+- Understand which topics need additional practice.
+
+School director dashboard:
+- View class and subject-level progress.
+- Review lesson activity and assignment completion.
+- Compare trends using sample data.
+- Export a demonstration report.
+
+Central administrator:
+- Manage demo schools, classes, users, subjects, languages and textbook metadata.
+- Configure role permissions and content availability.
+- Display audit and system status panels.
+
+Do not expose real student information. Use fictional demo records.
+
+## 10. AI learning assistant
+
+Create separate student and teacher assistant interfaces.
+
+Student assistant:
+- Explain concepts step by step.
+- Give hints before revealing a solution.
+- Generate practice questions.
+- Explain mistakes in accessible language.
+
+Teacher assistant:
+- Draft lesson plans.
+- Generate quizzes and differentiated exercises.
+- Suggest explanations and revision activities.
+
+When no AI API is configured, provide interactive sample conversations and mark them as demonstrations. Keep API keys out of frontend code.
+
+## 11. Offline mode and accessibility
+
+Build the application as a responsive PWA where practical.
+
+- Cache selected lessons and authorized textbook files.
+- Allow supported exercises to work offline.
+- Save progress locally and synchronize when connectivity returns.
+- Show clear online/offline status.
+- Explain that live classes and cloud AI features require an internet connection.
+- Support keyboard navigation, readable contrast and scalable text.
+
+Do not promise offline capabilities that have not actually been implemented.
+
+## 12. Technical quality
+
+Use a maintainable React + TypeScript architecture with reusable components.
+
+Implement:
+- Real navigation and working buttons.
+- Persistent demo settings and progress where practical.
+- Functional search, filters, forms, quizzes and textbook navigation.
+- Empty, loading, success and error states.
+- Responsive layouts and accessible controls.
+- A clear separation between demo data and future backend services.
+
+Avoid dead buttons, fake integrations, broken routes and placeholder dashboards that look functional but do nothing.
+
+Do not claim integration with eMaktab or other external systems unless it has actually been authorized and implemented.
+
+## 13. Demonstration journey
+
+Prepare a smooth guided demo:
+
+1. Open EDUVERSE UZ and select a language.
+2. Enter the student dashboard.
+3. Open a Grade 7 textbook and navigate its chapters.
+4. Switch to the interactive whiteboard.
+5. Launch a quiz and display sample student responses.
+6. Upload a notebook photo and view the demo analysis.
+7. Switch to the teacher dashboard and review homework.
+8. Show parent and school progress dashboards.
+9. Demonstrate offline mode.
+10. End with a concise overview of the platform's value for schools.
+
+## Final acceptance criteria
+
+Deliver a polished, navigable prototype that can be demonstrated to teachers and school leaders. Prioritize a complete core workflow over a large collection of unfinished features.
+
+At the end, provide a concise implementation report listing:
+- Features that work.
+- Features simulated with demo data.
+- Features requiring a backend or AI connection.
+- Textbooks and other materials that still require authorized files.
+- Recommended next steps for a supervised school pilot.
+
+The result should feel like a serious education technology product built for Uzbekistan's schools: reliable, accessible, academically focused and visually refined — never neon or childish.
