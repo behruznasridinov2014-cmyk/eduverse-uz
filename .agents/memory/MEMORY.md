@@ -1,0 +1,1 @@
+- [EDUVERSE UZ visual direction](eduverse-visual-direction.md) — matte glass and restrained motion are the current direction; get approval before app integration.
