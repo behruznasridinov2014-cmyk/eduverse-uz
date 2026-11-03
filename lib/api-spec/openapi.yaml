@@ -10,11 +10,15 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Account and session operations
+  - name: guard
+    description: Authenticated local security diagnostics
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
+      tags: [guard]
       summary: Health check
       description: Returns server health status
       responses:
@@ -24,7 +28,204 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create an account
+      description: Creates an account and establishes a server-side session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUserResponse"
+        "400":
+          description: Invalid registration details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Username or login is already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Registration rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Request origin is not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in
+      description: Verifies credentials and establishes a server-side session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUserResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Sign-in rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Request origin is not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the current user
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Current authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUserResponse"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Sign out
+      responses:
+        "204":
+          description: Session ended
+        "403":
+          description: Request origin is not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /guard/check:
+    get:
+      operationId: getGuardCheck
+      tags: [guard]
+      summary: Run authenticated local security checks
+      description: Checks the current API session, database, password hashing, and configured account protections. Does not perform penetration testing.
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Local Guard check report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuardReport"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Guard check rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /guard/analyze:
+    post:
+      operationId: analyzeGuardReport
+      tags: [health]
+      summary: Explain a local Guard report with Ollama
+      description: Sends only the generated status report to an Ollama service on loopback. No source code or credentials are sent.
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GuardAnalysisRequest"
+      responses:
+        "200":
+          description: Local AI explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuardAnalysisResponse"
+        "400":
+          description: Unsupported language
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Guard analysis rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Local Ollama is unavailable or not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
+  securitySchemes:
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: eduverse.sid
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +234,136 @@ components:
           type: string
       required:
         - status
-
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        username:
+          type: string
+          minLength: 2
+          maxLength: 40
+        login:
+          type: string
+          minLength: 3
+          maxLength: 32
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        confirmPassword:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [username, login, password, confirmPassword]
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        login:
+          type: string
+          minLength: 3
+          maxLength: 32
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+      required: [login, password]
+    AuthenticatedUserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+      required: [user]
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        login:
+          type: string
+        role:
+          type: string
+          enum:
+            - student
+            - teacher
+            - parent
+            - school_director
+            - school_admin
+            - education_admin
+            - ministry_admin
+            - platform_superadmin
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, username, login, role, createdAt]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    GuardAnalysisRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        language:
+          type: string
+          enum: [Uzbek, Русский, English]
+      required: [language]
+    GuardCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          enum:
+            - api
+            - database
+            - session
+            - password_hashing
+            - cookie
+            - login_rate_limit
+            - multi_factor
+            - password_recovery
+            - school_data
+        status:
+          type: string
+          enum: [pass, warning, missing, unavailable]
+      required: [id, status]
+    GuardCheckCounts:
+      type: object
+      properties:
+        pass:
+          type: integer
+        warning:
+          type: integer
+        missing:
+          type: integer
+        unavailable:
+          type: integer
+      required: [pass, warning, missing, unavailable]
+    GuardReport:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/GuardCheck"
+        counts:
+          $ref: "#/components/schemas/GuardCheckCounts"
+      required: [generatedAt, checks, counts]
+    GuardAnalysisResponse:
+      type: object
+      properties:
+        analysis:
+          type: string
+        model:
+          type: string
+        report:
+          $ref: "#/components/schemas/GuardReport"
+      required: [analysis, model, report]

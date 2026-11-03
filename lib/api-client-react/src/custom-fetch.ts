@@ -38,7 +38,9 @@ export function setBaseUrl(url: string | null): void {
  * Pass `null` to clear the getter.
  *
  * NOTE: This function should never be used in web applications where session
- * token cookies are automatically associated with API calls by the browser.
+ * cookies are automatically associated with API calls by the browser. Cookie
+ * credentials are included by default; cross-origin APIs must still restrict
+ * CORS to trusted origins.
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
@@ -360,7 +362,12 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, {
+    ...init,
+    credentials: init.credentials ?? "include",
+    method,
+    headers,
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

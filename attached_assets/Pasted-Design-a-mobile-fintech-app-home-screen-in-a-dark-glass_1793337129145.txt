@@ -1,0 +1,48 @@
+Design a mobile fintech app home screen in a dark glassmorphism style.
+
+BACKGROUND:
+- Deep dark navy/black background with soft blurred gradient blobs
+  (teal/cyan #00D4D4 and deep blue #1A2A6C) glowing behind the UI.
+- Subtle noise/grain texture for depth. The blobs slowly drift and
+  pulse (20s loop).
+
+GLASS CARDS (Notifications, Create "My home", All services, Monitoring, Transfer without fees):
+- Large corner radius (28-32px).
+- Background: rgba(255,255,255,0.06) with backdrop-filter: blur(24px) saturate(140%).
+- 1px inner border rgba(255,255,255,0.12), top edge slightly brighter
+  to simulate light hitting glass.
+- Soft shadow: 0 10px 40px rgba(0,0,0,0.4).
+- Small line icon in the top-left, bold white label at the bottom-left.
+- Some cards are partially cut off on the right edge (horizontal scroll).
+
+ACTION BUTTONS (Pay, Transfer, payme go):
+- Pill shape, solid white / light frosted fill, dark text, icon on the left.
+- Soft white glow: box-shadow 0 0 30px rgba(255,255,255,0.35).
+- Hover/press: scale 0.96 with a spring animation, glow intensifies.
+
+ACCENT:
+- Cyan/teal highlight color for icons, the "+" badge and small details,
+  with a faint neon glow (drop-shadow 0 0 12px #00E5FF).
+
+BOTTOM:
+- Light blue rounded sheet sliding up from the bottom with large bold
+  headline text.
+- Floating pill button "Transfer to" with a heavy blur backdrop
+  (blur 30px), white fill and a long soft shadow.
+
+HEADER:
+- "Your balance" in small gray text, "Balance hidden" in large bold white
+  with an eye-off icon; avatar circle with initials top-right,
+  glass style.
+
+ANIMATIONS:
+- On load: cards fade in and rise 20px with a stagger of 60ms each
+  (ease-out, spring).
+- Buttons: tap squish + glow pulse.
+- Background blobs: slow floating motion.
+- Cards: on scroll, a slight parallax and blur change.
+- All transitions 250-400ms, cubic-bezier(0.22, 1, 0.36, 1).
+
+Typography: modern geometric sans-serif (Inter / SF Pro / Manrope),
+heavy weight for headings.
+Output: HTML + CSS + JS (single file), mobile viewport 390x844.

@@ -27,6 +27,8 @@ if (!basePath) {
   );
 }
 
+const apiServerUrl = process.env.API_SERVER_URL ?? 'http://127.0.0.1:5000';
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -69,6 +71,11 @@ export default defineConfig({
     strictPort: true,
     host: '0.0.0.0',
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: apiServerUrl,
+      },
+    },
     fs: {
       strict: true,
     },

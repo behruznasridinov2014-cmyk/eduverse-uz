@@ -1,7 +1,20 @@
 import { useState, useMemo } from 'react';
 import { ArrowUpRight, ArrowDown, ArrowUp, X, Plus, Search } from 'lucide-react';
 
-const TEAM = [
+type TeamMember = {
+  id: string;
+  name: string;
+  role: string;
+  atelier: 'Vinification' | 'Distillation' | 'Assemblage' | 'Élevage';
+  origin: string;
+  vintage: number;
+  signature: string;
+  status: 'Active' | 'Field' | 'Lab' | 'Vault';
+  img: string;
+  bio: string;
+};
+
+const TEAM: TeamMember[] = [
   { id: '01', name: 'Margaux Verrier', role: 'Maître de Chai', atelier: 'Vinification', origin: 'Beaune, FR', vintage: 1998, signature: 'Cuvée Ardente №7', status: 'Active', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop', bio: 'Third-generation cellar master. Margaux composes blends the way others compose music — by ear, by instinct, against the grain of convention.' },
   { id: '02', name: 'Elias Brandt', role: 'Head Distiller', atelier: 'Distillation', origin: 'Basel, CH', vintage: 2004, signature: 'Eau-de-Vie Solstice', status: 'Active', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop', bio: 'Trained in copper and patience. Elias runs the alembic stills on a lunar schedule he refuses to explain and no one dares to question.' },
   { id: '03', name: 'Soraya Klein', role: 'Blend Architect', atelier: 'Assemblage', origin: 'Vienna, AT', vintage: 2011, signature: 'Vermouth Carmin', status: 'Active', img: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=400&fit=crop', bio: 'Former perfumer. Soraya treats every blend as a fragrance with a finish — top notes, heart, and a long amber tail.' },
@@ -16,7 +29,7 @@ const TEAM = [
 
 const ATELIERS = ['All', 'Vinification', 'Distillation', 'Assemblage', 'Élevage'];
 
-const STATUS_COLOR = {
+const STATUS_COLOR: Record<TeamMember['status'], string> = {
   Active: '#8E1B2E',
   Field: '#D44324',
   Lab: '#DC7A1F',
@@ -26,29 +39,35 @@ const STATUS_COLOR = {
 export default function App() {
   const [filter, setFilter] = useState('All');
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState('id');
-  const [sortDir, setSortDir] = useState('asc');
-  const [selected, setSelected] = useState(null);
+  const [sortKey, setSortKey] = useState<keyof TeamMember>('id');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [selected, setSelected] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     let r = TEAM.filter(t => (filter === 'All' || t.atelier === filter) &&
       (t.name + t.role + t.origin + t.signature).toLowerCase().includes(query.toLowerCase()));
     r.sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey];
-      const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      const cmp = typeof av === 'number' && typeof bv === 'number'
+        ? av - bv
+        : String(av).localeCompare(String(bv));
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return r;
   }, [filter, query, sortKey, sortDir]);
 
-  const toggleSort = (key) => {
+  const toggleSort = (key: keyof TeamMember) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('asc'); }
   };
 
   const sel = TEAM.find(t => t.id === selected);
 
-  const SortHead = ({ label, k, className = '' }) => (
+  const SortHead = ({ label, k, className = '' }: {
+    label: string;
+    k: keyof TeamMember;
+    className?: string;
+  }) => (
     <th className={`text-left font-semibold text-[10px] tracking-[0.14em] uppercase pb-3 cursor-pointer select-none group ${className}`}
         onClick={() => toggleSort(k)}>
       <span className="inline-flex items-center gap-1 text-[#1A0E0C]">
@@ -93,14 +112,14 @@ export default function App() {
             </div>
 
             <nav className="px-7">
-              {[
+              {([
                 ['01', 'Overview', false],
                 ['02', 'The Atelier', true],
                 ['03', 'Cuvées', false],
                 ['04', 'Distillates', false],
                 ['05', 'Cellar Ledger', false],
                 ['06', 'Provenance', false],
-              ].map(([n, label, active]) => (
+              ] as [string, string, boolean][]).map(([n, label, active]) => (
                 <a key={n} href="#" onClick={e => e.preventDefault()}
                    className={`flex items-baseline gap-3 py-[9px] border-b hairline group ${active ? '' : 'opacity-60 hover:opacity-100'} transition-opacity`}>
                   <span className={`text-[10px] tabular font-semibold ${active ? 'text-[#D44324]' : ''}`}>{n}</span>
@@ -174,12 +193,12 @@ export default function App() {
 
             {/* Stat band — overlaps upward */}
             <div className="relative z-10 mt-14 -mb-px grid grid-cols-2 md:grid-cols-4 bg-[#1A0E0C] text-[#F4EFE7]">
-              {[
+              {([
                 ['47', 'People in register', '+3 this vintage'],
                 ['04', 'Ateliers', 'Vinification → Élevage'],
                 ['1921', 'Oldest vault vintage', 'Bibliothèque cellar'],
                 ['212', 'Yeast strains archived', 'Wild Ferment lab'],
-              ].map(([num, label, sub], i) => (
+              ] as [string, string, string][]).map(([num, label, sub], i) => (
                 <div key={label} className={`px-7 py-7 ${i !== 0 ? 'border-l border-[#F4EFE7]/15' : ''}`}>
                   <div className="text-[40px] font-extrabold leading-none tabular tracking-tight">{num}</div>
                   <div className="text-[11px] uppercase tracking-[0.14em] font-semibold mt-3">{label}</div>
@@ -316,7 +335,12 @@ export default function App() {
                   <div className="text-[11px] uppercase tracking-[0.14em] text-[#DC7A1F] font-semibold mt-1.5">{sel.role} — {sel.atelier}</div>
                   <p className="text-[12.5px] leading-[1.7] mt-4 opacity-85">{sel.bio}</p>
                   <div className="grid grid-cols-2 gap-px bg-[#F4EFE7]/15 mt-5 border border-[#F4EFE7]/15">
-                    {[['Vintage joined', sel.vintage], ['Origin', sel.origin], ['Signature', sel.signature], ['Status', sel.status]].map(([k, v]) => (
+                    {([
+                      ['Vintage joined', sel.vintage],
+                      ['Origin', sel.origin],
+                      ['Signature', sel.signature],
+                      ['Status', sel.status],
+                    ] as [string, string | number][]).map(([k, v]) => (
                       <div key={k} className="bg-[#1A0E0C] px-3 py-3">
                         <div className="text-[9px] uppercase tracking-[0.16em] opacity-50">{k}</div>
                         <div className="text-[12px] font-semibold mt-1">{v}</div>

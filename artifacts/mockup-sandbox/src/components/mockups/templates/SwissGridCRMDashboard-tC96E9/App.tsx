@@ -5,6 +5,23 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+type ContactStatus = 'Engaged' | 'Due soon' | 'At risk';
+type ContactTab = 'All' | ContactStatus;
+type Contact = {
+  id: number;
+  name: string;
+  role: string;
+  org: string;
+  segment: string;
+  seats: number;
+  plan: string;
+  renewal: string;
+  engagement: number;
+  status: ContactStatus;
+  initials: string;
+  last: string;
+};
+
 const CONTACTS = [
   { id: 1,  name: 'Marisol Vega',     role: 'Director of Curriculum', org: 'Ridgeline Unified SD',   segment: 'K-12',       seats: 1240, plan: 'District',  renewal: 'Mar 14', engagement: 92, status: 'Engaged',  initials: 'MV', last: '2d ago' },
   { id: 2,  name: 'Daniel Okafor',    role: 'Dean of Online Learning', org: 'Carver State College',  segment: 'Higher Ed',  seats: 3800, plan: 'Campus',    renewal: 'Mar 02', engagement: 67, status: 'Due soon', initials: 'DO', last: '5h ago' },
@@ -16,17 +33,22 @@ const CONTACTS = [
   { id: 8,  name: 'Hannah Whitfield', role: 'Asst. Superintendent',    org: 'Cedar Falls CSD',       segment: 'K-12',       seats: 1875, plan: 'District',  renewal: 'Mar 11', engagement: 58, status: 'Due soon', initials: 'HW', last: '4d ago' },
   { id: 9,  name: 'Kenji Watanabe',   role: 'Director, Student Success',org: 'Pacific Crest College',segment: 'Higher Ed',  seats: 2900, plan: 'Campus',    renewal: 'Jun 17', engagement: 95, status: 'Engaged',  initials: 'KW', last: '1h ago' },
   { id: 10, name: 'Leah Strickland',  role: 'Program Manager',         org: 'Open Door Adult Ed',    segment: 'Tutoring',   seats: 220,  plan: 'School',    renewal: 'Mar 05', engagement: 49, status: 'Due soon', initials: 'LS', last: '7d ago' },
-];
+] satisfies Contact[];
 
-const TABS = ['All', 'Due soon', 'Engaged', 'At risk'];
+const TABS = ['All', 'Due soon', 'Engaged', 'At risk'] as const;
 
-const STATUS_STYLE = {
+const STATUS_STYLE: Record<ContactStatus, { dot: string; bg: string; text: string }> = {
   'Engaged':  { dot: '#1A7A4C', bg: 'rgba(26,122,76,0.08)',  text: '#1A7A4C' },
   'Due soon': { dot: '#E8501F', bg: 'rgba(232,80,31,0.08)',  text: '#C2401A' },
   'At risk':  { dot: '#1A1816', bg: 'rgba(26,24,22,0.06)',   text: '#1A1816' },
 };
 
-function SegmentBar({ label, value, total, accent }) {
+function SegmentBar({ label, value, total, accent }: {
+  label: string;
+  value: number;
+  total: number;
+  accent: string;
+}) {
   const pct = Math.round((value / total) * 100);
   return (
     <div className="group">
@@ -48,8 +70,8 @@ function SegmentBar({ label, value, total, accent }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState('All');
-  const [selected, setSelected] = useState([2, 5]);
+  const [tab, setTab] = useState<ContactTab>('All');
+  const [selected, setSelected] = useState<number[]>([2, 5]);
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
@@ -61,7 +83,7 @@ export default function App() {
     });
   }, [tab, query]);
 
-  const toggle = (id) =>
+  const toggle = (id: number) =>
     setSelected(s => (s.includes(id) ? s.filter(x => x !== id) : [...s, id]));
 
   const allChecked = filtered.length > 0 && filtered.every(c => selected.includes(c.id));

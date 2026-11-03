@@ -1,0 +1,34 @@
+﻿services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - eduverse-postgres:/var/lib/postgresql/data
+    networks: [private]
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS}
+      TRUST_PROXY: "1"
+      EDUVERSE_ALLOW_PUBLIC_REGISTRATION: "0"
+    depends_on: [postgres]
+    networks: [private]
+
+volumes:
+  eduverse-postgres:
+
+networks:
+  private:
+    driver: bridge

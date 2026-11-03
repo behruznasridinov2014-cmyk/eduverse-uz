@@ -1,0 +1,20 @@
+{
+  "name": "EDUVERSE-UZ School Platform",
+  "short_name": "EDUVERSE-UZ",
+  "description": "A private school learning workspace for schedules, classes, lessons, assignments, and practice.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f4",
+  "theme_color": "#344f67",
+  "lang": "uz",
+  "scope": "/",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
