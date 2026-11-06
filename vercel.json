@@ -1,15 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @workspace/api-server build && pnpm --filter @workspace/eduverse-uz build",
-  "outputDirectory": "artifacts/eduverse-uz/dist/public",
-  "rewrites": [
-    { "source": "/((?!api).*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/[...path].mjs": {
-      "maxDuration": 30
+  "services": {
+    "api": {
+      "root": "artifacts/api-server",
+      "framework": "express",
+      "entrypoint": "dist/vercel.mjs",
+      "buildCommand": "node ./build.mjs"
+    },
+    "web": {
+      "root": "artifacts/eduverse-uz",
+      "framework": "vite"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
 }
