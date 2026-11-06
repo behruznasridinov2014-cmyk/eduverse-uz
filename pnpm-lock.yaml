@@ -640,6 +640,10 @@ importers:
         version: 0.31.11
 
   scripts:
+    dependencies:
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

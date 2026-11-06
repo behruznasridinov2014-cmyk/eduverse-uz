@@ -1,5 +1,5 @@
-const CACHE_NAME = 'eduverse-uz-shell-v1';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/favicon.svg'];
+const CACHE_NAME = 'eduverse-uz-shell-v2';
+const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -26,6 +26,6 @@ self.addEventListener('fetch', (event) => {
         void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
       }
       return response;
-    }).catch(() => caches.match(request).then((response) => response || caches.match('/'))),
+    }).catch(() => caches.match(request).then((response) => response || caches.match('/index.html') || caches.match('/'))),
   );
 });

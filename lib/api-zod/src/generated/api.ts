@@ -102,48 +102,1383 @@ export const LogoutResponse = zod.void()
 
 
 /**
- * Checks the current API session, database, password hashing, and configured account protections. Does not perform penetration testing.
- * @summary Run authenticated local security checks
+ * Creates a short-lived challenge for a device that is not signed in. The response is displayed as a QR code / code and approved by an already signed-in device.
+ * @summary Start a QR device-confirmation sign-in
  */
-export const GetGuardCheckResponse = zod.object({
-  "generatedAt": zod.coerce.date(),
-  "checks": zod.array(zod.object({
-  "id": zod.enum(['api', 'database', 'session', 'password_hashing', 'cookie', 'login_rate_limit', 'multi_factor', 'password_recovery', 'school_data']),
-  "status": zod.enum(['pass', 'warning', 'missing', 'unavailable'])
-})),
-  "counts": zod.object({
-  "pass": zod.number().int(),
-  "warning": zod.number().int(),
-  "missing": zod.number().int(),
-  "unavailable": zod.number().int()
+export const startQrLoginBodyDeviceLabelMax = 80;
+
+
+
+export const StartQrLoginBody = zod.object({
+  "deviceLabel": zod.string().max(startQrLoginBodyDeviceLabelMax).optional()
+})
+
+export const StartQrLoginResponse = zod.object({
+  "deviceToken": zod.string(),
+  "code": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "approveUrl": zod.string()
+})
+
+
+/**
+ * @summary Poll a QR sign-in challenge
+ */
+export const GetQrLoginStatusQueryParams = zod.object({
+  "deviceToken": zod.coerce.string()
+})
+
+export const GetQrLoginStatusResponse = zod.object({
+  "status": zod.enum(['pending', 'scanned', 'approved', 'consumed', 'expired', 'denied']),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Approve a QR sign-in from a signed-in device
+ */
+export const ApproveQrLoginBody = zod.object({
+  "code": zod.string()
+})
+
+export const ApproveQrLoginResponse = zod.object({
+  "approved": zod.boolean(),
+  "expiresAt": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Exchange an approved QR challenge for a session
+ */
+export const ConsumeQrLoginBody = zod.object({
+  "deviceToken": zod.string()
+})
+
+export const ConsumeQrLoginResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string().uuid(),
+  "username": zod.string(),
+  "login": zod.string(),
+  "role": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin', 'education_admin', 'ministry_admin', 'platform_superadmin']),
+  "createdAt": zod.coerce.date()
 })
 })
 
 
 /**
- * Sends only the generated status report to an Ollama service on loopback. No source code or credentials are sent.
- * @summary Explain a local Guard report with Ollama
+ * @summary List the signed-in user's school memberships and classes
  */
-export const AnalyzeGuardReportBody = zod.object({
-  "language": zod.enum(['Uzbek', 'Русский', 'English'])
+export const GetMySchoolsResponse = zod.object({
+  "memberships": zod.array(zod.object({
+  "schoolId": zod.string().uuid(),
+  "schoolName": zod.string(),
+  "region": zod.string(),
+  "district": zod.string().nullish(),
+  "role": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin'])
+})),
+  "classes": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid(),
+  "schoolName": zod.string().optional(),
+  "region": zod.string().optional(),
+  "name": zod.string(),
+  "grade": zod.number().int(),
+  "academicYear": zod.string(),
+  "studentCount": zod.number().int().optional(),
+  "teacherCount": zod.number().int().optional()
+})),
+  "mySubmissionCount": zod.number().int()
 })
 
-export const AnalyzeGuardReportResponse = zod.object({
-  "analysis": zod.string(),
-  "model": zod.string(),
-  "report": zod.object({
-  "generatedAt": zod.coerce.date(),
-  "checks": zod.array(zod.object({
-  "id": zod.enum(['api', 'database', 'session', 'password_hashing', 'cookie', 'login_rate_limit', 'multi_factor', 'password_recovery', 'school_data']),
-  "status": zod.enum(['pass', 'warning', 'missing', 'unavailable'])
+
+/**
+ * @summary List schools
+ */
+export const ListSchoolsResponse = zod.object({
+  "schools": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "region": zod.string(),
+  "district": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "memberCount": zod.number().int().optional(),
+  "classCount": zod.number().int().optional()
+}))
+})
+
+
+/**
+ * @summary Create a school
+ */
+export const createSchoolBodyNameMax = 160;
+
+export const createSchoolBodyRegionMax = 120;
+
+export const createSchoolBodyDistrictMax = 120;
+
+export const createSchoolBodyAddressMax = 240;
+
+
+
+export const CreateSchoolBody = zod.object({
+  "name": zod.string().min(1).max(createSchoolBodyNameMax),
+  "region": zod.string().min(1).max(createSchoolBodyRegionMax),
+  "district": zod.string().max(createSchoolBodyDistrictMax).optional(),
+  "address": zod.string().max(createSchoolBodyAddressMax).optional()
+})
+
+export const CreateSchoolResponse = zod.object({
+  "school": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "region": zod.string(),
+  "district": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "memberCount": zod.number().int().optional(),
+  "classCount": zod.number().int().optional()
+})
+})
+
+
+/**
+ * @summary Get one school
+ */
+export const GetSchoolParams = zod.object({
+  "schoolId": zod.coerce.string().uuid()
+})
+
+export const GetSchoolResponse = zod.object({
+  "school": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "region": zod.string(),
+  "district": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "memberCount": zod.number().int().optional(),
+  "classCount": zod.number().int().optional()
+}),
+  "role": zod.union([zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin']),zod.null()]).optional()
+})
+
+
+/**
+ * @summary List school members
+ */
+export const ListSchoolMembersParams = zod.object({
+  "schoolId": zod.coerce.string().uuid()
+})
+
+export const ListSchoolMembersResponse = zod.object({
+  "members": zod.array(zod.object({
+  "id": zod.string().uuid().optional(),
+  "schoolId": zod.string().uuid().optional(),
+  "userId": zod.string().uuid(),
+  "username": zod.string(),
+  "login": zod.string().optional(),
+  "accountRole": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin', 'education_admin', 'ministry_admin', 'platform_superadmin']).optional(),
+  "role": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin']),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Add or update a school member
+ */
+export const AddSchoolMemberParams = zod.object({
+  "schoolId": zod.coerce.string().uuid()
+})
+
+export const AddSchoolMemberBody = zod.object({
+  "userId": zod.string().uuid(),
+  "role": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin'])
+})
+
+export const AddSchoolMemberResponse = zod.object({
+  "member": zod.object({
+  "id": zod.string().uuid().optional(),
+  "schoolId": zod.string().uuid().optional(),
+  "userId": zod.string().uuid(),
+  "username": zod.string(),
+  "login": zod.string().optional(),
+  "accountRole": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin', 'education_admin', 'ministry_admin', 'platform_superadmin']).optional(),
+  "role": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin']),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Remove a school member
+ */
+export const RemoveSchoolMemberParams = zod.object({
+  "schoolId": zod.coerce.string().uuid(),
+  "userId": zod.coerce.string().uuid()
+})
+
+export const RemoveSchoolMemberResponse = zod.void()
+
+
+/**
+ * @summary List classes in a school
+ */
+export const ListSchoolClassesParams = zod.object({
+  "schoolId": zod.coerce.string().uuid()
+})
+
+export const ListSchoolClassesResponse = zod.object({
+  "classes": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid(),
+  "schoolName": zod.string().optional(),
+  "region": zod.string().optional(),
+  "name": zod.string(),
+  "grade": zod.number().int(),
+  "academicYear": zod.string(),
+  "studentCount": zod.number().int().optional(),
+  "teacherCount": zod.number().int().optional()
+}))
+})
+
+
+/**
+ * @summary Create a class
+ */
+export const CreateClassParams = zod.object({
+  "schoolId": zod.coerce.string().uuid()
+})
+
+export const createClassBodyNameMax = 80;
+
+export const createClassBodyGradeMax = 11;
+
+export const createClassBodyAcademicYearMax = 20;
+
+
+
+export const CreateClassBody = zod.object({
+  "name": zod.string().min(1).max(createClassBodyNameMax),
+  "grade": zod.number().int().min(1).max(createClassBodyGradeMax),
+  "academicYear": zod.string().min(1).max(createClassBodyAcademicYearMax)
+})
+
+export const CreateClassResponse = zod.object({
+  "class": zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid(),
+  "schoolName": zod.string().optional(),
+  "region": zod.string().optional(),
+  "name": zod.string(),
+  "grade": zod.number().int(),
+  "academicYear": zod.string(),
+  "studentCount": zod.number().int().optional(),
+  "teacherCount": zod.number().int().optional()
+})
+})
+
+
+/**
+ * @summary Get one class
+ */
+export const GetClassParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const GetClassResponse = zod.object({
+  "class": zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid(),
+  "schoolName": zod.string().optional(),
+  "region": zod.string().optional(),
+  "name": zod.string(),
+  "grade": zod.number().int(),
+  "academicYear": zod.string(),
+  "studentCount": zod.number().int().optional(),
+  "teacherCount": zod.number().int().optional()
+}),
+  "role": zod.union([zod.enum(['student', 'teacher']),zod.null()]).optional(),
+  "schoolRole": zod.union([zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin']),zod.null()]).optional()
+})
+
+
+/**
+ * @summary List class members
+ */
+export const ListClassMembersParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const ListClassMembersResponse = zod.object({
+  "members": zod.array(zod.object({
+  "id": zod.string().uuid().optional(),
+  "classId": zod.string().uuid().optional(),
+  "userId": zod.string().uuid(),
+  "username": zod.string(),
+  "login": zod.string().optional(),
+  "accountRole": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin', 'education_admin', 'ministry_admin', 'platform_superadmin']).optional(),
+  "role": zod.enum(['student', 'teacher']),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Add or update a class member
+ */
+export const AddClassMemberParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const AddClassMemberBody = zod.object({
+  "userId": zod.string().uuid(),
+  "role": zod.enum(['student', 'teacher'])
+})
+
+export const AddClassMemberResponse = zod.object({
+  "member": zod.object({
+  "id": zod.string().uuid().optional(),
+  "classId": zod.string().uuid().optional(),
+  "userId": zod.string().uuid(),
+  "username": zod.string(),
+  "login": zod.string().optional(),
+  "accountRole": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin', 'education_admin', 'ministry_admin', 'platform_superadmin']).optional(),
+  "role": zod.enum(['student', 'teacher']),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Remove a class member
+ */
+export const RemoveClassMemberParams = zod.object({
+  "classId": zod.coerce.string().uuid(),
+  "userId": zod.coerce.string().uuid()
+})
+
+export const RemoveClassMemberResponse = zod.void()
+
+
+/**
+ * @summary List assignments for a class
+ */
+export const ListClassAssignmentsParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const ListClassAssignmentsResponse = zod.object({
+  "assignments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "classId": zod.string().uuid(),
+  "title": zod.string(),
+  "subject": zod.string(),
+  "description": zod.string(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "className": zod.string().optional(),
+  "schoolId": zod.string().uuid().optional(),
+  "schoolName": zod.string().optional(),
+  "createdBy": zod.string().uuid(),
+  "createdByName": zod.string(),
+  "submissionCount": zod.number().int().optional(),
+  "reviewCount": zod.number().int().optional()
+})))
+})
+
+
+/**
+ * @summary Create an assignment
+ */
+export const CreateAssignmentParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const createAssignmentBodyTitleMax = 180;
+
+export const createAssignmentBodySubjectMax = 80;
+
+export const createAssignmentBodyDescriptionMax = 4000;
+
+
+
+export const CreateAssignmentBody = zod.object({
+  "title": zod.string().min(1).max(createAssignmentBodyTitleMax),
+  "subject": zod.string().min(1).max(createAssignmentBodySubjectMax),
+  "description": zod.string().min(1).max(createAssignmentBodyDescriptionMax),
+  "dueAt": zod.coerce.date().nullish()
+})
+
+export const CreateAssignmentResponse = zod.object({
+  "assignment": zod.object({
+  "id": zod.string().uuid(),
+  "classId": zod.string().uuid(),
+  "title": zod.string(),
+  "subject": zod.string(),
+  "description": zod.string(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Update an assignment
+ */
+export const UpdateAssignmentParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const updateAssignmentBodyTitleMax = 180;
+
+export const updateAssignmentBodySubjectMax = 80;
+
+export const updateAssignmentBodyDescriptionMax = 4000;
+
+
+
+export const UpdateAssignmentBody = zod.object({
+  "title": zod.string().min(1).max(updateAssignmentBodyTitleMax).optional(),
+  "subject": zod.string().min(1).max(updateAssignmentBodySubjectMax).optional(),
+  "description": zod.string().min(1).max(updateAssignmentBodyDescriptionMax).optional(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']).optional()
+})
+
+export const UpdateAssignmentResponse = zod.object({
+  "assignment": zod.object({
+  "id": zod.string().uuid(),
+  "classId": zod.string().uuid(),
+  "title": zod.string(),
+  "subject": zod.string(),
+  "description": zod.string(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Delete an assignment
+ */
+export const DeleteAssignmentParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const DeleteAssignmentResponse = zod.void()
+
+
+/**
+ * @summary List submissions for an assignment
+ */
+export const ListSubmissionsParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const ListSubmissionsResponse = zod.object({
+  "submissions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "assignmentId": zod.string().uuid(),
+  "studentId": zod.string().uuid(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "content": zod.string(),
+  "score": zod.number().int().nullish(),
+  "feedback": zod.string(),
+  "submittedAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "studentName": zod.string()
+})))
+})
+
+
+/**
+ * @summary Submit a student assignment
+ */
+export const SubmitAssignmentParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const submitAssignmentBodyContentMax = 10000;
+
+
+
+export const SubmitAssignmentBody = zod.object({
+  "content": zod.string().min(1).max(submitAssignmentBodyContentMax)
+})
+
+export const SubmitAssignmentResponse = zod.object({
+  "submission": zod.object({
+  "id": zod.string().uuid(),
+  "assignmentId": zod.string().uuid(),
+  "studentId": zod.string().uuid(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "content": zod.string(),
+  "score": zod.number().int().nullish(),
+  "feedback": zod.string(),
+  "submittedAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Review a student submission
+ */
+export const ReviewSubmissionParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid(),
+  "studentId": zod.coerce.string().uuid()
+})
+
+export const reviewSubmissionBodyScoreMin = 0;
+export const reviewSubmissionBodyScoreMax = 100;
+
+export const reviewSubmissionBodyFeedbackMax = 4000;
+
+
+
+export const ReviewSubmissionBody = zod.object({
+  "status": zod.enum(['in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']).optional(),
+  "score": zod.number().int().min(reviewSubmissionBodyScoreMin).max(reviewSubmissionBodyScoreMax).nullish(),
+  "feedback": zod.string().max(reviewSubmissionBodyFeedbackMax).optional()
+})
+
+export const ReviewSubmissionResponse = zod.object({
+  "submission": zod.object({
+  "id": zod.string().uuid(),
+  "assignmentId": zod.string().uuid(),
+  "studentId": zod.string().uuid(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "content": zod.string(),
+  "score": zod.number().int().nullish(),
+  "feedback": zod.string(),
+  "submittedAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary List assignments relevant to the signed-in user
+ */
+export const GetMyAssignmentsResponse = zod.object({
+  "assignments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "classId": zod.string().uuid(),
+  "title": zod.string(),
+  "subject": zod.string(),
+  "description": zod.string(),
+  "dueAt": zod.coerce.date().nullish(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "className": zod.string().optional(),
+  "schoolId": zod.string().uuid().optional(),
+  "schoolName": zod.string().optional(),
+  "createdBy": zod.string().uuid(),
+  "createdByName": zod.string(),
+  "submissionCount": zod.number().int().optional(),
+  "reviewCount": zod.number().int().optional()
+})).and(zod.object({
+  "mySubmission": zod.union([zod.object({
+  "id": zod.string().uuid(),
+  "assignmentId": zod.string().uuid(),
+  "studentId": zod.string().uuid(),
+  "status": zod.enum(['assigned', 'in_progress', 'submitted', 'under_review', 'needs_revision', 'checked']),
+  "content": zod.string(),
+  "score": zod.number().int().nullish(),
+  "feedback": zod.string(),
+  "submittedAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()]).optional()
+})))
+})
+
+
+/**
+ * @summary List the supported focus subjects
+ */
+export const ListSubjectsResponse = zod.object({
+  "subjects": zod.array(zod.object({
+  "slug": zod.string(),
+  "grade": zod.number().int(),
+  "label": zod.string()
+}))
+})
+
+
+/**
+ * @summary List published AI-generated lesson topics
+ */
+export const ListTopicsResponse = zod.object({
+  "topics": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "subject": zod.string(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "status": zod.enum(['draft', 'published']),
+  "slides": zod.array(zod.object({
+  "title": zod.string(),
+  "bullets": zod.array(zod.string()),
+  "notes": zod.string(),
+  "durationMinutes": zod.number().int()
 })),
-  "counts": zod.object({
-  "pass": zod.number().int(),
-  "warning": zod.number().int(),
-  "missing": zod.number().int(),
-  "unavailable": zod.number().int()
+  "facts": zod.array(zod.object({
+  "text": zod.string(),
+  "source": zod.string()
+})),
+  "visual3d": zod.object({
+  "kind": zod.enum(['globe', 'cell', 'egg', 'molecule', 'atom', 'heart', 'plant', 'orbit', 'volcano', 'water']),
+  "label": zod.string(),
+  "caption": zod.string(),
+  "interactions": zod.array(zod.string()),
+  "parts": zod.array(zod.object({
+  "id": zod.string(),
+  "shape": zod.enum(['sphere', 'torus', 'cone', 'cylinder', 'box', 'ring']),
+  "color": zod.string(),
+  "scale": zod.number(),
+  "position": zod.array(zod.number()),
+  "draggable": zod.boolean(),
+  "label": zod.string()
+}))
+}),
+  "quiz": zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+}),
+  "source": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}))
+})
+
+
+/**
+ * @summary Generate and publish an AI lesson package
+ */
+export const CreateTopicBody = zod.object({
+  "subject": zod.string(),
+  "title": zod.string(),
+  "grade": zod.number().int().optional(),
+  "classId": zod.string().uuid().optional()
+})
+
+export const CreateTopicResponse = zod.object({
+  "topic": zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "subject": zod.string(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "status": zod.enum(['draft', 'published']),
+  "slides": zod.array(zod.object({
+  "title": zod.string(),
+  "bullets": zod.array(zod.string()),
+  "notes": zod.string(),
+  "durationMinutes": zod.number().int()
+})),
+  "facts": zod.array(zod.object({
+  "text": zod.string(),
+  "source": zod.string()
+})),
+  "visual3d": zod.object({
+  "kind": zod.enum(['globe', 'cell', 'egg', 'molecule', 'atom', 'heart', 'plant', 'orbit', 'volcano', 'water']),
+  "label": zod.string(),
+  "caption": zod.string(),
+  "interactions": zod.array(zod.string()),
+  "parts": zod.array(zod.object({
+  "id": zod.string(),
+  "shape": zod.enum(['sphere', 'torus', 'cone', 'cylinder', 'box', 'ring']),
+  "color": zod.string(),
+  "scale": zod.number(),
+  "position": zod.array(zod.number()),
+  "draggable": zod.boolean(),
+  "label": zod.string()
+}))
+}),
+  "quiz": zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+}),
+  "source": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}),
+  "aiConfigured": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Get one lesson topic
+ */
+export const GetTopicParams = zod.object({
+  "topicId": zod.coerce.string().uuid()
+})
+
+export const GetTopicResponse = zod.object({
+  "topic": zod.object({
+  "id": zod.string().uuid(),
+  "schoolId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "subject": zod.string(),
+  "grade": zod.number().int(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "status": zod.enum(['draft', 'published']),
+  "slides": zod.array(zod.object({
+  "title": zod.string(),
+  "bullets": zod.array(zod.string()),
+  "notes": zod.string(),
+  "durationMinutes": zod.number().int()
+})),
+  "facts": zod.array(zod.object({
+  "text": zod.string(),
+  "source": zod.string()
+})),
+  "visual3d": zod.object({
+  "kind": zod.enum(['globe', 'cell', 'egg', 'molecule', 'atom', 'heart', 'plant', 'orbit', 'volcano', 'water']),
+  "label": zod.string(),
+  "caption": zod.string(),
+  "interactions": zod.array(zod.string()),
+  "parts": zod.array(zod.object({
+  "id": zod.string(),
+  "shape": zod.enum(['sphere', 'torus', 'cone', 'cylinder', 'box', 'ring']),
+  "color": zod.string(),
+  "scale": zod.number(),
+  "position": zod.array(zod.number()),
+  "draggable": zod.boolean(),
+  "label": zod.string()
+}))
+}),
+  "quiz": zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+}),
+  "source": zod.string(),
+  "createdAt": zod.coerce.date().optional(),
+  "updatedAt": zod.coerce.date().optional()
+}),
+  "aiConfigured": zod.boolean().optional()
+})
+
+
+/**
+ * Pins an existing topic to a class; students of that class then see the 3D object, facts and test for the topic.
+ * @summary Assign a published topic to a class
+ */
+export const AssignTopicToClassParams = zod.object({
+  "topicId": zod.coerce.string().uuid()
+})
+
+export const AssignTopicToClassBody = zod.object({
+  "classId": zod.string().uuid()
+})
+
+export const AssignTopicToClassResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Generate a unique AI question for one student
+ */
+export const CreateStudentQuestionParams = zod.object({
+  "topicId": zod.coerce.string().uuid()
+})
+
+export const CreateStudentQuestionBody = zod.object({
+  "studentId": zod.string().uuid().optional(),
+  "studentName": zod.string().optional(),
+  "difficulty": zod.enum(['support', 'core', 'challenge']).optional(),
+  "weakAreas": zod.array(zod.string()).optional()
+})
+
+export const CreateStudentQuestionResponse = zod.object({
+  "question": zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+}).and(zod.object({
+  "focus": zod.string().optional()
+}))
+})
+
+
+/**
+ * School management creates student accounts with generated logins and temporary passwords, returned exactly once. The response contains credentials the director hands out to students.
+ * @summary Create student accounts and enrol them in a class
+ */
+export const CreateClassAccountsParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const CreateClassAccountsBody = zod.object({
+  "names": zod.array(zod.string())
+})
+
+export const CreateClassAccountsResponse = zod.object({
+  "created": zod.array(zod.object({
+  "username": zod.string(),
+  "login": zod.string(),
+  "password": zod.string()
+}))
+})
+
+
+/**
+ * Searches YouTube for the topic (requires YOUTUBE_API_KEY on the server). Without a key, returns a link to YouTube search results so lessons still work.
+ * @summary Find a lesson video on YouTube
+ */
+export const searchYouTubeQueryQueryMax = 140;
+
+
+
+export const SearchYouTubeQueryParams = zod.object({
+  "query": zod.coerce.string().max(searchYouTubeQueryQueryMax)
+})
+
+export const SearchYouTubeResponse = zod.object({
+  "source": zod.enum(['youtube', 'link']),
+  "videos": zod.array(zod.object({
+  "videoId": zod.string(),
+  "title": zod.string(),
+  "channel": zod.string().optional(),
+  "thumbnail": zod.string().optional()
+})),
+  "searchUrl": zod.string().optional()
+})
+
+
+/**
+ * Searches Sketchfab for 3D models (requires SKETCHFAB_API_KEY on the server). Without a key, returns a link to Sketchfab search results.
+ * @summary Find 3D models for the topic on the internet
+ */
+export const search3dModelsQueryQueryMax = 140;
+
+
+
+export const Search3dModelsQueryParams = zod.object({
+  "query": zod.coerce.string().max(search3dModelsQueryQueryMax)
+})
+
+export const Search3dModelsResponse = zod.object({
+  "source": zod.enum(['sketchfab', 'link']),
+  "models": zod.array(zod.object({
+  "uid": zod.string(),
+  "name": zod.string(),
+  "author": zod.string().optional(),
+  "embedUrl": zod.string(),
+  "thumbnail": zod.string().optional(),
+  "downloadable": zod.boolean().optional()
+})),
+  "searchUrl": zod.string().optional()
+})
+
+
+/**
+ * Lets a class manager enrol an existing account into the class (used from attendance). Only existing accounts can be added.
+ * @summary Add a student or teacher to a class by login
+ */
+export const AddClassMemberByLoginParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const AddClassMemberByLoginBody = zod.object({
+  "login": zod.string(),
+  "role": zod.enum(['student', 'teacher'])
+})
+
+export const AddClassMemberByLoginResponse = zod.object({
+  "added": zod.boolean(),
+  "name": zod.string()
+})
+
+
+/**
+ * @summary Get attendance for a class on a date
+ */
+export const GetClassAttendanceParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const GetClassAttendanceQueryParams = zod.object({
+  "date": zod.date().optional()
+})
+
+export const GetClassAttendanceResponse = zod.object({
+  "date": zod.string(),
+  "canManage": zod.boolean(),
+  "records": zod.array(zod.object({
+  "studentId": zod.string().uuid(),
+  "studentName": zod.string(),
+  "login": zod.string().optional(),
+  "status": zod.enum(['present', 'absent', 'late', 'excused', 'unmarked']),
+  "note": zod.string().optional(),
+  "markedAt": zod.coerce.date().nullish()
+})),
+  "summary": zod.object({
+  "total": zod.number().int(),
+  "present": zod.number().int(),
+  "absent": zod.number().int(),
+  "late": zod.number().int(),
+  "excused": zod.number().int()
 })
 })
+
+
+/**
+ * @summary Mark who was present in a class
+ */
+export const SaveClassAttendanceParams = zod.object({
+  "classId": zod.coerce.string().uuid()
+})
+
+export const SaveClassAttendanceBody = zod.object({
+  "date": zod.string().optional(),
+  "records": zod.array(zod.object({
+  "studentId": zod.string().uuid(),
+  "status": zod.enum(['present', 'absent', 'late', 'excused']),
+  "note": zod.string().optional()
+}))
+})
+
+export const SaveClassAttendanceResponse = zod.object({
+  "saved": zod.number().int(),
+  "date": zod.string()
+})
+
+
+/**
+ * @summary Get one student's attendance history
+ */
+export const GetStudentAttendanceParams = zod.object({
+  "studentId": zod.coerce.string().uuid()
+})
+
+export const GetStudentAttendanceResponse = zod.object({
+  "records": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "classId": zod.string().uuid(),
+  "className": zod.string().optional(),
+  "status": zod.string(),
+  "note": zod.string().optional(),
+  "attendanceDate": zod.string(),
+  "updatedAt": zod.coerce.date().optional()
+})),
+  "summary": zod.object({
+  "total": zod.number().int(),
+  "present": zod.number().int(),
+  "rate": zod.number().int()
+})
+})
+
+
+/**
+ * @summary List live lesson rooms
+ */
+export const ListLessonRoomsResponse = zod.object({
+  "rooms": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "topicId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "hostId": zod.string().uuid(),
+  "subject": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['open', 'live', 'ended']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish()
+}))
+})
+
+
+/**
+ * @summary Open a live lesson room from a topic
+ */
+export const CreateLessonRoomBody = zod.object({
+  "topicId": zod.string().uuid().optional(),
+  "classId": zod.string().uuid().optional(),
+  "subject": zod.string().optional(),
+  "title": zod.string().optional()
+})
+
+export const CreateLessonRoomResponse = zod.object({
+  "room": zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "topicId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "hostId": zod.string().uuid(),
+  "subject": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['open', 'live', 'ended']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish()
+})
+})
+
+
+/**
+ * @summary Find a lesson room by its join code
+ */
+export const FindLessonRoomByCodeParams = zod.object({
+  "code": zod.coerce.string()
+})
+
+export const FindLessonRoomByCodeResponse = zod.object({
+  "room": zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "topicId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "hostId": zod.string().uuid(),
+  "subject": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['open', 'live', 'ended']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish()
+})
+})
+
+
+/**
+ * @summary Get a lesson room and its participants
+ */
+export const GetLessonRoomParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const GetLessonRoomResponse = zod.object({
+  "room": zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "topicId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "hostId": zod.string().uuid(),
+  "subject": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['open', 'live', 'ended']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish()
+}),
+  "participants": zod.array(zod.object({
+  "userId": zod.string().uuid(),
+  "role": zod.string(),
+  "username": zod.string(),
+  "cameraOn": zod.boolean(),
+  "micOn": zod.boolean(),
+  "sharingScreen": zod.boolean(),
+  "testPrompt": zod.string().optional(),
+  "testChoices": zod.array(zod.string()).optional(),
+  "testAnswer": zod.string().nullish(),
+  "testScore": zod.number().int().nullish(),
+  "joinedAt": zod.coerce.date()
+})),
+  "serverTime": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Join a lesson room
+ */
+export const JoinLessonRoomParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const JoinLessonRoomResponse = zod.object({
+  "room": zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "topicId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "hostId": zod.string().uuid(),
+  "subject": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['open', 'live', 'ended']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish()
+}),
+  "participants": zod.array(zod.object({
+  "userId": zod.string().uuid(),
+  "role": zod.string(),
+  "username": zod.string(),
+  "cameraOn": zod.boolean(),
+  "micOn": zod.boolean(),
+  "sharingScreen": zod.boolean(),
+  "testPrompt": zod.string().optional(),
+  "testChoices": zod.array(zod.string()).optional(),
+  "testAnswer": zod.string().nullish(),
+  "testScore": zod.number().int().nullish(),
+  "joinedAt": zod.coerce.date()
+})),
+  "serverTime": zod.coerce.date().optional()
+})
+
+
+/**
+ * @summary Leave a lesson room
+ */
+export const LeaveLessonRoomParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const LeaveLessonRoomResponse = zod.void()
+
+
+/**
+ * @summary End a lesson room
+ */
+export const EndLessonRoomParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const EndLessonRoomResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Update camera, microphone, and screen-share state
+ */
+export const SetLessonPresenceParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const SetLessonPresenceBody = zod.object({
+  "cameraOn": zod.boolean().optional(),
+  "micOn": zod.boolean().optional(),
+  "sharingScreen": zod.boolean().optional()
+})
+
+export const SetLessonPresenceResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Long-poll WebRTC signalling messages
+ */
+export const PollLessonSignalsParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const PollLessonSignalsQueryParams = zod.object({
+  "since": zod.coerce.number().int().optional()
+})
+
+export const PollLessonSignalsResponse = zod.object({
+  "messages": zod.array(zod.object({
+  "seq": zod.number().int(),
+  "from": zod.string(),
+  "to": zod.string(),
+  "kind": zod.string(),
+  "payload": zod.unknown().optional(),
+  "at": zod.number()
+})),
+  "lastSeq": zod.number().int(),
+  "participants": zod.array(zod.object({
+  "userId": zod.string().uuid(),
+  "role": zod.string(),
+  "username": zod.string(),
+  "cameraOn": zod.boolean(),
+  "micOn": zod.boolean(),
+  "sharingScreen": zod.boolean(),
+  "testPrompt": zod.string().optional(),
+  "testChoices": zod.array(zod.string()).optional(),
+  "testAnswer": zod.string().nullish(),
+  "testScore": zod.number().int().nullish(),
+  "joinedAt": zod.coerce.date()
+})),
+  "roomStatus": zod.string()
+})
+
+
+/**
+ * @summary Send a WebRTC signalling message
+ */
+export const SendLessonSignalParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const SendLessonSignalBody = zod.object({
+  "to": zod.string().optional(),
+  "kind": zod.enum(['offer', 'answer', 'ice', 'chat', 'control']),
+  "payload": zod.unknown().optional()
+})
+
+export const SendLessonSignalResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Get my individual test in a lesson
+ */
+export const GetMyRoomTestParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const GetMyRoomTestResponse = zod.object({
+  "question": zod.union([zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+}),zod.null()]).optional(),
+  "answer": zod.string().nullish(),
+  "score": zod.number().int().nullish()
+})
+
+
+/**
+ * @summary Answer my individual test
+ */
+export const AnswerMyRoomTestParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const AnswerMyRoomTestBody = zod.object({
+  "answer": zod.string()
+})
+
+export const AnswerMyRoomTestResponse = zod.object({
+  "correct": zod.boolean(),
+  "score": zod.number().int(),
+  "explanation": zod.string().optional()
+})
+
+
+/**
+ * @summary Assign one shared question to the whole class
+ */
+export const AssignRoomTestParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const AssignRoomTestBody = zod.object({
+  "question": zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+})
+})
+
+export const AssignRoomTestResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Generate a unique AI question for every student
+ */
+export const AssignIndividualRoomTestsParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const AssignIndividualRoomTestsResponse = zod.object({
+  "assigned": zod.number().int()
+})
+
+
+/**
+ * @summary Get the gamified ranking for a lesson
+ */
+export const GetRoomResultsParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const GetRoomResultsResponse = zod.object({
+  "room": zod.object({
+  "id": zod.string().uuid(),
+  "code": zod.string(),
+  "topicId": zod.string().uuid().nullish(),
+  "classId": zod.string().uuid().nullish(),
+  "hostId": zod.string().uuid(),
+  "subject": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['open', 'live', 'ended']),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullish()
+}),
+  "ranking": zod.array(zod.object({
+  "studentId": zod.string().uuid(),
+  "studentName": zod.string(),
+  "score": zod.number().int(),
+  "answered": zod.boolean()
+})),
+  "bonusWinners": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "studentId": zod.string().uuid(),
+  "score": zod.number().int(),
+  "total": zod.number().int(),
+  "grade": zod.number().int().nullish()
+}))
+})
+
+
+/**
+ * @summary Record a gamified quiz score
+ */
+export const SubmitRoomResultParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const SubmitRoomResultBody = zod.object({
+  "score": zod.number().int(),
+  "total": zod.number().int(),
+  "answers": zod.array(zod.unknown()).optional()
+})
+
+export const SubmitRoomResultResponse = zod.object({
+  "attempt": zod.object({
+  "id": zod.string().uuid(),
+  "studentId": zod.string().uuid(),
+  "score": zod.number().int(),
+  "total": zod.number().int(),
+  "grade": zod.number().int().nullish()
+})
+})
+
+
+/**
+ * @summary Award the top scorer a grade in a class assignment
+ */
+export const AwardRoomWinnerParams = zod.object({
+  "roomId": zod.coerce.string().uuid()
+})
+
+export const AwardRoomWinnerBody = zod.object({
+  "studentId": zod.string().uuid(),
+  "assignmentId": zod.string().uuid(),
+  "grade": zod.number().int().optional()
+})
+
+export const AwardRoomWinnerResponse = zod.object({
+  "awarded": zod.boolean(),
+  "grade": zod.number().int()
 })
 
 

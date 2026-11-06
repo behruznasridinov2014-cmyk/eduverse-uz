@@ -1,4 +1,4 @@
-﻿import {
+import {
   index,
   integer,
   pgEnum,
@@ -72,6 +72,22 @@ export const assignmentsTable = pgTable("assignments", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("assignments_class_idx").on(table.classId), index("assignments_creator_idx").on(table.createdBy)]);
+
+export const assignmentSubmissionsTable = pgTable("assignment_submissions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  assignmentId: uuid("assignment_id").notNull().references(() => assignmentsTable.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  status: assignmentStatusEnum("status").notNull().default("submitted"),
+  content: text("content").notNull(),
+  score: integer("score"),
+  feedback: text("feedback").notNull().default(""),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("assignment_submissions_assignment_student_unique").on(table.assignmentId, table.studentId),
+  index("assignment_submissions_student_idx").on(table.studentId),
+  index("assignment_submissions_assignment_status_idx").on(table.assignmentId, table.status),
+]);
 
 export const lessonsTable = pgTable("lessons", {
   id: uuid("id").defaultRandom().primaryKey(),

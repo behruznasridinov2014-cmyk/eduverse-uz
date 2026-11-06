@@ -12,8 +12,10 @@ tags:
     description: Health operations
   - name: auth
     description: Account and session operations
-  - name: guard
-    description: Authenticated local security diagnostics
+  - name: learning
+    description: Attendance, subjects, and AI-generated lesson content
+  - name: lessons
+    description: Live lesson rooms, WebRTC signalling, and gamified tests
 paths:
   /healthz:
     get:
@@ -148,39 +150,66 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /guard/check:
-    get:
-      operationId: getGuardCheck
-      tags: [guard]
-      summary: Run authenticated local security checks
-      description: Checks the current API session, database, password hashing, and configured account protections. Does not perform penetration testing.
-      security:
-        - SessionCookie: []
+  /auth/qr/start:
+    post:
+      operationId: startQrLogin
+      tags: [auth]
+      summary: Start a QR device-confirmation sign-in
+      description: Creates a short-lived challenge for a device that is not signed in. The response is displayed as a QR code / code and approved by an already signed-in device.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QrStartRequest"
       responses:
-        "200":
-          description: Local Guard check report
+        "201":
+          description: QR challenge created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GuardReport"
-        "401":
-          description: Authentication required
+                $ref: "#/components/schemas/QrStartResponse"
+        "400":
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
-          description: Guard check rate limit exceeded
+          description: Rate limit exceeded
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /guard/analyze:
+  /auth/qr/status:
+    get:
+      operationId: getQrLoginStatus
+      tags: [auth]
+      summary: Poll a QR sign-in challenge
+      parameters:
+        - name: deviceToken
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current challenge status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrStatusResponse"
+        "404":
+          description: Challenge not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/qr/approve:
     post:
-      operationId: analyzeGuardReport
-      tags: [health]
-      summary: Explain a local Guard report with Ollama
-      description: Sends only the generated status report to an Ollama service on loopback. No source code or credentials are sent.
+      operationId: approveQrLogin
+      tags: [auth]
+      summary: Approve a QR sign-in from a signed-in device
       security:
         - SessionCookie: []
       requestBody:
@@ -188,16 +217,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/GuardAnalysisRequest"
+              $ref: "#/components/schemas/QrApproveRequest"
       responses:
         "200":
-          description: Local AI explanation
+          description: Challenge approved
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GuardAnalysisResponse"
+                $ref: "#/components/schemas/QrApproveResponse"
         "400":
-          description: Unsupported language
+          description: Invalid code
           content:
             application/json:
               schema:
@@ -208,14 +237,1395 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-        "429":
-          description: Guard analysis rate limit exceeded
+        "404":
+          description: Code not found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-        "503":
-          description: Local Ollama is unavailable or not configured
+        "410":
+          description: Challenge expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/qr/consume:
+    post:
+      operationId: consumeQrLogin
+      tags: [auth]
+      summary: Exchange an approved QR challenge for a session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QrConsumeRequest"
+      responses:
+        "200":
+          description: Signed in on the requesting device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUserResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Challenge not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Challenge not approved yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /schools/me:
+    get:
+      operationId: getMySchools
+      tags: [schools]
+      summary: List the signed-in user's school memberships and classes
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: School memberships and accessible classes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MySchoolsResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /schools:
+    get:
+      operationId: listSchools
+      tags: [schools]
+      summary: List schools
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Schools visible to a global administrator
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolListResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Global administrator access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createSchool
+      tags: [schools]
+      summary: Create a school
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSchoolRequest"
+      responses:
+        "201":
+          description: School created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolResponse"
+        "400":
+          description: Invalid school details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Global administrator access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /schools/{schoolId}:
+    get:
+      operationId: getSchool
+      tags: [schools]
+      summary: Get one school
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SchoolId"
+      responses:
+        "200":
+          description: School details and the caller's school role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolDetailResponse"
+        "403":
+          description: School access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: School not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /schools/{schoolId}/members:
+    get:
+      operationId: listSchoolMembers
+      tags: [schools]
+      summary: List school members
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SchoolId"
+      responses:
+        "200":
+          description: School members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolMembersResponse"
+        "403":
+          description: School management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: addSchoolMember
+      tags: [schools]
+      summary: Add or update a school member
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SchoolId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddSchoolMemberRequest"
+      responses:
+        "201":
+          description: School member saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolMemberResponse"
+        "400":
+          description: Invalid member details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: School management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /schools/{schoolId}/members/{userId}:
+    delete:
+      operationId: removeSchoolMember
+      tags: [schools]
+      summary: Remove a school member
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SchoolId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: School member removed
+        "403":
+          description: School management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /schools/{schoolId}/classes:
+    get:
+      operationId: listSchoolClasses
+      tags: [schools]
+      summary: List classes in a school
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SchoolId"
+      responses:
+        "200":
+          description: Classes in the school
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassesResponse"
+        "403":
+          description: School access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createClass
+      tags: [schools]
+      summary: Create a class
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/SchoolId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClassRequest"
+      responses:
+        "201":
+          description: Class created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolClassResponse"
+        "400":
+          description: Invalid class details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: School management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Class already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}:
+    get:
+      operationId: getClass
+      tags: [schools]
+      summary: Get one class
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      responses:
+        "200":
+          description: Class details and the caller's roles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassDetailResponse"
+        "403":
+          description: Class access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Class not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}/members:
+    get:
+      operationId: listClassMembers
+      tags: [schools]
+      summary: List class members
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      responses:
+        "200":
+          description: Class members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassMembersResponse"
+        "403":
+          description: Class access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: addClassMember
+      tags: [schools]
+      summary: Add or update a class member
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddClassMemberRequest"
+      responses:
+        "201":
+          description: Class member saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassMemberResponse"
+        "400":
+          description: Invalid class member details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Class management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}/members/{userId}:
+    delete:
+      operationId: removeClassMember
+      tags: [schools]
+      summary: Remove a class member
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Class member removed
+        "403":
+          description: Class management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}/assignments:
+    get:
+      operationId: listClassAssignments
+      tags: [schools]
+      summary: List assignments for a class
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      responses:
+        "200":
+          description: Class assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentsResponse"
+        "403":
+          description: Class access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createAssignment
+      tags: [schools]
+      summary: Create an assignment
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssignmentRequest"
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "400":
+          description: Invalid assignment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Assignment management access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /assignments/{assignmentId}:
+    patch:
+      operationId: updateAssignment
+      tags: [schools]
+      summary: Update an assignment
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AssignmentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAssignmentRequest"
+      responses:
+        "200":
+          description: Assignment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "400":
+          description: Invalid assignment changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Assignment edit access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Assignment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteAssignment
+      tags: [schools]
+      summary: Delete an assignment
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AssignmentId"
+      responses:
+        "204":
+          description: Assignment deleted
+        "403":
+          description: Assignment delete access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /assignments/{assignmentId}/submissions:
+    get:
+      operationId: listSubmissions
+      tags: [schools]
+      summary: List submissions for an assignment
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AssignmentId"
+      responses:
+        "200":
+          description: Assignment submissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionsResponse"
+        "403":
+          description: Submission review access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: submitAssignment
+      tags: [schools]
+      summary: Submit a student assignment
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AssignmentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAssignmentRequest"
+      responses:
+        "201":
+          description: Submission saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "400":
+          description: Invalid submission content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Student class membership required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /assignments/{assignmentId}/submissions/{studentId}:
+    patch:
+      operationId: reviewSubmission
+      tags: [schools]
+      summary: Review a student submission
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AssignmentId"
+        - $ref: "#/components/parameters/StudentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewSubmissionRequest"
+      responses:
+        "200":
+          description: Submission reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "400":
+          description: Invalid review changes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Submission review access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Submission not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /me/assignments:
+    get:
+      operationId: getMyAssignments
+      tags: [schools]
+      summary: List assignments relevant to the signed-in user
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Role-scoped assignment feed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyAssignmentsResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /subjects:
+    get:
+      operationId: listSubjects
+      tags: [learning]
+      summary: List the supported focus subjects
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Supported subjects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubjectsResponse"
+  /topics:
+    get:
+      operationId: listTopics
+      tags: [learning]
+      summary: List published AI-generated lesson topics
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Lesson topics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicsResponse"
+    post:
+      operationId: createTopic
+      tags: [learning]
+      summary: Generate and publish an AI lesson package
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTopicRequest"
+      responses:
+        "201":
+          description: Lesson topic created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /topics/{topicId}:
+    get:
+      operationId: getTopic
+      tags: [learning]
+      summary: Get one lesson topic
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: topicId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Lesson topic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopicResponse"
+        "404":
+          description: Topic not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /topics/{topicId}/assign:
+    post:
+      operationId: assignTopicToClass
+      tags: [learning]
+      summary: Assign a published topic to a class
+      description: Pins an existing topic to a class; students of that class then see the 3D object, facts and test for the topic.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: topicId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTopicRequest"
+      responses:
+        "200":
+          description: Topic assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Topic not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /topics/{topicId}/student-questions:
+    post:
+      operationId: createStudentQuestion
+      tags: [learning]
+      summary: Generate a unique AI question for one student
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: topicId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentQuestionRequest"
+      responses:
+        "200":
+          description: Individual question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentQuestionResponse"
+        "404":
+          description: Topic not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}/accounts:
+    post:
+      operationId: createClassAccounts
+      tags: [learning]
+      summary: Create student accounts and enrol them in a class
+      description: School management creates student accounts with generated logins and temporary passwords, returned exactly once. The response contains credentials the director hands out to students.
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClassAccountsRequest"
+      responses:
+        "201":
+          description: Accounts created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateClassAccountsResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Class not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /youtube/search:
+    get:
+      operationId: searchYouTube
+      tags: [learning]
+      summary: Find a lesson video on YouTube
+      description: Searches YouTube for the topic (requires YOUTUBE_API_KEY on the server). Without a key, returns a link to YouTube search results so lessons still work.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 140
+      responses:
+        "200":
+          description: Search result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/YouTubeSearchResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /models/3d:
+    get:
+      operationId: search3dModels
+      tags: [learning]
+      summary: Find 3D models for the topic on the internet
+      description: Searches Sketchfab for 3D models (requires SKETCHFAB_API_KEY on the server). Without a key, returns a link to Sketchfab search results.
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 140
+      responses:
+        "200":
+          description: Search result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Models3dSearchResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}/members/by-login:
+    post:
+      operationId: addClassMemberByLogin
+      tags: [learning]
+      summary: Add a student or teacher to a class by login
+      description: Lets a class manager enrol an existing account into the class (used from attendance). Only existing accounts can be added.
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddClassMemberByLoginRequest"
+      responses:
+        "200":
+          description: Member added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddClassMemberByLoginResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /classes/{classId}/attendance:
+    get:
+      operationId: getClassAttendance
+      tags: [learning]
+      summary: Get attendance for a class on a date
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Attendance records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Class not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: saveClassAttendance
+      tags: [learning]
+      summary: Mark who was present in a class
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ClassId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveAttendanceRequest"
+      responses:
+        "200":
+          description: Attendance saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaveAttendanceResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /students/{studentId}/attendance:
+    get:
+      operationId: getStudentAttendance
+      tags: [learning]
+      summary: Get one student's attendance history
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/StudentId"
+      responses:
+        "200":
+          description: Attendance history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentAttendanceResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms:
+    get:
+      operationId: listLessonRooms
+      tags: [lessons]
+      summary: List live lesson rooms
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Lesson rooms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonRoomsResponse"
+    post:
+      operationId: createLessonRoom
+      tags: [lessons]
+      summary: Open a live lesson room from a topic
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomRequest"
+      responses:
+        "201":
+          description: Lesson room created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonRoomResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/by-code/{code}:
+    get:
+      operationId: findLessonRoomByCode
+      tags: [lessons]
+      summary: Find a lesson room by its join code
+      security:
+        - SessionCookie: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lesson room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonRoomResponse"
+        "404":
+          description: No matching room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: Lesson ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}:
+    get:
+      operationId: getLessonRoom
+      tags: [lessons]
+      summary: Get a lesson room and its participants
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Lesson room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonRoomDetailResponse"
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}/join:
+    post:
+      operationId: joinLessonRoom
+      tags: [lessons]
+      summary: Join a lesson room
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonRoomDetailResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: Lesson ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}/leave:
+    post:
+      operationId: leaveLessonRoom
+      tags: [lessons]
+      summary: Leave a lesson room
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "204":
+          description: Left
+        "404":
+          description: Room not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}/end:
+    post:
+      operationId: endLessonRoom
+      tags: [lessons]
+      summary: End a lesson room
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}/presence:
+    post:
+      operationId: setLessonPresence
+      tags: [lessons]
+      summary: Update camera, microphone, and screen-share state
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresenceRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /rooms/{roomId}/signal:
+    get:
+      operationId: pollLessonSignals
+      tags: [lessons]
+      summary: Long-poll WebRTC signalling messages
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+        - name: since
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Signalling batch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonSignalResponse"
+    post:
+      operationId: sendLessonSignal
+      tags: [lessons]
+      summary: Send a WebRTC signalling message
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalRequest"
+      responses:
+        "200":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /rooms/{roomId}/my-test:
+    get:
+      operationId: getMyRoomTest
+      tags: [lessons]
+      summary: Get my individual test in a lesson
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Individual test
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomTestResponse"
+    put:
+      operationId: answerMyRoomTest
+      tags: [lessons]
+      summary: Answer my individual test
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerTestRequest"
+      responses:
+        "200":
+          description: Answer result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerTestResponse"
+        "409":
+          description: Not joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}/tests:
+    post:
+      operationId: assignRoomTest
+      tags: [lessons]
+      summary: Assign one shared question to the whole class
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignTestRequest"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+  /rooms/{roomId}/tests/individual:
+    post:
+      operationId: assignIndividualRoomTests
+      tags: [lessons]
+      summary: Generate a unique AI question for every student
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignIndividualResponse"
+        "409":
+          description: No students joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /rooms/{roomId}/results:
+    get:
+      operationId: getRoomResults
+      tags: [lessons]
+      summary: Get the gamified ranking for a lesson
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Ranking and bonus winners
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomResultsResponse"
+    post:
+      operationId: submitRoomResult
+      tags: [lessons]
+      summary: Record a gamified quiz score
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitResultRequest"
+      responses:
+        "201":
+          description: Attempt recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizAttemptResponse"
+  /rooms/{roomId}/award:
+    post:
+      operationId: awardRoomWinner
+      tags: [lessons]
+      summary: Award the top scorer a grade in a class assignment
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AwardRequest"
+      responses:
+        "200":
+          description: Awarded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AwardResponse"
+        "400":
+          description: Invalid request
           content:
             application/json:
               schema:
@@ -226,6 +1636,49 @@ components:
       type: apiKey
       in: cookie
       name: eduverse.sid
+  parameters:
+    SchoolId:
+      name: schoolId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ClassId:
+      name: classId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    StudentId:
+      name: studentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
     HealthStatus:
       type: object
@@ -305,65 +1758,1234 @@ components:
         error:
           type: string
       required: [error]
-    GuardAnalysisRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        language:
-          type: string
-          enum: [Uzbek, Русский, English]
-      required: [language]
-    GuardCheck:
+    SchoolRole:
+      type: string
+      enum: [student, teacher, parent, school_director, school_admin]
+    ClassRole:
+      type: string
+      enum: [student, teacher]
+    AssignmentStatus:
+      type: string
+      enum: [assigned, in_progress, submitted, under_review, needs_revision, checked]
+    SchoolRecord:
       type: object
       properties:
         id:
           type: string
-          enum:
-            - api
-            - database
-            - session
-            - password_hashing
-            - cookie
-            - login_rate_limit
-            - multi_factor
-            - password_recovery
-            - school_data
-        status:
+          format: uuid
+        name:
           type: string
-          enum: [pass, warning, missing, unavailable]
-      required: [id, status]
-    GuardCheckCounts:
-      type: object
-      properties:
-        pass:
-          type: integer
-        warning:
-          type: integer
-        missing:
-          type: integer
-        unavailable:
-          type: integer
-      required: [pass, warning, missing, unavailable]
-    GuardReport:
-      type: object
-      properties:
-        generatedAt:
+        region:
+          type: string
+        district:
+          type: [string, "null"]
+        address:
+          type: [string, "null"]
+        createdAt:
           type: string
           format: date-time
-        checks:
-          type: array
-          items:
-            $ref: "#/components/schemas/GuardCheck"
-        counts:
-          $ref: "#/components/schemas/GuardCheckCounts"
-      required: [generatedAt, checks, counts]
-    GuardAnalysisResponse:
+        memberCount:
+          type: integer
+        classCount:
+          type: integer
+      required: [id, name, region, createdAt]
+    SchoolMembership:
       type: object
       properties:
-        analysis:
+        schoolId:
           type: string
-        model:
+          format: uuid
+        schoolName:
           type: string
-        report:
-          $ref: "#/components/schemas/GuardReport"
-      required: [analysis, model, report]
+        region:
+          type: string
+        district:
+          type: [string, "null"]
+        role:
+          $ref: "#/components/schemas/SchoolRole"
+      required: [schoolId, schoolName, region, role]
+    SchoolClass:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        schoolId:
+          type: string
+          format: uuid
+        schoolName:
+          type: string
+        region:
+          type: string
+        name:
+          type: string
+        grade:
+          type: integer
+        academicYear:
+          type: string
+        studentCount:
+          type: integer
+        teacherCount:
+          type: integer
+      required: [id, schoolId, name, grade, academicYear]
+    SchoolMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        schoolId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        login:
+          type: string
+        accountRole:
+          type: string
+          enum:
+            - student
+            - teacher
+            - parent
+            - school_director
+            - school_admin
+            - education_admin
+            - ministry_admin
+            - platform_superadmin
+        role:
+          $ref: "#/components/schemas/SchoolRole"
+        createdAt:
+          type: string
+          format: date-time
+      required: [userId, username, role, createdAt]
+    ClassMember:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        classId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        login:
+          type: string
+        accountRole:
+          type: string
+          enum:
+            - student
+            - teacher
+            - parent
+            - school_director
+            - school_admin
+            - education_admin
+            - ministry_admin
+            - platform_superadmin
+        role:
+          $ref: "#/components/schemas/ClassRole"
+        createdAt:
+          type: string
+          format: date-time
+      required: [userId, username, role, createdAt]
+    Assignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        classId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        subject:
+          type: string
+        description:
+          type: string
+        dueAt:
+          type: [string, "null"]
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AssignmentStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        [id, classId, title, subject, description, status, createdAt, updatedAt]
+    AssignmentSummary:
+      allOf:
+        - $ref: "#/components/schemas/Assignment"
+        - type: object
+          properties:
+            className:
+              type: string
+            schoolId:
+              type: string
+              format: uuid
+            schoolName:
+              type: string
+            createdBy:
+              type: string
+              format: uuid
+            createdByName:
+              type: string
+            submissionCount:
+              type: integer
+            reviewCount:
+              type: integer
+          required: [createdBy, createdByName]
+    Submission:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        assignmentId:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/AssignmentStatus"
+        content:
+          type: string
+        score:
+          type: [integer, "null"]
+        feedback:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        [id, assignmentId, studentId, status, content, feedback, submittedAt, updatedAt]
+    SubmissionWithStudent:
+      allOf:
+        - $ref: "#/components/schemas/Submission"
+        - type: object
+          properties:
+            studentName:
+              type: string
+          required: [studentName]
+    MyAssignment:
+      allOf:
+        - $ref: "#/components/schemas/AssignmentSummary"
+        - type: object
+          properties:
+            mySubmission:
+              oneOf:
+                - $ref: "#/components/schemas/Submission"
+                - type: "null"
+    CreateSchoolRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        region:
+          type: string
+          minLength: 1
+          maxLength: 120
+        district:
+          type: string
+          maxLength: 120
+        address:
+          type: string
+          maxLength: 240
+      required: [name, region]
+    AddSchoolMemberRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/SchoolRole"
+      required: [userId, role]
+    CreateClassRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        grade:
+          type: integer
+          minimum: 1
+          maximum: 11
+        academicYear:
+          type: string
+          minLength: 1
+          maxLength: 20
+      required: [name, grade, academicYear]
+    AddClassMemberRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          $ref: "#/components/schemas/ClassRole"
+      required: [userId, role]
+    CreateAssignmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 180
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        dueAt:
+          type: [string, "null"]
+          format: date-time
+      required: [title, subject, description]
+    UpdateAssignmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 180
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 80
+        description:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        dueAt:
+          type: [string, "null"]
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AssignmentStatus"
+    SubmitAssignmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        content:
+          type: string
+          minLength: 1
+          maxLength: 10000
+      required: [content]
+    ReviewSubmissionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [in_progress, submitted, under_review, needs_revision, checked]
+        score:
+          type: [integer, "null"]
+          minimum: 0
+          maximum: 100
+        feedback:
+          type: string
+          maxLength: 4000
+    MySchoolsResponse:
+      type: object
+      properties:
+        memberships:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolMembership"
+        classes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolClass"
+        mySubmissionCount:
+          type: integer
+      required: [memberships, classes, mySubmissionCount]
+    SchoolListResponse:
+      type: object
+      properties:
+        schools:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolRecord"
+      required: [schools]
+    SchoolResponse:
+      type: object
+      properties:
+        school:
+          $ref: "#/components/schemas/SchoolRecord"
+      required: [school]
+    SchoolDetailResponse:
+      type: object
+      properties:
+        school:
+          $ref: "#/components/schemas/SchoolRecord"
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/SchoolRole"
+            - type: "null"
+      required: [school]
+    SchoolMembersResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolMember"
+      required: [members]
+    SchoolMemberResponse:
+      type: object
+      properties:
+        member:
+          $ref: "#/components/schemas/SchoolMember"
+      required: [member]
+    ClassesResponse:
+      type: object
+      properties:
+        classes:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchoolClass"
+      required: [classes]
+    SchoolClassResponse:
+      type: object
+      properties:
+        class:
+          $ref: "#/components/schemas/SchoolClass"
+      required: [class]
+    ClassDetailResponse:
+      type: object
+      properties:
+        class:
+          $ref: "#/components/schemas/SchoolClass"
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/ClassRole"
+            - type: "null"
+        schoolRole:
+          oneOf:
+            - $ref: "#/components/schemas/SchoolRole"
+            - type: "null"
+      required: [class]
+    ClassMembersResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassMember"
+      required: [members]
+    ClassMemberResponse:
+      type: object
+      properties:
+        member:
+          $ref: "#/components/schemas/ClassMember"
+      required: [member]
+    AssignmentsResponse:
+      type: object
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssignmentSummary"
+      required: [assignments]
+    AssignmentResponse:
+      type: object
+      properties:
+        assignment:
+          $ref: "#/components/schemas/Assignment"
+      required: [assignment]
+    SubmissionsResponse:
+      type: object
+      properties:
+        submissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubmissionWithStudent"
+      required: [submissions]
+    SubmissionResponse:
+      type: object
+      properties:
+        submission:
+          $ref: "#/components/schemas/Submission"
+      required: [submission]
+    MyAssignmentsResponse:
+      type: object
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/MyAssignment"
+      required: [assignments]
+    QrStartRequest:
+      type: object
+      properties:
+        deviceLabel:
+          type: string
+          maxLength: 80
+    QrStartResponse:
+      type: object
+      properties:
+        deviceToken:
+          type: string
+        code:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        approveUrl:
+          type: string
+      required: [deviceToken, code, expiresAt, approveUrl]
+    QrStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, scanned, approved, consumed, expired, denied]
+        expiresAt:
+          type: string
+          format: date-time
+      required: [status, expiresAt]
+    QrApproveRequest:
+      type: object
+      properties:
+        code:
+          type: string
+      required: [code]
+    QrApproveResponse:
+      type: object
+      properties:
+        approved:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+      required: [approved]
+    QrConsumeRequest:
+      type: object
+      properties:
+        deviceToken:
+          type: string
+      required: [deviceToken]
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+    Subject:
+      type: object
+      properties:
+        slug:
+          type: string
+        grade:
+          type: integer
+        label:
+          type: string
+      required: [slug, grade, label]
+    SubjectsResponse:
+      type: object
+      properties:
+        subjects:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subject"
+      required: [subjects]
+    LessonSlide:
+      type: object
+      properties:
+        title:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        durationMinutes:
+          type: integer
+      required: [title, bullets, notes, durationMinutes]
+    LessonFact:
+      type: object
+      properties:
+        text:
+          type: string
+        source:
+          type: string
+      required: [text, source]
+    Visual3dPart:
+      type: object
+      properties:
+        id:
+          type: string
+        shape:
+          type: string
+          enum: [sphere, torus, cone, cylinder, box, ring]
+        color:
+          type: string
+        scale:
+          type: number
+        position:
+          type: array
+          items:
+            type: number
+        draggable:
+          type: boolean
+        label:
+          type: string
+      required: [id, shape, color, scale, position, draggable, label]
+    Visual3d:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [globe, cell, egg, molecule, atom, heart, plant, orbit, volcano, water]
+        label:
+          type: string
+        caption:
+          type: string
+        interactions:
+          type: array
+          items:
+            type: string
+        parts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Visual3dPart"
+      required: [kind, label, caption, interactions, parts]
+    QuizQuestion:
+      type: object
+      properties:
+        prompt:
+          type: string
+        choices:
+          type: array
+          items:
+            type: string
+        correct:
+          type: string
+        explanation:
+          type: string
+      required: [prompt, choices, correct, explanation]
+    LessonTopic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        schoolId:
+          type: string
+          format: uuid
+          nullable: true
+        classId:
+          type: string
+          format: uuid
+          nullable: true
+        subject:
+          type: string
+        grade:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        slides:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonSlide"
+        facts:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonFact"
+        visual3d:
+          $ref: "#/components/schemas/Visual3d"
+        quiz:
+          $ref: "#/components/schemas/QuizQuestion"
+        source:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, subject, grade, title, summary, status, slides, facts, visual3d, quiz, source]
+    CreateTopicRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+        title:
+          type: string
+        grade:
+          type: integer
+        classId:
+          type: string
+          format: uuid
+      required: [subject, title]
+    TopicResponse:
+      type: object
+      properties:
+        topic:
+          $ref: "#/components/schemas/LessonTopic"
+        aiConfigured:
+          type: boolean
+      required: [topic]
+    TopicsResponse:
+      type: object
+      properties:
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonTopic"
+      required: [topics]
+    StudentQuestionRequest:
+      type: object
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        studentName:
+          type: string
+        difficulty:
+          type: string
+          enum: [support, core, challenge]
+        weakAreas:
+          type: array
+          items:
+            type: string
+    StudentQuestionResponse:
+      type: object
+      properties:
+        question:
+          allOf:
+            - $ref: "#/components/schemas/QuizQuestion"
+            - type: object
+              properties:
+                focus:
+                  type: string
+      required: [question]
+    AttendanceStatus:
+      type: string
+      enum: [present, absent, late, excused, unmarked]
+    AttendanceRecord:
+      type: object
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        studentName:
+          type: string
+        login:
+          type: string
+        status:
+          $ref: "#/components/schemas/AttendanceStatus"
+        note:
+          type: string
+        markedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [studentId, studentName, status]
+    AttendanceSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        present:
+          type: integer
+        absent:
+          type: integer
+        late:
+          type: integer
+        excused:
+          type: integer
+      required: [total, present, absent, late, excused]
+    AttendanceResponse:
+      type: object
+      properties:
+        date:
+          type: string
+        canManage:
+          type: boolean
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceRecord"
+        summary:
+          $ref: "#/components/schemas/AttendanceSummary"
+      required: [date, canManage, records, summary]
+    SaveAttendanceRequest:
+      type: object
+      properties:
+        date:
+          type: string
+        records:
+          type: array
+          items:
+            type: object
+            properties:
+              studentId:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [present, absent, late, excused]
+              note:
+                type: string
+            required: [studentId, status]
+      required: [records]
+    SaveAttendanceResponse:
+      type: object
+      properties:
+        saved:
+          type: integer
+        date:
+          type: string
+      required: [saved, date]
+    StudentAttendanceRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        classId:
+          type: string
+          format: uuid
+        className:
+          type: string
+        status:
+          type: string
+        note:
+          type: string
+        attendanceDate:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, classId, status, attendanceDate]
+    StudentAttendanceResponse:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudentAttendanceRecord"
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+            present:
+              type: integer
+            rate:
+              type: integer
+          required: [total, present, rate]
+      required: [records, summary]
+    LessonRoom:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        topicId:
+          type: string
+          format: uuid
+          nullable: true
+        classId:
+          type: string
+          format: uuid
+          nullable: true
+        hostId:
+          type: string
+          format: uuid
+        subject:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [open, live, ended]
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, code, hostId, subject, title, status, startedAt]
+    LessonParticipant:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+        username:
+          type: string
+        cameraOn:
+          type: boolean
+        micOn:
+          type: boolean
+        sharingScreen:
+          type: boolean
+        testPrompt:
+          type: string
+        testChoices:
+          type: array
+          items:
+            type: string
+        testAnswer:
+          type: string
+          nullable: true
+        testScore:
+          type: integer
+          nullable: true
+        joinedAt:
+          type: string
+          format: date-time
+      required: [userId, role, username, cameraOn, micOn, sharingScreen, joinedAt]
+    LessonRoomsResponse:
+      type: object
+      properties:
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonRoom"
+      required: [rooms]
+    LessonRoomResponse:
+      type: object
+      properties:
+        room:
+          $ref: "#/components/schemas/LessonRoom"
+      required: [room]
+    LessonRoomDetailResponse:
+      type: object
+      properties:
+        room:
+          $ref: "#/components/schemas/LessonRoom"
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonParticipant"
+        serverTime:
+          type: string
+          format: date-time
+      required: [room, participants]
+    CreateRoomRequest:
+      type: object
+      properties:
+        topicId:
+          type: string
+          format: uuid
+        classId:
+          type: string
+          format: uuid
+        subject:
+          type: string
+        title:
+          type: string
+    PresenceRequest:
+      type: object
+      properties:
+        cameraOn:
+          type: boolean
+        micOn:
+          type: boolean
+        sharingScreen:
+          type: boolean
+    SignalRequest:
+      type: object
+      properties:
+        to:
+          type: string
+        kind:
+          type: string
+          enum: [offer, answer, ice, chat, control]
+        payload: {}
+      required: [kind]
+    LessonSignal:
+      type: object
+      properties:
+        seq:
+          type: integer
+        from:
+          type: string
+        to:
+          type: string
+        kind:
+          type: string
+        payload: {}
+        at:
+          type: number
+      required: [seq, from, to, kind, at]
+    LessonSignalResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonSignal"
+        lastSeq:
+          type: integer
+        participants:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonParticipant"
+        roomStatus:
+          type: string
+      required: [messages, lastSeq, participants, roomStatus]
+    RoomTestResponse:
+      type: object
+      properties:
+        question:
+          anyOf:
+            - $ref: "#/components/schemas/QuizQuestion"
+            - type: "null"
+        answer:
+          type: string
+          nullable: true
+        score:
+          type: integer
+          nullable: true
+    AnswerTestRequest:
+      type: object
+      properties:
+        answer:
+          type: string
+      required: [answer]
+    AnswerTestResponse:
+      type: object
+      properties:
+        correct:
+          type: boolean
+        score:
+          type: integer
+        explanation:
+          type: string
+      required: [correct, score]
+    AssignTestRequest:
+      type: object
+      properties:
+        question:
+          $ref: "#/components/schemas/QuizQuestion"
+      required: [question]
+    AssignIndividualResponse:
+      type: object
+      properties:
+        assigned:
+          type: integer
+      required: [assigned]
+    RoomRankEntry:
+      type: object
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        studentName:
+          type: string
+        score:
+          type: integer
+        answered:
+          type: boolean
+      required: [studentId, studentName, score, answered]
+    QuizAttempt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        score:
+          type: integer
+        total:
+          type: integer
+        grade:
+          type: integer
+          nullable: true
+      required: [id, studentId, score, total]
+    RoomResultsResponse:
+      type: object
+      properties:
+        room:
+          $ref: "#/components/schemas/LessonRoom"
+        ranking:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoomRankEntry"
+        bonusWinners:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizAttempt"
+      required: [room, ranking, bonusWinners]
+    SubmitResultRequest:
+      type: object
+      properties:
+        score:
+          type: integer
+        total:
+          type: integer
+        answers:
+          type: array
+          items: {}
+      required: [score, total]
+    QuizAttemptResponse:
+      type: object
+      properties:
+        attempt:
+          $ref: "#/components/schemas/QuizAttempt"
+      required: [attempt]
+    AssignTopicRequest:
+      type: object
+      properties:
+        classId:
+          type: string
+          format: uuid
+      required: [classId]
+    CreateClassAccountsRequest:
+      type: object
+      properties:
+        names:
+          type: array
+          items:
+            type: string
+      required: [names]
+    ClassAccount:
+      type: object
+      properties:
+        username:
+          type: string
+        login:
+          type: string
+        password:
+          type: string
+      required: [username, login, password]
+    CreateClassAccountsResponse:
+      type: object
+      properties:
+        created:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassAccount"
+      required: [created]
+    YouTubeVideo:
+      type: object
+      properties:
+        videoId:
+          type: string
+        title:
+          type: string
+        channel:
+          type: string
+        thumbnail:
+          type: string
+      required: [videoId, title]
+    YouTubeSearchResponse:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [youtube, link]
+        videos:
+          type: array
+          items:
+            $ref: "#/components/schemas/YouTubeVideo"
+        searchUrl:
+          type: string
+      required: [source, videos]
+    Model3d:
+      type: object
+      properties:
+        uid:
+          type: string
+        name:
+          type: string
+        author:
+          type: string
+        embedUrl:
+          type: string
+        thumbnail:
+          type: string
+        downloadable:
+          type: boolean
+      required: [uid, name, embedUrl]
+    Models3dSearchResponse:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [sketchfab, link]
+        models:
+          type: array
+          items:
+            $ref: "#/components/schemas/Model3d"
+        searchUrl:
+          type: string
+      required: [source, models]
+    AddClassMemberByLoginRequest:
+      type: object
+      properties:
+        login:
+          type: string
+        role:
+          type: string
+          enum: [student, teacher]
+      required: [login, role]
+    AddClassMemberByLoginResponse:
+      type: object
+      properties:
+        added:
+          type: boolean
+        name:
+          type: string
+      required: [added, name]
+    AwardRequest:
+      type: object
+      properties:
+        studentId:
+          type: string
+          format: uuid
+        assignmentId:
+          type: string
+          format: uuid
+        grade:
+          type: integer
+      required: [studentId, assignmentId]
+    AwardResponse:
+      type: object
+      properties:
+        awarded:
+          type: boolean
+        grade:
+          type: integer
+      required: [awarded, grade]

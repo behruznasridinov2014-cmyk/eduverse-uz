@@ -146,7 +146,23 @@ if ($createdDatabase) {
     throw "Test database schema setup failed. The database was not force-migrated."
   }
 } else {
-  Write-Host "Existing $databaseName account tables found; no schema changes were applied."
+  $schoolSchemaState = & $psqlPath -w -h 127.0.0.1 -p 5432 -U postgres -d $databaseName -v ON_ERROR_STOP=1 -tAc "SELECT (to_regclass('public.schools') IS NOT NULL AND to_regclass('public.school_members') IS NOT NULL AND to_regclass('public.school_classes') IS NOT NULL AND to_regclass('public.class_members') IS NOT NULL AND to_regclass('public.assignments') IS NOT NULL AND to_regclass('public.assignment_submissions') IS NOT NULL)::int::text"
+  if ($LASTEXITCODE -ne 0) {
+    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+    throw "Could not inspect the school schema in the existing $databaseName database."
+  }
+  if (($schoolSchemaState | Out-String).Trim() -ne "1") {
+    Write-Host "Adding missing school tables to the separate $databaseName database..."
+    pnpm --filter @workspace/db run push
+    if ($LASTEXITCODE -ne 0) {
+      Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+      Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+      throw "Test database school schema setup failed. The database was not force-migrated."
+    }
+  } else {
+    Write-Host "Existing $databaseName account and school tables found; no schema changes were applied."
+  }
 }
 
 Write-Host "Creating/updating explicitly marked local role-testing accounts..."

@@ -10,7 +10,7 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 app.disable("x-powered-by");
-if (process.env.TRUST_PROXY === "1") app.set("trust proxy", 1);
+if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "")
     .split(",")

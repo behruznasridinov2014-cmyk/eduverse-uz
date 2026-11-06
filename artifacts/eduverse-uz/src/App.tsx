@@ -1,18 +1,29 @@
-﻿import './app.css';
+import './app.css';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocaleDom } from './localization';
 import { Link, useLocation } from 'wouter';
 import { authCopy, AuthLoadingPage, AuthStatusPage, getRoleLabel, LoginPage, ProfilePage } from './auth-pages';
 import { useAuth } from './auth-context';
-import { VisualLabPage } from './visual-lab';
-import { TopicStudioPage } from './topic-studio';
-import type { GuardCheckId, GuardCheckStatus, GuardReport, User } from '@workspace/api-client-react';
+import { LessonRoomPage } from './lesson-room';
+import { TopicLibraryPage } from './topic-library';
+import { AttendancePage } from './attendance-page';
+import type { User } from '@workspace/api-client-react';
+import { useSchoolData, type SchoolData } from './school-data';
+import {
+  SchoolScopeSummary,
+  ServerAdminSchoolsPanel,
+  ServerClassesPanel,
+  ServerSchoolOverview,
+  ServerTeachingPanel,
+  ServerAccountsPanel,
+  ServerTopicAssignPanel,
+} from './school-panels';
 import {
   Activity, ArrowLeft, ArrowRight, BookOpen, Bookmark, Check, CheckCircle2, ChevronDown,
   ChevronLeft, ChevronRight, CircleHelp, ClipboardCheck, Clock3, Download, Eraser, FileText,
-  GraduationCap, Highlighter, Home, Info, Library, Menu, MessageSquare,
+  GraduationCap, Highlighter, Home, Info, Library, Menu,
   Minus, Monitor, MoreHorizontal, Pen, Plus, Presentation, RotateCcw, Save, Search, Send,
-  Settings, Shapes, ShieldCheck, Sparkles, Timer, Trash2, Undo2, Upload, Users,
+  Settings, Shapes, ShieldCheck, Sparkles, Timer, Trash2, Undo2, Upload, Users, Video,
   Wifi, X, ZoomIn, ZoomOut,
 } from 'lucide-react';
 
@@ -20,14 +31,11 @@ type Lang = 'Uzbek' | 'Русский' | 'English';
 type Role = 'Student' | 'Teacher' | 'Parent' | 'School director' | 'Central administrator';
 type AssignmentStatus = 'Assigned' | 'In Progress' | 'Submitted' | 'Under Review' | 'Needs Revision' | 'Checked';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string };
-type ChatItem = { role:'assistant'|'user'; content:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
-type OfflineLesson = { id:string; subject:string; title:string; goal:string; conceptTitle:string; conceptText:string; homework:string; prompt:string; choices:string[]; correct:string; explanation:string };
-type GuardStatus = GuardCheckStatus;
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Schedule:'Jadval',Classes:'Sinflar','Offline lesson':'Oflayn dars',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Dars xonasi','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Learning assistant':'O‘quv yordamchisi','EduVerse Guard':'EduVerse Guard'},
-  Русский:{Schedule:'Расписание',Classes:'Классы','Offline lesson':'Офлайн-урок',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Учебная комната','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Learning assistant':'Помощник обучения','EduVerse Guard':'EduVerse Guard'},
-  English:{Schedule:'Schedule',Classes:'Classes','Offline lesson':'Offline lesson','EduVerse Guard':'EduVerse Guard'}
+  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Mavzular va 3D','Attendance':'Davomat'},
+  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Темы и 3D','Attendance':'Давомат'},
+  English:{Schedule:'Schedule',Classes:'Classes','Topics & 3D':'Topics & 3D','Lesson room':'Online lesson','Attendance':'Attendance'}
 };
 const BOOKS:Book[]=[
   {id:'math',title:'Mathematics',subject:'Mathematics',language:'Uzbek',author:'Sample editorial team',year:'2024–25',chapters:['Numbers and operations','Fractions and ratios','Geometry around us','Data and probability'],tone:''},
@@ -39,11 +47,6 @@ const BOOKS:Book[]=[
   {id:'uzbek',title:'Uzbek language',subject:'Uzbek',language:'Uzbek',author:'Sample editorial team',year:'2024–25',chapters:['Reading with care','Word forms','Clear sentences','Writing a short account'],tone:''},
   {id:'russian',title:'Russian language',subject:'Russian',language:'Russian',author:'Demo learning studio',year:'2024–25',chapters:['Reading a passage','Nouns and agreement','Verb forms','Writing practice'],tone:'ink'},
   {id:'english',title:'English in context',subject:'English',language:'English',author:'Sample editorial team',year:'2024–25',chapters:['People and places','Everyday routines','A short story','Writing a message'],tone:'alt'},
-];
-const OFFLINE_LESSONS:OfflineLesson[]=[
-  {id:'physics',subject:'Physics',title:'Motion and energy',goal:'Explain how motion describes a change in position and identify examples from everyday life.',conceptTitle:'Position can change',conceptText:'An object is moving when its position changes compared with a reference point. A bicycle, a car, and a falling ball are all examples of motion.',homework:'Take a photo of a short example or write two sentences about motion.',prompt:'Which statement best describes motion?',choices:['The object changes position over time','The object becomes heavier','The object changes colour','The object disappears'],correct:'The object changes position over time',explanation:'Motion is a change in position over time compared with a reference point.'},
-  {id:'chemistry',subject:'Chemistry',title:'Materials and properties',goal:'Classify familiar materials by observable properties and explain why a property matters for use.',conceptTitle:'Properties help us choose materials',conceptText:'Materials can be described by properties such as hardness, flexibility, transparency, and conductivity. A useful property depends on what we need the material to do.',homework:'Find two objects at home and write one property that helps explain their use.',prompt:'Which property describes whether light can pass through a material?',choices:['Transparency','Mass','Length','Temperature'],correct:'Transparency',explanation:'Transparency describes how much light can pass through a material.'},
-  {id:'history',subject:'History',title:'Sources and timelines',goal:'Use a source and a timeline to place events in order and distinguish evidence from an interpretation.',conceptTitle:'Sources help us build timelines',conceptText:'A source gives evidence about the past. Comparing dates, places, and authors helps us place events in sequence and explain what the evidence can support.',homework:'Choose two events from a textbook and write which one happened first and how you know.',prompt:'What is the main purpose of a timeline?',choices:['To show events in chronological order','To measure temperature','To list only opinions','To replace all sources'],correct:'To show events in chronological order',explanation:'A timeline arranges events by when they happened so their sequence is clear.'},
 ];
 const AI_PREVIEW_QUESTIONS:Record<string,{prompt:string;choices:string[];correct:string;explanation:string}>={
   Mathematics:{prompt:'Which ratio is equivalent to 2:3?',choices:['4:6','3:4','2:6','6:9'],correct:'4:6',explanation:'Both parts of 2:3 are multiplied by 2, so 4:6 keeps the same relationship.'},
@@ -71,48 +74,49 @@ function App(){
   const [assignments,setAssignments]=useSavedState<typeof INITIAL_ASSIGNMENTS>('school-demo-7b-assignments',INITIAL_ASSIGNMENTS);
   const [prefs]=useSavedState('preferences',{compact:false,notifications:true});
   const [mobileOpen,setMobileOpen]=useState(false);
+  const school=useSchoolData(auth.user,auth.status);
   useEffect(()=>{
-    if(hasLocalSession&&auth.user&&(location==='/login'||location==='/register'))setLocation('/dashboard');
+    const hasQrCode = typeof window!=='undefined' && new URLSearchParams(window.location.search).has('qr');
+    if(hasLocalSession&&auth.user&&!hasQrCode&&(location==='/login'||location==='/register'))setLocation('/dashboard');
   },[hasLocalSession,auth.user,location,setLocation]);
   const userRole=auth.user?.role;
   const roleNavigation:Record<User['role'],string[]> = {
-    student:['Overview','Textbook library','Practice','Homework scan','Lesson room','Learning assistant','EduVerse Guard'],
-    teacher:['Overview','Teacher workspace','Lesson room','Interactive board','Textbook library','EduVerse Guard'],
-    parent:['Overview','Family view','Textbook library','EduVerse Guard'],
-    school_director:['Overview','School insights','EduVerse Guard'],
-    school_admin:['Overview','School insights','EduVerse Guard'],
-    education_admin:['Overview','Administration','EduVerse Guard'],
-    ministry_admin:['Overview','Administration','EduVerse Guard'],
-    platform_superadmin:['Overview','Administration','EduVerse Guard'],
+    student:['Overview','Topics & 3D','Lesson room','Attendance','Textbook library','Practice','Homework scan'],
+    teacher:['Overview','Topics & 3D','Lesson room','Attendance','Teacher workspace','Interactive board','Textbook library'],
+    parent:['Overview','Attendance','Family view','Textbook library'],
+    school_director:['Overview','Attendance','School insights','Classes'],
+    school_admin:['Overview','Attendance','School insights','Classes'],
+    education_admin:['Overview','Administration'],
+    ministry_admin:['Overview','Administration'],
+    platform_superadmin:['Overview','Administration'],
   };
   const navItems=[
     {label:'Overview',href:'/dashboard',icon:Home,roles:Object.keys(roleNavigation) as User['role'][]},
     {label:'Schedule',href:'/schedule',icon:Clock3,roles:Object.keys(roleNavigation) as User['role'][]},
     {label:'Classes',href:'/classes',icon:Users,roles:Object.keys(roleNavigation) as User['role'][]},
-    {label:'Offline lesson',href:'/offline-lesson',icon:BookOpen,roles:['student','teacher'] as User['role'][]},
-    {label:'3D visual lessons',href:'/visual-lab',icon:BookOpen,roles:['student','teacher'] as User['role'][]},
-    {label:'AI topic studio',href:'/topic-studio',icon:Sparkles,roles:['student','teacher'] as User['role'][]},
+    {label:'Topics & 3D',href:'/topics',icon:Sparkles,roles:['student','teacher'] as User['role'][]},
+    {label:'Attendance',href:'/attendance',icon:ClipboardCheck,roles:['student','teacher','parent','school_director','school_admin'] as User['role'][]},
     {label:'Textbook library',href:'/library',icon:Library,roles:['student','teacher','parent'] as User['role'][]},
     {label:'Practice',href:'/practice',icon:ClipboardCheck,roles:['student'] as User['role'][]},
     {label:'Homework scan',href:'/homework/scan',icon:Upload,roles:['student'] as User['role'][]},
-    {label:'Lesson room',href:'/lesson',icon:Users,roles:['student','teacher'] as User['role'][]},
+    {label:'Lesson room',href:'/lesson',icon:Video,roles:['student','teacher'] as User['role'][]},
     {label:'Interactive board',href:'/board',icon:Presentation,roles:['teacher'] as User['role'][]},
     {label:'Teacher workspace',href:'/teacher',icon:GraduationCap,roles:['teacher'] as User['role'][]},
     {label:'Family view',href:'/parent',icon:Users,roles:['parent'] as User['role'][]},
     {label:'School insights',href:'/school',icon:Activity,roles:['school_director','school_admin'] as User['role'][]},
     {label:'Administration',href:'/admin',icon:Settings,roles:['education_admin','ministry_admin','platform_superadmin'] as User['role'][]},
-    {label:'Learning assistant',href:'/assistant',icon:MessageSquare,roles:['student','teacher'] as User['role'][]},
-    {label:'EduVerse Guard',href:'/guard',icon:ShieldCheck,roles:Object.keys(roleNavigation) as User['role'][]},
   ];
   const visible=userRole?navItems.filter(item=>item.roles.includes(userRole)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
   function navigate(href:string){setLocation(href);setMobileOpen(false)}
   const routeMatch=location.match(/^\/read\/([^/]+)/);const book=routeMatch?BOOKS.find(b=>b.id===routeMatch[1]):undefined;
-  const offlineLessonMatch=location.match(/^\/offline-lesson(?:\/([^/]+))?/);const offlineLessonId=offlineLessonMatch?.[1]??'physics';
+  const lessonRoomMatch=location.match(/^\/lesson(?:\/([^/]+))?/);const lessonTopicId=lessonRoomMatch?.[1];
   const progressValue=(bookId:string)=>progress[bookId]??1;
   if(location==='/'&&auth.status==='loading')return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
   if(location==='/'&&!hasLocalSession)return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
   if(location==='/login'){
+    const hasQrCode = typeof window!=='undefined' && new URLSearchParams(window.location.search).has('qr');
+    if(hasQrCode)return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
     if(hasLocalSession)return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
     return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
   }
@@ -129,16 +133,13 @@ function App(){
     '/classes':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
     '/library':['student','teacher','parent'],
     '/read':['student','teacher','parent'],
-    '/offline-lesson':['student','teacher'],
-    '/visual-lab':['student','teacher'],
-    '/topic-studio':['student','teacher'],
+    '/topics':['student','teacher'],
+    '/attendance':['student','teacher','parent','school_director','school_admin'],
     '/homework/scan':['student'],
     '/teacher':['teacher'],
     '/parent':['parent'],
     '/school':['school_director','school_admin'],
     '/admin':['education_admin','ministry_admin','platform_superadmin'],
-    '/guard':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
-    '/assistant':['student','teacher'],
     '/board':['teacher'],
   };
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
@@ -188,25 +189,21 @@ function App(){
       {mobileOpen&&<div style={{position:'fixed',zIndex:40,inset:'58px 0 auto',background:'#202c3b',padding:12,boxShadow:'0 10px 25px #20304033'}}>{visible.map(item=><Link key={item.href} href={item.href} className={`nav-item ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><item.icon/><span>{NAV_LABELS[lang][item.label]??item.label}</span></Link>)}{auth.user?<Link href="/profile" className="nav-item" onClick={()=>setMobileOpen(false)}><ShieldCheck/><span>{authCopy(lang).profile}</span></Link>:<Link href="/login" className="nav-item" onClick={()=>setMobileOpen(false)}><ShieldCheck/><span>{authCopy(lang).signIn}</span></Link>}</div>}
       <div className={`content ${prefs.compact?'compact':''}`}>
         {location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
-        :location==='/'||location==='/dashboard'?<RoleOverviewPage user={auth.user!} language={lang} onOpen={navigate}/>
-        :location==='/teacher'&&auth.user?<TeacherPage assignments={assignments} setAssignments={setAssignments} setStatus={(id,status)=>setAssignments(assignments.map(item=>item.id===id?{...item,status}:item))} goBoard={()=>navigate('/board')}/>
+        :location==='/'||location==='/dashboard'?<RoleOverviewPage user={auth.user!} school={school} language={lang} onOpen={navigate}/>
+        :location==='/teacher'&&auth.user?<TeacherPage school={school} language={lang} assignments={assignments} setAssignments={setAssignments} setStatus={(id,status)=>setAssignments(assignments.map(item=>item.id===id?{...item,status}:item))} goBoard={()=>navigate('/board')}/>
         :location==='/parent'&&auth.user?<ParentPage assignments={assignments}/>
-        :location==='/school'&&auth.user?<SchoolPage/>
-        :location==='/admin'&&auth.user?<AdminPage role={auth.user.role}/>
+        :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
+        :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
         :location==='/homework/scan'?<ScanPage assignments={assignments} setStatus={(id,status)=>setAssignments(assignments.map(item=>item.id===id?{...item,status}:item))}/>
         :location==='/library'?<LibraryPage progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
         :book?<ReaderPage book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} goBoard={()=>navigate('/board')}/>
         :location==='/board'?<BoardPage/>
-        :location==='/lesson'&&userRole==='teacher'?<LessonPageWithDevice userId={auth.user?.id}/>
-        :location==='/lesson'?<StudentLessonPage userId={auth.user?.id}/>
+        :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
         :location==='/schedule'?<SchedulePage role={userRole}/>
-        :location==='/classes'?<ClassesPage role={userRole}/>
-        :location==='/visual-lab'?<VisualLabPage/>
-        :location==='/topic-studio'&&userRole?<TopicStudioPage role={userRole==='teacher'?'teacher':'student'}/>
-        :location.startsWith('/offline-lesson')?<OfflineLessonPage role={userRole} userId={auth.user?.id} lessonId={offlineLessonId}/>
+        :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
+        :location==='/topics'&&auth.user?<TopicLibraryPage user={auth.user} language={lang} onOpenRoom={topicId=>navigate('/lesson/'+topicId)}/>
+        :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
         :location==='/practice'?<PracticePage userId={auth.user?.id}/>
-        :location==='/assistant'?<AssistantPage role={userRole==='teacher'?'Teacher':'Student'}/>
-        :location==='/guard'?<GuardPage language={lang}/>
         :<NotFound goHome={()=>navigate('/')}/>}
       </div>
       <nav className="mobile-nav" aria-label="Mobile navigation">{visible.slice(0,5).map(item=><Link key={item.href} href={item.href} className={active(item.href)?'active':''}><item.icon/><span>{(NAV_LABELS[lang][item.label]??item.label).split(' ')[0]}</span></Link>)}</nav>
@@ -226,68 +223,70 @@ const ROLE_HOME_COPY:Record<Lang,{
 }> = {
   Uzbek:{
     eyebrow:'SHAXSIY O‘QUV MAYDONI',title:'O‘qishni davom ettiring',subtitle:'Bu sahifa faqat server tasdiqlagan hisob ma’lumotlarini ko‘rsatadi.',
-    welcome:'Xush kelibsiz',account:'Hisob turi',schoolScope:'Tashkilot',scopeNotice:'Bu hisob uchun maktabga a’zolik va maktab ma’lumotlari tizimi hali ulanmagan. Jadval, baholar yoki o‘quvchilar ro‘yxati uydirib ko‘rsatilmaydi.',
+    welcome:'Xush kelibsiz',account:'Hisob turi',schoolScope:'Tashkilot',scopeNotice:'Maktab a’zoligi va sinf ma’lumotlari serverdan yuklanadi. Agar hisob biror maktabga bog‘lanmagan bo‘lsa, jadval, baholar yoki o‘quvchilar ro‘yxati uydirib ko‘rsatilmaydi.',
     localTest:'Mahalliy sinov hisobi — haqiqiy foydalanuvchi yoki maktab ma’lumoti emas.',
     available:'Mavjud',local:'Mahalliy namuna',planned:'Tayyorlanmoqda',open:'Ochish',
-    noSchedule:'Haqiqiy jadval hozircha ulanmagan.',noAssignments:'Haqiqiy vazifalar faqat maktab backend’i qo‘shilgach ko‘rinadi.',
+    noSchedule:'Haqiqiy jadval hozircha ulanmagan.',noAssignments:'Serverdagi vazifalar hisobingizga bog‘langan sinflar orqali ko‘rinadi.',
   },
   Русский:{
     eyebrow:'ЛИЧНОЕ УЧЕБНОЕ ПРОСТРАНСТВО',title:'Продолжайте обучение',subtitle:'Здесь отображаются только данные аккаунта, подтверждённые сервером.',
-    welcome:'Добро пожаловать',account:'Роль аккаунта',schoolScope:'Организация',scopeNotice:'Членство в школе и школьные данные для этого аккаунта пока не подключены. Расписание, оценки и списки учеников не подменяются выдуманными данными.',
+    welcome:'Добро пожаловать',account:'Роль аккаунта',schoolScope:'Организация',scopeNotice:'Членство в школе и данные классов загружаются с сервера. Если аккаунт не привязан к школе, расписание, оценки и списки учеников не подменяются выдуманными данными.',
     localTest:'Локальный тестовый аккаунт — это не реальный пользователь или школьная запись.',
     available:'Доступно',local:'Локальный образец',planned:'В разработке',open:'Открыть',
-    noSchedule:'Настоящее расписание пока не подключено.',noAssignments:'Реальные задания появятся после подключения школьного backend.',
+    noSchedule:'Настоящее расписание пока не подключено.',noAssignments:'Задания с сервера отображаются для классов, привязанных к вашему аккаунту.',
   },
   English:{
     eyebrow:'PERSONAL LEARNING SPACE',title:'Continue learning',subtitle:'This page shows only account details confirmed by the server.',
-    welcome:'Welcome',account:'Account role',schoolScope:'Organization',scopeNotice:'School membership and school records are not connected to this account yet. Schedules, grades, and student rosters are not fabricated.',
+    welcome:'Welcome',account:'Account role',schoolScope:'Organization',scopeNotice:'School membership and class records load from the server. If the account is not linked to a school, schedules, grades, and student rosters are not fabricated.',
     localTest:'Local test account — not a real user or school record.',
     available:'Available',local:'Local sample',planned:'In development',open:'Open',
-    noSchedule:'A real schedule is not connected yet.',noAssignments:'Real assignments require the school backend, which is not implemented yet.',
+    noSchedule:'A real schedule is not connected yet.',noAssignments:'Server assignments appear for classes linked to your account.',
   },
 };
 const ROLE_HOME_ACTIONS:Record<User['role'],WorkspaceAction[]> = {
  student:[
+  {label:{Uzbek:'Mavzular va 3D',Русский:'Темы и 3D',English:'Topics & 3D'},description:{Uzbek:'AI tayyorlagan mavzular, interaktiv 3D obyekt, faktlar va testlar.',Русский:'Темы от ИИ с интерактивным 3D-объектом, фактами и тестами.',English:'AI topics with an interactive 3D object, facts, and tests.'},path:'/topics',status:'available'},
+  {label:{Uzbek:'Onlayn dars',Русский:'Онлайн-урок',English:'Online lesson'},description:{Uzbek:'Kamera, mikrofon va ekran bilan sinfga ulanib, testni bajaring.',Русский:'Подключитесь к классу с камерой, микрофоном и тестом.',English:'Join the class with camera, mic, and the lesson test.'},path:'/lesson',status:'available'},
+  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Darslarda kim qatnashgani va sizning davomatingizni ko‘ring.',Русский:'Кто пришёл на урок и ваша посещаемость.',English:'Who came to class and your attendance record.'},path:'/attendance',status:'available'},
+  {label:{Uzbek:'Sinflar va topshiriqlar',Русский:'Классы и задания',English:'Classes & assignments'},description:{Uzbek:'Hisobingizga bog‘langan sinflar, ro‘yxat va serverdagi topshiriqlarni ko‘ring.',Русский:'Смотрите классы, списки и задания с сервера для вашего аккаунта.',English:'View classes, rosters, and server assignments linked to your account.'},path:'/classes',status:'available'},
   {label:{Uzbek:'Maktab kutubxonasi',Русский:'Школьная библиотека',English:'School library'},description:{Uzbek:'Maktab darsliklari va ruxsatli materiallar namunalarini ko‘ring.',Русский:'Просматривайте образцы школьных и разрешённых материалов.',English:'Browse school and authorized material samples.'},path:'/library',status:'available'},
-  {label:{Uzbek:'Mustaqil mashq',Русский:'Самостоятельная практика',English:'Independent practice'},description:{Uzbek:'Natijalar hozircha maktab backend’iga yuborilmaydi.',Русский:'Результаты пока не отправляются в школьную систему.',English:'Results are not sent to a school backend yet.'},path:'/practice',status:'local'},
-  {label:{Uzbek:'Profil va xavfsizlik',Русский:'Профиль и безопасность',English:'Profile and security'},description:{Uzbek:'Hisobingizni ko‘ring va Guard tekshiruvini oching.',Русский:'Просмотрите аккаунт и откройте Guard.',English:'Review your account and open Guard checks.'},path:'/profile',status:'available'},
-  {label:{Uzbek:'Uy vazifasini tekshirish',Русский:'Проверить домашнюю работу',English:'Review homework'},description:{Uzbek:'Suratni tanlab, lokal tekshirish oqimini ko‘ring. Natija o‘qituvchiga yuborilmaydi.',Русский:'Выберите фото и проверьте локальный сценарий. Результат не отправляется учителю.',English:'Choose a photo to try the local flow. Results are not sent to a teacher.'},path:'/homework/scan',status:'local'},
+  {label:{Uzbek:'Mustaqil mashq',Русский:'Самостоятельная практика',English:'Independent practice'},description:{Uzbek:'Natijalar serverga saqlanadi.',Русский:'Результаты сохраняются на сервере.',English:'Results are saved on the server.'},path:'/practice',status:'available'},
  ],
  teacher:[
-  {label:{Uzbek:'O‘qituvchi kabineti',Русский:'Кабинет учителя',English:'Teacher workspace'},description:{Uzbek:'Dars va topshiriq qoralamalarini shu brauzerda tayyorlang.',Русский:'Готовьте планы уроков и черновики заданий в этом браузере.',English:'Prepare lesson plans and assignment drafts in this browser.'},path:'/teacher',status:'local'},
-  {label:{Uzbek:'AI mavzu studiyasi',Русский:'AI-студия тем',English:'AI topic studio'},description:{Uzbek:'7-sinf uchun bir xil video, faktlar, 3D va test paketini yarating.',Русский:'Создайте единый пакет видео, фактов, 3D и теста для 7 класса.',English:'Create one shared grade 7 package with video, facts, 3D, and a test.'},path:'/topic-studio',status:'local'},
-  {label:{Uzbek:'Interaktiv doska',Русский:'Интерактивная доска',English:'Interactive board'},description:{Uzbek:'Lokal brauzer namunasini oching.',Русский:'Откройте локальный пример в браузере.',English:'Open the local browser sample.'},path:'/board',status:'local'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'Server va hisob himoyasining mavjud holati.',Русский:'Проверьте доступные серверные механизмы.',English:'Check available server-side protections.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Mavzular va 3D',Русский:'Темы и 3D',English:'Topics & 3D'},description:{Uzbek:'Fan va mavzuni tanlab, AI orqali slaydlar, 3D, faktlar va test yarating.',Русский:'Выберите предмет и тему — ИИ создаст слайды, 3D, факты и тест.',English:'Pick a subject and topic — the AI builds slides, 3D, facts, and a test.'},path:'/topics',status:'available'},
+  {label:{Uzbek:'Onlayn dars',Русский:'Онлайн-урок',English:'Online lesson'},description:{Uzbek:'Mavzu bo‘yicha xona oching, kodni ulashing va individual testlar bering.',Русский:'Создайте комнату по теме, поделитесь кодом и запустите индивидуальные тесты.',English:'Open a topic room, share the code, and run individual AI tests.'},path:'/lesson',status:'available'},
+  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Kim darsga kelganini belgilang.',Русский:'Отметьте, кто пришёл на урок.',English:'Mark who came to the lesson.'},path:'/attendance',status:'available'},
+  {label:{Uzbek:'O‘qituvchi kabineti',Русский:'Кабинет учителя',English:'Teacher workspace'},description:{Uzbek:'Bog‘langan sinflar uchun topshiriq joylang va ishlarni tekshiring.',Русский:'Публикуйте задания и проверяйте работы для привязанных классов.',English:'Publish assignments and review work for linked classes.'},path:'/teacher',status:'available'},
+  {label:{Uzbek:'Interaktiv doska',Русский:'Интерактивная доска',English:'Interactive board'},description:{Uzbek:'Doskada chizing va tushuntiring.',Русский:'Рисуйте и объясняйте на доске.',English:'Draw and explain on the board.'},path:'/board',status:'available'},
  ],
  parent:[
-  {label:{Uzbek:'Oila kabineti',Русский:'Кабинет родителя',English:'Family workspace'},description:{Uzbek:'Farzand bilan xavfsiz bog‘lanish modeli hali yo‘q.',Русский:'Связь с ребёнком и семейные данные пока не реализованы.',English:'Child linking and family data are not implemented yet.'},path:'/parent',status:'planned'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'Joriy hisob va server tekshiruvlari.',Русский:'Проверки текущего аккаунта и сервера.',English:'Checks for this account and server.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Oila kabineti',Русский:'Кабинет родителя',English:'Family workspace'},description:{Uzbek:'Farzandning o‘qish ko‘rinishi.',Русский:'Обзор обучения ребёнка.',English:'Overview of your child’s learning.'},path:'/parent',status:'available'},
+  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Farzandning darslarga qatnashishi.',Русский:'Посещение уроков ребёнком.',English:'Your child’s lesson attendance.'},path:'/attendance',status:'available'},
+  {label:{Uzbek:'Maktab kutubxonasi',Русский:'Школьная библиотека',English:'School library'},description:{Uzbek:'Birgalikda o‘qish uchun materiallar.',Русский:'Материалы для совместного чтения.',English:'Materials to read together.'},path:'/library',status:'available'},
  ],
  school_director:[
-  {label:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},description:{Uzbek:'Hozircha faqat lokal ko‘rsatkichlar bor; sinf va o‘quvchilar API’i mavjud emas.',Русский:'Пока доступен только локальный обзор; API классов и учеников нет.',English:'Only a local overview is available; class and student APIs do not exist yet.'},path:'/school',status:'local'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'TOTP va ma’muriy himoya hali tayyor emas.',Русский:'TOTP и усиленная защита администратора ещё не реализованы.',English:'TOTP and stronger administrator controls are not implemented yet.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},description:{Uzbek:'Serverdagi maktab, sinflar, ro‘yxat va topshiriqlarni boshqaring.',Русский:'Управляйте школой, классами, списками и заданиями на сервере.',English:'Manage school records, classes, rosters, and assignments on the server.'},path:'/school',status:'available'},
+  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Sinflar bo‘yicha davomatni kuzating.',Русский:'Отслеживайте посещаемость классов.',English:'Monitor attendance across classes.'},path:'/attendance',status:'available'},
  ],
  school_admin:[
-  {label:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},description:{Uzbek:'Hozircha faqat lokal ko‘rsatkichlar bor; sinf va o‘quvchilar API’i mavjud emas.',Русский:'Пока доступен только локальный обзор; API классов и учеников нет.',English:'Only a local overview is available; class and student APIs do not exist yet.'},path:'/school',status:'local'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'Hisob uchun mavjud himoya holati.',Русский:'Состояние доступных защит аккаунта.',English:'Current account protection status.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},description:{Uzbek:'Serverdagi maktab, sinflar, ro‘yxat va topshiriqlarni boshqaring.',Русский:'Управляйте школой, классами, списками и заданиями на сервере.',English:'Manage school records, classes, rosters, and assignments on the server.'},path:'/school',status:'available'},
+  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Sinflar bo‘yicha davomatni kuzating.',Русский:'Отслеживайте посещаемость классов.',English:'Monitor attendance across classes.'},path:'/attendance',status:'available'},
  ],
  education_admin:[
-  {label:{Uzbek:'Ta’lim boshqaruvi',Русский:'Управление образованием',English:'Education administration'},description:{Uzbek:'Hududiy boshqaruv lokal; hududga biriktirilgan maktab ma’lumotlari yo‘q.',Русский:'Региональный интерфейс локальный; данные школ по региону не подключены.',English:'Regional administration is local; region-scoped school records are unavailable.'},path:'/admin',status:'local'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'Serverdagi mavjud himoya tekshiruvlari.',Русский:'Доступные проверки механизмов защиты.',English:'Available security checks.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Ta’lim boshqaruvi',Русский:'Управление образованием',English:'Education administration'},description:{Uzbek:'Serverdagi maktab yozuvlarini ko‘ring va yarating.',Русский:'Просматривайте и создавайте школы на сервере.',English:'Inspect and create real school records on the server.'},path:'/admin',status:'available'},
  ],
  ministry_admin:[
-  {label:{Uzbek:'Markaziy boshqaruv',Русский:'Центральное управление',English:'Central administration'},description:{Uzbek:'Milliy ko‘rinish lokal; rasmiy integratsiya va tashkilotlar API’i mavjud emas.',Русский:'Национальный обзор локальный; официальные интеграции и API организаций недоступны.',English:'The national view is local; official integrations and organization APIs are unavailable.'},path:'/admin',status:'local'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'Serverdagi mavjud himoya tekshiruvlari.',Русский:'Доступные проверки механизмов защиты.',English:'Available security checks.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Markaziy boshqaruv',Русский:'Центральное управление',English:'Central administration'},description:{Uzbek:'Serverdagi maktab yozuvlarini ko‘ring va yarating.',Русский:'Просматривайте и создавайте школы на сервере.',English:'Inspect and create real school records on the server.'},path:'/admin',status:'available'},
  ],
  platform_superadmin:[
-  {label:{Uzbek:'Platforma boshqaruvi',Русский:'Управление платформой',English:'Platform administration'},description:{Uzbek:'Sozlamalar faqat lokal ko‘rinishda. Haqiqiy maktab va hisoblarni boshqarish API’i mavjud emas.',Русский:'Настройки показаны только локально. API управления школами и аккаунтами нет.',English:'Settings are shown locally only. Real school and account management APIs are unavailable.'},path:'/admin',status:'local'},
-  {label:{Uzbek:'Xavfsizlik tekshiruvi',Русский:'Проверка безопасности',English:'Security checks'},description:{Uzbek:'Serverdagi mavjud himoya tekshiruvlari.',Русский:'Доступные проверки механизмов защиты.',English:'Available security checks.'},path:'/guard',status:'available'},
+  {label:{Uzbek:'Platforma boshqaruvi',Русский:'Управление платформой',English:'Platform administration'},description:{Uzbek:'Serverdagi tashkilotlarni ko‘ring va yarating.',Русский:'Просматривайте и создавайте организации на сервере.',English:'Inspect and create real organizations on the server.'},path:'/admin',status:'available'},
  ],
 };
-function RoleOverviewPage({user,language,onOpen}:{user:User;language:Lang;onOpen:(path:string)=>void}){
+function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:SchoolData;language:Lang;onOpen:(path:string)=>void}){
  const copy=ROLE_HOME_COPY[language];
  const statusLabel={available:copy.available,local:copy.local,planned:copy.planned};
  const isLocalTest=user.login.startsWith('local_test_');
+ const primaryMembership=school.memberships[0];
  const platformRole=['education_admin','ministry_admin','platform_superadmin'].includes(user.role);
  const schoolRole=['school_director','school_admin'].includes(user.role);
  const teacherRole=user.role==='teacher';
@@ -302,11 +301,11 @@ function RoleOverviewPage({user,language,onOpen}:{user:User;language:Lang;onOpen
      ?copy.subtitle
      :language==='Uzbek'?'Oila kabineti va maktab o‘quv materiallari.':language==='Русский'?'Семейный кабинет и школьные материалы.':'Family workspace and school learning resources.';
  const sectionCards=platformRole
-  ?[{title:{Uzbek:'Platforma boshqaruvi',Русский:'Управление платформой',English:'Platform administration'},detail:{Uzbek:'Bu rol dars va test ishlash uchun emas. Tashkilotlarni boshqarish API’i hali ulanmagan.',Русский:'Эта роль не предназначена для уроков и тестов. API управления организациями ещё не подключён.',English:'This role is for platform operations, not lessons or tests. Organization management APIs are not connected yet.'}},
-    {title:{Uzbek:'Tizim xavfsizligi',Русский:'Безопасность системы',English:'System security'},detail:{Uzbek:'EduVerse Guard orqali server va hisob himoyasini tekshiring.',Русский:'Проверяйте сервер и защиту аккаунта через EduVerse Guard.',English:'Review server and account protections with EduVerse Guard.'}}]
+  ?[{title:{Uzbek:'Platforma boshqaruvi',Русский:'Управление платформой',English:'Platform administration'},detail:{Uzbek:'Bu rol dars va test ishlash uchun emas. Haqiqiy maktab yozuvlari serverda mavjud; qolgan sozlamalar lokal namuna.',Русский:'Эта роль не предназначена для уроков и тестов. Реальные школы доступны на сервере; остальные настройки пока локальны.',English:'This role is for platform operations, not lessons or tests. Real school records are available on the server; other settings stay local.'}},
+    {title:{Uzbek:'Davomat va darslar',Русский:'Давомат и уроки',English:'Attendance and lessons'},detail:{Uzbek:'Onlayn darslar, individual testlar va davomat platforma orqali boshqariladi.',Русский:'Онлайн-уроки, индивидуальные тесты и давомат управляются платформой.',English:'Online lessons, individual tests, and attendance are managed by the platform.'}}]
   :schoolRole
-   ?[{title:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},detail:{Uzbek:'Bu rol o‘quv materiallarini ko‘rish uchun emas. Sinf, o‘quvchi va o‘qituvchilarni boshqarish API’i hali mavjud emas.',Русский:'Эта роль предназначена не для учебных материалов. API классов, учеников и учителей ещё не реализован.',English:'This role is for school operations, not learning materials. Class, student, and teacher management APIs are not available yet.'}},
-     {title:{Uzbek:'Maktabga biriktirish',Русский:'Привязка к школе',English:'School assignment'},detail:{Uzbek:'Hisobga maktab tashkiloti biriktirilmagan. Haqiqiy maktab ma’lumotlari ko‘rsatilmaydi.',Русский:'К аккаунту не привязана школа. Реальные школьные данные не отображаются.',English:'No school organization is assigned to this account. Real school records are not shown.'}}]
+   ?[{title:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},detail:{Uzbek:'Bu rol o‘quv materiallarini ko‘rish uchun emas. Sinflar, ro‘yxat va topshiriqlar maktab API’sidan olinadi.',Русский:'Эта роль предназначена не для учебных материалов. Классы, списки и задания загружаются из школьного API.',English:'This role is for school operations, not learning materials. Classes, rosters, and assignments are read from the school API.'}},
+     {title:{Uzbek:'Maktabga biriktirish',Русский:'Привязка к школе',English:'School assignment'},detail:{Uzbek:'Maktab doirasi hisob a’zoligidan yuklanadi. A’zolik bo‘lmasa, hech qanday yozuv uydirib ko‘rsatilmaydi.',Русский:'Доступ к школе определяется членством аккаунта. Без членства записи не подменяются выдуманными данными.',English:'School scope loads from your account membership. When no membership exists, no records are fabricated.'}}]
    :teacherRole
     ?[{title:{Uzbek:'Dars tayyorlash',Русский:'Подготовка урока',English:'Lesson preparation'},detail:{Uzbek:'Dars rejasi va topshiriq qoralamalarini o‘qituvchi kabinetida tayyorlang. Ular hozircha faqat shu brauzerda saqlanadi.',Русский:'Готовьте планы и черновики заданий в кабинете учителя. Пока они сохраняются только в этом браузере.',English:'Draft lesson plans and assignments in the teacher workspace. They are currently stored only in this browser.'}},
      {title:{Uzbek:'Jonli sinf',Русский:'Онлайн-класс',English:'Live classroom'},detail:{Uzbek:'Dars xonasi hozircha sinov rejimida: haqiqiy o‘quvchilar ulanmagan.',Русский:'Учебная комната пока в тестовом режиме: реальные ученики не подключены.',English:'The lesson room is currently a simulation; no real students are connected.'}}]
@@ -323,9 +322,10 @@ function RoleOverviewPage({user,language,onOpen}:{user:User;language:Lang;onOpen
   <div className="role-identity">
    <span className="role-avatar">{user.username.slice(0,1).toLocaleUpperCase()}</span>
    <span><small>{copy.account}</small><b>{getRoleLabel(language,user.role)}</b></span>
-   <span className="role-organization"><small>{copy.schoolScope}</small><b>—</b></span>
+   <span className="role-organization"><small>{copy.schoolScope}</small><b>{primaryMembership?.schoolName??'—'}</b></span>
   </div>
   <div className="notice role-scope-notice"><ShieldCheck size={17}/><span>{copy.scopeNotice}</span></div>
+  <SchoolScopeSummary school={school} language={language}/>
   <div className="role-overview-grid">
    {ROLE_HOME_ACTIONS[user.role].map((action)=>(
     <article className={`role-action role-action-${action.status}`} key={action.path}>
@@ -339,169 +339,6 @@ function RoleOverviewPage({user,language,onOpen}:{user:User;language:Lang;onOpen
   <div className="role-empty-grid">{sectionCards.map((card)=><Panel key={card.title.English}><div className="row"><Info size={17}/><h2>{card.title[language]}</h2></div><p className="muted">{card.detail[language]}</p></Panel>)}</div>
  </section>
 }
-const GUARD_COPY:Record<Lang,{
-  eyebrow:string;title:string;subtitle:string;run:string;running:string;lastRun:string;checksTitle:string;
-  pass:string;warning:string;missing:string;unavailable:string;aiTitle:string;aiText:string;aiButton:string;
-  aiRunning:string;privacy:string;error:string;aiNotConfigured:string;aiUnavailable:string;aiFailed:string;
-  checkNames:Record<GuardCheckId,string>;checkDetails:Record<GuardCheckId,Record<GuardStatus,string>>;
-}>={
-  Uzbek:{
-    eyebrow:'HISOB XAVFSIZLIGI',title:'EduVerse Guard',subtitle:'Mahalliy server va hisob himoyasining mavjud holatini tekshiring. Bu tekshiruv ekspluatatsiya yoki kirib borish sinovi emas.',
-    run:'Qayta tekshirish',running:'Tekshirilmoqda…',lastRun:'Oxirgi tekshiruv',checksTitle:'Tekshiruv natijalari',
-    pass:'Ishlayapti',warning:'Diqqat kerak',missing:'Hali mavjud emas',unavailable:'Tekshirib bo‘lmadi',
-    aiTitle:'Mahalliy AI izohi',aiText:'Ixtiyoriy Ollama modeli faqat shu hisobotni izohlaydi. Kod, parollar va shaxsiy ma’lumotlar yuborilmaydi.',
-    aiButton:'AI bilan izohlash',aiRunning:'Mahalliy AI javobini kuting…',
-    privacy:'AI faqat 127.0.0.1 dagi Ollama xizmatiga ulanadi. Model EDUVERSE_LOCAL_AI_MODEL orqali server muhitida tanlanadi.',
-    error:'Tekshiruv serveriga ulanib bo‘lmadi. Mahalliy API ishga tushganini tekshiring.',
-    aiNotConfigured:'AI sozlanmagan. API serveri uchun EDUVERSE_LOCAL_AI_MODEL ni o‘rnatilgan Ollama modelining nomiga belgilang.',
-    aiUnavailable:'Ollama xizmatiga 127.0.0.1:11434 orqali ulanib bo‘lmadi. Ollama’ni ishga tushiring va model nomini tekshiring.',
-    aiFailed:'Mahalliy AI tahlilni bajara olmadi. Server jurnali va Ollama modelini tekshiring.',
-    checkNames:{
-      api:'EDUVERSE API',database:'PostgreSQL bilan aloqa',session:'Joriy hisob sessiyasi',
-      password_hashing:'Parol xeshlash sinovi',cookie:'Sessiya cookie sozlamalari',
-      login_rate_limit:'Kirish urinishlari limiti',multi_factor:'Ko‘p bosqichli tasdiqlash',
-      password_recovery:'Parolni tiklash',school_data:'Maktab ma’lumotlari va rollar',
-    },
-    checkDetails:{
-      api:{pass:'API so‘rovga javob berdi.',warning:'API holati noaniq.',missing:'API mavjud emas.',unavailable:'API javobi tasdiqlanmadi.'},
-      database:{pass:'Ma’lumotlar bazasi so‘rovi bajarildi.',warning:'Ma’lumotlar bazasi holati noaniq.',missing:'Ma’lumotlar bazasi ulanmagan.',unavailable:'Ma’lumotlar bazasi tekshiruvi bajarilmadi.'},
-      session:{pass:'Server joriy sessiyani tasdiqladi.',warning:'Sessiya holatini tekshiring.',missing:'Faol sessiya topilmadi.',unavailable:'Sessiya tekshiruvi bajarilmadi.'},
-      password_hashing:{pass:'Tasodifiy vaqtinchalik parol xeshi tekshirildi; hech narsa bazaga yozilmadi.',warning:'Xesh konfiguratsiyasini tekshiring.',missing:'Xeshlash yoqilmagan.',unavailable:'Xesh sinovi muvaffaqiyatsiz tugadi.'},
-      cookie:{pass:'HttpOnly, SameSite va production Secure talablari sozlangan.',warning:'Mahalliy HTTP Secure cookieni yoqmaydi; production HTTPS’da Secure yoqiladi.',missing:'Xavfsiz cookie sozlamalari yo‘q.',unavailable:'Cookie sozlamalarini tasdiqlab bo‘lmadi.'},
-      login_rate_limit:{pass:'Kirish urinishlari cheklanadi.',warning:'Limit faqat bitta API jarayonida ishlaydi; ko‘p serverli o‘rnatish uchun umumiy saqlash kerak.',missing:'Kirish limiti topilmadi.',unavailable:'Limit holatini aniqlab bo‘lmadi.'},
-      multi_factor:{pass:'Ikki bosqichli tasdiqlash ishlayapti.',warning:'Ikki bosqichli tasdiqlashni tekshiring.',missing:'TOTP va zaxira kodlari hali amalga oshirilmagan.',unavailable:'2FA holati tekshirilmagan.'},
-      password_recovery:{pass:'Tasdiqlangan tiklash oqimi sozlangan.',warning:'Tiklash xizmati to‘liq emas.',missing:'Email orqali tiklash xizmati ulanmagan.',unavailable:'Tiklash holatini tekshirib bo‘lmadi.'},
-      school_data:{pass:'Maktab API va rollar nazorati ishlayapti.',warning:'Maktab API’lari qisman mavjud.',missing:'Maktab tashkilotlari va maktab ma’lumotlari API’si hali yo‘q.',unavailable:'Maktab API holati tekshirilmagan.'},
-    },
-  },
-  Русский:{
-    eyebrow:'ЗАЩИТА АККАУНТА',title:'EduVerse Guard',subtitle:'Проверьте доступность локальных служб и текущее состояние защиты аккаунта. Это не тест на проникновение и не эксплуатация уязвимостей.',
-    run:'Проверить ещё раз',running:'Проверяем…',lastRun:'Последняя проверка',checksTitle:'Результаты проверки',
-    pass:'Работает',warning:'Нужно внимание',missing:'Пока не реализовано',unavailable:'Не удалось проверить',
-    aiTitle:'Пояснение локального AI',aiText:'Необязательная модель Ollama поясняет только этот отчёт. Код, пароли и личные данные не отправляются.',
-    aiButton:'Пояснить с помощью AI',aiRunning:'Ожидаем ответ локальной модели…',
-    privacy:'AI подключается только к Ollama на 127.0.0.1. Модель задаётся на сервере через EDUVERSE_LOCAL_AI_MODEL.',
-    error:'Не удалось подключиться к сервису проверок. Убедитесь, что локальный API запущен.',
-    aiNotConfigured:'AI не настроен. Укажите EDUVERSE_LOCAL_AI_MODEL с именем уже установленной модели Ollama для процесса API.',
-    aiUnavailable:'Ollama не отвечает на 127.0.0.1:11434. Запустите Ollama и проверьте имя модели.',
-    aiFailed:'Локальный AI не смог подготовить пояснение. Проверьте журнал API и модель Ollama.',
-    checkNames:{
-      api:'API EDUVERSE',database:'Подключение PostgreSQL',session:'Текущая сессия аккаунта',
-      password_hashing:'Проверка хеширования паролей',cookie:'Настройки cookie сессии',
-      login_rate_limit:'Ограничение попыток входа',multi_factor:'Многофакторная проверка',
-      password_recovery:'Восстановление пароля',school_data:'Школьные данные и роли',
-    },
-    checkDetails:{
-      api:{pass:'API ответил на запрос.',warning:'Состояние API требует проверки.',missing:'API недоступен.',unavailable:'Ответ API не подтверждён.'},
-      database:{pass:'Запрос к базе данных выполнен.',warning:'Состояние базы требует проверки.',missing:'База данных не подключена.',unavailable:'Проверить базу данных не удалось.'},
-      session:{pass:'Сервер подтвердил текущую сессию.',warning:'Проверьте статус сессии.',missing:'Активная сессия не найдена.',unavailable:'Не удалось проверить сессию.'},
-      password_hashing:{pass:'Проверен хеш временного случайного пароля; в базу ничего не записывалось.',warning:'Проверьте настройки хеширования.',missing:'Хеширование не включено.',unavailable:'Проверка хеширования завершилась ошибкой.'},
-      cookie:{pass:'Настроены HttpOnly, SameSite и Secure в production.',warning:'На локальном HTTP Secure-cookie отключена; в production Secure включается.',missing:'Безопасные параметры cookie не заданы.',unavailable:'Параметры cookie не подтверждены.'},
-      login_rate_limit:{pass:'Частота входа ограничивается.',warning:'Лимит действует только в одном процессе API; нескольким серверам нужно общее хранилище.',missing:'Ограничение входа не найдено.',unavailable:'Не удалось определить состояние лимита.'},
-      multi_factor:{pass:'Двухфакторная проверка работает.',warning:'Проверьте двухфакторную проверку.',missing:'TOTP и резервные коды пока не реализованы.',unavailable:'Статус 2FA не проверен.'},
-      password_recovery:{pass:'Безопасное восстановление настроено.',warning:'Восстановление настроено не полностью.',missing:'Восстановление через подтверждённую почту не подключено.',unavailable:'Не удалось проверить восстановление.'},
-      school_data:{pass:'Школьные API и проверка ролей работают.',warning:'Школьные API реализованы частично.',missing:'API школ и организаций пока нет.',unavailable:'Статус школьных API не проверен.'},
-    },
-  },
-  English:{
-    eyebrow:'ACCOUNT SECURITY',title:'EduVerse Guard',subtitle:'Check local services and the current state of account protection. This is not a penetration test or vulnerability exploitation.',
-    run:'Run checks again',running:'Checking…',lastRun:'Last check',checksTitle:'Check results',
-    pass:'Working',warning:'Needs attention',missing:'Not implemented',unavailable:'Could not check',
-    aiTitle:'Local AI explanation',aiText:'An optional Ollama model explains this report only. No source code, passwords, or personal data are sent.',
-    aiButton:'Explain with AI',aiRunning:'Waiting for the local model…',
-    privacy:'AI connects only to Ollama on 127.0.0.1. Set the model on the API server with EDUVERSE_LOCAL_AI_MODEL.',
-    error:'Could not reach the checker service. Make sure the local API is running.',
-    aiNotConfigured:'AI is not configured. Set EDUVERSE_LOCAL_AI_MODEL to a model already installed in Ollama for the API process.',
-    aiUnavailable:'Ollama did not respond at 127.0.0.1:11434. Start Ollama and verify the model name.',
-    aiFailed:'The local AI could not explain the report. Check the API log and Ollama model.',
-    checkNames:{
-      api:'EDUVERSE API',database:'PostgreSQL connection',session:'Current account session',
-      password_hashing:'Password hashing check',cookie:'Session cookie settings',
-      login_rate_limit:'Sign-in attempt limit',multi_factor:'Multi-factor authentication',
-      password_recovery:'Password recovery',school_data:'School data and roles',
-    },
-    checkDetails:{
-      api:{pass:'The API responded to the check.',warning:'The API status needs review.',missing:'The API is unavailable.',unavailable:'The API response was not confirmed.'},
-      database:{pass:'The database query succeeded.',warning:'The database status needs review.',missing:'The database is not connected.',unavailable:'The database check failed.'},
-      session:{pass:'The server confirmed the current session.',warning:'Review the session status.',missing:'No active session was found.',unavailable:'The session check failed.'},
-      password_hashing:{pass:'A temporary random password hash was verified; nothing was written to the database.',warning:'Review the password hash configuration.',missing:'Password hashing is not enabled.',unavailable:'The hash check failed.'},
-      cookie:{pass:'HttpOnly, SameSite, and production Secure settings are configured.',warning:'Local HTTP disables Secure cookies; Secure is enabled for production.',missing:'Safe cookie settings are missing.',unavailable:'Cookie settings could not be confirmed.'},
-      login_rate_limit:{pass:'Sign-in attempts are rate limited.',warning:'The limit is per API process; multi-server deployments need shared storage.',missing:'No sign-in rate limit was found.',unavailable:'The rate-limit status could not be determined.'},
-      multi_factor:{pass:'Multi-factor authentication is working.',warning:'Review multi-factor authentication.',missing:'TOTP and backup codes are not implemented yet.',unavailable:'The 2FA status was not checked.'},
-      password_recovery:{pass:'Secure recovery is configured.',warning:'Recovery is only partially configured.',missing:'Verified-email recovery is not connected.',unavailable:'Recovery could not be checked.'},
-      school_data:{pass:'School APIs and role checks are working.',warning:'School APIs are only partially available.',missing:'School and organization APIs are not implemented yet.',unavailable:'The school API status was not checked.'},
-    },
-  },
-};
-function isRecord(value:unknown):value is Record<string,unknown>{return typeof value==='object'&&value!==null&&!Array.isArray(value)}
-function isGuardReport(value:unknown):value is GuardReport{
- if(!isRecord(value)||typeof value.generatedAt!=='string'||!Array.isArray(value.checks))return false;
- const counts=value.counts;
- if(!isRecord(counts))return false;
- const validIds:GuardCheckId[]=['api','database','session','password_hashing','cookie','login_rate_limit','multi_factor','password_recovery','school_data'];
- const validStatuses:GuardStatus[]=['pass','warning','missing','unavailable'];
- const validChecks=value.checks.every((check:unknown)=>isRecord(check)&&validIds.some(id=>id===check.id)&&validStatuses.some(status=>status===check.status));
- const validCounts=validStatuses.every(status=>typeof counts[status]==='number'&&Number.isInteger(counts[status])&&counts[status]>=0);
- return validChecks&&validCounts;
-}
-function GuardPage({language}:{language:Lang}){
- const copy=GUARD_COPY[language];
- const [report,setReport]=useState<GuardReport|null>(null);
- const [loading,setLoading]=useState(false);
- const [error,setError]=useState('');
- const [analysis,setAnalysis]=useState('');
- const [aiLoading,setAiLoading]=useState(false);
- const [aiError,setAiError]=useState('');
- async function runChecks(){
-  setLoading(true);setError('');setAnalysis('');setAiError('');
-  try{
-   const response=await fetch('/api/guard/check',{credentials:'include',headers:{Accept:'application/json'}});
-   const payload:unknown=await response.json();
-   if(!response.ok||!isGuardReport(payload))throw new Error(copy.error);
-   setReport(payload);
-  }catch{setError(copy.error)}
-  finally{setLoading(false)}
- }
- async function explainReport(){
-  if(!report)return;
-  setAiLoading(true);setAiError('');setAnalysis('');
-  try{
-   const response=await fetch('/api/guard/analyze',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({language})});
-   const payload:unknown=await response.json();
-   if(!response.ok||!payload||typeof payload!=='object') {
-    const code=payload&&typeof payload==='object'&&'code'in payload?String(payload.code):'';
-    throw new Error(code==='LOCAL_AI_NOT_CONFIGURED'?copy.aiNotConfigured:code==='LOCAL_AI_UNAVAILABLE'?copy.aiUnavailable:copy.aiFailed);
-   }
-   const text='analysis'in payload?payload.analysis:undefined;
-   if(typeof text!=='string'||!text.trim())throw new Error(copy.aiFailed);
-   setAnalysis(text);
-  }catch(error){setAiError(error instanceof Error?error.message:copy.aiFailed)}
-  finally{setAiLoading(false)}
- }
- useEffect(()=>{void runChecks()},[]);
- const statusLabel:Record<GuardStatus,string>={pass:copy.pass,warning:copy.warning,missing:copy.missing,unavailable:copy.unavailable};
- return <div className="guard-page">
-  <PageHeading eyebrow={copy.eyebrow} title={copy.title} subtitle={copy.subtitle}>
-   <button className="btn primary" onClick={()=>void runChecks()} disabled={loading}><RotateCcw size={15}/>{loading?copy.running:copy.run}</button>
-  </PageHeading>
-  {error&&<div className="notice guard-error" role="alert"><Info size={16}/><span>{error}</span></div>}
-  <Panel className="guard-results">
-   <div className="section-head"><h2>{copy.checksTitle}</h2>{report&&<span className="muted">{copy.lastRun}: {new Date(report.generatedAt).toLocaleString(language==='Русский'?'ru-RU':language==='Uzbek'?'uz-UZ':'en-US')}</span>}</div>
-   {loading&&!report?<p className="muted" role="status">{copy.running}</p>:report?.checks.map(check=><article className={`guard-check guard-${check.status}`} key={check.id}>
-    <span className="guard-check-icon">{check.status==='pass'?<CheckCircle2 size={18}/>:check.status==='warning'?<Info size={18}/>:<CircleHelp size={18}/>}</span>
-    <div className="guard-check-copy"><b>{copy.checkNames[check.id]}</b><span>{copy.checkDetails[check.id][check.status]}</span></div>
-    <span className="guard-status">{statusLabel[check.status]}</span>
-   </article>)}
-  </Panel>
-  <Panel className="guard-ai-panel">
-   <div className="guard-ai-head"><span className="guard-ai-icon"><ShieldCheck size={21}/></span><div><h2>{copy.aiTitle}</h2><p>{copy.aiText}</p></div></div>
-   <button className="btn" onClick={()=>void explainReport()} disabled={!report||aiLoading||loading}>{aiLoading?copy.aiRunning:copy.aiButton}</button>
-   <p className="guard-privacy">{copy.privacy}</p>
-   {aiError&&<div className="notice guard-error" role="alert"><Info size={16}/><span>{aiError}</span></div>}
-   {analysis&&<div className="guard-analysis" role="status">{analysis}</div>}
-  </Panel>
- </div>
-}
 function PageHeading({eyebrow,title,subtitle,children}:{eyebrow:string;title:string;subtitle:string;children?:ReactNode}){return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p className="page-subtitle">{subtitle}</p></div>{children&&<div className="row">{children}</div>}</div>}
 function Panel({children,className='',style}:{children:ReactNode;className?:string;style?:CSSProperties}){return <section className={`panel ${className}`} style={style}>{children}</section>}
 function Metric({label,value,note,icon:Icon}:{label:string;value:string;note:string;icon:typeof Home}){return <Panel><div className="metric"><div><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></div><div className="metric-icon"><Icon/></div></div></Panel>}
@@ -509,7 +346,7 @@ function Dashboard({role,user,assignments,onOpen,progress}:{role:Role;user:{name
  const openAssignments=assignments.filter(a=>a.status!=='Checked');const reviewCount=assignments.filter(a=>a.status==='Submitted'||a.status==='Under Review').length;const progressPct=Math.min(100,Math.round(Object.values(progress).length?Object.values(progress).reduce((a,b)=>a+b,0)/Object.values(progress).length*8:32));
  const headlines:Record<Role,string>={Student:'Your learning, at a steady pace.',Teacher:'A clear view of today’s teaching.',Parent:'A thoughtful view of learning at home.','School director':'School activity, in one view.','Central administrator':'Workspace health and content access.'};
  const alert=<div className="notice" style={{marginBottom:17}}><ShieldCheck/><span><b>Demonstration workspace</b> — records are fictional and saved only in this browser. No student or school data is transmitted.</span></div>;
- if(role==='Student')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title={`Good morning, ${user.name.split(' ')[0]}`} subtitle={headlines[role]}><button className="btn" onClick={()=>onOpen('/library')}><Library/>Browse library</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Open assignments" value={`${openAssignments.length}`} note="Fictional class records" icon={ClipboardCheck}/><Metric label="Reading progress" value={`${progressPct}%`} note="Across sample books" icon={BookOpen}/><Metric label="Practice answered" value={`${Object.keys(readLocal('practice-checked',{})).length}`} note="Saved on this device" icon={CheckCircle2}/><Metric label="Next session" value="10:30" note="Mathematics · demo" icon={Clock3}/></div><div className="grid grid-2"><Panel><div className="section-head"><h2>My next assignments</h2><span className="tag blue">Grade 7B</span></div>{openAssignments.slice(0,3).map(a=><div className="list-row" key={a.id}><div><div className="list-title">{a.title}</div><div className="list-meta">{a.subject} · {a.dueDate}</div></div><button className="btn small" onClick={()=>onOpen('/practice')}>Continue</button></div>)}<button className="btn small" style={{marginTop:12}} onClick={()=>onOpen('/practice')}>Open practice</button></Panel><Panel><div className="section-head"><h2>Continue reading</h2><span className="tag">Saved locally</span></div><div className="row" style={{alignItems:'flex-start'}}><div className="book-cover"><span className="cover-grade">Grade 7 · sample</span><span className="cover-title">Mathematics</span></div><div style={{flex:1}}><h3>Fractions and ratios</h3><p className="muted">Original sample · Uzbek source</p><div className="progress-track"><div className="progress-fill" style={{width:`${progressPct}%`}}/></div><button className="btn small primary" style={{marginTop:11}} onClick={()=>onOpen('/read/math')}>Resume reading <ArrowRight/></button></div></div></Panel></div><Panel style={{marginTop:16}}><div className="section-head"><h2>Try next</h2><span className="muted">Choose a learning tool</span></div><div className="grid grid-3"><QuickAction icon={ClipboardCheck} title="Practice a concept" detail="Short questions with explanations" onClick={()=>onOpen('/practice')}/><QuickAction icon={Presentation} title="Work on the board" detail="Saved sketches and diagrams" onClick={()=>onOpen('/board')}/><QuickAction icon={MessageSquare} title="Ask for a hint" detail="Prewritten demonstration dialogue" onClick={()=>onOpen('/assistant')}/></div></Panel></>;
+ if(role==='Student')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title={`Good morning, ${user.name.split(' ')[0]}`} subtitle={headlines[role]}><button className="btn" onClick={()=>onOpen('/library')}><Library/>Browse library</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Open assignments" value={`${openAssignments.length}`} note="Fictional class records" icon={ClipboardCheck}/><Metric label="Reading progress" value={`${progressPct}%`} note="Across sample books" icon={BookOpen}/><Metric label="Practice answered" value={`${Object.keys(readLocal('practice-checked',{})).length}`} note="Saved on this device" icon={CheckCircle2}/><Metric label="Next session" value="10:30" note="Mathematics · demo" icon={Clock3}/></div><div className="grid grid-2"><Panel><div className="section-head"><h2>My next assignments</h2><span className="tag blue">Grade 7B</span></div>{openAssignments.slice(0,3).map(a=><div className="list-row" key={a.id}><div><div className="list-title">{a.title}</div><div className="list-meta">{a.subject} · {a.dueDate}</div></div><button className="btn small" onClick={()=>onOpen('/practice')}>Continue</button></div>)}<button className="btn small" style={{marginTop:12}} onClick={()=>onOpen('/practice')}>Open practice</button></Panel><Panel><div className="section-head"><h2>Continue reading</h2><span className="tag">Saved locally</span></div><div className="row" style={{alignItems:'flex-start'}}><div className="book-cover"><span className="cover-grade">Grade 7 · sample</span><span className="cover-title">Mathematics</span></div><div style={{flex:1}}><h3>Fractions and ratios</h3><p className="muted">Original sample · Uzbek source</p><div className="progress-track"><div className="progress-fill" style={{width:`${progressPct}%`}}/></div><button className="btn small primary" style={{marginTop:11}} onClick={()=>onOpen('/read/math')}>Resume reading <ArrowRight/></button></div></div></Panel></div><Panel style={{marginTop:16}}><div className="section-head"><h2>Try next</h2><span className="muted">Choose a learning tool</span></div><div className="grid grid-3"><QuickAction icon={ClipboardCheck} title="Practice a concept" detail="Short questions with explanations" onClick={()=>onOpen('/practice')}/><QuickAction icon={Presentation} title="Work on the board" detail="Saved sketches and diagrams" onClick={()=>onOpen('/board')}/><QuickAction icon={CircleHelp} title="Ask for a hint" detail="Prewritten demonstration dialogue" onClick={()=>onOpen('/assistant')}/></div></Panel></>;
  if(role==='Teacher')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title={`Good morning, ${user.name.split(' ')[0]}`} subtitle={headlines[role]}><button className="btn primary" onClick={()=>onOpen('/teacher')}><GraduationCap/>Open teacher workspace</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Classes today" value="3" note="Grade 7A, 7B, 8A · sample" icon={Users}/><Metric label="Assignments to review" value={`${reviewCount||3}`} note="Fictional submissions" icon={ClipboardCheck}/><Metric label="Class completion" value="71%" note="Grade 7B · sample" icon={Activity}/><Metric label="Next lesson" value="10:30" note="Ratios · 24 min" icon={Clock3}/></div><div className="grid grid-2"><Panel><div className="section-head"><h2>Teaching schedule</h2><span className="tag blue">Today</span></div>{[['10:30','Ratios in the classroom','Grade 7B'],['12:10','Fractions review','Grade 7A'],['14:00','Independent practice','Grade 8A']].map(r=><div className="list-row" key={r[0]}><div><div className="list-title">{r[1]}</div><div className="list-meta">{r[2]} · fictional schedule</div></div><button className="btn small" onClick={()=>onOpen('/lesson')}>{r[0]} · open</button></div>)}</Panel><Panel><h2>Review queue</h2><p className="muted">Sample learner work waits for local feedback; no real learners are connected.</p><div className="metric-value">{reviewCount||3}<span className="muted"> sample items</span></div><button className="btn primary" style={{marginTop:12}} onClick={()=>onOpen('/teacher')}>Review submissions</button><button className="btn" style={{margin:'12px 0 0 8px'}} onClick={()=>onOpen('/board')}>Present on board</button></Panel></div></>;
  if(role==='Parent')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title="Family learning at a glance" subtitle={headlines[role]}><button className="btn" onClick={()=>onOpen('/parent')}><Users/>Open family view</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Weekly progress" value="74%" note="Fictional learning summary" icon={Activity}/><Metric label="Attendance" value="94%" note="Term sample · not a school record" icon={CheckCircle2}/><Metric label="Needs attention" value={`${openAssignments.length}`} note="Open assignments" icon={ClipboardCheck}/><Metric label="Next school day" value="08:30" note="Fictional schedule" icon={Clock3}/></div><div className="grid grid-2"><Panel><h2>Family follow-up</h2>{openAssignments.slice(0,2).map(a=><div className="list-row" key={a.id}><div><div className="list-title">{a.title}</div><div className="list-meta">{a.subject} · {a.dueDate}</div></div><span className="tag gold">{a.status}</span></div>)}<button className="btn primary" style={{marginTop:12}} onClick={()=>onOpen('/parent')}>View assignments and feedback</button></Panel><Panel><h2>One idea to discuss</h2><div className="callout"><b>Fractions and ratios</b><br/>Discuss what each number represents before calculating. This is a fictional family prompt.</div><p className="muted" style={{marginTop:12}}>Recent sample teacher feedback is available in the family view.</p><button className="btn" onClick={()=>onOpen('/parent')}>See family notes</button></Panel></div></>;
  if(role==='School director')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title="School activity at a glance" subtitle={headlines[role]}><button className="btn primary" onClick={()=>onOpen('/school')}><Activity/>Open school insights</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Assignment completion" value="78.4%" note="School-wide fictional sample" icon={CheckCircle2}/><Metric label="Active classes" value="16" note="Fictional school roster" icon={Users}/><Metric label="Lessons this week" value="42" note="Across sample subjects" icon={Presentation}/><Metric label="Follow-up needed" value="6" note="Sample class signals" icon={Clock3}/></div><div className="grid grid-2"><Panel><h2>Subject trend snapshot</h2><div className="bar-chart">{[['Mathematics',78],['Biology',84],['Languages',88],['History',72]].map(([label,value])=><div className="bar-group" key={label as string}><div className="bar" style={{height:`${value}%`}}/><span className="bar-label">{label}</span></div>)}</div><p className="muted" style={{marginTop:28}}>Invented trend values · not official school analytics.</p></Panel><Panel><h2>Director actions</h2><div className="stack"><button className="btn" onClick={()=>onOpen('/school')}><Activity/>Review class trends</button><button className="btn" onClick={()=>onOpen('/school')}><Download/>Export demonstration report</button><div className="callout">Prioritise the fictional Grade 7B follow-up list for a presentation walkthrough.</div></div></Panel></div></>;
@@ -574,7 +411,7 @@ function BoardPage(){
  {poll&&<Modal title="Class poll · sample" close={()=>setPoll(false)}><p className="muted">Local response simulation only. No students are connected.</p><h3>Which representation helps you most?</h3>{['A diagram','A table','A number sentence'].map(a=><button key={a} className={`answer-choice ${vote===a?'chosen':''}`} onClick={()=>setVote(a)}>{a}</button>)}{vote&&<div className="callout" style={{marginTop:12}}>Your sample vote: {vote}. Response count: 1 fictional response.</div>}</Modal>}
  </>;
 }
-function ClassesPage({role}:{role:User['role']|undefined}){
+function ClassesPage({school,user,language,onOpen}:{school:SchoolData;user:User;language:Lang;onOpen:(path:string)=>void}){
  const [selectedClass,setSelectedClass]=useSavedState('selected-class','7-B');
  const classes=[
   {id:'7-B',name:'7-Б',title:'Grade 7B',room:'Room 204',students:24,teacher:'Dilshod Rahimov',subjects:['Mathematics','Physics','Chemistry','History'],next:'Physics · 09:00'},
@@ -582,8 +419,14 @@ function ClassesPage({role}:{role:User['role']|undefined}){
   {id:'8-A',name:'8-А',title:'Grade 8A',room:'Room 301',students:22,teacher:'Azizbek Umarov',subjects:['Algebra','Physics','Chemistry','Russian'],next:'Algebra · 12:10'},
  ];
  const activeClass=classes.find(item=>item.id===selectedClass)??classes[0];
- const isTeacher=role==='teacher';
- return <><PageHeading eyebrow="School workspace" title="Classes" subtitle="Classes, rooms, subjects, and the next lesson for your school account."><span className="tag blue">Local school model</span></PageHeading>
+ const isTeacher=user.role==='teacher';
+ const hasServerClasses=school.status==='ready'&&school.hasServerClasses;
+ return <><PageHeading eyebrow="School workspace" title="Classes" subtitle="Classes, rooms, subjects, and the next lesson for your school account."><span className={`tag ${hasServerClasses?'green':'blue'}`}>{hasServerClasses?'Server classes':'Local school model'}</span></PageHeading>
+  <SchoolScopeSummary school={school} language={language}/>
+  {hasServerClasses
+   ?<div style={{marginTop:16}}><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/></div>
+   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?'Loading classes linked to this account…':school.status==='unavailable'?'School records cannot be reached right now. The clearly-labelled local sample below remains available.':'This account is not linked to a server class yet. The clearly-labelled local sample below remains available.'}</span></div>}
+  <div className="section-head" style={{marginTop:24}}><div><h2>Local class sample</h2><p className="muted">Fictional records for exploring the interface. They are never presented as school data.</p></div><span className="tag gold">Local sample</span></div>
   <div className="grid grid-3">{classes.map(item=><button key={item.id} className={`panel class-card ${item.id===activeClass.id?'selected':''}`} onClick={()=>setSelectedClass(item.id)} style={{textAlign:'left'}}><div className="row-between"><span className="tag blue">{item.name}</span><span className="muted">{item.students} students</span></div><h2 style={{marginTop:12}}>{item.title}</h2><p className="muted">{item.room} · {item.teacher}</p><div className="progress-track" style={{marginTop:14}}><div className="progress-fill" style={{width:`${Math.min(100,item.students*3)}%`}}/></div></button>)}</div>
   <div className="grid grid-2" style={{marginTop:16}}><Panel><div className="section-head"><h2>{activeClass.title}</h2><span className="tag green">Active class</span></div><div className="list-row"><span className="list-title">Students</span><b>{activeClass.students}</b></div><div className="list-row"><span className="list-title">Class teacher</span><span>{activeClass.teacher}</span></div><div className="list-row"><span className="list-title">Room</span><span>{activeClass.room}</span></div><div className="list-row"><span className="list-title">Next lesson</span><span>{activeClass.next}</span></div><div className="row" style={{marginTop:14,flexWrap:'wrap'}}>{activeClass.subjects.map(subject=><span className="tag" key={subject}>{subject}</span>)}</div></Panel>
   <Panel><div className="section-head"><h2>Class workflow</h2><span className="tag">Offline + online</span></div><div className="stack"><div className="callout"><b>Before lesson</b><br/>Open the schedule and prepare the textbook or board.</div><div className="callout"><b>During lesson</b><br/>Explain the topic, open the class test, and collect responses.</div><div className="callout"><b>After lesson</b><br/>Review homework and monitor the class progress.</div>{isTeacher&&<button className="btn primary" onClick={()=>window.location.assign('/teacher')}>Open teacher workspace</button>}</div></Panel></div>
@@ -602,60 +445,10 @@ function SchedulePage({role}:{role:User['role']|undefined}){
  const isTeacher=role==='teacher';
  return <><PageHeading eyebrow="School schedule" title="Today’s lessons" subtitle="Your school timetable, rooms, and lesson access in one place."><span className="tag blue">School workspace</span></PageHeading>
   <div className="row" style={{marginBottom:16,flexWrap:'wrap'}}>{days.map(day=><button key={day} className={`btn small ${selectedDay===day?'subtle':''}`} onClick={()=>setSelectedDay(day)}>{day}</button>)}</div>
-  {lessons.length===0?<div className="notice"><Info/>No lessons are scheduled in this local preview for {selectedDay}. A real school timetable will come from the school backend.</div>:<div className="grid grid-2">{lessons.map(lesson=><Panel key={`${lesson.time}-${lesson.subject}`}><div className="row-between"><div><span className="eyebrow">{lesson.time}</span><h2 style={{marginTop:6}}>{lesson.subject}</h2></div><span className={`tag ${lesson.mode==='Online room'?'blue':'green'}`}>{lesson.mode}</span></div><p className="muted">{lesson.topic}</p><div className="list-row"><span><b>{lesson.className}</b><br/><span className="muted">{lesson.room} · {lesson.teacher}</span></span><button className="btn primary" onClick={()=>setLocation(lesson.mode==='Online room'?'/lesson':`/offline-lesson/${lesson.subject.toLowerCase()}`)}>{isTeacher?'Open lesson':'Open class'}</button></div></Panel>)}</div>}
+  {lessons.length===0?<div className="notice"><Info/>No lessons are scheduled in this local preview for {selectedDay}. A real school timetable will come from the school backend.</div>:<div className="grid grid-2">{lessons.map(lesson=><Panel key={`${lesson.time}-${lesson.subject}`}><div className="row-between"><div><span className="eyebrow">{lesson.time}</span><h2 style={{marginTop:6}}>{lesson.subject}</h2></div><span className={`tag ${lesson.mode==='Online room'?'blue':'green'}`}>{lesson.mode}</span></div><p className="muted">{lesson.topic}</p><div className="list-row"><span><b>{lesson.className}</b><br/><span className="muted">{lesson.room} · {lesson.teacher}</span></span><button className="btn primary" onClick={()=>setLocation(lesson.mode==='Online room'?'/lesson':'/topics')}>{isTeacher?'Open lesson':'Open class'}</button></div></Panel>)}</div>}
   <Panel style={{marginTop:16}}><div className="section-head"><h2>What happens next</h2><span className="tag">Offline + online</span></div><div className="grid grid-3"><div className="callout"><b>Before class</b><br/>Open the topic, textbook, or teacher materials.</div><div className="callout"><b>During class</b><br/>Follow the board, questions, and teacher explanation.</div><div className="callout"><b>After class</b><br/>Complete the assigned test and homework.</div></div></Panel>
  </>;
 }
-function OfflineLessonPage({role,userId,lessonId}:{role:User['role']|undefined;userId?:string;lessonId?:string}){
- const [,setLocation]=useLocation();
- const lesson=OFFLINE_LESSONS.find(item=>item.id===lessonId)??OFFLINE_LESSONS[0];
- const storageSuffix=userId?`:${userId}`:'';
- const [completed,setCompleted]=useSavedState(`offline-${lesson.id}-completed${storageSuffix}`,false);
- const [answer,setAnswer]=useSavedState(`offline-${lesson.id}-answer${storageSuffix}`,'');
- const [checked,setChecked]=useState(false);
- const isTeacher=role==='teacher';
- const choices=lesson.choices;
- return <><PageHeading eyebrow={`Offline lesson · ${lesson.subject} · Grade 7B`} title={lesson.title} subtitle="A lesson pack that works without a live classroom connection."><span className="tag green">Offline-ready</span><button className="btn" onClick={()=>setLocation('/schedule')}><Clock3/> Back to schedule</button></PageHeading>
-  <div className="grid grid-2"><Panel><div className="section-head"><h2>Lesson plan</h2><span className="tag blue">45 minutes</span></div><div className="stack"><div className="callout"><b>Learning goal</b><br/>{lesson.goal}</div><div className="list-row"><span><b>1. Warm-up</b><br/><span className="muted">Connect the topic to something you noticed today.</span></span><span className="tag">5 min</span></div><div className="list-row"><span><b>2. Read and observe</b><br/><span className="muted">Review the textbook section and identify one important example.</span></span><span className="tag">15 min</span></div><div className="list-row"><span><b>3. Explain</b><br/><span className="muted">Use the board or the diagram below to explain the idea.</span></span><span className="tag">15 min</span></div><div className="list-row"><span><b>4. Check understanding</b><br/><span className="muted">Answer the short question and review the explanation.</span></span><span className="tag">10 min</span></div></div></Panel>
-  <Panel><div className="section-head"><h2>Concept card</h2><span className="tag">Study material</span></div><div className="callout" style={{minHeight:150}}><div className="eyebrow">{lesson.subject.toUpperCase()}</div><h3 style={{marginTop:8}}>{lesson.conceptTitle}</h3><p className="muted" style={{lineHeight:1.7}}>{lesson.conceptText}</p><div className="progress-track" style={{marginTop:16}}><div className="progress-fill" style={{width:'68%'}}/></div><p className="muted" style={{marginTop:8}}>This local lesson visual remains available offline.</p></div>{isTeacher&&<button className="btn" style={{marginTop:12}} onClick={()=>setLocation('/board')}><Presentation/> Open on interactive board</button>}</Panel></div>
-  <Panel style={{marginTop:16}}><div className="section-head"><div><h2>After-lesson check</h2><p className="muted">This answer is stored on this device until the school backend is connected.</p></div><span className="tag blue">AI test preview</span></div><p style={{fontSize:15,lineHeight:1.6}}>{lesson.prompt}</p>{choices.map(choice=><button key={choice} className={`answer-choice ${answer===choice?'chosen':''} ${checked&&choice===lesson.correct?'correct':''} ${checked&&answer===choice&&choice!==lesson.correct?'wrong':''}`} onClick={()=>{setAnswer(choice);setChecked(false)}}>{choice}</button>)}<div className="row" style={{marginTop:14,flexWrap:'wrap'}}><button className="btn primary" disabled={!answer} onClick={()=>setChecked(true)}>Check answer</button>{checked&&<span className={`tag ${answer===lesson.correct?'green':'gold'}`}>{answer===lesson.correct?'Correct':'Review the concept card'}</span>}</div>{checked&&<div className="callout" style={{marginTop:14}}><b>Explanation</b><br/>{lesson.explanation}</div>}</Panel>
-  <Panel style={{marginTop:16}}><div className="row-between"><div><h2>Homework</h2><p className="muted">{lesson.homework}</p></div><span className={`tag ${completed?'green':'gold'}`}>{completed?'Completed locally':'Not submitted'}</span></div><div className="row" style={{marginTop:12,flexWrap:'wrap'}}><button className="btn" onClick={()=>setCompleted(!completed)}>{completed?'Mark as incomplete':'Mark homework ready'}</button><button className="btn primary" onClick={()=>setLocation('/homework/scan')}>Open homework submission</button></div></Panel>
- </>;
-}
-function LessonPage({userId}:{userId?:string}){
- const [,setLocation]=useLocation();
- const storageSuffix=userId?`:${userId}`:'';
- const [joined,setJoined]=useSavedState(`lesson-joined${storageSuffix}`,false);const [answer,setAnswer]=useSavedState(`lesson-answer${storageSuffix}`,'');const [free,setFree]=useSavedState(`lesson-free${storageSuffix}`,'');const [submitted,setSubmitted]=useState(false);const [teacherOpen,setTeacherOpen]=useState(false);
- return <><PageHeading eyebrow="Live lesson simulation" title="Lesson room" subtitle="A presentation-friendly room with local sample responses. No live class is connected."><span className="tag gold">SIMULATED</span></PageHeading>
- <div className="grid grid-2"><Panel><div className="row-between"><div><div className="eyebrow">Mathematics · Grade 7B</div><h2 style={{marginTop:7}}>Ratios in the classroom</h2></div><span className="tag green"><span className="small-dot"/> Room ready</span></div><p className="muted">Teacher: sample account · 10:30–11:00 · fictional schedule</p><div className="callout">Join code <b style={{fontFamily:'monospace',fontSize:17,marginLeft:9}}>UZ-7B-241</b><br/>The code is an interface sample; it does not open a real session.</div><div className="row" style={{marginTop:13}}><button className="btn primary" onClick={()=>setJoined(!joined)}>{joined?'Leave sample room':'Join sample room'}</button><span className="muted">{joined?'You are viewing a simulated session.':'Joining only changes this local demo view.'}</span></div></Panel>
- <Panel><div className="section-head"><h2>Room activity</h2><span className="tag">Fictional sample</span></div><div className="grid grid-3"><div><div className="metric-value" style={{fontSize:22}}>18</div><div className="muted">participants</div></div><div><div className="metric-value" style={{fontSize:22}}>12</div><div className="muted">answers received</div></div><div><div className="metric-value" style={{fontSize:22}}>06:18</div><div className="muted">session time</div></div></div><hr style={{border:0,borderTop:'1px solid #e7eaea',margin:'16px 0'}}/><div className="row-between"><span className="muted">Connection · demonstration mode</span><Wifi size={15} color="#5d9877"/></div></Panel>
- </div><div className="grid grid-2" style={{marginTop:16}}><Panel><div className="section-head"><h2>Question for the group</h2><span className="tag blue">AI test preview</span></div><p style={{fontSize:14}}>A recipe uses 2 cups of rice for 3 people. How many cups are needed for 6 people?</p>{['2 cups','4 cups','6 cups','9 cups'].map((a,i)=><button key={a} className={`answer-choice ${answer===a?'chosen':''}`} onClick={()=>{setAnswer(a);setSubmitted(false)}}>{String.fromCharCode(65+i)}. &nbsp;{a}</button>)}<div className="row" style={{marginTop:12,flexWrap:'wrap'}}><button className="btn primary" onClick={()=>setSubmitted(true)} disabled={!answer}>Submit sample response</button><button className="btn" onClick={()=>setLocation('/practice')}>Open after-class test</button>{submitted&&<span className="tag green"><Check/> Sample response counted locally</span>}</div></Panel>
- <Panel><div className="section-head"><h2>Short response</h2><span className="tag">Optional</span></div><p className="muted">Explain your method in one sentence.</p><div className="control"><label htmlFor="lesson-response">Your response</label><textarea id="lesson-response" value={free} onChange={e=>setFree(e.target.value)} placeholder="I multiplied the quantities by…"/></div><button className="btn" style={{marginTop:10}} onClick={()=>setSubmitted(true)} disabled={!free.trim()}><Send/> Submit sample response</button>{submitted&&<p className="muted" style={{marginTop:9}}>Your fictional response is included in the local class results.</p>}</Panel></div>
- <Panel style={{marginTop:16}}><div className="row-between"><div><h2>Teacher controls</h2><p className="muted">Only displayed as local prototype controls. No real students are notified.</p></div><button className="btn" onClick={()=>setTeacherOpen(!teacherOpen)}>{teacherOpen?'Hide controls':'Show controls'} <ChevronDown/></button></div>{teacherOpen&&<div className="row" style={{flexWrap:'wrap'}}>{['Start question','Pause timer','Show sample results','End demo session'].map(t=><button className="btn" key={t} onClick={()=>alert(`${t}: simulated locally.`)}>{t}</button>)}</div>}<div className="list-row"><div><div className="list-title">Class result preview</div><div className="list-meta">Correct 9 · Review 3 · No response 6 · fictional counts</div></div><div className="row"><div className="progress-track" style={{width:140}}><div className="progress-fill" style={{width:'50%'}}/></div><span className="muted">50%</span></div></div><div className="muted">Completion summary: Sample lesson ready to end · this does not record attendance or participation.</div></Panel>
- </>;
-}
-function StudentLessonPage({userId}:{userId?:string}){
- const [,setLocation]=useLocation();
- const storageSuffix=userId?`:${userId}`:'';
- const [joined,setJoined]=useSavedState(`student-lesson-joined${storageSuffix}`,false);const [answer,setAnswer]=useSavedState(`student-lesson-answer${storageSuffix}`,'');const [free,setFree]=useSavedState(`student-lesson-free${storageSuffix}`,'');const [submitted,setSubmitted]=useState(false);
- const choices=['2 cups','4 cups','6 cups','9 cups'];
- return <><PageHeading eyebrow="Student online lesson" title="Ratios in the classroom" subtitle="Join the teacher’s room, answer the check-in, and continue with the after-class test."><span className="tag gold">Local room preview</span></PageHeading><div className="grid grid-2"><Panel><div className="row-between"><div><span className="eyebrow">Mathematics · Grade 7B</span><h2 style={{marginTop:7}}>Lesson room</h2></div><span className="tag green"><span className="small-dot"/> Ready</span></div><p className="muted">Teacher account · 10:30–11:00 · Room code UZ-7B-241</p><div className="callout">This is a local preview. A real school room will require a connected classroom service.</div><div className="row" style={{marginTop:13}}><button className="btn primary" onClick={()=>setJoined(!joined)}>{joined?'Leave preview room':'Join preview room'}</button><span className="muted">{joined?'You joined this device-only preview.':'Joining does not contact a real class.'}</span></div></Panel><Panel><div className="section-head"><h2>Student actions</h2><span className="tag blue">Your workspace</span></div><div className="stack"><button className="btn" onClick={()=>setLocation('/offline-lesson')}><BookOpen/> Open offline lesson</button><button className="btn" onClick={()=>setLocation('/practice')}><ClipboardCheck/> Open after-class test</button><button className="btn" onClick={()=>setLocation('/homework/scan')}><Upload/> Prepare homework photo</button></div></Panel></div><div className="grid grid-2" style={{marginTop:16}}><Panel><div className="section-head"><h2>Question for the group</h2><span className="tag blue">Check-in</span></div><p style={{fontSize:14}}>A recipe uses 2 cups of rice for 3 people. How many cups are needed for 6 people?</p>{choices.map((choice,index)=><button key={choice} className={`answer-choice ${answer===choice?'chosen':''}`} onClick={()=>{setAnswer(choice);setSubmitted(false)}}>{String.fromCharCode(65+index)}. &nbsp;{choice}</button>)}<button className="btn primary" style={{marginTop:12}} disabled={!answer} onClick={()=>setSubmitted(true)}><Send/> Submit answer</button>{submitted&&<span className="tag green" style={{marginTop:10}}><Check/> Saved on this device</span>}</Panel><Panel><div className="section-head"><h2>Short response</h2><span className="tag">Optional</span></div><p className="muted">Explain your method in one sentence.</p><div className="control"><label htmlFor="student-lesson-response">Your response</label><textarea id="student-lesson-response" value={free} onChange={e=>setFree(e.target.value)} placeholder="I multiplied the quantities by…"/></div><p className="muted" style={{marginTop:10}}>Your draft stays on this device in the preview.</p></Panel></div><DeviceReadinessPanel/></>;
-}
-function DeviceReadinessPanel(){
- const [cameraStatus,setCameraStatus]=useState<'not-checked'|'ready'|'unsupported'|'blocked'>('not-checked');
- const [screenStatus,setScreenStatus]=useState<'not-checked'|'ready'|'unsupported'|'blocked'>('not-checked');
- async function checkCamera(){
-  if(!navigator.mediaDevices?.getUserMedia){setCameraStatus('unsupported');return}
-  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});stream.getTracks().forEach(track=>track.stop());setCameraStatus('ready')}catch{setCameraStatus('blocked')}
- }
- async function checkScreen(){
-  if(!navigator.mediaDevices?.getDisplayMedia){setScreenStatus('unsupported');return}
-  try{const stream=await navigator.mediaDevices.getDisplayMedia({video:true});stream.getTracks().forEach(track=>track.stop());setScreenStatus('ready')}catch{setScreenStatus('blocked')}
- }
- const label=(status:typeof cameraStatus)=>status==='ready'?'Ready on this device':status==='blocked'?'Permission was not granted':status==='unsupported'?'Browser support is unavailable':'Not checked';
- return <Panel style={{marginTop:16}}><div className="section-head"><div><h2>Device readiness</h2><p className="muted">Check permissions before a real online classroom service is connected.</p></div><span className="tag">Local check</span></div><div className="grid grid-3"><div className="callout"><b>Camera + microphone</b><br/><span className="muted">{label(cameraStatus)}</span><br/><button className="btn small" style={{marginTop:10}} onClick={checkCamera}>Check devices</button></div><div className="callout"><b>Screen sharing</b><br/><span className="muted">{label(screenStatus)}</span><br/><button className="btn small" style={{marginTop:10}} onClick={checkScreen}>Check sharing</button></div><div className="callout"><b>Live connection</b><br/><span className="muted">Not configured</span><br/><span className="tag gold" style={{marginTop:10}}>Simulation only</span></div></div><p className="muted" style={{marginTop:12}}>These checks request browser permissions and immediately stop the preview streams. They do not publish audio, video, or screen content.</p></Panel>;
-}
-function LessonPageWithDevice({userId}:{userId?:string}){return <><LessonPage userId={userId}/><DeviceReadinessPanel/></>}
 function PracticePage({userId}:{userId?:string}){
  const storageSuffix=userId?`:${userId}`:'';
  const [index,setIndex]=useSavedState(`practice-index${storageSuffix}`,0);const [answers,setAnswers]=useSavedState<Record<number,string>>(`practice-answers${storageSuffix}`,{});const [checked,setChecked]=useSavedState<Record<number,boolean>>(`practice-checked${storageSuffix}`,{});const [quizDrafts]=useSavedState<QuizDraft[]>('teacher-quiz-drafts',[]);
@@ -676,7 +469,7 @@ function ScanPage({assignments,setStatus}:{assignments:typeof INITIAL_ASSIGNMENT
   <Panel><div className="section-head"><h2>Sample analysis</h2><span className="tag gold">SIMULATION ONLY</span></div>{clearer?<div className="notice"><Info/>This image is marked blurry or unreadable. Please choose or retake a clearer photo. The prototype will not invent analysis for an unclear image.</div>:!submitted?<div className="stack"><div className="callout">Select an image, then submit to view the illustrative sample output. The demo does not inspect pixels or perform OCR.</div><div className="muted">A real analysis feature would require an approved service and student privacy review.</div></div>:<div className="stack"><div className="row"><CheckCircle2 color="#5d9877"/><b style={{fontSize:12}}>Sample review generated</b></div><div className="control"><label htmlFor="recognized-text">Recognized text · fictional example</label><textarea id="recognized-text" value={correction} onChange={e=>setCorrection(e.target.value)}/></div><div className="callout"><b>Illustrative steps</b><br/>1. Compare 2 with 4: the second value is doubled.<br/>2. Compare 3 with 6: the first value is also doubled.<br/>3. Both terms changed by the same factor.</div><div className="callout"><b>Possible point to check</b><br/>Make sure the numerator and denominator are multiplied by the same number.</div><p className="muted">Recommendation: show how the equivalent ratio was produced. This is prewritten sample feedback, not a judgment of your work.</p><label className="row" style={{fontSize:12}}><input type="checkbox" checked={review} onChange={e=>setReview(e.target.checked)}/> Ask teacher to review this sample</label><button className="btn" onClick={()=>{const item=assignments.find(a=>a.title===task);if(review&&item)setStatus(item.id,'Under Review');alert(review?'Teacher review marked in this local demo.':'Sample saved locally.')}}>Save correction & preference</button></div>}</Panel></div>
  </>;
 }
-function TeacherPage({assignments,setAssignments,setStatus,goBoard}:{assignments:typeof INITIAL_ASSIGNMENTS;setAssignments:(value:typeof INITIAL_ASSIGNMENTS)=>void;setStatus:(id:number,s:AssignmentStatus)=>void;goBoard:()=>void}){
+function TeacherPage({school,language,assignments,setAssignments,setStatus,goBoard}:{school:SchoolData;language:Lang;assignments:typeof INITIAL_ASSIGNMENTS;setAssignments:(value:typeof INITIAL_ASSIGNMENTS)=>void;setStatus:(id:number,s:AssignmentStatus)=>void;goBoard:()=>void}){
  const [title,setTitle]=useState('');const [lessonTitle,setLessonTitle]=useState('');const [subject,setSubject]=useState('Mathematics');const [chapter,setChapter]=useState(BOOKS[0].chapters[1]);const [newQuiz,setNewQuiz]=useState(false);const [quizTitle,setQuizTitle]=useState('');const [toast,setToast]=useState('');
  const [lessonOutline,setLessonOutline]=useSavedState('teacher-lesson-outline','1. Start with a guiding question.\n2. Model one example together.\n3. Invite students to explain their strategy.');
  const [lessonDrafts,setLessonDrafts]=useSavedState<{id:number;title:string;subject:string;chapter:string;outline:string}[]>('teacher-lesson-drafts',[]);
@@ -689,7 +482,13 @@ function TeacherPage({assignments,setAssignments,setStatus,goBoard}:{assignments
  function generateAiQuiz(){const preview=AI_PREVIEW_QUESTIONS[subject]??AI_PREVIEW_QUESTIONS.Mathematics;setQuizDrafts([{id:Date.now(),title:`AI test preview · ${subject}`,type:'AI-generated preview',...preview,source:'ai-preview',published:false},...quizDrafts]);setToast('AI test preview generated locally. Review it before assigning.')}
  function publishQuiz(id:number){const quiz=quizDrafts.find(item=>item.id===id);if(!quiz)return;if(quiz.source==='teacher'&&(!quiz.choices?.length||!quiz.correct)){setToast('This teacher draft needs answer choices before it can be assigned in the local practice flow.');return}setQuizDrafts(quizDrafts.map(item=>item.id===id?{...item,published:true}:item));setToast('Test published to the local Grade 7B preview.')}
  function updateFeedback(id:number,feedback:string){setAssignments(assignments.map(a=>a.id===id?{...a,feedback}:a))}
- return <><PageHeading eyebrow="Teacher workspace · Grade 7B" title="Plan, assign, review" subtitle="Organise lesson materials and manage fictional class records."><button className="btn primary" onClick={()=>window.location.assign('/topic-studio')}><Sparkles/> AI topic studio</button><button className="btn" onClick={goBoard}><Presentation/> Present on board</button></PageHeading>
+ return <><PageHeading eyebrow="Teacher workspace · Grade 7B" title="Plan, assign, review" subtitle="Publish real class assignments when a server class is linked, and keep local planning drafts in this browser."><button className="btn primary" onClick={()=>window.location.assign('/topics')}><Sparkles/> Topics & 3D</button><button className="btn" onClick={goBoard}><Presentation/> Present on board</button></PageHeading>
+  <SchoolScopeSummary school={school} language={language}/>
+  {school.status==='ready'&&school.hasServerClasses
+   ?<div style={{marginTop:16}}><ServerTeachingPanel school={school} language={language}/></div>
+   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?'Loading classes linked to this teacher account…':school.status==='unavailable'?'The school service is unreachable right now. Your browser-only drafting tools remain available below.':'No server class is linked to this teacher account yet. Your browser-only drafting tools remain available below.'}</span></div>}
+  {school.status==='ready'&&school.hasServerClasses&&<div className="grid grid-2" style={{marginTop:16}}><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div>}
+  <div className="section-head" style={{marginTop:24}}><div><h2>Local drafting tools</h2><p className="muted">Lesson plans and quiz drafts are stored only in this browser and are never sent to students.</p></div><span className="tag gold">Local only</span></div>
  <div className="grid grid-2"><Panel><div className="section-head"><h2>Build a lesson</h2><span className="tag blue">Draft locally</span></div><div className="stack"><Field label="Lesson title" placeholder="e.g. Equivalent ratios" value={lessonTitle} onChange={setLessonTitle}/><div className="grid grid-2"><div className="control"><label>Subject</label><select value={subject} onChange={e=>setSubject(e.target.value)}>{['Mathematics','Biology','History','Physics','Chemistry','Uzbek','Russian','English'].map(s=><option key={s} value={s}>{s}</option>)}</select></div><div className="control"><label>Chapter</label><select value={chapter} onChange={e=>setChapter(e.target.value)}>{BOOKS.find(b=>b.subject===subject)?.chapters.map(c=><option key={c} value={c}>{c}</option>)??BOOKS[0].chapters.map(c=><option key={c} value={c}>{c}</option>)}</select></div></div><div className="control"><label>Lesson outline</label><textarea value={lessonOutline} onChange={e=>setLessonOutline(e.target.value)}/></div><div className="row"><button className="btn primary" disabled={!lessonTitle.trim()} onClick={saveLesson}>Save lesson draft</button><button className="btn" onClick={goBoard}><Presentation/> Open on board</button></div><span className="muted">{toast||'Sample lesson plan · no class publishing.'}</span>{lessonDrafts.length>0&&<div><h3 style={{marginTop:8}}>Saved lesson drafts · this device</h3>{lessonDrafts.slice(0,4).map(d=><div className="list-row" key={d.id}><div><div className="list-title">{d.title}</div><div className="list-meta">{d.subject} · {d.chapter}</div></div><button className="btn small danger" aria-label={`Delete ${d.title}`} onClick={()=>setLessonDrafts(lessonDrafts.filter(item=>item.id!==d.id))}><Trash2/></button></div>)}</div>}</div></Panel>
  <Panel><div className="section-head"><h2>Assign work</h2><span className="tag">Local-only workflow</span></div><div className="stack"><div className="control"><label htmlFor="assignment-title">Assignment title</label><input id="assignment-title" value={title} onChange={e=>setTitle(e.target.value)} placeholder="A short, clear title"/></div><div className="control"><label htmlFor="assignment-subject">Subject</label><select id="assignment-subject" value={subject} onChange={e=>setSubject(e.target.value)}>{['Mathematics','Biology','History','Physics','Chemistry','Uzbek','Russian','English'].map(s=><option key={s}>{s}</option>)}</select></div><div className="control"><label htmlFor="assignment-exercise">Chapter / exercise</label><select id="assignment-exercise" value={chapter} onChange={e=>setChapter(e.target.value)}>{BOOKS.find(b=>b.subject===subject)?.chapters.map(c=><option key={c}>{c}</option>)??BOOKS[0].chapters.map(c=><option key={c}>{c}</option>)}</select></div><button className="btn primary" onClick={createAssignment} disabled={!title.trim()}><Plus/> Assign to Grade 7B</button></div></Panel></div>
   <Panel style={{marginTop:16}}><div className="section-head"><div><h2>Class assignments & sample submissions</h2><p className="muted">Changes are shared only with the Grade 7B demo on this device. They are not sent to students or the school server.</p></div><button className="btn" onClick={generateAiQuiz}><Sparkles/> Generate AI test preview</button><button className="btn" onClick={()=>setNewQuiz(true)}><Plus/> Create quiz</button></div><div className="table-wrap"><table className="table"><thead><tr><th>Assignment</th><th>Subject</th><th>Due</th><th>Status</th><th>Sample feedback · editable</th><th>Review</th></tr></thead><tbody>{assignments.map(a=><tr key={a.id}><td><b>{a.title}</b></td><td>{a.subject}</td><td>{a.dueDate}</td><td><select aria-label={`Status for ${a.title}`} value={a.status} onChange={e=>setStatus(a.id,e.target.value as AssignmentStatus)} className="top-select">{statuses.map(s=><option key={s} value={s}>{s}</option>)}</select></td><td><input className="input" aria-label={`Feedback for ${a.title}`} value={a.feedback} placeholder="Write local feedback" onChange={e=>updateFeedback(a.id,e.target.value)}/></td><td><button className="btn small" onClick={()=>{setStatus(a.id,a.status==='Needs Revision'?'Checked':'Under Review');setToast('Review status updated in the local demo.')}}>Review</button></td></tr>)}</tbody></table></div></Panel>
@@ -705,40 +504,39 @@ function ParentPage({assignments}:{assignments:typeof INITIAL_ASSIGNMENTS}){
  <Panel><h2>Topics to practise together</h2><div className="stack"><div className="callout"><b>Fractions and ratios</b><br/>Talk through what each number represents before calculating.</div><div className="callout"><b>Biology vocabulary</b><br/>Ask the student to explain one plant system in their own words.</div><div className="callout"><b>Reading a timeline</b><br/>Choose two events and discuss which came first, and why.</div></div></Panel></div>
  <div className="grid grid-2" style={{marginTop:16}}><Panel><h2>Weekly schedule · fictional</h2>{[['Monday','Mathematics · 08:30','Biology · 10:15'],['Tuesday','Uzbek · 09:20','Physics · 11:10'],['Wednesday','History · 08:30','English · 10:15']].map(row=><div className="list-row" key={row[0]}><b className="list-title">{row[0]}</b><span className="list-meta">{row[1]} · {row[2]}</span></div>)}</Panel><Panel><h2>Recent classroom note</h2><div className="row" style={{alignItems:'flex-start'}}><div className="avatar">T</div><div><b style={{fontSize:12}}>Teacher · sample feedback</b><p className="muted" style={{marginTop:7,lineHeight:1.6}}>“The student explained the ratio model clearly. Practising the written steps will help make the reasoning easier to follow.”</p><span className="tag">Fictional teacher note · 14 May</span></div></div></Panel></div></>;
 }
-function SchoolPage(){
+function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const [period,setPeriod]=useSavedState('school-period','This term');const [notice,setNotice]=useState('');
  const rows=[['Mathematics',78,62],['Biology',84,69],['History',72,58],['Languages',88,74]];
  function exportReport(){const report=['EDUVERSE UZ · DEMONSTRATION REPORT','Fictional data only — not an official school record.',`Period: ${period}`,'','Subject,Completion,Lesson activity',...rows.map(r=>`${r[0]},${r[1]}%,${r[2]}%`)].join('\n');const blob=new Blob([report],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='eduverse-demo-report.csv';a.click();URL.revokeObjectURL(url);setNotice('Fictional CSV report exported to your device.')}
- return <><PageHeading eyebrow="School 24 · Tashkent · fictional" title="School insights" subtitle="A compact view of sample completion and lesson activity."><button className="btn primary" onClick={exportReport}><Download/> Export demo report</button></PageHeading><div className="notice" style={{marginBottom:16}}><Info/>All chart values and classes are invented for this demonstration; they are not school analytics.</div>
+ return <><PageHeading eyebrow="School workspace" title="School insights" subtitle="Live school records when your account is linked, alongside a clearly-labelled local dashboard sample."><button className="btn primary" onClick={exportReport}><Download/> Export demo report</button></PageHeading>
+  <SchoolScopeSummary school={school} language={language}/>
+  {school.status==='ready'&&school.hasMembership
+   ?<div style={{marginTop:16,display:'grid',gap:16}}><ServerSchoolOverview school={school} user={user} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
+   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?'Loading school records linked to this account…':school.status==='unavailable'?'School records cannot be reached right now. The local dashboard sample below remains available.':'This account is not linked to a school organization yet. The local dashboard sample below remains available.'}</span></div>}
+  <div className="section-head" style={{marginTop:24}}><div><h2>Local dashboard sample</h2><p className="muted">Fictional values for the dashboard layout; not official school analytics.</p></div><span className="tag gold">Local sample</span></div>
+  <div className="notice" style={{marginBottom:16}}><Info/>All chart values and classes below are invented for this demonstration; they are not school analytics.</div>
  <div className="grid grid-4"><Metric label="Assignment completion" value="78.4%" note="Across fictional classes" icon={CheckCircle2}/><Metric label="Active lessons" value="12" note="This week · sample" icon={Presentation}/><Metric label="Learners represented" value="486" note="Fictional roster" icon={Users}/><Metric label="Subjects with activity" value="8" note="Demo workspace" icon={BookOpen}/></div>
  <div className="grid grid-2" style={{marginTop:16}}><Panel><div className="section-head"><h2>Completion by subject</h2><select className="top-select" value={period} onChange={e=>setPeriod(e.target.value)}><option>This term</option><option>Last 30 days</option><option>This month</option></select></div><div className="bar-chart">{rows.map(([name,val,activity])=><div className="bar-group" key={name as string} title={`${val}% completion · ${activity}% lesson activity`}><div className="bar" style={{height:`${val}%`}}/><div className="bar alt" style={{height:`${activity}%`}}/><span className="bar-label">{name}</span></div>)}</div><div className="row" style={{marginTop:28}}><span className="row muted"><span className="small-dot"/> Completion</span><span className="row muted"><span className="small-dot" style={{background:'#c0cbd1'}}/> Lesson activity</span></div></Panel>
  <Panel><h2>Class overview</h2><div className="table-wrap"><table className="table"><thead><tr><th>Class</th><th>Completion</th><th>Lesson activity</th></tr></thead><tbody>{[['Grade 7A','81%','76%'],['Grade 7B','74%','68%'],['Grade 8A','83%','72%'],['Grade 8B','76%','61%']].map(r=><tr key={r[0]}><td><b>{r[0]}</b></td><td>{r[1]}</td><td>{r[2]}</td></tr>)}</tbody></table></div><div className="callout" style={{marginTop:15}}>Sample trend: Biology completion is rising in the fictional term view. Interpret only as a demonstration of the dashboard.</div></Panel></div>
   <Panel style={{marginTop:16}}><div className="section-head"><h2>Lesson activity</h2><span className="tag">Fictional sample</span></div><div className="grid grid-3"><QuickAction icon={Presentation} title="12 lessons held" detail="4 subjects · this week" onClick={()=>setNotice('Lesson activity panel refreshed.')}/><QuickAction icon={ClipboardCheck} title="78.4% assignment completion" detail="Fictional Grade 7–8 sample" onClick={()=>setNotice('Completion breakdown is shown above.')}/><QuickAction icon={ShieldCheck} title="No system alerts" detail="Demo status only" onClick={()=>setNotice('All sample systems report ready.')}/></div><p className="muted" style={{margin:'12px 0 0'}}>{notice}</p></Panel></>;
  }
 
-function AdminPage({role}:{role:User['role']}){
+function AdminPage({role,language}:{role:User['role'];language:Lang}){
  const [schools,setSchools]=useSavedState('admin-schools',['School 24 · Tashkent','School 18 · Samarkand','School 6 · Bukhara']);const [classes,setClasses]=useSavedState('admin-classes',['Grade 7B · School 24','Grade 8A · School 24','Grade 7A · School 18']);const [languages,setLanguages]=useSavedState('admin-languages',['Uzbek','Russian','English']);const [languageAvailability,setLanguageAvailability]=useSavedState<Record<string,boolean>>('admin-language-availability',{Uzbek:true,Russian:true,English:true});const [schoolInput,setSchoolInput]=useState('');const [classInput,setClassInput]=useState('');const [languageInput,setLanguageInput]=useState('');const [notice,setNotice]=useState('');
- const [permissions,setPermissions]=useSavedState<Record<string,boolean>>('admin-permissions',{teacherCanAssign:true,parentCanSeeProgress:true,studentCanUseAssistant:true});
+ const [permissions,setPermissions]=useSavedState<Record<string,boolean>>('admin-permissions',{teacherCanAssign:true,parentCanSeeProgress:true,studentCanJoinLessons:true});
  const adminTitle=role==='platform_superadmin'?'Platform administration':role==='ministry_admin'?'National education oversight':'Regional education administration';
- const adminDescription=role==='platform_superadmin'?'Platform-level settings and organization provisioning. This browser-only preview does not create real schools or grant account permissions.':role==='ministry_admin'?'National-level education settings preview. No official government integrations or school records are connected.':'Regional administration preview. No region-scoped school records or access controls are connected.';
+ const adminDescription=role==='platform_superadmin'?'Platform-level settings and organization provisioning. Real school records can be inspected and created on the server; the configuration controls below remain browser-only.':role==='ministry_admin'?'National education oversight. Real school records from the server are listed below; the configuration controls remain a local preview.':'Regional education administration. Real school records from the server are listed below; the configuration controls remain a local preview.';
  function add(value:string,list:string[],setter:(next:string[])=>void,clear:(v:string)=>void){if(!value.trim())return;setter([...list,value.trim()]);clear('');setNotice('Local demo record added.')}
- return <><PageHeading eyebrow={getRoleLabel('English',role)} title={adminTitle} subtitle={adminDescription}><span className="tag gold">Local preview only</span></PageHeading><div className="notice" style={{marginBottom:16}}><ShieldCheck/>Changes persist in this browser only. No accounts, schools, or permissions are changed in a real system. This role has no student lessons or practice tools.</div>
+ return <><PageHeading eyebrow={getRoleLabel('English',role)} title={adminTitle} subtitle={adminDescription}><span className="tag green">Server + local</span></PageHeading>
+  <ServerAdminSchoolsPanel language={language}/>
+  <div className="section-head" style={{marginTop:24}}><div><h2>Local configuration preview</h2><p className="muted">The controls below persist in this browser only and do not change server permissions.</p></div><span className="tag gold">Local only</span></div>
+  <div className="notice" style={{marginBottom:16}}><ShieldCheck/>Changes below persist in this browser only. No accounts or permissions are changed in a real system. This role has no student lessons or practice tools.</div>
  <div className="grid grid-2"><Panel><div className="section-head"><h2>Demo schools</h2><span className="tag">{schools.length} records</span></div><div className="row"><input className="input" aria-label="New school" value={schoolInput} onChange={e=>setSchoolInput(e.target.value)} placeholder="Add a fictional school"/><button className="btn primary" onClick={()=>add(schoolInput,schools,setSchools,setSchoolInput)}><Plus/> Add</button></div>{schools.map(s=><div className="list-row" key={s}><span className="list-title">{s}</span><button className="btn small danger" aria-label={`Remove ${s}`} onClick={()=>setSchools(schools.filter(x=>x!==s))}><Trash2/></button></div>)}</Panel>
  <Panel><div className="section-head"><h2>Classes</h2><span className="tag">{classes.length} groups</span></div><div className="row"><input className="input" aria-label="New class" value={classInput} onChange={e=>setClassInput(e.target.value)} placeholder="Add a class record"/><button className="btn primary" onClick={()=>add(classInput,classes,setClasses,setClassInput)}><Plus/> Add</button></div>{classes.map(c=><div className="list-row" key={c}><span className="list-title">{c}</span><button className="btn small danger" aria-label={`Remove ${c}`} onClick={()=>setClasses(classes.filter(x=>x!==c))}><Trash2/></button></div>)}</Panel></div>
   <div className="grid grid-2" style={{marginTop:16}}><Panel><div className="section-head"><h2>Subjects & languages</h2><span className="tag blue">Availability</span></div><div className="row"><input className="input" aria-label="Add language" value={languageInput} onChange={e=>setLanguageInput(e.target.value)} placeholder="Add a language"/><button className="btn" onClick={()=>add(languageInput,languages,setLanguages,setLanguageInput)}><Plus/> Add</button></div><div className="stack" style={{marginTop:14}}>{languages.map(l=><label key={l} className="row-between list-row" style={{fontSize:12}}><span>{l}</span><input type="checkbox" checked={languageAvailability[l]??true} onChange={e=>setLanguageAvailability({...languageAvailability,[l]:e.target.checked})} aria-label={`${l} availability`}/></label>)}</div><div className="row" style={{marginTop:14,flexWrap:'wrap'}}>{['Mathematics','Algebra','Biology','Physics','Chemistry','History','Uzbek','Russian','English'].map(s=><span key={s} className="tag">{s}</span>)}</div></Panel>
- <Panel><h2>Role permissions · configuration preview</h2>{[['teacherCanAssign','Teacher can create assignments'],['parentCanSeeProgress','Parent can view progress'],['studentCanUseAssistant','Student can open assistant']].map(([id,label])=><label key={id} className="list-row" style={{fontSize:12}}><span>{label}</span><input type="checkbox" checked={permissions[id]} onChange={e=>setPermissions({...permissions,[id]:e.target.checked})}/></label>)}<p className="muted" style={{marginTop:12}}>Configuration only: these toggles persist locally for the prototype but do not enforce access or change role navigation.</p></Panel></div>
+ <Panel><h2>Role permissions · configuration preview</h2>{[['teacherCanAssign','Teacher can create assignments'],['parentCanSeeProgress','Parent can view progress'],['studentCanJoinLessons','Student can join online lessons']].map(([id,label])=><label key={id} className="list-row" style={{fontSize:12}}><span>{label}</span><input type="checkbox" checked={permissions[id]} onChange={e=>setPermissions({...permissions,[id]:e.target.checked})}/></label>)}<p className="muted" style={{marginTop:12}}>Configuration only: these toggles persist locally for the prototype but do not enforce access or change role navigation.</p></Panel></div>
  <div className="grid grid-2" style={{marginTop:16}}><Panel><h2>Textbook metadata</h2><div className="table-wrap"><table className="table"><thead><tr><th>Title</th><th>Subject</th><th>Grade</th><th>Material</th></tr></thead><tbody>{BOOKS.slice(0,5).map(b=><tr key={b.id}><td>{b.title}</td><td>{b.subject}</td><td>7</td><td><span className="tag gold">Sample only</span></td></tr>)}</tbody></table></div><p className="muted" style={{marginTop:10}}>Official textbook files require authorized source material.</p></Panel>
  <Panel><div className="section-head"><h2>System status & audit trail</h2><span className="tag green"><span className="small-dot"/>Local ready</span></div><div className="list-row"><span className="list-title">Browser storage</span><span className="muted">Available locally</span></div><div className="list-row"><span className="list-title">Network services</span><span className="muted">Not connected</span></div><div className="list-row"><span className="list-title">Sample audit</span><span className="muted">Role changed · local record</span></div><div className="list-row"><span className="list-title">Cloud AI / live classes</span><span className="tag gold">Not configured</span></div><p className="muted" style={{marginTop:12}}>{notice||'Administrative actions are stored in this browser only.'}</p><button className="btn small" onClick={()=>setNotice('Demo audit checked at '+new Date().toLocaleTimeString())}>Refresh local status</button></Panel></div></>;
-}
-function AssistantPage({role}:{role:Role}){
- const [view,setView]=useState<'Student'|'Teacher'>(role==='Teacher'?'Teacher':'Student');const [messages,setMessages]=useSavedState<ChatItem[]>('assistant-'+view,view==='Teacher'?[{role:'assistant',content:'Hello. I can help draft a lesson outline or differentiated practice set using these sample prompts. This is simulated dialogue; no AI model is connected.'}]:[{role:'assistant',content:'Hello. Tell me what you are working on. I can offer a hint first, then a step-by-step explanation. This is prewritten demo behaviour, not an AI response.'}]);const [input,setInput]=useState('');
- const prompts=view==='Student'?['Give me a hint about equivalent ratios','Explain fractions step by step','Make a short practice set','Why was my answer incorrect?']:['Draft a lesson plan on ratios','Create a short quiz','Differentiate an exercise','Explain a common misconception'];
- function send(text:string){if(!text.trim())return;const question=text.trim();const lower=question.toLowerCase();const reply=view==='Teacher'?`Sample draft for “${question}”: Begin with a 3-minute warm-up, model one example, then invite pairs to solve a related task. Offer a visual model and a stretch prompt. This is fictional draft text to edit before use.`:lower.includes('hint')?`Hint: Write the two quantities in the same order. What happens to both parts if you multiply them by the same number? Try that first, and then check your answer.`:lower.includes('wrong')?`A useful check is to ask whether each part of the ratio changed by the same factor. If only one number changes, the relationship is no longer equivalent. Want to try the numbers again?`:lower.includes('practice')?`Practice set: (1) Simplify 6:9. (2) Find a ratio equivalent to 4:7. (3) A group has 3 red and 5 blue cards. What fraction are red? Try each before asking for a solution.`:`Let’s work step by step. First, identify the two quantities and write them in the same order. Next, decide how one value changes. Apply the same operation to the other value. Finally, check whether the relationship stays balanced.`;
- setMessages([...messages,{role:'user',content:question},{role:'assistant',content:reply}]);setInput('')}
- return <><PageHeading eyebrow="Learning support · simulated" title="Learning assistant" subtitle="Sample conversation patterns only. No AI service or external API is used."><span className="tag gold">PREWRITTEN DEMO</span></PageHeading>
- <div className="row" style={{marginBottom:14}}><button className={`btn ${view==='Student'?'primary':''}`} onClick={()=>setView('Student')}>Student support</button><button className={`btn ${view==='Teacher'?'primary':''}`} onClick={()=>setView('Teacher')}>Teacher planning</button></div>
- <div className="grid grid-2"><Panel><div className="section-head"><h2>{view==='Student'?'Ask for a hint first':'Draft teaching materials'}</h2><span className="tag blue">Sample dialogue</span></div><div className="chat-window" aria-live="polite">{messages.map((m,i)=><div className={`chat-bubble ${m.role==='user'?'mine':''}`} key={i}>{m.content}<div style={{fontSize:9,color:'#89939a',marginTop:5}}>{m.role==='assistant'?'SIMULATED RESPONSE':'YOU'}</div></div>)}</div><form className="row" style={{marginTop:10}} onSubmit={e=>{e.preventDefault();send(input)}}><input className="input" value={input} onChange={e=>setInput(e.target.value)} placeholder={view==='Student'?'Ask about a topic…':'What are you planning?'} aria-label="Message"/><button className="btn primary" type="submit" disabled={!input.trim()}><Send/> Send</button></form><p className="muted" style={{marginTop:7}}>Messages are saved locally in this browser. Treat drafts as examples to review.</p></Panel>
- <Panel><h2>Try a sample prompt</h2><div className="stack">{prompts.map(p=><button key={p} className="btn" style={{justifyContent:'flex-start',textAlign:'left'}} onClick={()=>send(p)}>{view==='Student'?<CircleHelp/>:<FileText/>}{p}</button>)}</div><hr style={{border:0,borderTop:'1px solid #e7eaea',margin:'18px 0'}}/><div className="notice"><ShieldCheck/>Student mode offers a hint before a full solution. Teacher mode provides editable lesson plans, quizzes, and differentiated exercise drafts.</div><button className="btn small" style={{marginTop:12}} onClick={()=>setMessages([{role:'assistant',content:`${view==='Student'?'Hello. I can offer a hint first and guide you through a problem.':'Hello. I can help draft teaching materials with sample prompts.'} This is simulated dialogue; no AI model is connected.`}])}><RotateCcw/> Start a new sample conversation</button></Panel></div></>;
 }
 function NotFound({goHome}:{goHome:()=>void}){return <div className="panel" style={{maxWidth:550,margin:'10vh auto',textAlign:'center',padding:35}}><div className="eyebrow">Page not found</div><h1>This learning page isn’t here.</h1><p className="muted">Choose a workspace from the navigation to continue.</p><button className="btn primary" onClick={goHome}><Home/> Return to overview</button></div>}
 

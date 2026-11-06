@@ -75,65 +75,896 @@ export interface ErrorResponse {
   error: string;
 }
 
-export type GuardAnalysisRequestLanguage = typeof GuardAnalysisRequestLanguage[keyof typeof GuardAnalysisRequestLanguage];
+export type SchoolRole = typeof SchoolRole[keyof typeof SchoolRole];
 
 
-export const GuardAnalysisRequestLanguage = {
-  Uzbek: 'Uzbek',
-  Русский: 'Русский',
-  English: 'English',
+export const SchoolRole = {
+  student: 'student',
+  teacher: 'teacher',
+  parent: 'parent',
+  school_director: 'school_director',
+  school_admin: 'school_admin',
 } as const;
 
-export interface GuardAnalysisRequest {
-  language: GuardAnalysisRequestLanguage;
-}
-
-export type GuardCheckId = typeof GuardCheckId[keyof typeof GuardCheckId];
+export type ClassRole = typeof ClassRole[keyof typeof ClassRole];
 
 
-export const GuardCheckId = {
-  api: 'api',
-  database: 'database',
-  session: 'session',
-  password_hashing: 'password_hashing',
-  cookie: 'cookie',
-  login_rate_limit: 'login_rate_limit',
-  multi_factor: 'multi_factor',
-  password_recovery: 'password_recovery',
-  school_data: 'school_data',
+export const ClassRole = {
+  student: 'student',
+  teacher: 'teacher',
 } as const;
 
-export type GuardCheckStatus = typeof GuardCheckStatus[keyof typeof GuardCheckStatus];
+export type AssignmentStatus = typeof AssignmentStatus[keyof typeof AssignmentStatus];
 
 
-export const GuardCheckStatus = {
-  pass: 'pass',
-  warning: 'warning',
-  missing: 'missing',
-  unavailable: 'unavailable',
+export const AssignmentStatus = {
+  assigned: 'assigned',
+  in_progress: 'in_progress',
+  submitted: 'submitted',
+  under_review: 'under_review',
+  needs_revision: 'needs_revision',
+  checked: 'checked',
 } as const;
 
-export interface GuardCheck {
-  id: GuardCheckId;
-  status: GuardCheckStatus;
+export interface SchoolRecord {
+  id: string;
+  name: string;
+  region: string;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  address?: string | null;
+  createdAt: string;
+  memberCount?: number;
+  classCount?: number;
 }
 
-export interface GuardCheckCounts {
-  pass: number;
-  warning: number;
-  missing: number;
-  unavailable: number;
+export interface SchoolMembership {
+  schoolId: string;
+  schoolName: string;
+  region: string;
+  /** @nullable */
+  district?: string | null;
+  role: SchoolRole;
 }
 
-export interface GuardReport {
-  generatedAt: string;
-  checks: GuardCheck[];
-  counts: GuardCheckCounts;
+export interface SchoolClass {
+  id: string;
+  schoolId: string;
+  schoolName?: string;
+  region?: string;
+  name: string;
+  grade: number;
+  academicYear: string;
+  studentCount?: number;
+  teacherCount?: number;
 }
 
-export interface GuardAnalysisResponse {
-  analysis: string;
-  model: string;
-  report: GuardReport;
+export type SchoolMemberAccountRole = typeof SchoolMemberAccountRole[keyof typeof SchoolMemberAccountRole];
+
+
+export const SchoolMemberAccountRole = {
+  student: 'student',
+  teacher: 'teacher',
+  parent: 'parent',
+  school_director: 'school_director',
+  school_admin: 'school_admin',
+  education_admin: 'education_admin',
+  ministry_admin: 'ministry_admin',
+  platform_superadmin: 'platform_superadmin',
+} as const;
+
+export interface SchoolMember {
+  id?: string;
+  schoolId?: string;
+  userId: string;
+  username: string;
+  login?: string;
+  accountRole?: SchoolMemberAccountRole;
+  role: SchoolRole;
+  createdAt: string;
 }
+
+export type ClassMemberAccountRole = typeof ClassMemberAccountRole[keyof typeof ClassMemberAccountRole];
+
+
+export const ClassMemberAccountRole = {
+  student: 'student',
+  teacher: 'teacher',
+  parent: 'parent',
+  school_director: 'school_director',
+  school_admin: 'school_admin',
+  education_admin: 'education_admin',
+  ministry_admin: 'ministry_admin',
+  platform_superadmin: 'platform_superadmin',
+} as const;
+
+export interface ClassMember {
+  id?: string;
+  classId?: string;
+  userId: string;
+  username: string;
+  login?: string;
+  accountRole?: ClassMemberAccountRole;
+  role: ClassRole;
+  createdAt: string;
+}
+
+export interface Assignment {
+  id: string;
+  classId: string;
+  title: string;
+  subject: string;
+  description: string;
+  /** @nullable */
+  dueAt?: string | null;
+  status: AssignmentStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AssignmentSummary = Assignment & {
+  className?: string;
+  schoolId?: string;
+  schoolName?: string;
+  createdBy: string;
+  createdByName: string;
+  submissionCount?: number;
+  reviewCount?: number;
+};
+
+export interface Submission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  status: AssignmentStatus;
+  content: string;
+  /** @nullable */
+  score?: number | null;
+  feedback: string;
+  submittedAt: string;
+  updatedAt: string;
+}
+
+export type SubmissionWithStudent = Submission & {
+  studentName: string;
+};
+
+export type MyAssignment = AssignmentSummary & ({
+  mySubmission?: Submission | null;
+});
+
+export interface CreateSchoolRequest {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  region: string;
+  /** @maxLength 120 */
+  district?: string;
+  /** @maxLength 240 */
+  address?: string;
+}
+
+export interface AddSchoolMemberRequest {
+  userId: string;
+  role: SchoolRole;
+}
+
+export interface CreateClassRequest {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 11
+     */
+  grade: number;
+  /**
+     * @minLength 1
+     * @maxLength 20
+     */
+  academicYear: string;
+}
+
+export interface AddClassMemberRequest {
+  userId: string;
+  role: ClassRole;
+}
+
+export interface CreateAssignmentRequest {
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  subject: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  description: string;
+  /** @nullable */
+  dueAt?: string | null;
+}
+
+export interface UpdateAssignmentRequest {
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  title?: string;
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  subject?: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  description?: string;
+  /** @nullable */
+  dueAt?: string | null;
+  status?: AssignmentStatus;
+}
+
+export interface SubmitAssignmentRequest {
+  /**
+     * @minLength 1
+     * @maxLength 10000
+     */
+  content: string;
+}
+
+export type ReviewSubmissionRequestStatus = typeof ReviewSubmissionRequestStatus[keyof typeof ReviewSubmissionRequestStatus];
+
+
+export const ReviewSubmissionRequestStatus = {
+  in_progress: 'in_progress',
+  submitted: 'submitted',
+  under_review: 'under_review',
+  needs_revision: 'needs_revision',
+  checked: 'checked',
+} as const;
+
+export interface ReviewSubmissionRequest {
+  status?: ReviewSubmissionRequestStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  score?: number | null;
+  /** @maxLength 4000 */
+  feedback?: string;
+}
+
+export interface MySchoolsResponse {
+  memberships: SchoolMembership[];
+  classes: SchoolClass[];
+  mySubmissionCount: number;
+}
+
+export interface SchoolListResponse {
+  schools: SchoolRecord[];
+}
+
+export interface SchoolResponse {
+  school: SchoolRecord;
+}
+
+export interface SchoolDetailResponse {
+  school: SchoolRecord;
+  role?: SchoolRole | null;
+}
+
+export interface SchoolMembersResponse {
+  members: SchoolMember[];
+}
+
+export interface SchoolMemberResponse {
+  member: SchoolMember;
+}
+
+export interface ClassesResponse {
+  classes: SchoolClass[];
+}
+
+export interface SchoolClassResponse {
+  class: SchoolClass;
+}
+
+export interface ClassDetailResponse {
+  class: SchoolClass;
+  role?: ClassRole | null;
+  schoolRole?: SchoolRole | null;
+}
+
+export interface ClassMembersResponse {
+  members: ClassMember[];
+}
+
+export interface ClassMemberResponse {
+  member: ClassMember;
+}
+
+export interface AssignmentsResponse {
+  assignments: AssignmentSummary[];
+}
+
+export interface AssignmentResponse {
+  assignment: Assignment;
+}
+
+export interface SubmissionsResponse {
+  submissions: SubmissionWithStudent[];
+}
+
+export interface SubmissionResponse {
+  submission: Submission;
+}
+
+export interface MyAssignmentsResponse {
+  assignments: MyAssignment[];
+}
+
+export interface QrStartRequest {
+  /** @maxLength 80 */
+  deviceLabel?: string;
+}
+
+export interface QrStartResponse {
+  deviceToken: string;
+  code: string;
+  expiresAt: string;
+  approveUrl: string;
+}
+
+export type QrStatusResponseStatus = typeof QrStatusResponseStatus[keyof typeof QrStatusResponseStatus];
+
+
+export const QrStatusResponseStatus = {
+  pending: 'pending',
+  scanned: 'scanned',
+  approved: 'approved',
+  consumed: 'consumed',
+  expired: 'expired',
+  denied: 'denied',
+} as const;
+
+export interface QrStatusResponse {
+  status: QrStatusResponseStatus;
+  expiresAt: string;
+}
+
+export interface QrApproveRequest {
+  code: string;
+}
+
+export interface QrApproveResponse {
+  approved: boolean;
+  expiresAt?: string;
+}
+
+export interface QrConsumeRequest {
+  deviceToken: string;
+}
+
+export interface OkResponse {
+  ok: boolean;
+}
+
+export interface Subject {
+  slug: string;
+  grade: number;
+  label: string;
+}
+
+export interface SubjectsResponse {
+  subjects: Subject[];
+}
+
+export interface LessonSlide {
+  title: string;
+  bullets: string[];
+  notes: string;
+  durationMinutes: number;
+}
+
+export interface LessonFact {
+  text: string;
+  source: string;
+}
+
+export type Visual3dPartShape = typeof Visual3dPartShape[keyof typeof Visual3dPartShape];
+
+
+export const Visual3dPartShape = {
+  sphere: 'sphere',
+  torus: 'torus',
+  cone: 'cone',
+  cylinder: 'cylinder',
+  box: 'box',
+  ring: 'ring',
+} as const;
+
+export interface Visual3dPart {
+  id: string;
+  shape: Visual3dPartShape;
+  color: string;
+  scale: number;
+  position: number[];
+  draggable: boolean;
+  label: string;
+}
+
+export type Visual3dKind = typeof Visual3dKind[keyof typeof Visual3dKind];
+
+
+export const Visual3dKind = {
+  globe: 'globe',
+  cell: 'cell',
+  egg: 'egg',
+  molecule: 'molecule',
+  atom: 'atom',
+  heart: 'heart',
+  plant: 'plant',
+  orbit: 'orbit',
+  volcano: 'volcano',
+  water: 'water',
+} as const;
+
+export interface Visual3d {
+  kind: Visual3dKind;
+  label: string;
+  caption: string;
+  interactions: string[];
+  parts: Visual3dPart[];
+}
+
+export interface QuizQuestion {
+  prompt: string;
+  choices: string[];
+  correct: string;
+  explanation: string;
+}
+
+export type LessonTopicStatus = typeof LessonTopicStatus[keyof typeof LessonTopicStatus];
+
+
+export const LessonTopicStatus = {
+  draft: 'draft',
+  published: 'published',
+} as const;
+
+export interface LessonTopic {
+  id: string;
+  /** @nullable */
+  schoolId?: string | null;
+  /** @nullable */
+  classId?: string | null;
+  subject: string;
+  grade: number;
+  title: string;
+  summary: string;
+  status: LessonTopicStatus;
+  slides: LessonSlide[];
+  facts: LessonFact[];
+  visual3d: Visual3d;
+  quiz: QuizQuestion;
+  source: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateTopicRequest {
+  subject: string;
+  title: string;
+  grade?: number;
+  classId?: string;
+}
+
+export interface TopicResponse {
+  topic: LessonTopic;
+  aiConfigured?: boolean;
+}
+
+export interface TopicsResponse {
+  topics: LessonTopic[];
+}
+
+export type StudentQuestionRequestDifficulty = typeof StudentQuestionRequestDifficulty[keyof typeof StudentQuestionRequestDifficulty];
+
+
+export const StudentQuestionRequestDifficulty = {
+  support: 'support',
+  core: 'core',
+  challenge: 'challenge',
+} as const;
+
+export interface StudentQuestionRequest {
+  studentId?: string;
+  studentName?: string;
+  difficulty?: StudentQuestionRequestDifficulty;
+  weakAreas?: string[];
+}
+
+export type StudentQuestionResponseQuestion = QuizQuestion & {
+  focus?: string;
+};
+
+export interface StudentQuestionResponse {
+  question: StudentQuestionResponseQuestion;
+}
+
+export type AttendanceStatus = typeof AttendanceStatus[keyof typeof AttendanceStatus];
+
+
+export const AttendanceStatus = {
+  present: 'present',
+  absent: 'absent',
+  late: 'late',
+  excused: 'excused',
+  unmarked: 'unmarked',
+} as const;
+
+export interface AttendanceRecord {
+  studentId: string;
+  studentName: string;
+  login?: string;
+  status: AttendanceStatus;
+  note?: string;
+  /** @nullable */
+  markedAt?: string | null;
+}
+
+export interface AttendanceSummary {
+  total: number;
+  present: number;
+  absent: number;
+  late: number;
+  excused: number;
+}
+
+export interface AttendanceResponse {
+  date: string;
+  canManage: boolean;
+  records: AttendanceRecord[];
+  summary: AttendanceSummary;
+}
+
+export type SaveAttendanceRequestRecordsItemStatus = typeof SaveAttendanceRequestRecordsItemStatus[keyof typeof SaveAttendanceRequestRecordsItemStatus];
+
+
+export const SaveAttendanceRequestRecordsItemStatus = {
+  present: 'present',
+  absent: 'absent',
+  late: 'late',
+  excused: 'excused',
+} as const;
+
+export type SaveAttendanceRequestRecordsItem = {
+  studentId: string;
+  status: SaveAttendanceRequestRecordsItemStatus;
+  note?: string;
+};
+
+export interface SaveAttendanceRequest {
+  date?: string;
+  records: SaveAttendanceRequestRecordsItem[];
+}
+
+export interface SaveAttendanceResponse {
+  saved: number;
+  date: string;
+}
+
+export interface StudentAttendanceRecord {
+  id: string;
+  classId: string;
+  className?: string;
+  status: string;
+  note?: string;
+  attendanceDate: string;
+  updatedAt?: string;
+}
+
+export type StudentAttendanceResponseSummary = {
+  total: number;
+  present: number;
+  rate: number;
+};
+
+export interface StudentAttendanceResponse {
+  records: StudentAttendanceRecord[];
+  summary: StudentAttendanceResponseSummary;
+}
+
+export type LessonRoomStatus = typeof LessonRoomStatus[keyof typeof LessonRoomStatus];
+
+
+export const LessonRoomStatus = {
+  open: 'open',
+  live: 'live',
+  ended: 'ended',
+} as const;
+
+export interface LessonRoom {
+  id: string;
+  code: string;
+  /** @nullable */
+  topicId?: string | null;
+  /** @nullable */
+  classId?: string | null;
+  hostId: string;
+  subject: string;
+  title: string;
+  status: LessonRoomStatus;
+  startedAt: string;
+  /** @nullable */
+  endedAt?: string | null;
+}
+
+export interface LessonParticipant {
+  userId: string;
+  role: string;
+  username: string;
+  cameraOn: boolean;
+  micOn: boolean;
+  sharingScreen: boolean;
+  testPrompt?: string;
+  testChoices?: string[];
+  /** @nullable */
+  testAnswer?: string | null;
+  /** @nullable */
+  testScore?: number | null;
+  joinedAt: string;
+}
+
+export interface LessonRoomsResponse {
+  rooms: LessonRoom[];
+}
+
+export interface LessonRoomResponse {
+  room: LessonRoom;
+}
+
+export interface LessonRoomDetailResponse {
+  room: LessonRoom;
+  participants: LessonParticipant[];
+  serverTime?: string;
+}
+
+export interface CreateRoomRequest {
+  topicId?: string;
+  classId?: string;
+  subject?: string;
+  title?: string;
+}
+
+export interface PresenceRequest {
+  cameraOn?: boolean;
+  micOn?: boolean;
+  sharingScreen?: boolean;
+}
+
+export type SignalRequestKind = typeof SignalRequestKind[keyof typeof SignalRequestKind];
+
+
+export const SignalRequestKind = {
+  offer: 'offer',
+  answer: 'answer',
+  ice: 'ice',
+  chat: 'chat',
+  control: 'control',
+} as const;
+
+export interface SignalRequest {
+  to?: string;
+  kind: SignalRequestKind;
+  payload?: unknown;
+}
+
+export interface LessonSignal {
+  seq: number;
+  from: string;
+  to: string;
+  kind: string;
+  payload?: unknown;
+  at: number;
+}
+
+export interface LessonSignalResponse {
+  messages: LessonSignal[];
+  lastSeq: number;
+  participants: LessonParticipant[];
+  roomStatus: string;
+}
+
+export interface RoomTestResponse {
+  question?: QuizQuestion | null;
+  /** @nullable */
+  answer?: string | null;
+  /** @nullable */
+  score?: number | null;
+}
+
+export interface AnswerTestRequest {
+  answer: string;
+}
+
+export interface AnswerTestResponse {
+  correct: boolean;
+  score: number;
+  explanation?: string;
+}
+
+export interface AssignTestRequest {
+  question: QuizQuestion;
+}
+
+export interface AssignIndividualResponse {
+  assigned: number;
+}
+
+export interface RoomRankEntry {
+  studentId: string;
+  studentName: string;
+  score: number;
+  answered: boolean;
+}
+
+export interface QuizAttempt {
+  id: string;
+  studentId: string;
+  score: number;
+  total: number;
+  /** @nullable */
+  grade?: number | null;
+}
+
+export interface RoomResultsResponse {
+  room: LessonRoom;
+  ranking: RoomRankEntry[];
+  bonusWinners: QuizAttempt[];
+}
+
+export interface SubmitResultRequest {
+  score: number;
+  total: number;
+  answers?: unknown[];
+}
+
+export interface QuizAttemptResponse {
+  attempt: QuizAttempt;
+}
+
+export interface AssignTopicRequest {
+  classId: string;
+}
+
+export interface CreateClassAccountsRequest {
+  names: string[];
+}
+
+export interface ClassAccount {
+  username: string;
+  login: string;
+  password: string;
+}
+
+export interface CreateClassAccountsResponse {
+  created: ClassAccount[];
+}
+
+export interface YouTubeVideo {
+  videoId: string;
+  title: string;
+  channel?: string;
+  thumbnail?: string;
+}
+
+export type YouTubeSearchResponseSource = typeof YouTubeSearchResponseSource[keyof typeof YouTubeSearchResponseSource];
+
+
+export const YouTubeSearchResponseSource = {
+  youtube: 'youtube',
+  link: 'link',
+} as const;
+
+export interface YouTubeSearchResponse {
+  source: YouTubeSearchResponseSource;
+  videos: YouTubeVideo[];
+  searchUrl?: string;
+}
+
+export interface Model3d {
+  uid: string;
+  name: string;
+  author?: string;
+  embedUrl: string;
+  thumbnail?: string;
+  downloadable?: boolean;
+}
+
+export type Models3dSearchResponseSource = typeof Models3dSearchResponseSource[keyof typeof Models3dSearchResponseSource];
+
+
+export const Models3dSearchResponseSource = {
+  sketchfab: 'sketchfab',
+  link: 'link',
+} as const;
+
+export interface Models3dSearchResponse {
+  source: Models3dSearchResponseSource;
+  models: Model3d[];
+  searchUrl?: string;
+}
+
+export type AddClassMemberByLoginRequestRole = typeof AddClassMemberByLoginRequestRole[keyof typeof AddClassMemberByLoginRequestRole];
+
+
+export const AddClassMemberByLoginRequestRole = {
+  student: 'student',
+  teacher: 'teacher',
+} as const;
+
+export interface AddClassMemberByLoginRequest {
+  login: string;
+  role: AddClassMemberByLoginRequestRole;
+}
+
+export interface AddClassMemberByLoginResponse {
+  added: boolean;
+  name: string;
+}
+
+export interface AwardRequest {
+  studentId: string;
+  assignmentId: string;
+  grade?: number;
+}
+
+export interface AwardResponse {
+  awarded: boolean;
+  grade: number;
+}
+
+export type GetQrLoginStatusParams = {
+deviceToken: string;
+};
+
+export type SearchYouTubeParams = {
+/**
+ * @maxLength 140
+ */
+query: string;
+};
+
+export type Search3dModelsParams = {
+/**
+ * @maxLength 140
+ */
+query: string;
+};
+
+export type GetClassAttendanceParams = {
+date?: string;
+};
+
+export type PollLessonSignalsParams = {
+since?: number;
+};
 

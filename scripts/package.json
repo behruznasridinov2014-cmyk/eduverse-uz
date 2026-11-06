@@ -5,7 +5,15 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "smoke:features": "node ./smoke-features.mjs",
+    "smoke:attendance": "node ./smoke-attendance.mjs",
+    "seed:demo-school": "node ./seed-demo-school.mjs",
+    "telegram:webhook": "node ./set-telegram-webhook.mjs",
+    "rotate:2fa-key": "tsx ./rotate-two-factor-key.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",

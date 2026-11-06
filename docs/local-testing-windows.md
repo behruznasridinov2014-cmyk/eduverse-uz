@@ -21,9 +21,10 @@ local PostgreSQL 17 Windows service and no Docker/Podman CLI.
 
 Run each command from the repository root. Start prompts for the local
 PostgreSQL `postgres` password using a secure prompt. It creates a separate
-`eduverse_test` database if needed and only pushes the current schema to an
-empty database. If the database is non-empty but lacks the existing EDUVERSE
-`users` and `sessions` tables, startup refuses to modify it.
+`eduverse_test` database if needed. It pushes the current schema to an empty
+database, adds missing school tables to an existing database that already
+matches the EDUVERSE account schema, and refuses to modify any non-empty
+database that lacks the existing `users` and `sessions` tables.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-eduverse-test.ps1
@@ -46,8 +47,12 @@ The launcher creates or updates 27 explicitly named role-preview accounts in
 school admin, teacher, parent, and 20 students). Each password is generated
 randomly and stored only in the local test credentials file; Windows ACLs are
 restricted to the current user and SYSTEM. Never copy this file or these
-accounts into production. These accounts have global roles only: there are no
-school records, school membership links, or cross-school isolation guarantees.
+accounts into production. These accounts are global role-preview accounts; the
+server-backed demo school and class are linked only by the seeding script in
+`eduverse_test`. The seed is idempotent: it creates the local demo school, adds
+role memberships, links the teacher and five students to class 7-B, and adds
+two assignments with three submissions. It does not provide real-school data or
+a guarantee that a production tenant is isolated.
 The smoke test also creates one randomly named synthetic student per run.
 It authenticates against each seeded role and does not print passwords.
 
@@ -56,19 +61,35 @@ It authenticates against each seeded role and does not print passwords.
 | Area | Current status |
 |---|---|
 | Password hashing and session token helpers | Unit tests exist |
+| School role, validation, and permission helpers | Unit tests exist |
 | API health, account registration/session/logout, authenticated Guard | Covered by the local API smoke script; requires the local API and test DB |
-| Current account roles | Role is stored on the account; no organization membership model |
-| School/tenant CRUD and two-school isolation | Not implemented; no school or membership schema/API |
-| Class, student roster, teacher assignments, CSV import | Not implemented |
-| TOTP, QR enrollment, backup codes, device confirmation/history/revocation | Not implemented |
+| Current account roles | Role is stored on the account; school membership is stored separately |
+| School/class CRUD, membership, roster, assignments, submissions | Implemented with authenticated, role- and membership-scoped API routes; UI integration is server-first with local demo fallbacks |
+| Two-school isolation | Server-side scope checks are implemented; an automated two-school database integration test is still required before production use |
+| Class, student roster, teacher assignments, CSV import | Roster and assignment flows are implemented; CSV import is not implemented |
+| Telegram 2FA, one-time setup binding, recovery codes, challenge-based login | Implemented; database integration tests require a dedicated local `eduverse_test` URL |
+| Durable Telegram sending, timeout/retry/backoff, account/chat throttling | PostgreSQL outbox worker and policy tests implemented |
+| 100,000 registered or concurrent accounts | Not load-tested; registered-account design target is not a concurrency claim |
 | Online rooms, participant invitations, WebRTC camera/microphone/screen share | Not implemented; lesson page is a local UI simulation |
 | iOS native app | Not present; the web UI is not a native app |
 
-Do not treat the absence of a tenant API as proof of tenant isolation. The
-required two-school security tests must be added alongside school-scoped
-tables and server-side authorization before real school data is introduced.
-Synthetic school seed accounts should be added only after that schema exists,
-and must be restricted to the dedicated local test database.
+Server-side authorization now scopes school and class access by the
+authenticated account and membership. Do not treat the presence of these routes
+as proof of production tenant isolation: the required two-school database
+integration tests must still be added, and synthetic school data must stay
+restricted to the dedicated local test database.
+
+The API unit suite includes Telegram delivery and security-helper tests. The
+route-level Telegram 2FA suite is skipped unless
+`EDUVERSE_TEST_DATABASE_URL` points to a loopback PostgreSQL database whose name
+is `eduverse_test` (optionally with a local suffix). It uses fake bot values,
+never calls Telegram, and refuses non-local or differently named databases.
+Provision/apply the schema only to that dedicated local database before running
+`pnpm --filter @workspace/api-server test`; do not point this variable at a
+production database. For manual local UI testing, `EDUVERSE_DEV_2FA_ECHO=1`
+exposes test codes only when `NODE_ENV` is not `production`. Development
+encryption keys are ephemeral unless a local key is configured, so do not use
+them for accounts that must survive a restart.
 
 ## WebRTC and device testing requirements
 

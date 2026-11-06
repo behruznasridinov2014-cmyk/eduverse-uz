@@ -1,20 +1,33 @@
 {
-  "name": "EDUVERSE-UZ School Platform",
-  "short_name": "EDUVERSE-UZ",
-  "description": "A private school learning workspace for schedules, classes, lessons, assignments, and practice.",
+  "name": "EDUVERSE UZ — интерактивная онлайн-школа",
+  "short_name": "EDUVERSE UZ",
+  "description": "Онлайн-уроки с камерой и экраном, ИИ-темы с интерактивным 3D-объектом, давомат, классы и задания для школы.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f4f6f4",
-  "theme_color": "#344f67",
-  "lang": "uz",
+  "background_color": "#141e2a",
+  "theme_color": "#1f2b3a",
+  "lang": "ru",
   "scope": "/",
-  "categories": ["education"],
+  "orientation": "any",
+  "categories": ["education", "productivity"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
