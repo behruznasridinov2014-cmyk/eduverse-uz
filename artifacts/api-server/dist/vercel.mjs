@@ -42970,6 +42970,7 @@ __export(src_exports, {
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  databaseIsConfigured: () => databaseIsConfigured,
   db: () => db,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
@@ -42994,7 +42995,7 @@ __export(src_exports, {
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   usersTable: () => usersTable
 });
-var Pool3, pool, db;
+var Pool3, configured, poolInstance, dbInstance, databaseIsConfigured, pool, db;
 var init_src = __esm({
   "../../lib/db/src/index.ts"() {
     "use strict";
@@ -43003,13 +43004,31 @@ var init_src = __esm({
     init_schema2();
     init_schema2();
     ({ Pool: Pool3 } = esm_default);
-    if (!process.env.DATABASE_URL) {
-      throw new Error(
-        "DATABASE_URL must be set. Did you forget to provision a database?"
+    configured = Boolean(process.env.DATABASE_URL);
+    poolInstance = null;
+    dbInstance = null;
+    if (configured) {
+      poolInstance = new Pool3({ connectionString: process.env.DATABASE_URL });
+      dbInstance = drizzle(poolInstance, { schema: schema_exports });
+    } else {
+      console.error(
+        "[db] DATABASE_URL is not configured \u2014 all database-backed endpoints will fail. Set DATABASE_URL in Vercel \u2192 Project \u2192 Settings \u2192 Environment Variables, then redeploy."
       );
     }
-    pool = new Pool3({ connectionString: process.env.DATABASE_URL });
-    db = drizzle(pool, { schema: schema_exports });
+    databaseIsConfigured = () => configured;
+    pool = poolInstance;
+    db = new Proxy({}, {
+      get(_target, prop) {
+        if (!dbInstance) {
+          throw new Error(
+            "DATABASE_URL is not configured on the server. Set it in Vercel \u2192 Project \u2192 Settings \u2192 Environment Variables (Production), then redeploy."
+          );
+        }
+        const target = dbInstance;
+        const value = target[prop];
+        return typeof value === "function" ? value.bind(target) : value;
+      }
+    });
   }
 });
 
@@ -49843,10 +49862,14 @@ var AwardRoomWinnerResponse = objectType({
 });
 
 // src/routes/health.ts
+init_src();
 var router2 = (0, import_express2.Router)();
 router2.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
-  res.json(data);
+  res.json({
+    ...data,
+    database: databaseIsConfigured() ? "configured" : "missing"
+  });
 });
 var health_default = router2;
 
