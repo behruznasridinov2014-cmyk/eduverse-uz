@@ -43829,6 +43829,16 @@ function verifyTotpStep(secretBase32, code, timeMs = Date.now()) {
 function generateTotpSecret() {
   return base32Encode(randomBytes2(20));
 }
+function buildOtpauthUrl(secretBase32, label, issuer = "EDUVERSE-UZ") {
+  const params = new URLSearchParams({
+    secret: secretBase32,
+    issuer,
+    algorithm: "SHA1",
+    digits: String(TOTP_DIGITS),
+    period: String(TOTP_STEP_SECONDS)
+  });
+  return `otpauth://totp/${encodeURIComponent(`${issuer}:${label}`)}?${params.toString()}`;
+}
 var RECOVERY_CODE_COUNT = 8;
 var RECOVERY_CODE_BYTES = 6;
 function generateRecoveryCodes() {
@@ -44207,7 +44217,7 @@ router.post(
       return;
     }
     if (user3.twoFactorEnabled) {
-      if (!user3.twoFactorSecret || !user3.twoFactorTelegramId) {
+      if (!user3.twoFactorSecret) {
         res.status(503).json({ error: "Two-factor authentication is not configured correctly." });
         return;
       }
@@ -44236,18 +44246,13 @@ router.post(
       if (!challenge) throw new Error("Two-factor challenge insert did not return a row.");
       const code = totp(decryptSecret(user3.twoFactorSecret));
       const queued = telegramBotConfigured();
-      if (queued) {
+      if (queued && user3.twoFactorTelegramId) {
         await enqueueTelegramMessage({
           chatId: user3.twoFactorTelegramId,
           text: `EDUVERSE sign-in code: <code>${code}</code>`,
           deduplicationKey: `login:${challenge.id}`,
           expiresAt: new Date(Date.now() + 6e4)
         });
-      }
-      if (!queued && !devEchoCodes()) {
-        await db.delete(twoFactorChallengesTable).where(eq(twoFactorChallengesTable.id, challenge.id));
-        res.status(503).json({ error: "The Telegram code could not be sent. Please try again later." });
-        return;
       }
       res.status(202).json({
         twoFactorRequired: true,
@@ -44313,6 +44318,7 @@ router.get("/auth/2fa/status", async (req, res) => {
     enabled: user3.twoFactorEnabled,
     telegramConnected: Boolean(user3.twoFactorTelegramId),
     telegramAvailable: telegramSetupIsConfigured() || devEchoCodes(),
+    authenticatorAvailable: true,
     setupLink: user3.twoFactorPendingNonce && user3.twoFactorPendingExpiresAt && user3.twoFactorPendingExpiresAt.getTime() > Date.now() ? buildBindLink(user3.twoFactorPendingNonce) : null
   });
 });
@@ -44345,18 +44351,12 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
     return;
   }
   const localSetup = devEchoCodes() && !telegramSetupIsConfigured();
-  if (!telegramSetupIsConfigured() && !devEchoCodes()) {
-    res.status(503).json({ error: "Telegram bot setup is not available on the server." });
-    return;
-  }
+  const telegramAvailable = telegramSetupIsConfigured();
   const secret = generateTotpSecret();
-  const nonce = localSetup ? null : randomBytes3(32).toString("base64url");
+  const nonce = localSetup ? null : telegramAvailable ? randomBytes3(32).toString("base64url") : null;
   const pendingExpiresAt = nonce ? new Date(Date.now() + twoFactorBindNonceDurationMs) : null;
   const bindLink = nonce ? buildBindLink(nonce) : null;
-  if (!bindLink && !localSetup) {
-    res.status(503).json({ error: "Telegram bot setup is not available on the server." });
-    return;
-  }
+  const otpauthUrl = buildOtpauthUrl(secret, user3.username || user3.login);
   const [prepared] = await db.update(usersTable).set({
     twoFactorSecret: encryptSecret(secret),
     twoFactorTelegramId: localSetup ? `dev:${user3.id}` : null,
@@ -44369,6 +44369,9 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
     return;
   }
   res.json({
+    otpauthUrl,
+    secret,
+    telegramAvailable,
     bindLink,
     ...localSetup ? { devCode: totp(secret) } : {}
   });
@@ -44383,8 +44386,8 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
     res.status(401).json({ error: "Authentication required." });
     return;
   }
-  if (user3.twoFactorEnabled || !user3.twoFactorSecret || !user3.twoFactorTelegramId) {
-    res.status(409).json({ error: "Connect Telegram before confirming two-factor authentication." });
+  if (user3.twoFactorEnabled || !user3.twoFactorSecret) {
+    res.status(409).json({ error: "Complete two-factor setup before requesting a code." });
     return;
   }
   if (!await applyUserRateLimit(
@@ -44399,7 +44402,7 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
   }
   const code = totp(decryptSecret(user3.twoFactorSecret));
   const queued = telegramBotConfigured();
-  if (queued) {
+  if (queued && user3.twoFactorTelegramId) {
     await enqueueTelegramMessage({
       chatId: user3.twoFactorTelegramId,
       text: `EDUVERSE setup code: <code>${code}</code>`,
@@ -44407,11 +44410,7 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
       expiresAt: new Date(Date.now() + 6e4)
     });
   }
-  if (!queued && !devEchoCodes()) {
-    res.status(503).json({ error: "The Telegram code could not be sent. Please try again later." });
-    return;
-  }
-  res.json({ sent: queued, ...devEchoCodes() ? { devCode: code } : {} });
+  res.json({ sent: queued && Boolean(user3.twoFactorTelegramId), ...devEchoCodes() ? { devCode: code } : {} });
 });
 router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, async (req, res) => {
   if (!hasOnlyFields(req.body, ["code"])) {
@@ -44435,8 +44434,8 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
   }
   const code = getString(req.body, "code")?.trim() ?? "";
   const setupStep = user3.twoFactorSecret ? verifyTotpStep(decryptSecret(user3.twoFactorSecret), code) : null;
-  if (user3.twoFactorEnabled || !user3.twoFactorSecret || !user3.twoFactorTelegramId || !/^\d{6}$/.test(code) || setupStep === null) {
-    res.status(401).json({ error: "The Telegram code is invalid or expired." });
+  if (user3.twoFactorEnabled || !user3.twoFactorSecret || !/^\d{6}$/.test(code) || setupStep === null) {
+    res.status(401).json({ error: "The confirmation code is invalid or expired." });
     return;
   }
   const recoveryCodes = generateRecoveryCodes();
@@ -44589,7 +44588,7 @@ router.post("/auth/2fa/login/resend", requireAllowedOrigin, twoFactorSetupLimite
   }
   const code = totp(decryptSecret(challenge.secret));
   const queued = telegramBotConfigured();
-  if (queued) {
+  if (queued && challenge.telegramId) {
     await enqueueTelegramMessage({
       chatId: challenge.telegramId,
       text: `EDUVERSE sign-in code: <code>${code}</code>`,
@@ -44597,11 +44596,7 @@ router.post("/auth/2fa/login/resend", requireAllowedOrigin, twoFactorSetupLimite
       expiresAt: new Date(Date.now() + 6e4)
     });
   }
-  if (!queued && !devEchoCodes()) {
-    res.status(503).json({ error: "The Telegram code could not be sent. Please try again later." });
-    return;
-  }
-  res.json({ sent: queued, ...devEchoCodes() ? { devCode: code } : {} });
+  res.json({ sent: queued && Boolean(challenge.telegramId), ...devEchoCodes() ? { devCode: code } : {} });
 });
 var TwoFactorChallengeConflict = class extends Error {
 };
@@ -44625,7 +44620,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
     expiresAt: twoFactorChallengesTable.expiresAt,
     consumedAt: twoFactorChallengesTable.consumedAt
   }).from(twoFactorChallengesTable).innerJoin(usersTable, eq(usersTable.id, twoFactorChallengesTable.userId)).where(eq(twoFactorChallengesTable.tokenHash, hashChallengeToken(challengeToken))).limit(1);
-  if (!challenge || challenge.consumedAt || challenge.expiresAt.getTime() <= Date.now() || !challenge.enabled || !challenge.secret || !challenge.telegramId) {
+  if (!challenge || challenge.consumedAt || challenge.expiresAt.getTime() <= Date.now() || !challenge.enabled || !challenge.secret) {
     res.status(410).json({ error: "This two-factor challenge has expired. Sign in again." });
     return;
   }
@@ -48901,6 +48896,59 @@ var ConsumeQrLoginResponse = objectType({
     "role": enumType(["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"]),
     "createdAt": coerce.date()
   })
+});
+var GetTwoFactorStatusResponse = objectType({
+  "enabled": booleanType(),
+  "telegramConnected": booleanType(),
+  "telegramAvailable": booleanType(),
+  "authenticatorAvailable": booleanType(),
+  "setupLink": stringType().nullish()
+});
+var StartTwoFactorSetupResponse = objectType({
+  "otpauthUrl": stringType(),
+  "secret": stringType(),
+  "telegramAvailable": booleanType(),
+  "bindLink": stringType().optional(),
+  "devCode": stringType().optional()
+});
+var ResendTwoFactorSetupCodeResponse = objectType({
+  "sent": booleanType().optional(),
+  "devCode": stringType().optional()
+});
+var EnableTwoFactorBody = objectType({
+  "code": stringType()
+});
+var EnableTwoFactorResponse = objectType({
+  "enabled": booleanType(),
+  "recoveryCodes": arrayType(stringType())
+});
+var DisableTwoFactorBody = objectType({
+  "code": stringType()
+});
+var DisableTwoFactorResponse = objectType({
+  "enabled": booleanType().optional()
+});
+var ResendTwoFactorLoginCodeBody = objectType({}).passthrough();
+var ResendTwoFactorLoginCodeResponse = objectType({
+  "sent": booleanType().optional(),
+  "devCode": stringType().optional()
+});
+var VerifyTwoFactorLoginBody = objectType({
+  "challengeToken": stringType(),
+  "code": stringType()
+});
+var VerifyTwoFactorLoginResponse = objectType({
+  "user": objectType({
+    "id": stringType().uuid(),
+    "username": stringType(),
+    "login": stringType(),
+    "role": enumType(["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"]),
+    "createdAt": coerce.date()
+  })
+});
+var TelegramWebhookBody = recordType(stringType(), unknownType());
+var TelegramWebhookResponse = objectType({
+  "ok": booleanType()
 });
 var GetMySchoolsResponse = objectType({
   "memberships": arrayType(objectType({

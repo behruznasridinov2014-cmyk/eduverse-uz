@@ -393,7 +393,7 @@ router.post(
         .set({ status: "live" })
         .where(eq(lessonRoomsTable.id, room.id));
     }
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "joined" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "joined" } });
     res.json({ room, participants: await participants(room.id) });
   },
 );
@@ -417,7 +417,7 @@ router.post(
           eq(lessonRoomParticipantsTable.userId, viewer.id),
         ),
       );
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "left" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "left" } });
     res.status(204).end();
   },
 );
@@ -440,8 +440,8 @@ router.post(
       .update(lessonRoomsTable)
       .set({ status: "ended", endedAt: new Date() })
       .where(eq(lessonRoomsTable.id, room.id));
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "ended" } });
-    void dropSignals(room.id);
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "ended" } });
+    await dropSignals(room.id);
     res.json({ ended: true });
   },
 );
@@ -594,7 +594,7 @@ router.post(
           eq(lessonRoomParticipantsTable.role, "student"),
         ),
       );
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "test-started" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "test-started" } });
     res.json({ assigned: true });
   },
 );
@@ -656,7 +656,7 @@ router.post(
         .where(eq(lessonRoomParticipantsTable.id, student.participantId));
       assigned += 1;
     }
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
     res.json({ assigned });
   },
 );
@@ -799,7 +799,7 @@ router.post(
       res.status(400).json({ error: "Unsupported signalling message." });
       return;
     }
-    void appendSignal(room.id, {
+    await appendSignal(room.id, {
       from: viewer.id,
       to,
       kind: kind as "offer" | "answer" | "ice" | "chat" | "control",

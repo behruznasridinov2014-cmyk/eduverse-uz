@@ -51,6 +51,11 @@ import type {
   CreateRoomRequest,
   CreateSchoolRequest,
   CreateTopicRequest,
+  CreateTopicTestRequest,
+  CreateTopicTestResponse,
+  DisableTwoFactorRequest,
+  EnableTwoFactorRequest,
+  EnableTwoFactorResponse,
   ErrorResponse,
   GetClassAttendanceParams,
   GetQrLoginStatusParams,
@@ -74,6 +79,7 @@ import type {
   QrStatusResponse,
   QuizAttemptResponse,
   RegisterRequest,
+  ResendTwoFactorLoginRequest,
   ReviewSubmissionRequest,
   RoomResultsResponse,
   RoomTestResponse,
@@ -96,9 +102,16 @@ import type {
   SubmissionsResponse,
   SubmitAssignmentRequest,
   SubmitResultRequest,
+  TelegramUpdate,
   TopicResponse,
   TopicsResponse,
+  TwoFactorDisabledResponse,
+  TwoFactorLoginPromptResponse,
+  TwoFactorResendResponse,
+  TwoFactorSetupResponse,
+  TwoFactorStatus,
   UpdateAssignmentRequest,
+  VerifyTwoFactorLoginRequest,
   YouTubeSearchResponse
 } from './api.schemas';
 
@@ -332,7 +345,7 @@ export const getLoginUrl = () => {
  * Verifies credentials and establishes a server-side session.
  * @summary Sign in
  */
-export const login = async (loginRequest: LoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AuthenticatedUserResponse> => {
+export const login = async (loginRequest: LoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AuthenticatedUserResponse | TwoFactorLoginPromptResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -348,7 +361,7 @@ export const login = async (loginRequest: LoginRequest, options?: Parameters<typ
     }
     return headers;
   };
-return customFetch<AuthenticatedUserResponse>(getLoginUrl(),
+return customFetch<AuthenticatedUserResponse | TwoFactorLoginPromptResponse>(getLoginUrl(),
   {
     ...options,
     method: 'POST',
@@ -955,6 +968,695 @@ export const useConsumeQrLogin = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getConsumeQrLoginMutationOptions(options), queryClient);
+    }
+
+export const getGetTwoFactorStatusUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/status`
+}
+
+/**
+ * @summary Get the signed-in account's two-factor status
+ */
+export const getTwoFactorStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<TwoFactorStatus> => {
+
+  return customFetch<TwoFactorStatus>(getGetTwoFactorStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTwoFactorStatusQueryKey = () => {
+    return [
+    `/api/auth/2fa/status`
+    ] as const;
+    }
+
+
+export const getGetTwoFactorStatusQueryOptions = <TData = Awaited<ReturnType<typeof getTwoFactorStatus>>, TError = ErrorType<ErrorResponse>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTwoFactorStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTwoFactorStatus>>> = ({ signal }) => getTwoFactorStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTwoFactorStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getTwoFactorStatus>>>
+export type GetTwoFactorStatusQueryError = ErrorType<ErrorResponse>
+
+
+export function useGetTwoFactorStatus<TData = Awaited<ReturnType<typeof getTwoFactorStatus>>, TError = ErrorType<ErrorResponse>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTwoFactorStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getTwoFactorStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTwoFactorStatus<TData = Awaited<ReturnType<typeof getTwoFactorStatus>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTwoFactorStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getTwoFactorStatus>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTwoFactorStatus<TData = Awaited<ReturnType<typeof getTwoFactorStatus>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get the signed-in account's two-factor status
+ */
+
+export function useGetTwoFactorStatus<TData = Awaited<ReturnType<typeof getTwoFactorStatus>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTwoFactorStatus>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTwoFactorStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartTwoFactorSetupUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/setup`
+}
+
+/**
+ * @summary Start two-factor setup (returns a Telegram bind link)
+ */
+export const startTwoFactorSetup = async ( options?: Parameters<typeof customFetch>[1]): Promise<TwoFactorSetupResponse> => {
+
+  return customFetch<TwoFactorSetupResponse>(getStartTwoFactorSetupUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStartTwoFactorSetupMutationKey = () => ['startTwoFactorSetup'] as const;
+
+export const getStartTwoFactorSetupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTwoFactorSetup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startTwoFactorSetup>>, TError,void, TContext> => {
+
+const mutationKey = getStartTwoFactorSetupMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startTwoFactorSetup>>, void> = () => {
+
+
+          return  startTwoFactorSetup(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartTwoFactorSetupMutationResult = NonNullable<Awaited<ReturnType<typeof startTwoFactorSetup>>>
+
+    export type StartTwoFactorSetupMutationError = ErrorType<ErrorResponse>
+
+
+    /**
+ * @summary Start two-factor setup (returns a Telegram bind link)
+ */
+export const useStartTwoFactorSetup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startTwoFactorSetup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof startTwoFactorSetup>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartTwoFactorSetupMutationOptions(options), queryClient);
+    }
+
+export const getResendTwoFactorSetupCodeUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/setup/resend`
+}
+
+/**
+ * @summary Resend the two-factor setup confirmation code
+ */
+export const resendTwoFactorSetupCode = async ( options?: Parameters<typeof customFetch>[1]): Promise<TwoFactorResendResponse> => {
+
+  return customFetch<TwoFactorResendResponse>(getResendTwoFactorSetupCodeUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResendTwoFactorSetupCodeMutationKey = () => ['resendTwoFactorSetupCode'] as const;
+
+export const getResendTwoFactorSetupCodeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendTwoFactorSetupCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resendTwoFactorSetupCode>>, TError,void, TContext> => {
+
+const mutationKey = getResendTwoFactorSetupCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resendTwoFactorSetupCode>>, void> = () => {
+
+
+          return  resendTwoFactorSetupCode(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResendTwoFactorSetupCodeMutationResult = NonNullable<Awaited<ReturnType<typeof resendTwoFactorSetupCode>>>
+
+    export type ResendTwoFactorSetupCodeMutationError = ErrorType<ErrorResponse>
+
+
+    /**
+ * @summary Resend the two-factor setup confirmation code
+ */
+export const useResendTwoFactorSetupCode = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendTwoFactorSetupCode>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof resendTwoFactorSetupCode>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getResendTwoFactorSetupCodeMutationOptions(options), queryClient);
+    }
+
+export const getEnableTwoFactorUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/enable`
+}
+
+/**
+ * @summary Confirm the code and enable two-factor authentication
+ */
+export const enableTwoFactor = async (enableTwoFactorRequest: EnableTwoFactorRequest, options?: Parameters<typeof customFetch>[1]): Promise<EnableTwoFactorResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<EnableTwoFactorResponse>(getEnableTwoFactorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(enableTwoFactorRequest)
+  }
+);}
+
+
+
+
+
+export const getEnableTwoFactorMutationKey = () => ['enableTwoFactor'] as const;
+
+export const getEnableTwoFactorMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enableTwoFactor>>, TError,EnableTwoFactorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof enableTwoFactor>>, TError,EnableTwoFactorMutationVariables, TContext> => {
+
+const mutationKey = getEnableTwoFactorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enableTwoFactor>>, EnableTwoFactorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  enableTwoFactor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnableTwoFactorMutationResult = NonNullable<Awaited<ReturnType<typeof enableTwoFactor>>>
+    export type EnableTwoFactorMutationBody = BodyType<EnableTwoFactorRequest>
+    export type EnableTwoFactorMutationError = ErrorType<ErrorResponse>
+    export type EnableTwoFactorMutationVariables = {data: BodyType<EnableTwoFactorRequest>}
+
+    /**
+ * @summary Confirm the code and enable two-factor authentication
+ */
+export const useEnableTwoFactor = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enableTwoFactor>>, TError,EnableTwoFactorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof enableTwoFactor>>,
+        TError,
+        EnableTwoFactorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEnableTwoFactorMutationOptions(options), queryClient);
+    }
+
+export const getDisableTwoFactorUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/disable`
+}
+
+/**
+ * @summary Disable two-factor authentication
+ */
+export const disableTwoFactor = async (disableTwoFactorRequest: DisableTwoFactorRequest, options?: Parameters<typeof customFetch>[1]): Promise<TwoFactorDisabledResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TwoFactorDisabledResponse>(getDisableTwoFactorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(disableTwoFactorRequest)
+  }
+);}
+
+
+
+
+
+export const getDisableTwoFactorMutationKey = () => ['disableTwoFactor'] as const;
+
+export const getDisableTwoFactorMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disableTwoFactor>>, TError,DisableTwoFactorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof disableTwoFactor>>, TError,DisableTwoFactorMutationVariables, TContext> => {
+
+const mutationKey = getDisableTwoFactorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof disableTwoFactor>>, DisableTwoFactorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  disableTwoFactor(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DisableTwoFactorMutationResult = NonNullable<Awaited<ReturnType<typeof disableTwoFactor>>>
+    export type DisableTwoFactorMutationBody = BodyType<DisableTwoFactorRequest>
+    export type DisableTwoFactorMutationError = ErrorType<ErrorResponse>
+    export type DisableTwoFactorMutationVariables = {data: BodyType<DisableTwoFactorRequest>}
+
+    /**
+ * @summary Disable two-factor authentication
+ */
+export const useDisableTwoFactor = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof disableTwoFactor>>, TError,DisableTwoFactorMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof disableTwoFactor>>,
+        TError,
+        DisableTwoFactorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDisableTwoFactorMutationOptions(options), queryClient);
+    }
+
+export const getResendTwoFactorLoginCodeUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/login/resend`
+}
+
+/**
+ * @summary Resend the login confirmation code
+ */
+export const resendTwoFactorLoginCode = async (resendTwoFactorLoginRequest?: ResendTwoFactorLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<TwoFactorResendResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TwoFactorResendResponse>(getResendTwoFactorLoginCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resendTwoFactorLoginRequest)
+  }
+);}
+
+
+
+
+
+export const getResendTwoFactorLoginCodeMutationKey = () => ['resendTwoFactorLoginCode'] as const;
+
+export const getResendTwoFactorLoginCodeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendTwoFactorLoginCode>>, TError,ResendTwoFactorLoginCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resendTwoFactorLoginCode>>, TError,ResendTwoFactorLoginCodeMutationVariables, TContext> => {
+
+const mutationKey = getResendTwoFactorLoginCodeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resendTwoFactorLoginCode>>, ResendTwoFactorLoginCodeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  resendTwoFactorLoginCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResendTwoFactorLoginCodeMutationResult = NonNullable<Awaited<ReturnType<typeof resendTwoFactorLoginCode>>>
+    export type ResendTwoFactorLoginCodeMutationBody = BodyType<ResendTwoFactorLoginRequest> | undefined
+    export type ResendTwoFactorLoginCodeMutationError = ErrorType<ErrorResponse>
+    export type ResendTwoFactorLoginCodeMutationVariables = {data?: BodyType<ResendTwoFactorLoginRequest>}
+
+    /**
+ * @summary Resend the login confirmation code
+ */
+export const useResendTwoFactorLoginCode = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resendTwoFactorLoginCode>>, TError,ResendTwoFactorLoginCodeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof resendTwoFactorLoginCode>>,
+        TError,
+        ResendTwoFactorLoginCodeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getResendTwoFactorLoginCodeMutationOptions(options), queryClient);
+    }
+
+export const getVerifyTwoFactorLoginUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/login/verify`
+}
+
+/**
+ * @summary Finish sign-in with the two-factor code
+ */
+export const verifyTwoFactorLogin = async (verifyTwoFactorLoginRequest: VerifyTwoFactorLoginRequest, options?: Parameters<typeof customFetch>[1]): Promise<AuthenticatedUserResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AuthenticatedUserResponse>(getVerifyTwoFactorLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(verifyTwoFactorLoginRequest)
+  }
+);}
+
+
+
+
+
+export const getVerifyTwoFactorLoginMutationKey = () => ['verifyTwoFactorLogin'] as const;
+
+export const getVerifyTwoFactorLoginMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyTwoFactorLogin>>, TError,VerifyTwoFactorLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyTwoFactorLogin>>, TError,VerifyTwoFactorLoginMutationVariables, TContext> => {
+
+const mutationKey = getVerifyTwoFactorLoginMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyTwoFactorLogin>>, VerifyTwoFactorLoginMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyTwoFactorLogin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyTwoFactorLoginMutationResult = NonNullable<Awaited<ReturnType<typeof verifyTwoFactorLogin>>>
+    export type VerifyTwoFactorLoginMutationBody = BodyType<VerifyTwoFactorLoginRequest>
+    export type VerifyTwoFactorLoginMutationError = ErrorType<ErrorResponse>
+    export type VerifyTwoFactorLoginMutationVariables = {data: BodyType<VerifyTwoFactorLoginRequest>}
+
+    /**
+ * @summary Finish sign-in with the two-factor code
+ */
+export const useVerifyTwoFactorLogin = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyTwoFactorLogin>>, TError,VerifyTwoFactorLoginMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof verifyTwoFactorLogin>>,
+        TError,
+        VerifyTwoFactorLoginMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVerifyTwoFactorLoginMutationOptions(options), queryClient);
+    }
+
+export const getTelegramWebhookUrl = () => {
+
+
+
+
+  return `/api/auth/2fa/telegram/webhook`
+}
+
+/**
+ * @summary Telegram bot webhook for two-factor bind
+ */
+export const telegramWebhook = async (telegramUpdate: TelegramUpdate, options?: Parameters<typeof customFetch>[1]): Promise<OkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<OkResponse>(getTelegramWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(telegramUpdate)
+  }
+);}
+
+
+
+
+
+export const getTelegramWebhookMutationKey = () => ['telegramWebhook'] as const;
+
+export const getTelegramWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,TelegramWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,TelegramWebhookMutationVariables, TContext> => {
+
+const mutationKey = getTelegramWebhookMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof telegramWebhook>>, TelegramWebhookMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  telegramWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TelegramWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof telegramWebhook>>>
+    export type TelegramWebhookMutationBody = BodyType<TelegramUpdate>
+    export type TelegramWebhookMutationError = ErrorType<unknown>
+    export type TelegramWebhookMutationVariables = {data: BodyType<TelegramUpdate>}
+
+    /**
+ * @summary Telegram bot webhook for two-factor bind
+ */
+export const useTelegramWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,TelegramWebhookMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof telegramWebhook>>,
+        TError,
+        TelegramWebhookMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTelegramWebhookMutationOptions(options), queryClient);
     }
 
 export const getGetMySchoolsUrl = () => {
@@ -3296,6 +3998,96 @@ export function useGetTopic<TData = Awaited<ReturnType<typeof getTopic>>, TError
 
 
 
+
+export const getCreateTopicTestUrl = (topicId: string,) => {
+
+
+
+
+  return `/api/topics/${topicId}/test`
+}
+
+/**
+ * Generates and saves test questions for the topic. Students of the assigned class can open it from the topic page.
+ * @summary Create a test for a published topic
+ */
+export const createTopicTest = async (topicId: string,
+    createTopicTestRequest?: CreateTopicTestRequest, options?: Parameters<typeof customFetch>[1]): Promise<CreateTopicTestResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CreateTopicTestResponse>(getCreateTopicTestUrl(topicId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createTopicTestRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateTopicTestMutationKey = () => ['createTopicTest'] as const;
+
+export const getCreateTopicTestMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTopicTest>>, TError,CreateTopicTestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTopicTest>>, TError,CreateTopicTestMutationVariables, TContext> => {
+
+const mutationKey = getCreateTopicTestMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTopicTest>>, CreateTopicTestMutationVariables> = (props) => {
+          const {topicId,data} = props ?? {};
+
+          return  createTopicTest(topicId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTopicTestMutationResult = NonNullable<Awaited<ReturnType<typeof createTopicTest>>>
+    export type CreateTopicTestMutationBody = BodyType<CreateTopicTestRequest> | undefined
+    export type CreateTopicTestMutationError = ErrorType<ErrorResponse>
+    export type CreateTopicTestMutationVariables = {topicId: string;data?: BodyType<CreateTopicTestRequest>}
+
+    /**
+ * @summary Create a test for a published topic
+ */
+export const useCreateTopicTest = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTopicTest>>, TError,CreateTopicTestMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createTopicTest>>,
+        TError,
+        CreateTopicTestMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateTopicTestMutationOptions(options), queryClient);
+    }
 
 export const getAssignTopicToClassUrl = (topicId: string,) => {
 

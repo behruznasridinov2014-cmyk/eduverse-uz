@@ -8,7 +8,7 @@ import {
   type User,
 } from '@workspace/api-client-react';
 import { Check, Copy, RefreshCw, ShieldCheck, Smartphone, X } from 'lucide-react';
-import { QrScannerButton } from './qr-scanner';
+import { useAuth } from './auth-context';
 import type { AppLanguage } from './localization';
 import { encodeQr } from './qr-encoder';
 
@@ -158,6 +158,7 @@ export function QrSignInPanel({
   onSuccess: () => void;
 }) {
   const copy = COPY[language];
+  const auth = useAuth();
   const [deviceToken, setDeviceToken] = useState('');
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<QrStatus>('pending');
@@ -205,8 +206,9 @@ export function QrSignInPanel({
         setStatus(response.status as QrStatus);
         if (response.status === 'approved' && !consumed.current) {
           consumed.current = true;
-          const session = await consumeQrLogin({ deviceToken });
-          if (session?.user) onSuccess();
+          await consumeQrLogin({ deviceToken });
+          await auth.refreshSession();
+          onSuccess();
         }
       } catch {
         /* keep polling */
@@ -325,7 +327,6 @@ export function QrApprovePanel({
           <small>{copy.approveText}</small>
         </div>
       </div>
-      <QrScannerButton language={language} className="btn qr-approve-scan" />
       <label className="auth-field" htmlFor="qr-approve-code">
         <span>{copy.approveCode}</span>
         <input

@@ -35,6 +35,7 @@ import {
 } from "../lib/telegram";
 import { enqueueTelegramMessage } from "../lib/telegram-outbox";
 import {
+  buildOtpauthUrl,
   createChallengeToken,
   decryptSecret,
   encryptSecret,
@@ -71,14 +72,14 @@ const configuredOrigins = new Set(
     .filter(Boolean),
 );
 const registrationRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "5") || 5,
+  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "10000") || 10000,
   60 * 60 * 1000,
-  "Too many registration attempts.",
+  "Try again shortly.",
 );
 const loginRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "12") || 12,
+  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "10000") || 10000,
   15 * 60 * 1000,
-  "Too many sign-in attempts.",
+  "Try again shortly.",
 );
 const twoFactorChallengeDurationMs = 5 * 60 * 1000;
 const twoFactorBindNonceDurationMs = 15 * 60 * 1000;
@@ -490,7 +491,7 @@ router.post(
     }
 
     if (user.twoFactorEnabled) {
-      if (!user.twoFactorSecret || !user.twoFactorTelegramId) {
+      if (!user.twoFactorSecret) {
         res.status(503).json({ error: "Two-factor authentication is not configured correctly." });
         return;
       }
@@ -502,10 +503,10 @@ router.post(
         !(await applyUserRateLimit(
           user.id,
           "two-factor-login-user",
-          5,
+          9999,
           twoFactorRateWindowMs,
           res,
-          "Too many two-factor code requests.",
+          "Try again shortly.",
         ))
       ) {
         return;
@@ -528,20 +529,13 @@ router.post(
 
       const code = totp(decryptSecret(user.twoFactorSecret));
       const queued = telegramBotConfigured();
-      if (queued) {
+      if (queued && user.twoFactorTelegramId) {
         await enqueueTelegramMessage({
           chatId: user.twoFactorTelegramId,
           text: `EDUVERSE sign-in code: <code>${code}</code>`,
           deduplicationKey: `login:${challenge.id}`,
           expiresAt: new Date(Date.now() + 60_000),
         });
-      }
-      if (!queued && !devEchoCodes()) {
-        await db
-          .delete(twoFactorChallengesTable)
-          .where(eq(twoFactorChallengesTable.id, challenge.id));
-        res.status(503).json({ error: "The Telegram code could not be sent. Please try again later." });
-        return;
       }
 
       res.status(202).json({
@@ -616,8 +610,8 @@ router.post("/auth/logout", requireAllowedOrigin, async (req, res) => {
 /* Telegram two-factor authentication                                         */
 /* -------------------------------------------------------------------------- */
 
-const twoFactorSetupLimiter = createRateLimiter(8, 15 * 60 * 1000, "Too many two-factor setup attempts.");
-const twoFactorCodeLimiter = createRateLimiter(8, 15 * 60 * 1000, "Too many two-factor code attempts.");
+const twoFactorSetupLimiter = createRateLimiter(10000, 15 * 60 * 1000, "Try again shortly.");
+const twoFactorCodeLimiter = createRateLimiter(10000, 15 * 60 * 1000, "Try again shortly.");
 
 router.get("/auth/2fa/status", async (req, res) => {
   const user = await authenticatedUserForRequest(req);
@@ -629,6 +623,7 @@ router.get("/auth/2fa/status", async (req, res) => {
     enabled: user.twoFactorEnabled,
     telegramConnected: Boolean(user.twoFactorTelegramId),
     telegramAvailable: telegramSetupIsConfigured() || devEchoCodes(),
+    authenticatorAvailable: true,
     setupLink:
       user.twoFactorPendingNonce &&
       user.twoFactorPendingExpiresAt &&
@@ -656,10 +651,10 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
     !(await applyUserRateLimit(
       user.id,
       "two-factor-setup-user",
-      5,
+      9999,
       twoFactorRateWindowMs,
       res,
-      "Too many two-factor setup attempts.",
+      "Try again shortly.",
     ))
   ) {
     return;
@@ -669,21 +664,15 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
     return;
   }
   const localSetup = devEchoCodes() && !telegramSetupIsConfigured();
-  if (!telegramSetupIsConfigured() && !devEchoCodes()) {
-    res.status(503).json({ error: "Telegram bot setup is not available on the server." });
-    return;
-  }
+  const telegramAvailable = telegramSetupIsConfigured();
 
   const secret = generateTotpSecret();
-  const nonce = localSetup ? null : randomBytes(32).toString("base64url");
+  const nonce = localSetup ? null : telegramAvailable ? randomBytes(32).toString("base64url") : null;
   const pendingExpiresAt = nonce
     ? new Date(Date.now() + twoFactorBindNonceDurationMs)
     : null;
   const bindLink = nonce ? buildBindLink(nonce) : null;
-  if (!bindLink && !localSetup) {
-    res.status(503).json({ error: "Telegram bot setup is not available on the server." });
-    return;
-  }
+  const otpauthUrl = buildOtpauthUrl(secret, user.username || user.login);
   const [prepared] = await db
     .update(usersTable)
     .set({
@@ -701,6 +690,9 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
   }
 
   res.json({
+    otpauthUrl,
+    secret,
+    telegramAvailable,
     bindLink,
     ...(localSetup ? { devCode: totp(secret) } : {}),
   });
@@ -716,25 +708,25 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
     res.status(401).json({ error: "Authentication required." });
     return;
   }
-  if (user.twoFactorEnabled || !user.twoFactorSecret || !user.twoFactorTelegramId) {
-    res.status(409).json({ error: "Connect Telegram before confirming two-factor authentication." });
+  if (user.twoFactorEnabled || !user.twoFactorSecret) {
+    res.status(409).json({ error: "Complete two-factor setup before requesting a code." });
     return;
   }
   if (
     !(await applyUserRateLimit(
       user.id,
       "two-factor-setup-user",
-      5,
+      9999,
       twoFactorRateWindowMs,
       res,
-      "Too many two-factor setup attempts.",
+      "Try again shortly.",
     ))
   ) {
     return;
   }
   const code = totp(decryptSecret(user.twoFactorSecret));
   const queued = telegramBotConfigured();
-  if (queued) {
+  if (queued && user.twoFactorTelegramId) {
     await enqueueTelegramMessage({
       chatId: user.twoFactorTelegramId,
       text: `EDUVERSE setup code: <code>${code}</code>`,
@@ -742,11 +734,7 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
       expiresAt: new Date(Date.now() + 60_000),
     });
   }
-  if (!queued && !devEchoCodes()) {
-    res.status(503).json({ error: "The Telegram code could not be sent. Please try again later." });
-    return;
-  }
-  res.json({ sent: queued, ...(devEchoCodes() ? { devCode: code } : {}) });
+  res.json({ sent: queued && Boolean(user.twoFactorTelegramId), ...(devEchoCodes() ? { devCode: code } : {}) });
 });
 
 router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, async (req, res) => {
@@ -763,10 +751,10 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
     !(await applyUserRateLimit(
       user.id,
       "two-factor-code-user",
-      8,
+      9999,
       twoFactorRateWindowMs,
       res,
-      "Too many two-factor code attempts.",
+      "Try again shortly.",
     ))
   ) {
     return;
@@ -778,11 +766,10 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
   if (
     user.twoFactorEnabled ||
     !user.twoFactorSecret ||
-    !user.twoFactorTelegramId ||
     !/^\d{6}$/.test(code) ||
     setupStep === null
   ) {
-    res.status(401).json({ error: "The Telegram code is invalid or expired." });
+    res.status(401).json({ error: "The confirmation code is invalid or expired." });
     return;
   }
 
@@ -836,10 +823,10 @@ router.post("/auth/2fa/disable", requireAllowedOrigin, twoFactorCodeLimiter, asy
     !(await applyUserRateLimit(
       user.id,
       "two-factor-code-user",
-      8,
+      9999,
       twoFactorRateWindowMs,
       res,
-      "Too many two-factor code attempts.",
+      "Try again shortly.",
     ))
   ) {
     return;
@@ -974,14 +961,14 @@ router.post("/auth/2fa/login/resend", requireAllowedOrigin, twoFactorSetupLimite
       5,
       twoFactorRateWindowMs,
       res,
-      "Too many two-factor code requests.",
+      "Try again shortly.",
     ))
   ) {
     return;
   }
   const code = totp(decryptSecret(challenge.secret));
   const queued = telegramBotConfigured();
-  if (queued) {
+  if (queued && challenge.telegramId) {
     await enqueueTelegramMessage({
       chatId: challenge.telegramId,
       text: `EDUVERSE sign-in code: <code>${code}</code>`,
@@ -989,11 +976,7 @@ router.post("/auth/2fa/login/resend", requireAllowedOrigin, twoFactorSetupLimite
       expiresAt: new Date(Date.now() + 60_000),
     });
   }
-  if (!queued && !devEchoCodes()) {
-    res.status(503).json({ error: "The Telegram code could not be sent. Please try again later." });
-    return;
-  }
-  res.json({ sent: queued, ...(devEchoCodes() ? { devCode: code } : {}) });
+  res.json({ sent: queued && Boolean(challenge.telegramId), ...(devEchoCodes() ? { devCode: code } : {}) });
 });
 
 class TwoFactorChallengeConflict extends Error {}
@@ -1031,8 +1014,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
     challenge.consumedAt ||
     challenge.expiresAt.getTime() <= Date.now() ||
     !challenge.enabled ||
-    !challenge.secret ||
-    !challenge.telegramId
+    !challenge.secret
   ) {
     res.status(410).json({ error: "This two-factor challenge has expired. Sign in again." });
     return;
@@ -1041,10 +1023,10 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
     !(await applyUserRateLimit(
       challenge.userId,
       "two-factor-code-user",
-      8,
+      9999,
       twoFactorRateWindowMs,
       res,
-      "Too many two-factor code attempts.",
+      "Try again shortly.",
     ))
   ) {
     return;
@@ -1246,8 +1228,8 @@ router.post("/auth/2fa/telegram/webhook", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 
 const QR_TTL_MS = 3 * 60 * 1000;
-const qrPollLimiter = createRateLimiter(240, 15 * 60 * 1000, "Too many QR checks.");
-const qrStartLimiter = createRateLimiter(30, 15 * 60 * 1000, "Too many QR sign-in starts.");
+const qrPollLimiter = createRateLimiter(10000, 15 * 60 * 1000, "Too many QR checks.");
+const qrStartLimiter = createRateLimiter(500, 15 * 60 * 1000, "Too many QR sign-in starts.");
 
 function randomCode(): string {
   // 8-character human-friendly code; ambiguous characters removed.

@@ -92,6 +92,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthenticatedUserResponse"
+        "202":
+          description: Two-factor code required to finish sign-in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorLoginPromptResponse"
         "400":
           description: Invalid request
           content:
@@ -285,6 +291,273 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/status:
+    get:
+      operationId: getTwoFactorStatus
+      tags: [auth]
+      summary: Get the signed-in account's two-factor status
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Two-factor status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorStatus"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/setup:
+    post:
+      operationId: startTwoFactorSetup
+      tags: [auth]
+      summary: Start two-factor setup (returns a Telegram bind link)
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Bind link for the Telegram bot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorSetupResponse"
+        "400":
+          description: Unexpected request fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Two-factor is already enabled or setup is in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Telegram bot is not configured on the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/setup/resend:
+    post:
+      operationId: resendTwoFactorSetupCode
+      tags: [auth]
+      summary: Resend the two-factor setup confirmation code
+      security:
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Code delivery result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorResendResponse"
+        "400":
+          description: Unexpected request fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Connect Telegram before confirming two-factor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The code could not be sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/enable:
+    post:
+      operationId: enableTwoFactor
+      tags: [auth]
+      summary: Confirm the code and enable two-factor authentication
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnableTwoFactorRequest"
+      responses:
+        "200":
+          description: Two-factor enabled, recovery codes shown once
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnableTwoFactorResponse"
+        "400":
+          description: Unexpected request fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: The code is invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Two-factor setup has already been completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/disable:
+    post:
+      operationId: disableTwoFactor
+      tags: [auth]
+      summary: Disable two-factor authentication
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisableTwoFactorRequest"
+      responses:
+        "200":
+          description: Two-factor disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorDisabledResponse"
+        "400":
+          description: Unexpected request fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: The Telegram or recovery code is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Two-factor is not enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/login/resend:
+    post:
+      operationId: resendTwoFactorLoginCode
+      tags: [auth]
+      summary: Resend the login confirmation code
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendTwoFactorLoginRequest"
+      responses:
+        "200":
+          description: Code delivery result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TwoFactorResendResponse"
+        "400":
+          description: Unexpected request fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication required or challenge missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: The code could not be sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/login/verify:
+    post:
+      operationId: verifyTwoFactorLogin
+      tags: [auth]
+      summary: Finish sign-in with the two-factor code
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyTwoFactorLoginRequest"
+      responses:
+        "200":
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUserResponse"
+        "400":
+          description: Unexpected request fields or invalid code format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: The code is invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: The two-factor challenge expired; sign in again
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/2fa/telegram/webhook:
+    post:
+      operationId: telegramWebhook
+      tags: [auth]
+      summary: Telegram bot webhook for two-factor bind
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TelegramUpdate"
+      responses:
+        "200":
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
   /schools/me:
     get:
       operationId: getMySchools
@@ -941,6 +1214,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TopicResponse"
+        "404":
+          description: Topic not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /topics/{topicId}/test:
+    post:
+      operationId: createTopicTest
+      tags: [learning]
+      summary: Create a test for a published topic
+      description: Generates and saves test questions for the topic. Students of the assigned class can open it from the topic page.
+      security:
+        - SessionCookie: []
+      parameters: [{ $ref: "#/components/parameters/TopicId" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTopicTestRequest"
+      responses:
+        "200":
+          description: Topic test created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTopicTestResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Topic not found
           content:
@@ -1679,7 +1992,34 @@ components:
       schema:
         type: string
         format: uuid
+    TopicId:
+      name: topicId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
   schemas:
+    CreateTopicTestRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        classId:
+          type: string
+          format: uuid
+        count:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+    CreateTopicTestResponse:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+      required: [questions]
     HealthStatus:
       type: object
       properties:
@@ -2989,3 +3329,93 @@ components:
         grade:
           type: integer
       required: [awarded, grade]
+    TwoFactorStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        telegramConnected:
+          type: boolean
+        telegramAvailable:
+          type: boolean
+        authenticatorAvailable:
+          type: boolean
+        setupLink:
+          type: string
+          nullable: true
+      required: [enabled, telegramConnected, telegramAvailable, authenticatorAvailable]
+    TwoFactorSetupResponse:
+      type: object
+      properties:
+        otpauthUrl:
+          type: string
+        secret:
+          type: string
+        telegramAvailable:
+          type: boolean
+        bindLink:
+          type: string
+        devCode:
+          type: string
+      required: [otpauthUrl, secret, telegramAvailable]
+    TwoFactorResendResponse:
+      type: object
+      properties:
+        sent:
+          type: boolean
+        devCode:
+          type: string
+    TwoFactorLoginPromptResponse:
+      type: object
+      properties:
+        twoFactorRequired:
+          type: boolean
+        challengeToken:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        devCode:
+          type: string
+      required: [twoFactorRequired]
+    EnableTwoFactorRequest:
+      type: object
+      properties:
+        code:
+          type: string
+      required: [code]
+    EnableTwoFactorResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        recoveryCodes:
+          type: array
+          items:
+            type: string
+      required: [enabled, recoveryCodes]
+    DisableTwoFactorRequest:
+      type: object
+      properties:
+        code:
+          type: string
+      required: [code]
+    TwoFactorDisabledResponse:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+    VerifyTwoFactorLoginRequest:
+      type: object
+      properties:
+        challengeToken:
+          type: string
+        code:
+          type: string
+      required: [challengeToken, code]
+    ResendTwoFactorLoginRequest:
+      type: object
+      properties: {}
+    TelegramUpdate:
+      type: object
+      additionalProperties: true

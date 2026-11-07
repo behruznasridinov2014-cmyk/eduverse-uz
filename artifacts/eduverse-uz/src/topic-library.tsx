@@ -2,15 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ApiError,
   createTopic,
+  createTopicTest,
   getMySchools,
   listTopics,
-  search3dModels,
-  searchYouTube,
   type LessonTopic,
-  type Model3d,
+  type QuizQuestion,
   type SchoolClass,
   type User,
-  type YouTubeVideo,
 } from '@workspace/api-client-react';
 import {
   ArrowRight,
@@ -426,7 +424,6 @@ function TopicDetail({
       </section>
 
       <VideoPanel topic={topic} />
-      <Online3dPanel topic={topic} />
 
       <SlidesPanel topic={topic} copy={copy} />
       <FactsPanel topic={topic} copy={copy} />
@@ -449,154 +446,33 @@ function TopicDetail({
 /* -------------------------------------------------------------------------- */
 
 function VideoPanel({ topic }: { topic: LessonTopic }) {
-  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
-  const [searchUrl, setSearchUrl] = useState('');
-  const [selected, setSelected] = useState<YouTubeVideo | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setSelected(null);
-    searchYouTube({ query: `${topic.subject} ${topic.title} урок 7 класс` })
-      .then((response) => {
-        if (!active) return;
-        const list = response.videos ?? [];
-        setVideos(list);
-        setSearchUrl(response.searchUrl ?? '');
-        setSelected(list[0] ?? null);
-      })
-      .catch(() => {
-        if (!active) return;
-        setVideos([]);
-        setSearchUrl(`https://www.youtube.com/results?search_query=${encodeURIComponent(`${topic.subject} ${topic.title} урок`)}`);
-      })
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [topic.id, topic.subject, topic.title]);
-
-  const fallbackUrl = searchUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(`${topic.subject} ${topic.title} урок`)}`;
+  const query = `${topic.subject} ${topic.title} урок 7 класс`;
+  const embedSrc = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&rel=0`;
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 
   return (
     <section className="panel reveal-up topic-video">
       <div className="section-head">
         <div>
           <h2><MonitorPlay size={16} /> Видео по теме</h2>
-          <p className="muted">ИИ подобрал ролики по теме урока — 40 минут с объяснением.</p>
+          <p className="muted">Смотрите объяснение прямо здесь или найдите больше видео ниже.</p>
         </div>
-        {selected && <span className="tag red">YouTube</span>}
+        <span className="tag red">Видео</span>
       </div>
-      {loading ? (
-        <p className="muted" role="status">Ищем видео по теме…</p>
-      ) : selected ? (
-        <>
-          <div className="video-embed">
-            <iframe
-              src={`https://www.youtube.com/embed/${selected.videoId}?rel=0`}
-              title={selected.title}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-          <p className="video-title">{selected.title}{selected.channel ? ` — ${selected.channel}` : ''}</p>
-          {videos.length > 1 && (
-            <div className="video-list">
-              {videos.map((video) => (
-                <button
-                  key={video.videoId}
-                  type="button"
-                  className={`video-choice ${selected.videoId === video.videoId ? 'selected' : ''}`}
-                  onClick={() => setSelected(video)}
-                >
-                  {video.thumbnail && <img src={video.thumbnail} alt="" loading="lazy" />}
-                  <span>{video.title}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="video-fallback">
-          <p className="muted">YouTube не подключён на сервере (добавьте YOUTUBE_API_KEY в переменные на Vercel).</p>
-          <a className="btn primary" href={fallbackUrl} target="_blank" rel="noreferrer">
-            <MonitorPlay size={15} /> Открыть видео по теме на YouTube
-            <ArrowRight size={14} />
-          </a>
-        </div>
-      )}
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* 3D models from the internet (Sketchfab)                                    */
-/* -------------------------------------------------------------------------- */
-
-function Online3dPanel({ topic }: { topic: LessonTopic }) {
-  const [models, setModels] = useState<Model3d[]>([]);
-  const [searchUrl, setSearchUrl] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    search3dModels({ query: `${topic.subject} ${topic.title}` })
-      .then((response) => {
-        if (!active) return;
-        setModels(response.models ?? []);
-        setSearchUrl(response.searchUrl ?? '');
-      })
-      .catch(() => {
-        if (!active) return;
-        setModels([]);
-        setSearchUrl(`https://sketchfab.com/search?type=models&q=${encodeURIComponent(`${topic.subject} ${topic.title}`)}`);
-      })
-      .finally(() => active && setLoading(false));
-    return () => {
-      active = false;
-    };
-  }, [topic.id, topic.subject, topic.title]);
-
-  const fallbackUrl = searchUrl || `https://sketchfab.com/search?type=models&q=${encodeURIComponent(`${topic.subject} ${topic.title}`)}`;
-
-  return (
-    <section className="panel reveal-up online-3d">
-      <div className="section-head">
-        <div>
-          <h2><Globe2 size={16} /> 3D из интернета</h2>
-          <p className="muted">Модели по теме из открытых источников (Sketchfab) — вращайте их мышью или пальцем.</p>
-        </div>
-        {models.length > 0 && <span className="tag green">{models.length} моделей</span>}
+      <div className="video-embed">
+        <iframe
+          src={embedSrc}
+          title={`${topic.subject} — ${topic.title}`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
       </div>
-      {loading ? (
-        <p className="muted" role="status">Ищем 3D-модели в интернете…</p>
-      ) : models.length > 0 ? (
-        <div className="model-grid">
-          {models.map((model) => (
-            <a
-              key={model.uid}
-              className="model-card"
-              href={model.embedUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {model.thumbnail && <img src={model.thumbnail} alt={model.name} loading="lazy" />}
-              <span className="model-name">{model.name}</span>
-              <span className="model-author">{model.author}</span>
-            </a>
-          ))}
-        </div>
-      ) : (
-        <div className="video-fallback">
-          <p className="muted">Добавьте SKETCHFAB_API_KEY на Vercel, чтобы модели темы появлялись прямо здесь.</p>
-          <a className="btn" href={fallbackUrl} target="_blank" rel="noreferrer">
-            <Globe2 size={15} /> Открыть 3D-модели по теме
-            <ArrowRight size={14} />
-          </a>
-        </div>
-      )}
+      <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+        <a className="btn primary" href={searchUrl} target="_blank" rel="noreferrer">
+          <MonitorPlay size={15} /> Смотреть ещё видео по теме
+          <ArrowRight size={14} />
+        </a>
+      </div>
     </section>
   );
 }
@@ -685,54 +561,100 @@ function FactsPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
 }
 
 function QuizPanel({ topic, copy, onOpenRoom }: { topic: LessonTopic; copy: Copy; onOpenRoom: (topicId: string) => void }) {
-  const [answer, setAnswer] = useState('');
+  const [questions, setQuestions] = useState<QuizQuestion[]>(() => [
+    { prompt: topic.quiz.prompt, choices: topic.quiz.choices, correct: topic.quiz.correct, explanation: topic.quiz.explanation },
+  ]);
+  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [checked, setChecked] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genNotice, setGenNotice] = useState('');
+  const [genError, setGenError] = useState('');
+  const teacherLike = topic.quiz.prompt !== '';
   useEffect(() => {
-    setAnswer('');
+    setQuestions([
+      { prompt: topic.quiz.prompt, choices: topic.quiz.choices, correct: topic.quiz.correct, explanation: topic.quiz.explanation },
+    ]);
+    setAnswers({});
     setChecked(false);
-  }, [topic.id]);
-  const correct = checked && answer === topic.quiz.correct;
+    setGenNotice('');
+    setGenError('');
+  }, [topic.id, topic.quiz]);
+  const correctCount = questions.filter((q, i) => answers[i] === q.correct).length;
+  async function generate() {
+    setGenerating(true);
+    setGenError('');
+    setGenNotice('');
+    try {
+      const response = await createTopicTest(topic.id, { count: 5 });
+      if (response.questions?.length) {
+        setQuestions(response.questions);
+        setAnswers({});
+        setChecked(false);
+        setGenNotice('Тест создан. Теперь ответьте на вопросы.');
+      }
+    } catch (error) {
+      setGenError(describe(error, 'Русский'));
+    } finally {
+      setGenerating(false);
+    }
+  }
   return (
     <section className="panel reveal-up">
       <div className="section-head">
         <div>
           <h2><CheckCircle2 size={16} /> {copy.quiz}</h2>
-          <p className="muted">{topic.quiz.prompt}</p>
+          <p className="muted">Ответьте на вопросы по теме. Учитель видит этот тест у всех учеников темы.</p>
         </div>
       </div>
-      <div className="stack">
-        {topic.quiz.choices.map((choice) => (
-          <button
-            key={choice}
-            type="button"
-            className={`answer-choice ${answer === choice ? 'chosen' : ''} ${checked && choice === topic.quiz.correct ? 'correct' : ''} ${checked && answer === choice && choice !== topic.quiz.correct ? 'wrong' : ''}`}
-            onClick={() => {
-              setAnswer(choice);
-              setChecked(false);
-            }}
-          >
-            {choice}
+      {teacherLike && (
+        <div className="row" style={{ marginBottom: 12 }}>
+          <button type="button" className="btn primary small" disabled={generating} onClick={() => void generate()}>
+            {generating ? 'Создаём тест…' : 'Создать тест'}
           </button>
+          {genNotice && <span className="tag green">{genNotice}</span>}
+          {genError && <span className="tag red">{genError}</span>}
+        </div>
+      )}
+      <div className="stack">
+        {questions.map((question, index) => (
+          <div key={`${index}-${question.prompt}`} className="quiz-question">
+            <p className="lesson-test-question"><b>{index + 1}. {question.prompt}</b></p>
+            <div className="stack">
+              {question.choices.map((choice) => (
+                <button
+                  key={choice}
+                  type="button"
+                  className={`answer-choice ${answers[index] === choice ? 'chosen' : ''} ${checked && choice === question.correct ? 'correct' : ''} ${checked && answers[index] === choice && choice !== question.correct ? 'wrong' : ''}`}
+                  onClick={() => {
+                    setAnswers((prev) => ({ ...prev, [index]: choice }));
+                    setChecked(false);
+                  }}
+                >
+                  {choice}
+                </button>
+              ))}
+            </div>
+            {checked && answers[index] && (
+              <div className="callout" style={{ marginTop: 8 }}>
+                <b>{question.explanation}</b>
+              </div>
+            )}
+          </div>
         ))}
       </div>
       <div className="row" style={{ marginTop: 12 }}>
-        <button type="button" className="btn primary" disabled={!answer} onClick={() => setChecked(true)}>
+        <button type="button" className="btn primary" disabled={Object.keys(answers).length < questions.length || questions.length === 0} onClick={() => setChecked(true)}>
           {copy.answer}
         </button>
         {checked && (
-          <span className={`tag ${correct ? 'green' : 'gold'}`}>
-            {correct ? copy.correct : copy.tryAgain}
+          <span className={`tag ${correctCount === questions.length ? 'green' : 'gold'}`}>
+            {correctCount} / {questions.length} — {correctCount === questions.length ? copy.correct : copy.tryAgain}
           </span>
         )}
         <button type="button" className="btn small" onClick={() => onOpenRoom(topic.id)}>
           <ArrowRight size={13} /> {copy.openLessonRoom}
         </button>
       </div>
-      {checked && (
-        <div className="callout" style={{ marginTop: 12 }}>
-          <b>{topic.quiz.explanation}</b>
-        </div>
-      )}
     </section>
   );
 }

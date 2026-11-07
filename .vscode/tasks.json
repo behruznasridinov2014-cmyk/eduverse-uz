@@ -60,6 +60,20 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Start EDUVERSE local test stack",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\start-eduverse-test.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }

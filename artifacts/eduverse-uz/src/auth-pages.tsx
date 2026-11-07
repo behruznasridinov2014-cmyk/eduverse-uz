@@ -30,6 +30,8 @@ import {
 import type { User } from '@workspace/api-client-react';
 import type { AppLanguage } from './localization';
 import { getAuthErrorMessage, useAuth } from './auth-context';
+import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
+import { TwoFactorSettings } from './two-factor-settings';
 
 type AuthCopy = {
   signIn: string;
@@ -77,6 +79,14 @@ type AuthCopy = {
   qrTitle: string;
   qrUnavailable: string;
   localAccess: string;
+  twoFactorTitle: string;
+  twoFactorSubtitle: string;
+  twoFactorCode: string;
+  twoFactorSubmit: string;
+  twoFactorResend: string;
+  twoFactorBack: string;
+  twoFactorSent: string;
+  twoFactorDevCode: string;
 };
 
 const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
@@ -126,6 +136,14 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     qrTitle: 'Telefon orqali kirish',
     qrUnavailable: 'QR orqali kirish EDUVERSE mobil ilovasi tayyor bo‘lganda yoqiladi. Hozircha login va parol bilan kiring.',
     localAccess: 'Faqat mahalliy sinov muhiti',
+    twoFactorTitle: 'Ikkinchi omil',
+    twoFactorSubtitle: 'Google Authenticator yoki Telegram ilovasidagi kodni kiriting.',
+    twoFactorCode: 'Bir martalik kod',
+    twoFactorSubmit: 'Kirishni yakunlash',
+    twoFactorResend: 'Kodni qayta yuborish',
+    twoFactorBack: 'Orqaga',
+    twoFactorSent: 'Kod yubordi.',
+    twoFactorDevCode: 'Mahalliy sinov kodi — Telegram xabar yuborilmadi.',
   },
   Русский: {
     signIn: 'Войти',
@@ -173,6 +191,14 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     qrTitle: 'Вход с телефона',
     qrUnavailable: 'Вход по QR появится после выхода мобильного приложения EDUVERSE. Пока используйте логин и пароль.',
     localAccess: 'Только локальная тестовая среда',
+    twoFactorTitle: 'Второй фактор',
+    twoFactorSubtitle: 'Введите код из Google Authenticator или Telegram.',
+    twoFactorCode: 'Одноразовый код',
+    twoFactorSubmit: 'Завершить вход',
+    twoFactorResend: 'Отправить код ещё раз',
+    twoFactorBack: 'Назад',
+    twoFactorSent: 'Код отправлен.',
+    twoFactorDevCode: 'Локальный тестовый код — сообщение Telegram не отправлялось.',
   },
   English: {
     signIn: 'Sign in',
@@ -220,6 +246,14 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     qrTitle: 'Sign in with your phone',
     qrUnavailable: 'QR sign-in will be available when the EDUVERSE mobile app is ready. For now, use your login and password.',
     localAccess: 'Local test environment only',
+    twoFactorTitle: 'Second factor',
+    twoFactorSubtitle: 'Enter the code from Google Authenticator or Telegram.',
+    twoFactorCode: 'One-time code',
+    twoFactorSubmit: 'Finish sign-in',
+    twoFactorResend: 'Send code again',
+    twoFactorBack: 'Back',
+    twoFactorSent: 'Code sent.',
+    twoFactorDevCode: 'Local test code — no Telegram message was sent.',
   },
 };
 
@@ -845,17 +879,51 @@ function FormError({ children }: { children: string }) {
 
 export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPageProps) {
   const copy = authCopy(language);
+  const qrCopy = QR_COPY[language];
   const auth = useAuth();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [tab, setTab] = useState<'code' | 'qr'>(() => {
+    const qr = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('qr');
+    return qr ? 'qr' : 'code';
+  });
+  const [code, setCode] = useState('');
+  const [resendNotice, setResendNotice] = useState('');
+  const qrCode = typeof window === 'undefined' ? '' : (new URLSearchParams(window.location.search).get('qr') ?? '');
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     try {
       await auth.signIn({ login: login.trim(), password });
+      if (!auth.twoFactorChallenge) onSuccess();
+    } catch (requestError) {
+      setError(getAuthErrorMessage(requestError, language));
+    }
+  }
+
+  async function submitTwoFactor(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    try {
+      await auth.signIn2fa(code);
       onSuccess();
+    } catch (requestError) {
+      setError(getAuthErrorMessage(requestError, language));
+    }
+  }
+
+  async function resendTwoFactor() {
+    setError('');
+    setResendNotice('');
+    try {
+      const response: unknown = await auth.resend2fa();
+      const code = typeof response === 'object' && response !== null && 'devCode' in response && typeof response.devCode === 'string'
+        ? response.devCode
+        : '';
+      if (code) setCode(code);
+      setResendNotice(code ? copy.twoFactorDevCode : copy.twoFactorSent);
     } catch (requestError) {
       setError(getAuthErrorMessage(requestError, language));
     }
@@ -864,29 +932,75 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
   return (
     <AuthFrame language={language} onLanguageChange={onLanguageChange} loginMode>
       <div className="auth-eyebrow">{copy.signIn}</div>
-      <h2>{copy.loginTitle}</h2>
-      <p className="auth-description">{copy.signInSubtitle}</p>
+      <h2>{auth.twoFactorChallenge ? copy.twoFactorTitle : copy.loginTitle}</h2>
+      <p className="auth-description">{auth.twoFactorChallenge ? copy.twoFactorSubtitle : copy.signInSubtitle}</p>
       {auth.status === 'unavailable' && <div className="auth-error" role="status">{copy.serviceWarning}</div>}
-      <form className="auth-form" onSubmit={submit}>
-        <label className="auth-field" htmlFor="account-login">
-          <span>{copy.login}</span>
-          <input id="account-login" type="text" name="username" value={login} onChange={(event) => setLogin(event.target.value)} placeholder={copy.loginPlaceholder} autoComplete="username" minLength={3} maxLength={32} required/>
-        </label>
-        <label className="auth-field" htmlFor="account-password">
-          <span>{copy.password}</span>
-          <input id="account-password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} maxLength={128} required/>
-        </label>
-        {error && <FormError>{error}</FormError>}
-        <button className="auth-submit" type="submit" disabled={auth.isSubmitting}>
-          {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={17}/> : <LockKeyhole size={17}/>}
-          {auth.isSubmitting ? copy.loading : copy.submitLogin}
-        </button>
-      </form>
-      <aside className="auth-qr-unavailable" aria-label={copy.qrTitle}>
-        <span className="auth-qr-icon"><Smartphone size={19}/></span>
-        <span><b>{copy.qrTitle}</b><small>{copy.qrUnavailable}</small></span>
-      </aside>
-      <div className="auth-switch">{copy.noAccount}</div>
+      {auth.twoFactorChallenge ? (
+        <form className="auth-form" onSubmit={submitTwoFactor}>
+          <label className="auth-field" htmlFor="account-2fa-code">
+            <span>{copy.twoFactorCode}</span>
+            <input
+              id="account-2fa-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="123456"
+              minLength={6}
+              maxLength={6}
+              required
+              autoFocus
+            />
+          </label>
+          {error && <FormError>{error}</FormError>}
+          {resendNotice && <div className="notice" role="status">{resendNotice}</div>}
+          <button className="auth-submit" type="submit" disabled={auth.isSubmitting || code.trim().length !== 6}>
+            {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={17}/> : <ShieldCheck size={17}/>}
+            {copy.twoFactorSubmit}
+          </button>
+          <button className="btn" type="button" onClick={() => void resendTwoFactor()} disabled={auth.isSubmitting}>
+            {copy.twoFactorResend}
+          </button>
+          <button className="btn" type="button" onClick={auth.cancelTwoFactor} disabled={auth.isSubmitting}>
+            {copy.twoFactorBack}
+          </button>
+        </form>
+      ) : (
+        <>
+          <div className="auth-tabs" role="tablist" aria-label={copy.signIn}>
+            <button type="button" role="tab" aria-selected={tab === 'code'} className={`auth-tab ${tab === 'code' ? 'active' : ''}`} onClick={() => setTab('code')}>
+              <LockKeyhole size={15} /> {qrCopy.tabCode}
+            </button>
+            <button type="button" role="tab" aria-selected={tab === 'qr'} className={`auth-tab ${tab === 'qr' ? 'active' : ''}`} onClick={() => setTab('qr')}>
+              <Smartphone size={15} /> {qrCopy.tabQr}
+            </button>
+          </div>
+
+          {tab === 'code' ? (
+            <form className="auth-form" onSubmit={submit}>
+              <label className="auth-field" htmlFor="account-login">
+                <span>{copy.login}</span>
+                <input id="account-login" type="text" name="username" value={login} onChange={(event) => setLogin(event.target.value)} placeholder={copy.loginPlaceholder} autoComplete="username" minLength={3} maxLength={32} required/>
+              </label>
+              <label className="auth-field" htmlFor="account-password">
+                <span>{copy.password}</span>
+                <input id="account-password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} maxLength={128} required/>
+              </label>
+              {error && <FormError>{error}</FormError>}
+              <button className="auth-submit" type="submit" disabled={auth.isSubmitting}>
+                {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={17}/> : <LockKeyhole size={17}/>}
+                {auth.isSubmitting ? copy.loading : copy.submitLogin}
+              </button>
+            </form>
+          ) : qrCode ? (
+            <QrApprovePanel language={language} prefillCode={qrCode} onApproved={() => onSuccess()} />
+          ) : (
+            <QrSignInPanel language={language} onSuccess={() => onSuccess()} />
+          )}
+          <div className="auth-switch">{copy.noAccount}</div>
+        </>
+      )}
       <p className="auth-note">{copy.emailNotice}</p>
     </AuthFrame>
   );
@@ -997,6 +1111,7 @@ export function ProfilePage({
           <div><span>{copy.createdAt}</span><b>{new Date(user.createdAt).toLocaleDateString(locale, { dateStyle: 'long' })}</b></div>
           <div><span>{copy.role}</span><b>{ROLE_LABELS[language][user.role]}</b></div>
         </div>
+        <TwoFactorSettings language={language} />
         <p className="auth-note profile-note">{copy.emailNotice}</p>
         {error && <FormError>{error}</FormError>}
         <div className="profile-actions">

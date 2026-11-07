@@ -13,22 +13,34 @@ import {
   login,
   logout,
   register,
+  verifyTwoFactorLogin,
+  resendTwoFactorLoginCode,
   ApiError,
   UserRole,
   type LoginRequest,
   type RegisterRequest,
+  type TwoFactorResendResponse,
   type User,
 } from '@workspace/api-client-react';
+
+export type TwoFactorChallenge = {
+  challengeToken: string;
+  expiresAt?: string;
+};
 
 type AuthStatus = 'loading' | 'anonymous' | 'authenticated' | 'offline' | 'unavailable';
 type AuthContextValue = {
   status: AuthStatus;
   user: User | null;
   isSubmitting: boolean;
+  twoFactorChallenge: TwoFactorChallenge | null;
   refreshSession: () => Promise<void>;
   signIn: (request: LoginRequest) => Promise<void>;
   signUp: (request: RegisterRequest) => Promise<void>;
   signOut: () => Promise<void>;
+  signIn2fa: (code: string) => Promise<void>;
+  resend2fa: () => Promise<TwoFactorResendResponse>;
+  cancelTwoFactor: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -110,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
   const sessionRevision = useRef(0);
 
   const refreshSession = useCallback(async () => {
@@ -148,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response: unknown = await login(request);
       if (revision === sessionRevision.current) {
+        const challenge = readTwoFactorChallenge(response);
+        if (challenge) {
+          setTwoFactorChallenge(challenge);
+          return;
+        }
         const authenticatedUser = readUserResponse(response);
         cacheUser(authenticatedUser);
         setUser(authenticatedUser);
@@ -185,15 +203,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (revision === sessionRevision.current) {
         clearCachedUser();
         setUser(null);
+        setTwoFactorChallenge(null);
         setStatus('anonymous');
       }
       setIsSubmitting(false);
     }
   }, []);
 
+  const signIn2fa = useCallback(
+    async (code: string) => {
+      if (!twoFactorChallenge) throw new Error('Two-factor challenge is missing.');
+      const response: unknown = await verifyTwoFactorLogin({
+        challengeToken: twoFactorChallenge.challengeToken,
+        code: code.trim(),
+      });
+      const authenticatedUser = readUserResponse(response);
+      cacheUser(authenticatedUser);
+      setUser(authenticatedUser);
+      setTwoFactorChallenge(null);
+      setStatus('authenticated');
+    },
+    [twoFactorChallenge],
+  );
+
+  const resend2fa = useCallback(async () => {
+    if (!twoFactorChallenge) throw new Error('Two-factor challenge is missing.');
+    const response = await resendTwoFactorLoginCode({
+      challengeToken: twoFactorChallenge.challengeToken,
+    });
+    return response;
+  }, [twoFactorChallenge]);
+
+  const cancelTwoFactor = useCallback(() => {
+    ++sessionRevision.current;
+    setTwoFactorChallenge(null);
+    setStatus('anonymous');
+  }, []);
+
   const value = useMemo(
-    () => ({ status, user, isSubmitting, refreshSession, signIn, signUp, signOut }),
-    [status, user, isSubmitting, refreshSession, signIn, signUp, signOut],
+    () => ({
+      status,
+      user,
+      isSubmitting,
+      twoFactorChallenge,
+      refreshSession,
+      signIn,
+      signUp,
+      signOut,
+      signIn2fa,
+      resend2fa,
+      cancelTwoFactor,
+    }),
+    [
+      status,
+      user,
+      isSubmitting,
+      twoFactorChallenge,
+      refreshSession,
+      signIn,
+      signUp,
+      signOut,
+      signIn2fa,
+      resend2fa,
+      cancelTwoFactor,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -205,6 +278,18 @@ export function useAuth(): AuthContextValue {
     throw new Error('useAuth must be used within an AuthProvider.');
   }
   return context;
+}
+
+function readTwoFactorChallenge(value: unknown): TwoFactorChallenge | null {
+  if (typeof value !== 'object' || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (record.twoFactorRequired !== true) return null;
+  const challengeToken = typeof record.challengeToken === 'string' ? record.challengeToken : '';
+  if (!challengeToken) return null;
+  return {
+    challengeToken,
+    expiresAt: typeof record.expiresAt === 'string' ? record.expiresAt : undefined,
+  };
 }
 
 export function getAuthErrorMessage(error: unknown, language: 'Uzbek' | 'Русский' | 'English'): string {

@@ -53,13 +53,33 @@ if ($postgresService.Status -ne "Running") {
     throw "PostgreSQL service '$($postgresService.Name)' is stopped and could not be started. Start it from Windows Services, then retry."
   }
 }
+$existingProcessRecord = $null
+$reuseApi = $false
+$reuseWeb = $false
 if (Test-Path $processFile) {
-  throw "A local EDUVERSE test launch record already exists. Run scripts\status-eduverse-test.ps1 and scripts\stop-eduverse-test.ps1 first."
+  try {
+    $existingProcessRecord = Get-Content -Path $processFile -Raw | ConvertFrom-Json
+  } catch {
+    throw "Cannot read the existing local EDUVERSE process record. Inspect $processFile before starting again."
+  }
+
+  $existingApiProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $([int]$existingProcessRecord.ApiProcessId)" -ErrorAction SilentlyContinue
+  if (
+    $existingApiProcess -and
+    $existingApiProcess.CommandLine -and
+    $existingApiProcess.CommandLine.Contains([string]$existingProcessRecord.ApiRunner) -and
+    (Test-LocalPortListener 5000)
+  ) {
+    $reuseApi = $true
+    Write-Host "The EDUVERSE API is already running. The local database and demo login will be repaired and verified without stopping it."
+  }
 }
 
-$reuseWeb = $false
 foreach ($port in @(5000, 4173)) {
   if (Test-LocalPortListener $port) {
+    if ($port -eq 5000 -and $reuseApi) {
+      continue
+    }
     if ($port -eq 4173) {
       try {
         $existingWeb = Invoke-WebRequest -Uri "http://127.0.0.1:4173/" -TimeoutSec 5 -UseBasicParsing
@@ -165,6 +185,50 @@ if ($createdDatabase) {
   }
 }
 
+$authSchemaQuery = @"
+SELECT (
+  (SELECT COUNT(*) = 7
+   FROM information_schema.columns
+   WHERE table_schema = 'public'
+     AND table_name = 'users'
+     AND column_name IN (
+       'two_factor_secret',
+       'two_factor_telegram_id',
+       'two_factor_enabled',
+       'two_factor_pending_nonce',
+       'two_factor_pending_expires_at',
+       'two_factor_enabled_at',
+       'two_factor_last_used_step'
+     ))
+  AND to_regclass('public.two_factor_recovery_codes') IS NOT NULL
+  AND to_regclass('public.two_factor_challenges') IS NOT NULL
+  AND to_regclass('public.telegram_outbox') IS NOT NULL
+  AND to_regclass('public.rate_limit_buckets') IS NOT NULL
+)::int::text
+"@
+$authSchemaReady = & $psqlPath -w -h 127.0.0.1 -p 5432 -U postgres -d $databaseName -v ON_ERROR_STOP=1 -tAc $authSchemaQuery
+if ($LASTEXITCODE -ne 0) {
+  Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  throw "Could not inspect the authentication schema in the local $databaseName database."
+}
+if (($authSchemaReady | Out-String).Trim() -ne "1") {
+  Write-Host "Applying the current Drizzle schema to the local $databaseName database to add missing authentication columns and tables..."
+  pnpm --filter @workspace/db run push
+  if ($LASTEXITCODE -ne 0) {
+    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+    throw "Authentication schema setup failed. The local database was not force-migrated."
+  }
+
+  $authSchemaReady = & $psqlPath -w -h 127.0.0.1 -p 5432 -U postgres -d $databaseName -v ON_ERROR_STOP=1 -tAc $authSchemaQuery
+  if ($LASTEXITCODE -ne 0 -or ($authSchemaReady | Out-String).Trim() -ne "1") {
+    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+    throw "The local authentication schema is still incomplete after setup. The API was not restarted."
+  }
+}
+
 Write-Host "Creating/updating explicitly marked local role-testing accounts..."
 $env:EDUVERSE_ALLOW_LOCAL_TEST_SEED = "1"
 $env:EDUVERSE_LOCAL_TEST_DATA = $dataDirectory
@@ -195,19 +259,26 @@ $webRunner = Join-Path $PSScriptRoot "run-eduverse-test-web.ps1"
 $powerShellPath = Join-Path $PSHOME "powershell.exe"
 
 try {
-  $apiProcess = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$apiRunner`"") -WorkingDirectory $repoRoot -RedirectStandardOutput $apiLog -RedirectStandardError "$apiLog.err" -PassThru
-  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  if (!$reuseApi) {
+    $apiProcess = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$apiRunner`"") -WorkingDirectory $repoRoot -RedirectStandardOutput $apiLog -RedirectStandardError "$apiLog.err" -PassThru
+    Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
+  }
   if (!$reuseWeb) {
     $webProcess = Start-Process -FilePath $powerShellPath -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$webRunner`"") -WorkingDirectory $repoRoot -RedirectStandardOutput $webLog -RedirectStandardError "$webLog.err" -PassThru
   }
-  $webProcessId = if ($webProcess) { $webProcess.Id } else { 0 }
-  [pscustomobject]@{
-    ApiProcessId = $apiProcess.Id
-    WebProcessId = $webProcessId
-    WebReused = $reuseWeb
-    ApiRunner = $apiRunner
-    WebRunner = $webRunner
-  } | ConvertTo-Json | Set-Content -Path $processFile -Encoding UTF8
+  if (!$reuseApi -or !$reuseWeb) {
+    $apiProcessId = if ($reuseApi) { [int]$existingProcessRecord.ApiProcessId } else { $apiProcess.Id }
+    $webProcessId = if ($reuseWeb) { [int]$existingProcessRecord.WebProcessId } elseif ($webProcess) { $webProcess.Id } else { 0 }
+    $recordedApiRunner = if ($reuseApi) { [string]$existingProcessRecord.ApiRunner } else { $apiRunner }
+    $recordedWebRunner = if ($reuseWeb -and $existingProcessRecord.WebRunner) { [string]$existingProcessRecord.WebRunner } else { $webRunner }
+    [pscustomobject]@{
+      ApiProcessId = $apiProcessId
+      WebProcessId = $webProcessId
+      WebReused = $reuseWeb
+      ApiRunner = $recordedApiRunner
+      WebRunner = $recordedWebRunner
+    } | ConvertTo-Json | Set-Content -Path $processFile -Encoding UTF8
+  }
 } catch {
   if ($webProcess) {
     Stop-Process -Id $webProcess.Id -ErrorAction SilentlyContinue
@@ -220,9 +291,69 @@ try {
   throw
 }
 
-Write-Host "Local test services are starting."
+Write-Host "Checking API health and the demo student login..."
+$apiHealthy = $false
+for ($attempt = 0; $attempt -lt 30; $attempt += 1) {
+  try {
+    $health = Invoke-WebRequest -Uri "http://127.0.0.1:5000/api/healthz" -TimeoutSec 3 -UseBasicParsing
+    if ($health.StatusCode -eq 200) {
+      $apiHealthy = $true
+      break
+    }
+  } catch {
+    Start-Sleep -Seconds 2
+  }
+}
+if (!$apiHealthy) {
+  Write-Host "API did not become ready. Recent API log:"
+  if (Test-Path $apiLog) { Get-Content $apiLog -Tail 30 }
+  if (Test-Path "$apiLog.err") { Get-Content "$apiLog.err" -Tail 15 }
+  throw "The API is not ready. Database and frontend were left intact for diagnosis."
+}
+
+$webHealthy = $false
+try {
+  $webHealth = Invoke-WebRequest -Uri "http://127.0.0.1:4173/api/healthz" -TimeoutSec 5 -UseBasicParsing
+  $webHealthy = $webHealth.StatusCode -eq 200
+} catch {
+  Write-Host "Frontend API proxy check failed: $($_.Exception.Message)"
+}
+if (!$webHealthy) {
+  throw "Startup verification failed: the frontend is not reaching the local API at http://127.0.0.1:5000."
+}
+
+try {
+  $demoLogin = Invoke-WebRequest `
+    -Uri "http://127.0.0.1:5000/api/auth/login" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body '{"login":"demo_student_b_1","password":"demo-school-2026"}' `
+    -TimeoutSec 10 `
+    -UseBasicParsing
+  $demoLoginBody = $demoLogin.Content | ConvertFrom-Json
+} catch {
+  if ($_.Exception.Response) {
+    Write-Host "Demo student login returned HTTP $([int]$_.Exception.Response.StatusCode)."
+    $errorReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+    $errorBody = $errorReader.ReadToEnd()
+    if ($errorBody) { Write-Host "API response: $errorBody" }
+  } else {
+    Write-Host "Demo student login request failed: $($_.Exception.Message)"
+  }
+  Write-Host "Recent API log:"
+  if (Test-Path $apiLog) { Get-Content $apiLog -Tail 30 }
+  if (Test-Path "$apiLog.err") { Get-Content "$apiLog.err" -Tail 15 }
+  throw "Startup verification failed: demo_student_b_1 could not sign in."
+}
+if ($demoLogin.StatusCode -ne 200 -or $demoLoginBody.user.login -ne "demo_student_b_1") {
+  throw "Startup verification failed: the demo student login did not return the expected account."
+}
+
+Write-Host "Local test services are ready."
 Write-Host "Web: http://127.0.0.1:4173"
 Write-Host "API health: http://127.0.0.1:5000/api/healthz"
+Write-Host "Frontend-to-API connection verified."
+Write-Host "Demo student login verified: demo_student_b_1"
 Write-Host "Database: $databaseName (separate from eduverse_local)"
 Write-Host "Role-test credentials: $credentialFile (local test accounts only)"
 Write-Host "Process record: $processFile"

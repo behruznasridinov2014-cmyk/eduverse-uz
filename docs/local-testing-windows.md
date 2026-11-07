@@ -23,8 +23,9 @@ Run each command from the repository root. Start prompts for the local
 PostgreSQL `postgres` password using a secure prompt. It creates a separate
 `eduverse_test` database if needed. It pushes the current schema to an empty
 database, adds missing school tables to an existing database that already
-matches the EDUVERSE account schema, and refuses to modify any non-empty
-database that lacks the existing `users` and `sessions` tables.
+matches the EDUVERSE account schema, updates missing authentication tables and
+columns, and refuses to modify any non-empty database that lacks the existing
+`users` and `sessions` tables.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-eduverse-test.ps1
@@ -42,17 +43,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\stop-eduverse-test
 
 The stop command stops only recorded launcher process trees and preserves the
 test database. Do not remove or reset databases as part of routine testing.
-The launcher creates or updates 27 explicitly named role-preview accounts in
-`eduverse_test` (platform admin, ministry admin, education admin, school director,
-school admin, teacher, parent, and 20 students). Each password is generated
-randomly and stored only in the local test credentials file; Windows ACLs are
-restricted to the current user and SYSTEM. Never copy this file or these
-accounts into production. These accounts are global role-preview accounts; the
-server-backed demo school and class are linked only by the seeding script in
-`eduverse_test`. The seed is idempotent: it creates the local demo school, adds
-role memberships, links the teacher and five students to class 7-B, and adds
-two assignments with three submissions. It does not provide real-school data or
-a guarantee that a production tenant is isolated.
+The launcher creates or updates 28 explicitly named local test accounts in
+`eduverse_test` (platform admin, ministry admin, education admin, school
+director, school admin, teacher, parent, 20 role-preview students, and the
+`demo_student_b_1` login for class 7-B). Role-preview passwords are generated
+randomly; the demo student uses `demo-school-2026`. Credentials are stored only
+in the local test credentials file; Windows ACLs are restricted to the current
+user and SYSTEM. Never copy this file or these accounts into production. These
+accounts are global role-preview accounts; the server-backed demo school and
+class are linked only by the seeding script in `eduverse_test`. The seed is
+idempotent: it creates the local demo school, adds role memberships, links the
+teacher and six students to class 7-B, and adds two assignments with three
+submissions. It does not provide real-school data or a guarantee that a
+production tenant is isolated.
 The smoke test also creates one randomly named synthetic student per run.
 It authenticates against each seeded role and does not print passwords.
 
@@ -62,7 +65,7 @@ It authenticates against each seeded role and does not print passwords.
 |---|---|
 | Password hashing and session token helpers | Unit tests exist |
 | School role, validation, and permission helpers | Unit tests exist |
-| API health, account registration/session/logout, authenticated Guard | Covered by the local API smoke script; requires the local API and test DB |
+| API health, protected account registration/session/logout | Covered by the local API smoke script; requires the local API and test DB |
 | Current account roles | Role is stored on the account; school membership is stored separately |
 | School/class CRUD, membership, roster, assignments, submissions | Implemented with authenticated, role- and membership-scoped API routes; UI integration is server-first with local demo fallbacks |
 | Two-school isolation | Server-side scope checks are implemented; an automated two-school database integration test is still required before production use |

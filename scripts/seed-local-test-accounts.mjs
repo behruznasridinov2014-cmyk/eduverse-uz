@@ -38,6 +38,12 @@ const roles = [
   ["local_test_school_admin", "LOCAL TEST - School administrator", "school_admin"],
   ["local_test_teacher", "LOCAL TEST - Teacher", "teacher"],
   ["local_test_parent", "LOCAL TEST - Parent", "parent"],
+  [
+    "demo_student_b_1",
+    "LOCAL TEST - Demo student 7-B",
+    "student",
+    "demo-school-2026",
+  ],
 ];
 for (let index = 1; index <= 20; index += 1) {
   const suffix = String(index).padStart(2, "0");
@@ -91,9 +97,11 @@ let client;
 try {
   client = await pool.connect();
   await client.query("BEGIN");
-  for (const [login, username, role] of roles) {
+  for (const [login, username, role, fixedPassword] of roles) {
     const password =
-      previousByLogin.get(login) ?? `${randomBytes(24).toString("base64url")}Aa7!`;
+      fixedPassword ??
+      previousByLogin.get(login) ??
+      `${randomBytes(24).toString("base64url")}Aa7!`;
     const passwordHash = await hashPassword(password);
     const usernameNormalized = username.normalize("NFKC").toLowerCase();
     const loginNormalized = login.toLowerCase();
@@ -104,15 +112,39 @@ try {
     );
     if (existing.rowCount) {
       const current = existing.rows[0];
+      const isExistingDemoStudent =
+        login === "demo_student_b_1" &&
+        role === "student" &&
+        current.role === role &&
+        ["bekzod yusupov", usernameNormalized].includes(
+          current.username_normalized,
+        );
       if (
-        current.username_normalized !== usernameNormalized ||
+        (current.username_normalized !== usernameNormalized &&
+          !isExistingDemoStudent) ||
         current.role !== role
       ) {
         throw new Error(`Refusing to overwrite a non-test account at ${login}.`);
       }
       await client.query(
-        "UPDATE users SET username = $1, password_hash = $2, updated_at = now() WHERE id = $3",
-        [username, passwordHash, current.id],
+        `UPDATE users
+         SET username = $1, username_normalized = $2, password_hash = $3,
+             two_factor_secret = CASE WHEN $5 THEN NULL ELSE two_factor_secret END,
+             two_factor_telegram_id = CASE WHEN $5 THEN NULL ELSE two_factor_telegram_id END,
+             two_factor_enabled = CASE WHEN $5 THEN false ELSE two_factor_enabled END,
+             two_factor_pending_nonce = CASE WHEN $5 THEN NULL ELSE two_factor_pending_nonce END,
+             two_factor_pending_expires_at = CASE WHEN $5 THEN NULL ELSE two_factor_pending_expires_at END,
+             two_factor_enabled_at = CASE WHEN $5 THEN NULL ELSE two_factor_enabled_at END,
+             two_factor_last_used_step = CASE WHEN $5 THEN NULL ELSE two_factor_last_used_step END,
+             updated_at = now()
+         WHERE id = $4`,
+        [
+          username,
+          usernameNormalized,
+          passwordHash,
+          current.id,
+          login === "demo_student_b_1",
+        ],
       );
     } else {
       await client.query(
@@ -132,6 +164,17 @@ try {
     [seededLogins],
   );
   const userIdByLogin = new Map(seededUsers.rows.map((row) => [row.login, row.id]));
+  const demoStudentId = userIdByLogin.get("demo_student_b_1");
+  if (demoStudentId) {
+    await client.query(
+      "DELETE FROM two_factor_recovery_codes WHERE user_id = $1",
+      [demoStudentId],
+    );
+    await client.query(
+      "DELETE FROM two_factor_challenges WHERE user_id = $1",
+      [demoStudentId],
+    );
+  }
 
   async function ensureSchool(name, region, district, address) {
     const existing = await client.query(
@@ -244,6 +287,7 @@ try {
       ["local_test_school_admin", "school_admin"],
       ["local_test_teacher", "teacher"],
       ["local_test_parent", "parent"],
+      ["demo_student_b_1", "student"],
     ];
     for (let index = 1; index <= 5; index += 1) {
       schoolMemberships.push([
@@ -271,6 +315,9 @@ try {
       ) {
         classMemberCount += 1;
       }
+    }
+    if (await ensureClassMember(classId, "demo_student_b_1", "student")) {
+      classMemberCount += 1;
     }
 
     if (!teacherId) {

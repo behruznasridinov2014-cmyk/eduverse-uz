@@ -46,18 +46,28 @@ try {
     (account) => account.role === "student" && account.login === "local_test_student_01",
   );
   assert.ok(studentAccount, "A local test student account should exist");
-  const roleAccounts = [...nonStudentRoleAccounts, studentAccount];
+  const demoStudentAccount = credentials.accounts.find(
+    (account) =>
+      account.role === "student" && account.login === "demo_student_b_1",
+  );
+  assert.ok(demoStudentAccount, "The demo 7-B student account should exist");
+  assert.equal(demoStudentAccount.password, "demo-school-2026");
+  const roleAccounts = [
+    ...nonStudentRoleAccounts,
+    studentAccount,
+    demoStudentAccount,
+  ];
 
   const health = await request("/api/healthz");
   assert.equal(health.status, 200, "API health endpoint should be ready");
   const healthBody = await health.json();
   assert.equal(healthBody.status, "ok");
 
-  const unauthenticatedGuard = await request("/api/guard/check");
+  const unauthenticatedUser = await request("/api/auth/me");
   assert.equal(
-    unauthenticatedGuard.status,
+    unauthenticatedUser.status,
     401,
-    "Guard diagnostics must require an authenticated account",
+    "Account details must require an authenticated session",
   );
 
   const registration = await request("/api/auth/register", {
@@ -83,13 +93,6 @@ try {
   const currentUserBody = await currentUser.json();
   assert.equal(currentUserBody.user.login, login);
   assert.equal(currentUserBody.user.role, "student");
-
-  const guard = await request("/api/guard/check");
-  assert.equal(guard.status, 200, "Authenticated Guard diagnostics should run");
-  const guardBody = await guard.json();
-  assert.ok(Array.isArray(guardBody.checks));
-  assert.ok(guardBody.checks.some((check) => check.id === "database" && check.status === "pass"));
-  assert.ok(guardBody.checks.some((check) => check.id === "multi_factor" && check.status === "missing"));
 
   const logout = await request("/api/auth/logout", { method: "POST" });
   assert.equal(logout.status, 204, "Logout should revoke the current session");
@@ -118,7 +121,9 @@ try {
     sessionCookie = "";
   }
 
-  console.log("PASS: API health, registration/session/logout, Guard, and all 8 local account roles.");
+  console.log(
+    "PASS: API health, protected account/session lifecycle, all local account roles, and the demo 7-B student login.",
+  );
   console.log("A synthetic smoke-test account remains in eduverse_test; test passwords were not printed.");
 } catch (error) {
   console.error("FAIL: local API smoke test.", error);

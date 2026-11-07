@@ -5,6 +5,26 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface CreateTopicTestRequest {
+  classId?: string;
+  /**
+     * @minimum 1
+     * @maximum 10
+     */
+  count?: number;
+}
+
+export interface QuizQuestion {
+  prompt: string;
+  choices: string[];
+  correct: string;
+  explanation: string;
+}
+
+export interface CreateTopicTestResponse {
+  questions: QuizQuestion[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -534,13 +554,6 @@ export interface Visual3d {
   parts: Visual3dPart[];
 }
 
-export interface QuizQuestion {
-  prompt: string;
-  choices: string[];
-  correct: string;
-  explanation: string;
-}
-
 export type LessonTopicStatus = typeof LessonTopicStatus[keyof typeof LessonTopicStatus];
 
 
@@ -941,6 +954,61 @@ export interface AwardResponse {
   awarded: boolean;
   grade: number;
 }
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  telegramConnected: boolean;
+  telegramAvailable: boolean;
+  authenticatorAvailable: boolean;
+  /** @nullable */
+  setupLink?: string | null;
+}
+
+export interface TwoFactorSetupResponse {
+  otpauthUrl: string;
+  secret: string;
+  telegramAvailable: boolean;
+  bindLink?: string;
+  devCode?: string;
+}
+
+export interface TwoFactorResendResponse {
+  sent?: boolean;
+  devCode?: string;
+}
+
+export interface TwoFactorLoginPromptResponse {
+  twoFactorRequired: boolean;
+  challengeToken?: string;
+  expiresAt?: string;
+  devCode?: string;
+}
+
+export interface EnableTwoFactorRequest {
+  code: string;
+}
+
+export interface EnableTwoFactorResponse {
+  enabled: boolean;
+  recoveryCodes: string[];
+}
+
+export interface DisableTwoFactorRequest {
+  code: string;
+}
+
+export interface TwoFactorDisabledResponse {
+  enabled?: boolean;
+}
+
+export interface VerifyTwoFactorLoginRequest {
+  challengeToken: string;
+  code: string;
+}
+
+export interface ResendTwoFactorLoginRequest { [key: string]: unknown }
+
+export interface TelegramUpdate { [key: string]: unknown }
 
 export type GetQrLoginStatusParams = {
 deviceToken: string;

@@ -22,6 +22,7 @@ import {
 import {
   generateStudentQuestion,
   generateTopicPackage,
+  generateTopicTest,
   isAiConfigured,
   SUPPORTED_SUBJECTS,
 } from "../lib/ai-content";
@@ -614,6 +615,66 @@ router.get(
       models: [],
       searchUrl: `https://sketchfab.com/search?type=models&q=${encodeURIComponent(query)}`,
     });
+  },
+);
+
+/**
+ * Create a multiple-question test for a published topic. Teachers and school
+ * managers can create and re-create it; students see the generated test in the
+ * topic page. The same topic can be regenerated whenever a new test is wanted.
+ */
+router.post(
+  "/topics/:topicId/test",
+  requireAuthenticatedRole(
+    "teacher",
+    "school_director",
+    "school_admin",
+    "education_admin",
+    "ministry_admin",
+    "platform_superadmin",
+  ),
+  async (req, res) => {
+    const topicId = String(req.params.topicId);
+    if (!isValidUuid(topicId)) {
+      res.status(400).json({ error: "Invalid topic identifier." });
+      return;
+    }
+    const viewer = user(res);
+    const classId = readString(req.body, "classId", 64);
+    if (classId !== undefined && !isValidUuid(classId)) {
+      res.status(400).json({ error: "Invalid class identifier." });
+    }
+    const requestedCountRaw = isRecord(req.body) ? Number(req.body.count) : Number.NaN;
+    const count = Number.isInteger(requestedCountRaw)
+      ? Math.max(1, Math.min(10, requestedCountRaw))
+      : 5;
+    const [topic] = await db
+      .select()
+      .from(lessonTopicsTable)
+      .where(eq(lessonTopicsTable.id, topicId))
+      .limit(1);
+    if (!topic) {
+      res.status(404).json({ error: "Topic not found." });
+      return;
+    }
+    if (classId && !(await canManage(viewer.id, viewer.role, classId))) {
+      res.status(403).json({ error: "You cannot create a test for this class." });
+      return;
+    }
+    const questions = await generateTopicTest(topic.subject, topic.grade, topic.title, count);
+    const quizWithQuestions = {
+      ...(typeof topic.quiz === "object" && topic.quiz !== null ? topic.quiz : {}),
+      prompt: questions[0]?.prompt ?? "Тест по теме",
+      choices: questions[0]?.choices ?? [],
+      correct: questions[0]?.correct ?? "",
+      explanation: questions[0]?.explanation ?? "",
+      questions,
+    };
+    await db
+      .update(lessonTopicsTable)
+      .set({ quiz: quizWithQuestions, status: "published", updatedAt: new Date() })
+      .where(eq(lessonTopicsTable.id, topicId));
+    res.json({ questions });
   },
 );
 

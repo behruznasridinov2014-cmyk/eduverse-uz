@@ -166,6 +166,106 @@ export const ConsumeQrLoginResponse = zod.object({
 
 
 /**
+ * @summary Get the signed-in account's two-factor status
+ */
+export const GetTwoFactorStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "telegramConnected": zod.boolean(),
+  "telegramAvailable": zod.boolean(),
+  "authenticatorAvailable": zod.boolean(),
+  "setupLink": zod.string().nullish()
+})
+
+
+/**
+ * @summary Start two-factor setup (returns a Telegram bind link)
+ */
+export const StartTwoFactorSetupResponse = zod.object({
+  "otpauthUrl": zod.string(),
+  "secret": zod.string(),
+  "telegramAvailable": zod.boolean(),
+  "bindLink": zod.string().optional(),
+  "devCode": zod.string().optional()
+})
+
+
+/**
+ * @summary Resend the two-factor setup confirmation code
+ */
+export const ResendTwoFactorSetupCodeResponse = zod.object({
+  "sent": zod.boolean().optional(),
+  "devCode": zod.string().optional()
+})
+
+
+/**
+ * @summary Confirm the code and enable two-factor authentication
+ */
+export const EnableTwoFactorBody = zod.object({
+  "code": zod.string()
+})
+
+export const EnableTwoFactorResponse = zod.object({
+  "enabled": zod.boolean(),
+  "recoveryCodes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Disable two-factor authentication
+ */
+export const DisableTwoFactorBody = zod.object({
+  "code": zod.string()
+})
+
+export const DisableTwoFactorResponse = zod.object({
+  "enabled": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Resend the login confirmation code
+ */
+export const ResendTwoFactorLoginCodeBody = zod.object({
+
+}).passthrough()
+
+export const ResendTwoFactorLoginCodeResponse = zod.object({
+  "sent": zod.boolean().optional(),
+  "devCode": zod.string().optional()
+})
+
+
+/**
+ * @summary Finish sign-in with the two-factor code
+ */
+export const VerifyTwoFactorLoginBody = zod.object({
+  "challengeToken": zod.string(),
+  "code": zod.string()
+})
+
+export const VerifyTwoFactorLoginResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string().uuid(),
+  "username": zod.string(),
+  "login": zod.string(),
+  "role": zod.enum(['student', 'teacher', 'parent', 'school_director', 'school_admin', 'education_admin', 'ministry_admin', 'platform_superadmin']),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Telegram bot webhook for two-factor bind
+ */
+export const TelegramWebhookBody = zod.record(zod.string(), zod.unknown())
+
+export const TelegramWebhookResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary List the signed-in user's school memberships and classes
  */
 export const GetMySchoolsResponse = zod.object({
@@ -880,6 +980,34 @@ export const GetTopicResponse = zod.object({
   "updatedAt": zod.coerce.date().optional()
 }),
   "aiConfigured": zod.boolean().optional()
+})
+
+
+/**
+ * Generates and saves test questions for the topic. Students of the assigned class can open it from the topic page.
+ * @summary Create a test for a published topic
+ */
+export const CreateTopicTestParams = zod.object({
+  "topicId": zod.coerce.string().uuid()
+})
+
+export const createTopicTestBodyCountDefault = 5;
+export const createTopicTestBodyCountMax = 10;
+
+
+
+export const CreateTopicTestBody = zod.object({
+  "classId": zod.string().uuid().optional(),
+  "count": zod.number().int().min(1).max(createTopicTestBodyCountMax).default(createTopicTestBodyCountDefault)
+})
+
+export const CreateTopicTestResponse = zod.object({
+  "questions": zod.array(zod.object({
+  "prompt": zod.string(),
+  "choices": zod.array(zod.string()),
+  "correct": zod.string(),
+  "explanation": zod.string()
+}))
 })
 
 

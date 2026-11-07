@@ -703,6 +703,59 @@ async function enrichFacts(pkg: GeneratedTopicPackage): Promise<GeneratedTopicPa
 /* Per-student differentiated questions                                        */
 /* -------------------------------------------------------------------------- */
 
+export async function generateTopicTest(
+  subject: string,
+  grade: number,
+  title: string,
+  count = 5,
+): Promise<GeneratedQuizQuestion[]> {
+  const questionCount = Math.max(1, Math.min(10, count));
+  if (!isAiConfigured()) return localTestQuestions(subject, grade, title, questionCount);
+
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        "Ты — учитель. Создай тест из нескольких вопросов по теме. Отвечай только JSON: {\"questions\":[{\"prompt\":\"...\",\"choices\":[\"...\",\"...\",\"...\",\"...\"],\"correct\":\"...\",\"explanation\":\"...\"}]}. Ровно один верный вариант в каждом вопросе.",
+    },
+    {
+      role: "user",
+      content: `Тема: ${title}. Предмет: ${subject}. Класс: ${grade}. Количество вопросов: ${questionCount}.`,
+    },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  const questions = Array.isArray(parsed?.questions)
+    ? (parsed.questions as unknown[]).map(parseQuiz).filter((q): q is GeneratedQuizQuestion => Boolean(q))
+    : [];
+  return questions.length > 0 ? questions.slice(0, questionCount) : localTestQuestions(subject, grade, title, questionCount);
+}
+
+function localTestQuestions(
+  subject: string,
+  grade: number,
+  title: string,
+  count: number,
+): GeneratedQuizQuestion[] {
+  const base = localQuiz(subject, title);
+  const bp = blueprintFor(subject);
+  const variants: GeneratedQuizQuestion[] = [
+    base,
+    {
+      prompt: `Какое понятие является ключевой идеей темы «${title}»?`,
+      choices: [base.correct, base.explanation, title, bp.topics[0]],
+      correct: base.correct,
+      explanation: base.explanation,
+    },
+    {
+      prompt: `Почему тема «${title}» важна для ${grade} класса?`,
+      choices: [base.explanation, "Она помогает решать практические задачи", "Новая тема нужна только для экзамена", "Все перечисленные ответы верны"],
+      correct: base.explanation,
+      explanation: base.explanation,
+    },
+  ];
+  return Array.from({ length: count }, (_, i) => variants[i % variants.length]);
+}
+
 export async function generateStudentQuestion(
   subject: string,
   title: string,
