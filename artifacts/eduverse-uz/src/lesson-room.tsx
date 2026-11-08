@@ -413,7 +413,7 @@ function RoomView({
         }
       }
     },
-    [localStream, screenStream, room.id, mode],
+    [localStream, screenStream, room.id],
   );
 
   const ensurePeer = useCallback(
@@ -558,7 +558,7 @@ function RoomView({
 
   /* Student fallback: if the teacher never called (e.g. tabs reloaded), call them in 2s. */
   useEffect(() => {
-    if (isHost || mode !== 'guest') return;
+    if (isHost) return;
     const timer = window.setTimeout(() => {
       for (const participant of participants) {
         if (participant.userId === user.id) continue;
@@ -569,7 +569,7 @@ function RoomView({
       }
     }, 2000);
     return () => window.clearTimeout(timer);
-  }, [participants, isHost, mode, user.id, ensurePeer]);
+  }, [participants, isHost, user.id, ensurePeer]);
 
   /* ---- Individual AI test for a student ---- */
   const loadMyTest = useCallback(async () => {

@@ -22,7 +22,7 @@ if (configured) {
   );
 }
 
-export const databaseIsConfigured = () => configured;
+export const databaseIsConfigured = () => Boolean(process.env.DATABASE_URL);
 
 export const pool = poolInstance as pg.Pool;
 export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {

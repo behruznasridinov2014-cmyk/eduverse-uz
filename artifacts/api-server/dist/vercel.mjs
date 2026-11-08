@@ -43015,7 +43015,7 @@ var init_src = __esm({
         "[db] DATABASE_URL is not configured \u2014 all database-backed endpoints will fail. Set DATABASE_URL in Vercel \u2192 Project \u2192 Settings \u2192 Environment Variables, then redeploy."
       );
     }
-    databaseIsConfigured = () => configured;
+    databaseIsConfigured = () => Boolean(process.env.DATABASE_URL);
     pool = poolInstance;
     db = new Proxy({}, {
       get(_target, prop) {
@@ -49951,6 +49951,7 @@ var AwardRoomWinnerResponse = objectType({
 init_src();
 var router2 = (0, import_express2.Router)();
 router2.get("/healthz", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json({
     ...data,

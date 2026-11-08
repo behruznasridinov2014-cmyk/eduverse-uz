@@ -5,6 +5,7 @@ import { databaseIsConfigured } from "@workspace/db";
 const router: IRouter = Router();
 
 router.get("/healthz", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json({
     ...data,

@@ -375,7 +375,7 @@ export function TopicLibraryPage({
 
         <div className="topic-detail">
           {selected ? (
-            <TopicDetail topic={selected} copy={copy} onOpenRoom={onOpenRoom} />
+            <TopicDetail topic={selected} copy={copy} onOpenRoom={onOpenRoom} canCreate={isTeacher} />
           ) : (
             <section className="panel topic-empty">
               <GraduationCap size={28} />
@@ -395,10 +395,12 @@ function TopicDetail({
   topic,
   copy,
   onOpenRoom,
+  canCreate = false,
 }: {
   topic: LessonTopic;
   copy: Copy;
   onOpenRoom: (topicId: string) => void;
+  canCreate?: boolean;
 }) {
   const totalMinutes = topic.slides.reduce((sum, slide) => sum + (slide.durationMinutes || 0), 0);
   return (
@@ -437,7 +439,7 @@ function TopicDetail({
         </div>
         <Interactive3d scene={topic.visual3d} />
       </section>
-      <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={isTeacher} />
+      <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={canCreate} />
     </>
   );
 }
