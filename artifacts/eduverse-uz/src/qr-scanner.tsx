@@ -73,9 +73,13 @@ export function QrScanner({
           audio: false,
         });
       } catch {
-        setStatus('denied');
-        setError(copy.cameraDenied);
-        return;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } catch {
+          setStatus('denied');
+          setError(copy.cameraDenied);
+          return;
+        }
       }
       if (!active) {
         stream.getTracks().forEach((track) => track.stop());

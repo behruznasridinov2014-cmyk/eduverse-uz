@@ -199,7 +199,7 @@ export function LessonRoomPage({
                 <label htmlFor="host-topic">{copy.chooseTopic}</label>
                 <select id="host-topic" value={selectedTopicId} onChange={(event) => setSelectedTopicId(event.target.value)}>
                   <option value="">{copy.noTopic}</option>
-                  {topics.map((topic) => (
+                  {[...new Map(topics.map((topic) => [`${topic.subject} · ${topic.title}`, topic])).values()].map((topic) => (
                     <option key={topic.id} value={topic.id}>
                       {topic.subject} · {topic.title}
                     </option>
@@ -497,25 +497,36 @@ function RoomView({
       }
       const peer = await ensurePeer(from, username, false);
       if (kind === 'offer') {
-        await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
-        for (const candidate of peer.pendingIce.splice(0)) {
-          try {
-            await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch {
-            /* ignore late candidates */
+        try {
+          // Glare-safe: if we already sent our own offer, ignore this one —
+          // our connection will still be respected by the other side's answer.
+          if (peer.connection.signalingState === 'have-local-offer') return;
+          await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
+          for (const candidate of peer.pendingIce.splice(0)) {
+            try {
+              await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch {
+              /* ignore late candidates */
+            }
           }
+          const answer = await peer.connection.createAnswer();
+          await peer.connection.setLocalDescription(answer);
+          void sendLessonSignal(room.id, { to: from, kind: 'answer', payload: answer }).catch(() => {});
+        } catch {
+          /* ignore — a retry offer will follow */
         }
-        const answer = await peer.connection.createAnswer();
-        await peer.connection.setLocalDescription(answer);
-        void sendLessonSignal(room.id, { to: from, kind: 'answer', payload: answer }).catch(() => {});
       } else if (kind === 'answer') {
-        await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
-        for (const candidate of peer.pendingIce.splice(0)) {
-          try {
-            await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch {
-            /* ignore late candidates */
+        try {
+          await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
+          for (const candidate of peer.pendingIce.splice(0)) {
+            try {
+              await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch {
+              /* ignore late candidates */
+            }
           }
+        } catch {
+          /* ignore */
         }
       } else if (kind === 'ice') {
         const candidate = payload as RTCIceCandidateInit;

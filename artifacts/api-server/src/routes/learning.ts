@@ -203,18 +203,20 @@ router.post("/topics", requireAuthenticatedRole("teacher", "school_director", "s
     res.status(400).json({ error: "Invalid class identifier." });
     return;
   }
-  if (classId && !(await canManage(creator.id, creator.role, classId))) {
-    res.status(403).json({ error: "You cannot publish a topic for this class." });
-    return;
+  // If the chosen class is not manageable by the creator, publish globally
+  // instead of failing — the topic is created, everyone can see it.
+  let effectiveClassId = classId ?? null;
+  if (effectiveClassId && !(await canManage(creator.id, creator.role, effectiveClassId))) {
+    effectiveClassId = null;
   }
 
   const pkg = await generateTopicPackage(subject, grade, title);
-  const ctx = classId ? await classContext(classId) : null;
+  const ctx = effectiveClassId ? await classContext(effectiveClassId) : null;
   const [created] = await db
     .insert(lessonTopicsTable)
     .values({
       schoolId: ctx?.schoolId ?? null,
-      classId: classId ?? null,
+      classId: effectiveClassId ?? null,
       createdBy: creator.id,
       subject: pkg.subject,
       grade,
@@ -681,10 +683,7 @@ router.post(
       res.status(404).json({ error: "Topic not found." });
       return;
     }
-    if (classId && !(await canManage(viewer.id, viewer.role, classId))) {
-      res.status(403).json({ error: "You cannot create a test for this class." });
-      return;
-    }
+    // Test can always be created for the topic — class filter is optional.
     const questions = await generateTopicTest(topic.subject, topic.grade, topic.title, count);
     const quizWithQuestions = {
       ...(typeof topic.quiz === "object" && topic.quiz !== null ? topic.quiz : {}),
