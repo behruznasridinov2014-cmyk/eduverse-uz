@@ -50423,13 +50423,14 @@ router3.post(
     res.status(201).json({ created });
   }
 );
-var YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? process.env.GEMINI_API_KEY ?? "";
+var YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
 var SKETCHFAB_API_KEY = process.env.SKETCHFAB_API_KEY ?? "";
 router3.get(
   "/youtube/search",
   requireAuthenticatedRole(
     "student",
     "teacher",
+    "parent",
     "school_director",
     "school_admin",
     "education_admin",
@@ -50459,6 +50460,26 @@ router3.get(
       } catch {
       }
     }
+    try {
+      const html = await fetch(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+        { headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" } }
+      ).then((r) => r.ok ? r.text() : "");
+      const ids = [...html.matchAll(/"videoId":"([A-Za-z0-9_-]{11})"/g)].map((m) => m[1]).filter((id) => id !== "dQw4w9WgXcQ");
+      const unique = [...new Set(ids)].slice(0, 3);
+      if (unique.length > 0) {
+        const videos = unique.map((videoId, index2) => ({
+          videoId,
+          title: `\u0412\u0438\u0434\u0435\u043E \u043F\u043E \u0442\u0435\u043C\u0435 \u2014 ${query}`,
+          channel: "",
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+          rank: index2
+        }));
+        res.json({ source: "youtube", videos });
+        return;
+      }
+    } catch {
+    }
     res.json({
       source: "link",
       videos: [],
@@ -50471,6 +50492,7 @@ router3.get(
   requireAuthenticatedRole(
     "student",
     "teacher",
+    "parent",
     "school_director",
     "school_admin",
     "education_admin",

@@ -512,13 +512,13 @@ router.post(
 /* Online resources: YouTube lessons + 3D models from the internet             */
 /* -------------------------------------------------------------------------- */
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? process.env.GEMINI_API_KEY ?? "";
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY ?? "";
 const SKETCHFAB_API_KEY = process.env.SKETCHFAB_API_KEY ?? "";
 
 router.get(
   "/youtube/search",
   requireAuthenticatedRole(
-    "student", "teacher", "school_director", "school_admin",
+    "student", "teacher", "parent", "school_director", "school_admin",
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
   async (req, res) => {
@@ -553,8 +553,32 @@ router.get(
         res.json({ source: "youtube", videos });
         return;
       } catch {
-        // fall through to the safe fallback so the lesson still works offline
+        // fall through to the no-key fallback so the lesson still works
       }
+    }
+    // No-key fallback: search the public YouTube results page and extract IDs.
+    try {
+      const html = await fetch(
+        `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+        { headers: { Accept: "text/html", "User-Agent": "Mozilla/5.0" } },
+      ).then((r) => (r.ok ? r.text() : ""));
+      const ids = [...html.matchAll(/"videoId":"([A-Za-z0-9_-]{11})"/g)]
+        .map((m) => m[1])
+        .filter((id) => id !== "dQw4w9WgXcQ");
+      const unique = [...new Set(ids)].slice(0, 3);
+      if (unique.length > 0) {
+        const videos = unique.map((videoId, index) => ({
+          videoId,
+          title: `Видео по теме — ${query}`,
+          channel: "",
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+          rank: index,
+        }));
+        res.json({ source: "youtube", videos });
+        return;
+      }
+    } catch {
+      // fall through to the link fallback
     }
     res.json({
       source: "link",
@@ -567,7 +591,7 @@ router.get(
 router.get(
   "/models/3d",
   requireAuthenticatedRole(
-    "student", "teacher", "school_director", "school_admin",
+    "student", "teacher", "parent", "school_director", "school_admin",
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
   async (req, res) => {

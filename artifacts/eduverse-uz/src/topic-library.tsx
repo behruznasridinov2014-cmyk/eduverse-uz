@@ -5,6 +5,7 @@ import {
   createTopicTest,
   getMySchools,
   listTopics,
+  searchYouTube,
   type LessonTopic,
   type QuizQuestion,
   type SchoolClass,
@@ -436,7 +437,7 @@ function TopicDetail({
         </div>
         <Interactive3d scene={topic.visual3d} />
       </section>
-      <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} />
+      <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={isTeacher} />
     </>
   );
 }
@@ -447,8 +448,29 @@ function TopicDetail({
 
 function VideoPanel({ topic }: { topic: LessonTopic }) {
   const query = `${topic.subject} ${topic.title} урок 7 класс`;
-  const embedSrc = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(query)}&rel=0`;
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+  const [videoId, setVideoId] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    searchYouTube({ query })
+      .then((response) => {
+        if (!active) return;
+        const id = response.videos?.[0]?.videoId ?? "";
+        setVideoId(id);
+      })
+      .catch(() => {
+        if (active) setVideoId("");
+      })
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [query]);
+
+  const embedSrc = videoId ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0` : "";
 
   return (
     <section className="panel reveal-up topic-video">
@@ -459,14 +481,22 @@ function VideoPanel({ topic }: { topic: LessonTopic }) {
         </div>
         <span className="tag red">Видео</span>
       </div>
-      <div className="video-embed">
-        <iframe
-          src={embedSrc}
-          title={`${topic.subject} — ${topic.title}`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
+      {loading ? (
+        <p className="muted" role="status">Ищем видео по теме…</p>
+      ) : embedSrc ? (
+        <div className="video-embed">
+          <iframe
+            src={embedSrc}
+            title={`${topic.subject} — ${topic.title}`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <div className="video-fallback">
+          <p className="muted">Видео пока не нашли. Откройте поиск — подберём ролик.</p>
+        </div>
+      )}
       <div className="row" style={{ marginTop: 10, flexWrap: 'wrap' }}>
         <a className="btn primary" href={searchUrl} target="_blank" rel="noreferrer">
           <MonitorPlay size={15} /> Смотреть ещё видео по теме
@@ -560,7 +590,7 @@ function FactsPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
   );
 }
 
-function QuizPanel({ topic, copy, onOpenRoom }: { topic: LessonTopic; copy: Copy; onOpenRoom: (topicId: string) => void }) {
+function QuizPanel({ topic, copy, onOpenRoom, canCreate = false }: { topic: LessonTopic; copy: Copy; onOpenRoom: (topicId: string) => void; canCreate?: boolean }) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(() => [
     { prompt: topic.quiz.prompt, choices: topic.quiz.choices, correct: topic.quiz.correct, explanation: topic.quiz.explanation },
   ]);
@@ -569,7 +599,7 @@ function QuizPanel({ topic, copy, onOpenRoom }: { topic: LessonTopic; copy: Copy
   const [generating, setGenerating] = useState(false);
   const [genNotice, setGenNotice] = useState('');
   const [genError, setGenError] = useState('');
-  const teacherLike = topic.quiz.prompt !== '';
+  const correctCount = questions.filter((q, i) => answers[i] === q.correct).length;
   useEffect(() => {
     setQuestions([
       { prompt: topic.quiz.prompt, choices: topic.quiz.choices, correct: topic.quiz.correct, explanation: topic.quiz.explanation },
@@ -579,7 +609,6 @@ function QuizPanel({ topic, copy, onOpenRoom }: { topic: LessonTopic; copy: Copy
     setGenNotice('');
     setGenError('');
   }, [topic.id, topic.quiz]);
-  const correctCount = questions.filter((q, i) => answers[i] === q.correct).length;
   async function generate() {
     setGenerating(true);
     setGenError('');
@@ -606,7 +635,7 @@ function QuizPanel({ topic, copy, onOpenRoom }: { topic: LessonTopic; copy: Copy
           <p className="muted">Ответьте на вопросы по теме. Учитель видит этот тест у всех учеников темы.</p>
         </div>
       </div>
-      {teacherLike && (
+      {canCreate && (
         <div className="row" style={{ marginBottom: 12 }}>
           <button type="button" className="btn primary small" disabled={generating} onClick={() => void generate()}>
             {generating ? 'Создаём тест…' : 'Создать тест'}
