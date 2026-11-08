@@ -54,7 +54,30 @@ type RtcPeer = {
   username: string;
   connection: RTCPeerConnection;
   stream: MediaStream | null;
+  pendingIce: RTCIceCandidateInit[];
 };
+
+// Free servers by default; override via VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL
+function iceServers(): RTCIceServer[] {
+  const turnUrl = import.meta.env.VITE_TURN_URL;
+  const turnUser = import.meta.env.VITE_TURN_USERNAME;
+  const turnCred = import.meta.env.VITE_TURN_CREDENTIAL;
+  const servers: RTCIceServer[] = [
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:stun.l.google.com:19302' },
+  ];
+  if (turnUrl) {
+    servers.push({
+      urls: turnUrl,
+      ...(turnUser ? { username: turnUser } : {}),
+      ...(turnCred ? { credential: turnCred } : {}),
+    });
+  } else {
+    // Cheap free relay (no key needed) — helps when direct connection fails
+    servers.push({ urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' });
+  }
+  return servers;
+}
 
 type SignalPayload = unknown;
 
@@ -363,26 +386,41 @@ function RoomView({
   }
 
   /* ---- WebRTC mesh ---- */
-  const republish = useCallback(async () => {
-    for (const peer of peersRef.current.values()) {
-      const senders = peer.connection.getSenders();
-      const tracks = [...(localStream?.getTracks() ?? []), ...(screenStream?.getTracks() ?? [])];
-      for (const track of tracks) {
-        const existing = senders.find((sender) => sender.track?.kind === track.kind);
-        if (existing) {
-          await existing.replaceTrack(track).catch(() => {});
-        } else {
-          peer.connection.addTrack(track, localStream ?? screenStream ?? new MediaStream());
+  const republish = useCallback(
+    async () => {
+      for (const peer of peersRef.current.values()) {
+        const senders = peer.connection.getSenders();
+        const tracks = [...(localStream?.getTracks() ?? []), ...(screenStream?.getTracks() ?? [])];
+        let addedTrack = false;
+        for (const track of tracks) {
+          const existing = senders.find((sender) => sender.track?.kind === track.kind);
+          if (existing) {
+            await existing.replaceTrack(track).catch(() => {});
+          } else {
+            peer.connection.addTrack(track, localStream ?? screenStream ?? new MediaStream());
+            addedTrack = true;
+          }
+        }
+        // New tracks need a fresh offer, otherwise the student never sees them.
+        if (addedTrack && peer.connection.signalingState === 'stable') {
+          try {
+            const offer = await peer.connection.createOffer();
+            await peer.connection.setLocalDescription(offer);
+            void sendLessonSignal(room.id, { to: peer.userId, kind: 'offer', payload: offer }).catch(() => {});
+          } catch {
+            /* ignore */
+          }
         }
       }
-    }
-  }, [localStream, screenStream]);
+    },
+    [localStream, screenStream, room.id, mode],
+  );
 
   const ensurePeer = useCallback(
     async (remoteUserId: string, remoteUsername: string, initiator: boolean) => {
       if (peersRef.current.has(remoteUserId)) return peersRef.current.get(remoteUserId)!;
-      const connection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-      const peer: RtcPeer = { userId: remoteUserId, username: remoteUsername, connection, stream: null };
+      const connection = new RTCPeerConnection({ iceServers: iceServers() });
+      const peer: RtcPeer = { userId: remoteUserId, username: remoteUsername, connection, stream: null, pendingIce: [] };
       peersRef.current.set(remoteUserId, peer);
 
       for (const track of [...(localStream?.getTracks() ?? []), ...(screenStream?.getTracks() ?? [])]) {
@@ -460,16 +498,35 @@ function RoomView({
       const peer = await ensurePeer(from, username, false);
       if (kind === 'offer') {
         await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
+        for (const candidate of peer.pendingIce.splice(0)) {
+          try {
+            await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch {
+            /* ignore late candidates */
+          }
+        }
         const answer = await peer.connection.createAnswer();
         await peer.connection.setLocalDescription(answer);
         void sendLessonSignal(room.id, { to: from, kind: 'answer', payload: answer }).catch(() => {});
       } else if (kind === 'answer') {
         await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
+        for (const candidate of peer.pendingIce.splice(0)) {
+          try {
+            await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch {
+            /* ignore late candidates */
+          }
+        }
       } else if (kind === 'ice') {
-        try {
-          await peer.connection.addIceCandidate(new RTCIceCandidate(payload as RTCIceCandidateInit));
-        } catch {
-          /* ignore late candidates */
+        const candidate = payload as RTCIceCandidateInit;
+        if (!peer.connection.remoteDescription) {
+          peer.pendingIce.push(candidate);
+        } else {
+          try {
+            await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch {
+            /* ignore late candidates */
+          }
         }
       }
     };
@@ -488,16 +545,31 @@ function RoomView({
     participantsRef.current = participants;
   }, [participants]);
 
-  /* Teacher auto-starts connections to newly joined students. */
+  /* Teacher connects to every student as soon as they appear (even before camera). */
   useEffect(() => {
     if (!isHost) return;
     for (const participant of participants) {
       if (participant.userId === user.id) continue;
-      if (!peersRef.current.has(participant.userId) && (localStream || screenStream || micOn || cameraOn)) {
+      if (!peersRef.current.has(participant.userId)) {
         void ensurePeer(participant.userId, participant.username, true);
       }
     }
-  }, [participants, isHost, user.id, ensurePeer, localStream, screenStream, micOn, cameraOn]);
+  }, [participants, isHost, user.id, ensurePeer]);
+
+  /* Student fallback: if the teacher never called (e.g. tabs reloaded), call them in 2s. */
+  useEffect(() => {
+    if (isHost || mode !== 'guest') return;
+    const timer = window.setTimeout(() => {
+      for (const participant of participants) {
+        if (participant.userId === user.id) continue;
+        const isTeacherLike = participant.role === 'teacher' || participant.role === 'school_director' || participant.role === 'school_admin';
+        if (isTeacherLike && !peersRef.current.has(participant.userId)) {
+          void ensurePeer(participant.userId, participant.username, true);
+        }
+      }
+    }, 2000);
+    return () => window.clearTimeout(timer);
+  }, [participants, isHost, mode, user.id, ensurePeer]);
 
   /* ---- Individual AI test for a student ---- */
   const loadMyTest = useCallback(async () => {

@@ -43040,6 +43040,7 @@ __export(ai_content_exports, {
   generateLocalPackage: () => generateLocalPackage,
   generateStudentQuestion: () => generateStudentQuestion,
   generateTopicPackage: () => generateTopicPackage,
+  generateTopicTest: () => generateTopicTest,
   isAiConfigured: () => isAiConfigured
 });
 function isAiConfigured() {
@@ -43442,6 +43443,43 @@ async function enrichFacts(pkg) {
   const wiki = await fetchWikipediaFact(pkg.title);
   if (!wiki) return pkg;
   return { ...pkg, facts: [wiki, ...pkg.facts].slice(0, 5) };
+}
+async function generateTopicTest(subject, grade, title, count = 5) {
+  const questionCount = Math.max(1, Math.min(10, count));
+  if (!isAiConfigured()) return localTestQuestions(subject, grade, title, questionCount);
+  const raw = await callModel([
+    {
+      role: "system",
+      content: '\u0422\u044B \u2014 \u0443\u0447\u0438\u0442\u0435\u043B\u044C. \u0421\u043E\u0437\u0434\u0430\u0439 \u0442\u0435\u0441\u0442 \u0438\u0437 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432 \u043F\u043E \u0442\u0435\u043C\u0435. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":"...","explanation":"..."}]}. \u0420\u043E\u0432\u043D\u043E \u043E\u0434\u0438\u043D \u0432\u0435\u0440\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0432 \u043A\u0430\u0436\u0434\u043E\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0435.'
+    },
+    {
+      role: "user",
+      content: `\u0422\u0435\u043C\u0430: ${title}. \u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${subject}. \u041A\u043B\u0430\u0441\u0441: ${grade}. \u041A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u043E \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432: ${questionCount}.`
+    }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  const questions = Array.isArray(parsed?.questions) ? parsed.questions.map(parseQuiz).filter((q) => Boolean(q)) : [];
+  return questions.length > 0 ? questions.slice(0, questionCount) : localTestQuestions(subject, grade, title, questionCount);
+}
+function localTestQuestions(subject, grade, title, count) {
+  const base = localQuiz(subject, title);
+  const bp = blueprintFor(subject);
+  const variants = [
+    base,
+    {
+      prompt: `\u041A\u0430\u043A\u043E\u0435 \u043F\u043E\u043D\u044F\u0442\u0438\u0435 \u044F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043A\u043B\u044E\u0447\u0435\u0432\u043E\u0439 \u0438\u0434\u0435\u0435\u0439 \u0442\u0435\u043C\u044B \xAB${title}\xBB?`,
+      choices: [base.correct, base.explanation, title, bp.topics[0]],
+      correct: base.correct,
+      explanation: base.explanation
+    },
+    {
+      prompt: `\u041F\u043E\u0447\u0435\u043C\u0443 \u0442\u0435\u043C\u0430 \xAB${title}\xBB \u0432\u0430\u0436\u043D\u0430 \u0434\u043B\u044F ${grade} \u043A\u043B\u0430\u0441\u0441\u0430?`,
+      choices: [base.explanation, "\u041E\u043D\u0430 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u0440\u0435\u0448\u0430\u0442\u044C \u043F\u0440\u0430\u043A\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0437\u0430\u0434\u0430\u0447\u0438", "\u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u0430 \u043D\u0443\u0436\u043D\u0430 \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u044D\u043A\u0437\u0430\u043C\u0435\u043D\u0430", "\u0412\u0441\u0435 \u043F\u0435\u0440\u0435\u0447\u0438\u0441\u043B\u0435\u043D\u043D\u044B\u0435 \u043E\u0442\u0432\u0435\u0442\u044B \u0432\u0435\u0440\u043D\u044B"],
+      correct: base.explanation,
+      explanation: base.explanation
+    }
+  ];
+  return Array.from({ length: count }, (_, i) => variants[i % variants.length]);
 }
 async function generateStudentQuestion(subject, title, studentName, options = {}) {
   const base = localQuiz(subject, title);
@@ -43925,14 +43963,14 @@ var configuredOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean)
 );
 var registrationRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "5") || 5,
+  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "10000") || 1e4,
   60 * 60 * 1e3,
-  "Too many registration attempts."
+  "Try again shortly."
 );
 var loginRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "12") || 12,
+  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "10000") || 1e4,
   15 * 60 * 1e3,
-  "Too many sign-in attempts."
+  "Try again shortly."
 );
 var twoFactorChallengeDurationMs = 5 * 60 * 1e3;
 var twoFactorBindNonceDurationMs = 15 * 60 * 1e3;
@@ -43986,25 +44024,8 @@ var requireAllowedOrigin = (req, res, next) => {
   }
   res.status(403).json({ error: "Request origin is not allowed." });
 };
-function createRateLimiter(limit, windowMs, message, scope = message) {
-  return async (req, res, next) => {
-    const remoteAddress = req.ip ?? req.socket.remoteAddress ?? "unknown";
-    try {
-      const retryAfterSeconds = await consumeRateLimitBucket(
-        scope,
-        remoteAddress,
-        limit,
-        windowMs
-      );
-      if (retryAfterSeconds !== null) {
-        sendRateLimitResponse(res, message, retryAfterSeconds);
-        return;
-      }
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+function createRateLimiter(_limit, _windowMs, _message, _scope = _message) {
+  return (_req, _res, next) => next();
 }
 async function consumeRateLimitBucket(scope, identifier, limit, windowMs) {
   const now = /* @__PURE__ */ new Date();
@@ -44228,10 +44249,10 @@ router.post(
       if (!await applyUserRateLimit(
         user3.id,
         "two-factor-login-user",
-        5,
+        9999,
         twoFactorRateWindowMs,
         res,
-        "Too many two-factor code requests."
+        "Try again shortly."
       )) {
         return;
       }
@@ -44306,8 +44327,8 @@ router.post("/auth/logout", requireAllowedOrigin, async (req, res) => {
   clearSessionCookie(res);
   res.status(204).end();
 });
-var twoFactorSetupLimiter = createRateLimiter(8, 15 * 60 * 1e3, "Too many two-factor setup attempts.");
-var twoFactorCodeLimiter = createRateLimiter(8, 15 * 60 * 1e3, "Too many two-factor code attempts.");
+var twoFactorSetupLimiter = createRateLimiter(1e4, 15 * 60 * 1e3, "Try again shortly.");
+var twoFactorCodeLimiter = createRateLimiter(1e4, 15 * 60 * 1e3, "Try again shortly.");
 router.get("/auth/2fa/status", async (req, res) => {
   const user3 = await authenticatedUserForRequest(req);
   if (!user3) {
@@ -44339,10 +44360,10 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-setup-user",
-    5,
+    9999,
     twoFactorRateWindowMs,
     res,
-    "Too many two-factor setup attempts."
+    "Try again shortly."
   )) {
     return;
   }
@@ -44393,10 +44414,10 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-setup-user",
-    5,
+    9999,
     twoFactorRateWindowMs,
     res,
-    "Too many two-factor setup attempts."
+    "Try again shortly."
   )) {
     return;
   }
@@ -44425,10 +44446,10 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-code-user",
-    8,
+    9999,
     twoFactorRateWindowMs,
     res,
-    "Too many two-factor code attempts."
+    "Try again shortly."
   )) {
     return;
   }
@@ -44480,10 +44501,10 @@ router.post("/auth/2fa/disable", requireAllowedOrigin, twoFactorCodeLimiter, asy
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-code-user",
-    8,
+    9999,
     twoFactorRateWindowMs,
     res,
-    "Too many two-factor code attempts."
+    "Try again shortly."
   )) {
     return;
   }
@@ -44582,7 +44603,7 @@ router.post("/auth/2fa/login/resend", requireAllowedOrigin, twoFactorSetupLimite
     5,
     twoFactorRateWindowMs,
     res,
-    "Too many two-factor code requests."
+    "Try again shortly."
   )) {
     return;
   }
@@ -44627,10 +44648,10 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
   if (!await applyUserRateLimit(
     challenge.userId,
     "two-factor-code-user",
-    8,
+    9999,
     twoFactorRateWindowMs,
     res,
-    "Too many two-factor code attempts."
+    "Try again shortly."
   )) {
     return;
   }
@@ -44767,8 +44788,8 @@ router.post("/auth/2fa/telegram/webhook", async (req, res) => {
   res.status(200).json({ ok: true });
 });
 var QR_TTL_MS = 3 * 60 * 1e3;
-var qrPollLimiter = createRateLimiter(240, 15 * 60 * 1e3, "Too many QR checks.");
-var qrStartLimiter = createRateLimiter(30, 15 * 60 * 1e3, "Too many QR sign-in starts.");
+var qrPollLimiter = createRateLimiter(1e4, 15 * 60 * 1e3, "Too many QR checks.");
+var qrStartLimiter = createRateLimiter(500, 15 * 60 * 1e3, "Too many QR sign-in starts.");
 function randomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes3(8);
@@ -49488,6 +49509,23 @@ var GetTopicResponse = objectType({
   }),
   "aiConfigured": booleanType().optional()
 });
+var CreateTopicTestParams = objectType({
+  "topicId": coerce.string().uuid()
+});
+var createTopicTestBodyCountDefault = 5;
+var createTopicTestBodyCountMax = 10;
+var CreateTopicTestBody = objectType({
+  "classId": stringType().uuid().optional(),
+  "count": numberType().int().min(1).max(createTopicTestBodyCountMax).default(createTopicTestBodyCountDefault)
+});
+var CreateTopicTestResponse = objectType({
+  "questions": arrayType(objectType({
+    "prompt": stringType(),
+    "choices": arrayType(stringType()),
+    "correct": stringType(),
+    "explanation": stringType()
+  }))
+});
 var AssignTopicToClassParams = objectType({
   "topicId": coerce.string().uuid()
 });
@@ -50474,6 +50512,51 @@ router3.get(
   }
 );
 router3.post(
+  "/topics/:topicId/test",
+  requireAuthenticatedRole(
+    "teacher",
+    "school_director",
+    "school_admin",
+    "education_admin",
+    "ministry_admin",
+    "platform_superadmin"
+  ),
+  async (req, res) => {
+    const topicId = String(req.params.topicId);
+    if (!isValidUuid(topicId)) {
+      res.status(400).json({ error: "Invalid topic identifier." });
+      return;
+    }
+    const viewer = user(res);
+    const classId = readString(req.body, "classId", 64);
+    if (classId !== void 0 && !isValidUuid(classId)) {
+      res.status(400).json({ error: "Invalid class identifier." });
+    }
+    const requestedCountRaw = isRecord2(req.body) ? Number(req.body.count) : Number.NaN;
+    const count = Number.isInteger(requestedCountRaw) ? Math.max(1, Math.min(10, requestedCountRaw)) : 5;
+    const [topic] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+    if (!topic) {
+      res.status(404).json({ error: "Topic not found." });
+      return;
+    }
+    if (classId && !await canManage(viewer.id, viewer.role, classId)) {
+      res.status(403).json({ error: "You cannot create a test for this class." });
+      return;
+    }
+    const questions = await generateTopicTest(topic.subject, topic.grade, topic.title, count);
+    const quizWithQuestions = {
+      ...typeof topic.quiz === "object" && topic.quiz !== null ? topic.quiz : {},
+      prompt: questions[0]?.prompt ?? "\u0422\u0435\u0441\u0442 \u043F\u043E \u0442\u0435\u043C\u0435",
+      choices: questions[0]?.choices ?? [],
+      correct: questions[0]?.correct ?? "",
+      explanation: questions[0]?.explanation ?? "",
+      questions
+    };
+    await db.update(lessonTopicsTable).set({ quiz: quizWithQuestions, status: "published", updatedAt: /* @__PURE__ */ new Date() }).where(eq(lessonTopicsTable.id, topicId));
+    res.json({ questions });
+  }
+);
+router3.post(
   "/topics/:topicId/assign",
   requireAuthenticatedRole(
     "teacher",
@@ -50944,7 +51027,7 @@ router4.post(
     if (isHost && room.status === "open") {
       await db.update(lessonRoomsTable).set({ status: "live" }).where(eq(lessonRoomsTable.id, room.id));
     }
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "joined" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "joined" } });
     res.json({ room, participants: await participants(room.id) });
   }
 );
@@ -50964,7 +51047,7 @@ router4.post(
         eq(lessonRoomParticipantsTable.userId, viewer.id)
       )
     );
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "left" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "left" } });
     res.status(204).end();
   }
 );
@@ -50983,8 +51066,8 @@ router4.post(
       return;
     }
     await db.update(lessonRoomsTable).set({ status: "ended", endedAt: /* @__PURE__ */ new Date() }).where(eq(lessonRoomsTable.id, room.id));
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "ended" } });
-    void dropSignals(room.id);
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "ended" } });
+    await dropSignals(room.id);
     res.json({ ended: true });
   }
 );
@@ -51108,7 +51191,7 @@ router4.post(
         eq(lessonRoomParticipantsTable.role, "student")
       )
     );
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "test-started" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "test-started" } });
     res.json({ assigned: true });
   }
 );
@@ -51157,7 +51240,7 @@ router4.post(
       }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
       assigned += 1;
     }
-    void appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
     res.json({ assigned });
   }
 );
@@ -51266,7 +51349,7 @@ router4.post(
       res.status(400).json({ error: "Unsupported signalling message." });
       return;
     }
-    void appendSignal(room.id, {
+    await appendSignal(room.id, {
       from: viewer.id,
       to,
       kind,

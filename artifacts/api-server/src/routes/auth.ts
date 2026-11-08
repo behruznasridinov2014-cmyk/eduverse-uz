@@ -150,30 +150,15 @@ export const requireAllowedOrigin: RequestHandler = (req, res, next) => {
   res.status(403).json({ error: "Request origin is not allowed." });
 };
 
+// Rate limits are intentionally DISABLED for this project (user request):
+// every request passes straight through. Kept as a no-op so routes keep working.
 export function createRateLimiter(
-  limit: number,
-  windowMs: number,
-  message: string,
-  scope = message,
+  _limit: number,
+  _windowMs: number,
+  _message: string,
+  _scope = _message,
 ): RequestHandler {
-  return async (req, res, next) => {
-    const remoteAddress = req.ip ?? req.socket.remoteAddress ?? "unknown";
-    try {
-      const retryAfterSeconds = await consumeRateLimitBucket(
-        scope,
-        remoteAddress,
-        limit,
-        windowMs,
-      );
-      if (retryAfterSeconds !== null) {
-        sendRateLimitResponse(res, message, retryAfterSeconds);
-        return;
-      }
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
+  return (_req, _res, next) => next();
 }
 
 async function consumeRateLimitBucket(
