@@ -1034,5 +1034,7 @@ date?: string;
 
 export type PollLessonSignalsParams = {
 since?: number;
+/** How long the server holds the request until a message arrives (ms). */
+wait?: number;
 };
 

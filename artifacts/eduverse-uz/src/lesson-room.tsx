@@ -319,14 +319,16 @@ function RoomView({
     return 'ok';
   }, [peerStates]);
 
-  /* ---- Signalling poll loop ---- */
+  /* ---- Signalling poll loop (long poll) ---- */
   useEffect(() => {
     let active = true;
     let timer: number | undefined;
     const poll = async () => {
       if (!active) return;
       try {
-        const batch = await pollLessonSignals(room.id, { since: lastSeq.current });
+        // The server holds the request until a message arrives, so the next
+        // offer is seen in a fraction of a second instead of a full poll cycle.
+        const batch = await pollLessonSignals(room.id, { since: lastSeq.current, wait: 8000 });
         lastSeq.current = batch.lastSeq;
         for (const message of batch.messages) {
           const username =
@@ -354,7 +356,7 @@ function RoomView({
       } catch {
         /* keep polling */
       }
-      if (active) timer = window.setTimeout(poll, negotiationPending() ? 700 : 1500);
+      if (active) timer = window.setTimeout(poll, 150);
     };
 
     void poll();

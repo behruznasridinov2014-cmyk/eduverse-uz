@@ -983,8 +983,21 @@ router.get(
       return;
     }
     const since = Number(req.query.since ?? 0);
-    const messages = await readSignals(room.id, Number.isFinite(since) ? since : 0, viewer.id);
-    const lastSeq = messages.length > 0 ? messages[messages.length - 1]!.seq : Number.isFinite(since) ? since : 0;
+    const cursor = Number.isFinite(since) ? since : 0;
+    // Long poll: the request is held until a message arrives. Without it every
+    // offer would need a full poll cycle (seconds on a serverless deployment)
+    // and the microphone would only be heard after a noticeable delay.
+    const waitMs = Math.min(
+      Math.max(Number(req.query.wait ?? "8000") || 0, 0),
+      20_000,
+    );
+    const deadline = Date.now() + waitMs;
+    let messages = await readSignals(room.id, cursor, viewer.id);
+    while (messages.length === 0 && waitMs > 0 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      messages = await readSignals(room.id, cursor, viewer.id);
+    }
+    const lastSeq = messages.length > 0 ? messages[messages.length - 1]!.seq : cursor;
     res.json({
       messages,
       lastSeq,
