@@ -74,6 +74,11 @@ class CDP {
     await this.send('Page.navigate', { url });
     await this.waitFor('document.readyState === "complete"');
   }
+  /** Brings the tab to the front so the browser renders its video elements. */
+  async show() {
+    await this.send('Page.bringToFront').catch(() => {});
+    await new Promise((r) => setTimeout(r, 400));
+  }
   async waitFor(expression, timeoutMs = 30000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
@@ -99,7 +104,8 @@ const PATCH = `(() => {
 
 const TILES = `(() => {
   const vids = [...document.querySelectorAll('video')].map((v) => ({
-    w: v.videoWidth, h: v.videoHeight,
+    w: v.videoWidth, h: v.videoHeight, paused: v.paused, ready: v.readyState,
+    hasSource: Boolean(v.srcObject),
     tracks: v.srcObject ? v.srcObject.getTracks().map((t) => t.kind + ':' + t.readyState + (t.muted ? ':muted' : '')) : null,
   }));
   return {
@@ -121,6 +127,11 @@ const MEDIA = `(async () => {
   }
   return inbound;
 })()`;
+
+async function tilesOf(cdp) {
+  await cdp.show();
+  return cdp.evaluate(TILES);
+}
 
 const results = [];
 function check(name, ok, detail = '') {
@@ -187,7 +198,7 @@ async function main() {
   // 1. teacher camera on -> student sees the picture
   await clickControl(teacher, 0);
   await sleep(7000);
-  let studentTiles = await student.evaluate(TILES);
+  let studentTiles = await tilesOf(student);
   let remote = studentTiles.vids[1];
   check('teacher camera reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
   check('teacher camera shows no error', !studentTiles.notice, studentTiles.notice ?? '');
@@ -217,14 +228,14 @@ async function main() {
   // 4. camera on again -> the picture returns (stale-track regression)
   await clickControl(teacher, 0);
   await sleep(7000);
-  studentTiles = await student.evaluate(TILES);
+  studentTiles = await tilesOf(student);
   remote = studentTiles.vids[1];
   check('camera on again restores the picture', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
 
   // 5. screen share -> the student sees the screen
   await clickControl(teacher, 2);
   await sleep(7000);
-  studentTiles = await student.evaluate(TILES);
+  studentTiles = await tilesOf(student);
   remote = studentTiles.vids[1];
   check('screen share reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
   await clickControl(teacher, 2);
@@ -235,9 +246,9 @@ async function main() {
   await sleep(2500);
   await clickControl(student, 0);
   await sleep(7000);
-  const teacherTiles = await teacher.evaluate(TILES);
+  const teacherTiles = await tilesOf(teacher);
   const studentRemote = teacherTiles.vids[1];
-  const studentLocal = (await student.evaluate(TILES)).vids[0];
+  const studentLocal = (await tilesOf(student)).vids[0];
   if (!studentLocal || studentLocal.w === 0) {
     // The fake camera of the test browser delivered no frames at all — that is
     // a device problem, not a problem of the lesson.
@@ -247,22 +258,22 @@ async function main() {
   }
   const teacherMedia = await teacher.evaluate(MEDIA);
   check('student microphone reaches the teacher', teacherMedia.some((m) => m.kind === 'audio'), JSON.stringify(teacherMedia));
-  const studentNotice = await student.evaluate(TILES);
+  const studentNotice = await tilesOf(student);
   check('student camera shows no error', !studentNotice.notice, studentNotice.notice ?? '');
 
   // 7. chat still works
-  await student.evaluate(`(() => {
+  const chatSent = await student.evaluate(`(() => {
     const input = document.querySelector('.lesson-chat')?.parentElement?.querySelector('input');
-    if (!input) return false;
+    if (!input) return 'no chat input';
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     setter.call(input, 'salom');
     input.dispatchEvent(new Event('input', { bubbles: true }));
     input.closest('form').requestSubmit();
-    return true;
+    return 'sent';
   })()`);
   await sleep(4000);
   const teacherChat = await teacher.evaluate(`document.body.innerText.includes('salom')`);
-  check('lesson chat delivers messages', teacherChat === true);
+  check('lesson chat delivers messages', teacherChat === true, chatSent === 'sent' ? '' : String(chatSent));
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
