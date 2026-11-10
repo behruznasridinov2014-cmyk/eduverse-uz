@@ -50815,7 +50815,8 @@ async function appendSignal(roomId, message) {
       const cutoff = new Date(Date.now() - SIGNAL_TTL_MS);
       await db.delete(lessonRoomSignalsTable).where(lt(lessonRoomSignalsTable.createdAt, cutoff));
     }
-  } catch {
+  } catch (error) {
+    logger.error({ err: error, roomId, kind: message.kind }, "cannot store lesson signal");
   }
 }
 async function readSignals(roomId, since, viewerId) {
@@ -50846,7 +50847,8 @@ async function readSignals(roomId, since, viewerId) {
 async function dropSignals(roomId) {
   try {
     await db.delete(lessonRoomSignalsTable).where(eq(lessonRoomSignalsTable.roomId, roomId));
-  } catch {
+  } catch (error) {
+    logger.error({ err: error, roomId }, "cannot clear lesson signals");
   }
 }
 async function schoolRole2(userId, schoolId) {

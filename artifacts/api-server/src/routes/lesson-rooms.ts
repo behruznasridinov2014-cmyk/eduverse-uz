@@ -15,6 +15,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
+import { logger } from "../lib/logger";
 import {
   canManageClass,
   cleanText,
@@ -89,8 +90,10 @@ async function appendSignal(
         .delete(lessonRoomSignalsTable)
         .where(lt(lessonRoomSignalsTable.createdAt, cutoff));
     }
-  } catch {
-    // signalling is best-effort; clients keep polling
+  } catch (error) {
+    // A dropped signalling message breaks the peer connection, so it has to be
+    // visible in the logs instead of disappearing silently.
+    logger.error({ err: error, roomId, kind: message.kind }, "cannot store lesson signal");
   }
 }
 
@@ -132,8 +135,8 @@ async function readSignals(
 async function dropSignals(roomId: string): Promise<void> {
   try {
     await db.delete(lessonRoomSignalsTable).where(eq(lessonRoomSignalsTable.roomId, roomId));
-  } catch {
-    /* best effort */
+  } catch (error) {
+    logger.error({ err: error, roomId }, "cannot clear lesson signals");
   }
 }
 
