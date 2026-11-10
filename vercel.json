@@ -9,7 +9,10 @@
     },
     "web": {
       "root": "artifacts/eduverse-uz",
-      "framework": "vite"
+      "framework": "vite",
+      "rewrites": [
+        { "source": "/(.*)", "destination": "/index.html" }
+      ]
     }
   },
   "rewrites": [

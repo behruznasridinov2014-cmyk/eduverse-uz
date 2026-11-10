@@ -162,11 +162,14 @@ async function main() {
   await signIn(student, STUDENT);
   await teacher.navigate(`${WEB}/lesson`);
   await student.navigate(`${WEB_ALT}/lesson`);
-  await teacher.waitFor(`document.body.innerText.includes('Xona yaratish')`);
-  await student.waitFor(`document.body.innerText.includes('Darsga kirish')`);
+  await teacher.waitFor(`/Xona yaratish|Создать комнату|Create room/.test(document.body.innerText)`);
+  await student.waitFor(`/Darsga kirish|Войти в урок|Join lesson/.test(document.body.innerText)`);
 
-  await teacher.evaluate(`(() => { [...document.querySelectorAll('button')].find((x) => /Xona yaratish/.test(x.textContent || '')).click(); return true; })()`);
-  await teacher.waitFor(`document.body.innerText.includes('Qatnashchilar')`);
+  await teacher.evaluate(`(() => {
+    [...document.querySelectorAll('button')].find((x) => /Xona yaratish|Создать комнату|Create room/.test(x.textContent || '')).click();
+    return true;
+  })()`);
+  await teacher.waitFor(`/Qatnashchilar|Участники|Participants/.test(document.body.innerText)`);
   const code = await teacher.evaluate(`document.body.innerText.match(/[A-Z0-9]{3}-[A-Z0-9]{3}/)[0]`);
   console.log('lesson room:', code, '\n');
 
@@ -175,10 +178,10 @@ async function main() {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     setter.call(input, ${JSON.stringify(code)});
     input.dispatchEvent(new Event('input', { bubbles: true }));
-    [...document.querySelectorAll('button')].find((x) => /Darsga kirish/.test(x.textContent || '')).click();
+    [...document.querySelectorAll('button')].find((x) => /Darsga kirish|Войти в урок|Join lesson/.test(x.textContent || '')).click();
     return true;
   })()`);
-  await student.waitFor(`document.body.innerText.includes('Qatnashchilar · 2')`);
+  await student.waitFor(`document.querySelectorAll('.lesson-person').length === 2`);
   await sleep(2500);
 
   // 1. teacher camera on -> student sees the picture
