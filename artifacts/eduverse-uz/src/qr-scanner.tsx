@@ -62,7 +62,7 @@ export function QrScanner({
 
     const start = async () => {
       const detectorCtor = (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
-      if (!detectorCtor || !navigator.mediaDevices?.getUserMedia) {
+      if (!navigator.mediaDevices?.getUserMedia) {
         setStatus('unsupported');
         setError(copy.unsupported);
         return;
@@ -93,17 +93,46 @@ export function QrScanner({
       await video.play().catch(() => {});
       setStatus('scanning');
 
-      const detector = new detectorCtor({ formats: ['qr_code'] });
+      // `BarcodeDetector` only exists on some platforms (for example Chrome on
+      // Android). On desktop browsers the frame is decoded with jsQR so the
+      // camera keeps working everywhere. The decoder is loaded on demand so it
+      // does not weigh on the main bundle.
+      const detector = detectorCtor ? new detectorCtor({ formats: ['qr_code'] }) : null;
+      let decoder: typeof import('jsqr').default | null = null;
+      if (!detector) {
+        try {
+          const module = await import('jsqr');
+          decoder = module.default;
+        } catch {
+          setStatus('unsupported');
+          setError(copy.unsupported);
+          return;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+
+      const handle = (rawValue: string | undefined) => {
+        const hit = rawValue?.match(/([A-Za-z0-9]{4}-[A-Za-z0-9]{4})/)?.[1];
+        if (!hit) return;
+        stop();
+        onDetected(hit.toUpperCase());
+      };
+
       const check = async () => {
         if (!active || !video) return;
         try {
-          const codes = await detector.detect(video);
-          const hit = codes[0]?.rawValue?.match(/([A-Za-z0-9]{4}-[A-Za-z0-9]{4})/)?.[1];
-          if (hit) {
-            const code = hit.toUpperCase();
-            stop();
-            onDetected(code);
+          if (detector) {
+            const codes = await detector.detect(video);
+            handle(codes[0]?.rawValue);
+            return;
           }
+          if (!decoder || !context || video.videoWidth === 0 || video.videoHeight === 0) return;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const image = context.getImageData(0, 0, canvas.width, canvas.height);
+          handle(decoder(image.data, image.width, image.height)?.data);
         } catch {
           /* keep scanning — frames may be transiently undecodable */
         }

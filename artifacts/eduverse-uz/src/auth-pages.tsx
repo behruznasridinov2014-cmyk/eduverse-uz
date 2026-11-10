@@ -31,6 +31,7 @@ import type { User } from '@workspace/api-client-react';
 import type { AppLanguage } from './localization';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
+import { QrScannerButton } from './qr-scanner';
 import { TwoFactorSettings } from './two-factor-settings';
 
 type AuthCopy = {
@@ -1115,6 +1116,7 @@ export function ProfilePage({
         <p className="auth-note profile-note">{copy.emailNotice}</p>
         {error && <FormError>{error}</FormError>}
         <div className="profile-actions">
+          <QrScannerButton language={language} className="btn" />
           <Link href="/" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>
           <button className="btn danger" onClick={() => void signOut()} disabled={auth.isSubmitting}>
             {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={16}/> : <LogOut size={16}/>}

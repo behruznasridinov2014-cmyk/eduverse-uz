@@ -73,7 +73,7 @@ It authenticates against each seeded role and does not print passwords.
 | Telegram 2FA, one-time setup binding, recovery codes, challenge-based login | Implemented; database integration tests require a dedicated local `eduverse_test` URL |
 | Durable Telegram sending, timeout/retry/backoff, account/chat throttling | PostgreSQL outbox worker and policy tests implemented |
 | 100,000 registered or concurrent accounts | Not load-tested; registered-account design target is not a concurrency claim |
-| Online rooms, participant invitations, WebRTC camera/microphone/screen share | Not implemented; lesson page is a local UI simulation |
+| Online rooms, participant invitations, WebRTC camera/microphone/screen share | Implemented: PostgreSQL signalling, WebRTC mesh with perfect negotiation; automated end-to-end check in `scripts/lesson-webrtc-check.mjs` |
 | iOS native app | Not present; the web UI is not a native app |
 
 Server-side authorization now scopes school and class access by the
@@ -96,17 +96,53 @@ them for accounts that must survive a restart.
 
 ## WebRTC and device testing requirements
 
-The current project does not implement WebRTC. Once it does, basic
-`getUserMedia` testing can run on `localhost` in a modern browser with explicit
-camera/microphone permission. Testing participant connections in one browser
-can validate signaling paths, but does not validate network traversal.
+The live lesson uses a WebRTC mesh: the camera, the microphone and the screen
+share are published with `addTrack`/`replaceTrack` and the offer/answer exchange
+follows the perfect-negotiation pattern, so both sides can offer at the same
+time without deadlocking. Signalling messages travel through the API and are
+stored in PostgreSQL, which keeps the mesh working on serverless hosts.
+
+Check the media path with two real Chrome tabs:
+
+```powershell
+# terminal 1 — API
+$env:DATABASE_URL = "<your database>"
+$env:PORT = "5000"
+pnpm --filter @workspace/api-server run dev
+
+# terminal 2 — web app
+$env:PORT = "5173"
+pnpm --filter @workspace/eduverse-uz run dev
+
+# terminal 3 — headless Chrome with a fake camera and microphone
+$chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+Start-Process $chrome -ArgumentList '--headless=new','--remote-debugging-port=9223',`
+  '--user-data-dir=C:\Temp\eduverse-chrome','--use-fake-device-for-media-stream',`
+  '--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required','about:blank'
+
+# terminal 4 — the check itself (teacher + student in one room)
+pnpm --filter @workspace/scripts run check:lesson
+```
+
+The check signs in as `demo_teacher` and `demo_student_b_1`, opens a room, joins
+it with the second tab and verifies that the camera, the microphone and the
+screen share really arrive at the other side (including the switch-off and
+switch-on cycles).
+
+The QR codes of the sign-in screen are verified separately:
+
+```powershell
+pnpm --filter @workspace/scripts run check:qr
+```
 
 Testing between different networks or real mobile devices requires reachable
-signaling endpoints and a TURN server with appropriate credentials and
-firewall configuration. Do not expose a development server publicly as a
-substitute. Use synthetic accounts and room membership checks in automated
-tests; require user consent before enabling camera, microphone, or screen
-sharing.
+signalling endpoints and a TURN server with appropriate credentials and
+firewall configuration. Without a dedicated TURN server the mesh falls back to
+public relays (`VITE_TURN_URL`, `VITE_TURN_USERNAME` and
+`VITE_TURN_CREDENTIAL` set them at build time). Do not expose a development
+server publicly as a substitute. Use synthetic accounts and room membership
+checks in automated tests; require user consent before enabling camera,
+microphone, or screen sharing.
 
 ## Native iOS plan
 

@@ -45,39 +45,10 @@ import {
   X,
 } from 'lucide-react';
 import { Interactive3d } from './interactive-3d';
+import { useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
 
 /* -------------------------------------------------------------------------- */
-
-type RtcPeer = {
-  userId: string;
-  username: string;
-  connection: RTCPeerConnection;
-  stream: MediaStream | null;
-  pendingIce: RTCIceCandidateInit[];
-};
-
-// Free servers by default; override via VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL
-function iceServers(): RTCIceServer[] {
-  const turnUrl = import.meta.env.VITE_TURN_URL;
-  const turnUser = import.meta.env.VITE_TURN_USERNAME;
-  const turnCred = import.meta.env.VITE_TURN_CREDENTIAL;
-  const servers: RTCIceServer[] = [
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:stun.l.google.com:19302' },
-  ];
-  if (turnUrl) {
-    servers.push({
-      urls: turnUrl,
-      ...(turnUser ? { username: turnUser } : {}),
-      ...(turnCred ? { credential: turnCred } : {}),
-    });
-  } else {
-    // Cheap free relay (no key needed) — helps when direct connection fails
-    servers.push({ urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' });
-  }
-  return servers;
-}
 
 type SignalPayload = unknown;
 
@@ -290,13 +261,6 @@ function RoomView({
 }) {
   const copy = COPY[language];
   const localVideo = useRef<HTMLVideoElement | null>(null);
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
-  const [cameraOn, setCameraOn] = useState(false);
-  const [micOn, setMicOn] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [peers, setPeers] = useState<RtcPeer[]>([]);
-  const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream | null>>({});
   const [chat, setChat] = useState<Array<{ from: string; text: string }>>([]);
   const [chatDraft, setChatDraft] = useState('');
   const [results, setResults] = useState<{ ranking: RoomRankEntry[] }>({ ranking: [] });
@@ -305,160 +269,40 @@ function RoomView({
   const [testFeedback, setTestFeedback] = useState('');
   const [testStarted, setTestStarted] = useState(false);
 
-  const peersRef = useRef<Map<string, RtcPeer>>(new Map());
   const participantsRef = useRef<LessonParticipant[]>([]);
   const lastSeq = useRef(0);
 
-  /* ---- Local camera / microphone ---- */
-  async function toggleCamera() {
-    if (cameraOn) {
-      localStream?.getVideoTracks().forEach((track) => track.stop());
-      setCameraOn(false);
-      void setLessonPresence(room.id, { cameraOn: false });
-      await republish();
-      return;
-    }
-    try {
-      const stream = localStream ?? (await navigator.mediaDevices.getUserMedia({ video: true, audio: micOn }));
-      const videoTrack = stream.getVideoTracks()[0];
-      if (!videoTrack) throw new Error('no video');
-      const next = localStream ?? new MediaStream();
-      if (!localStream) stream.getTracks().forEach((track) => next.addTrack(track));
-      setLocalStream(next);
-      if (localVideo.current) localVideo.current.srcObject = next;
-      setCameraOn(true);
-      void setLessonPresence(room.id, { cameraOn: true });
-      await republish();
-    } catch {
-      setError(copy.cameraDenied);
-    }
-  }
-
-  async function toggleMic() {
-    if (micOn) {
-      localStream?.getAudioTracks().forEach((track) => (track.enabled = false));
-      setMicOn(false);
-      void setLessonPresence(room.id, { micOn: false });
-      return;
-    }
-    try {
-      const stream = localStream ?? (await navigator.mediaDevices.getUserMedia({ audio: true }));
-      if (!localStream) setLocalStream(stream);
-      stream.getAudioTracks().forEach((track) => {
-        track.enabled = true;
-        if (localStream && !localStream.getAudioTracks().includes(track)) localStream.addTrack(track);
-      });
-      setMicOn(true);
-      void setLessonPresence(room.id, { micOn: true });
-      await republish();
-    } catch {
-      setError(copy.micDenied);
-    }
-  }
-
-  async function toggleShare() {
-    if (sharing) {
-      screenStream?.getTracks().forEach((track) => track.stop());
-      setScreenStream(null);
-      setSharing(false);
-      void setLessonPresence(room.id, { sharingScreen: false });
-      await republish();
-      return;
-    }
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      setError(copy.shareUnsupported);
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-        setScreenStream(null);
-        setSharing(false);
-        void republish();
-      });
-      setScreenStream(stream);
-      setSharing(true);
-      void setLessonPresence(room.id, { sharingScreen: true });
-      await republish();
-    } catch {
-      setError(copy.shareDenied);
-    }
-  }
-
-  /* ---- WebRTC mesh ---- */
-  const republish = useCallback(
-    async () => {
-      for (const peer of peersRef.current.values()) {
-        const senders = peer.connection.getSenders();
-        const tracks = [...(localStream?.getTracks() ?? []), ...(screenStream?.getTracks() ?? [])];
-        let addedTrack = false;
-        for (const track of tracks) {
-          const existing = senders.find((sender) => sender.track?.kind === track.kind);
-          if (existing) {
-            await existing.replaceTrack(track).catch(() => {});
-          } else {
-            peer.connection.addTrack(track, localStream ?? screenStream ?? new MediaStream());
-            addedTrack = true;
-          }
-        }
-        // New tracks need a fresh offer, otherwise the student never sees them.
-        if (addedTrack && peer.connection.signalingState === 'stable') {
-          try {
-            const offer = await peer.connection.createOffer();
-            await peer.connection.setLocalDescription(offer);
-            void sendLessonSignal(room.id, { to: peer.userId, kind: 'offer', payload: offer }).catch(() => {});
-          } catch {
-            /* ignore */
-          }
-        }
-      }
+  /* ---- WebRTC mesh (camera / microphone / screen) ---- */
+  const mesh = useLessonMesh({
+    roomId: room.id,
+    selfUserId: user.id,
+    sendSignal: async (to, kind, payload) => {
+      await sendLessonSignal(room.id, { to, kind, payload });
     },
-    [localStream, screenStream, room.id],
-  );
-
-  const ensurePeer = useCallback(
-    async (remoteUserId: string, remoteUsername: string, initiator: boolean) => {
-      if (peersRef.current.has(remoteUserId)) return peersRef.current.get(remoteUserId)!;
-      const connection = new RTCPeerConnection({ iceServers: iceServers() });
-      const peer: RtcPeer = { userId: remoteUserId, username: remoteUsername, connection, stream: null, pendingIce: [] };
-      peersRef.current.set(remoteUserId, peer);
-
-      for (const track of [...(localStream?.getTracks() ?? []), ...(screenStream?.getTracks() ?? [])]) {
-        connection.addTrack(track, localStream ?? screenStream ?? new MediaStream());
-      }
-
-      connection.onicecandidate = (event) => {
-        if (event.candidate) {
-          void sendLessonSignal(room.id, {
-            to: remoteUserId,
-            kind: 'ice',
-            payload: event.candidate.toJSON(),
-          }).catch(() => {});
-        }
-      };
-      connection.ontrack = (event) => {
-        const [stream] = event.streams;
-        peer.stream = stream ?? null;
-        setRemoteStreams((current) => ({ ...current, [remoteUserId]: stream ?? null }));
-      };
-      connection.onconnectionstatechange = () => {
-        if (['failed', 'closed', 'disconnected'].includes(connection.connectionState)) {
-          peersRef.current.delete(remoteUserId);
-          setPeers([...peersRef.current.values()]);
-        }
-      };
-
-      setPeers([...peersRef.current.values()]);
-
-      if (initiator) {
-        const offer = await connection.createOffer();
-        await connection.setLocalDescription(offer);
-        void sendLessonSignal(room.id, { to: remoteUserId, kind: 'offer', payload: offer }).catch(() => {});
-      }
-      return peer;
+    onPresence: (patch) => {
+      void setLessonPresence(room.id, patch);
     },
-    [room.id, localStream, screenStream],
-  );
+    onError: (kind) => {
+      if (kind === 'camera') setError(copy.cameraDenied);
+      else if (kind === 'mic') setError(copy.micDenied);
+      else if (kind === 'share-denied') setError(copy.shareDenied);
+      else if (kind === 'share-unsupported') setError(copy.shareUnsupported);
+    },
+  });
+
+  const {
+    localStream,
+    screenStream,
+    cameraOn,
+    micOn,
+    sharing,
+    remoteStreams,
+    toggleCamera,
+    toggleMic,
+    toggleShare,
+    handleSignal: handleMeshSignal,
+    ensurePeer,
+  } = mesh;
 
   /* ---- Signalling poll loop ---- */
   useEffect(() => {
@@ -470,7 +314,21 @@ function RoomView({
         const batch = await pollLessonSignals(room.id, { since: lastSeq.current });
         lastSeq.current = batch.lastSeq;
         for (const message of batch.messages) {
-          await handleSignal(message.from, message.kind, message.payload as SignalPayload);
+          const username =
+            participantsRef.current.find((participant) => participant.userId === message.from)?.username ??
+            message.from.slice(0, 6);
+          if (message.kind === 'control') {
+            const event = (message.payload as { event?: string })?.event;
+            if (event === 'individual-tests-started' || event === 'test-started') void loadMyTest();
+            if (event === 'ended') onRefresh();
+            continue;
+          }
+          if (message.kind === 'chat') {
+            const text = (message.payload as { text?: string })?.text;
+            if (text) setChat((current) => [...current, { from: username, text }]);
+            continue;
+          }
+          await handleMeshSignal(message.from, message.kind, message.payload as SignalPayload);
         }
         onParticipants(batch.participants);
         if (batch.roomStatus === 'ended') {
@@ -482,72 +340,10 @@ function RoomView({
       if (active) timer = window.setTimeout(poll, 1500);
     };
 
-    const handleSignal = async (from: string, kind: string, payload: SignalPayload) => {
-      const username = participantsRef.current.find((p) => p.userId === from)?.username ?? from.slice(0, 6);
-      if (kind === 'control') {
-        const event = (payload as { event?: string })?.event;
-        if (event === 'individual-tests-started' || event === 'test-started') void loadMyTest();
-        if (event === 'ended') onRefresh();
-        return;
-      }
-      if (kind === 'chat') {
-        const text = (payload as { text?: string })?.text;
-        if (text) setChat((current) => [...current, { from: username, text }]);
-        return;
-      }
-      const peer = await ensurePeer(from, username, false);
-      if (kind === 'offer') {
-        try {
-          // Glare-safe: if we already sent our own offer, ignore this one —
-          // our connection will still be respected by the other side's answer.
-          if (peer.connection.signalingState === 'have-local-offer') return;
-          await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
-          for (const candidate of peer.pendingIce.splice(0)) {
-            try {
-              await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch {
-              /* ignore late candidates */
-            }
-          }
-          const answer = await peer.connection.createAnswer();
-          await peer.connection.setLocalDescription(answer);
-          void sendLessonSignal(room.id, { to: from, kind: 'answer', payload: answer }).catch(() => {});
-        } catch {
-          /* ignore — a retry offer will follow */
-        }
-      } else if (kind === 'answer') {
-        try {
-          await peer.connection.setRemoteDescription(new RTCSessionDescription(payload as RTCSessionDescriptionInit));
-          for (const candidate of peer.pendingIce.splice(0)) {
-            try {
-              await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-            } catch {
-              /* ignore late candidates */
-            }
-          }
-        } catch {
-          /* ignore */
-        }
-      } else if (kind === 'ice') {
-        const candidate = payload as RTCIceCandidateInit;
-        if (!peer.connection.remoteDescription) {
-          peer.pendingIce.push(candidate);
-        } else {
-          try {
-            await peer.connection.addIceCandidate(new RTCIceCandidate(candidate));
-          } catch {
-            /* ignore late candidates */
-          }
-        }
-      }
-    };
-
     void poll();
     return () => {
       active = false;
       if (timer) window.clearTimeout(timer);
-      for (const peer of peersRef.current.values()) peer.connection.close();
-      peersRef.current.clear();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room.id]);
@@ -556,31 +352,13 @@ function RoomView({
     participantsRef.current = participants;
   }, [participants]);
 
-  /* Teacher connects to every student as soon as they appear (even before camera). */
+  /* Everybody connects to everybody as soon as both sides are in the room. */
   useEffect(() => {
-    if (!isHost) return;
     for (const participant of participants) {
       if (participant.userId === user.id) continue;
-      if (!peersRef.current.has(participant.userId)) {
-        void ensurePeer(participant.userId, participant.username, true);
-      }
+      ensurePeer(participant.userId, participant.username);
     }
-  }, [participants, isHost, user.id, ensurePeer]);
-
-  /* Student fallback: if the teacher never called (e.g. tabs reloaded), call them in 2s. */
-  useEffect(() => {
-    if (isHost) return;
-    const timer = window.setTimeout(() => {
-      for (const participant of participants) {
-        if (participant.userId === user.id) continue;
-        const isTeacherLike = participant.role === 'teacher' || participant.role === 'school_director' || participant.role === 'school_admin';
-        if (isTeacherLike && !peersRef.current.has(participant.userId)) {
-          void ensurePeer(participant.userId, participant.username, true);
-        }
-      }
-    }, 2000);
-    return () => window.clearTimeout(timer);
-  }, [participants, isHost, user.id, ensurePeer]);
+  }, [participants, user.id, ensurePeer]);
 
   /* ---- Individual AI test for a student ---- */
   const loadMyTest = useCallback(async () => {
@@ -668,8 +446,13 @@ function RoomView({
   }
 
   useEffect(() => {
-    if (localVideo.current && localStream) localVideo.current.srcObject = localStream;
-  }, [localStream]);
+    const element = localVideo.current;
+    if (!element) return;
+    const stream = sharing ? screenStream : localStream;
+    if (!stream) return;
+    if (element.srcObject !== stream) element.srcObject = stream;
+    void element.play().catch(() => {});
+  }, [localStream, screenStream, sharing, cameraOn, micOn]);
 
   return (
     <div className="lesson-room">
@@ -904,16 +687,38 @@ function VideoTile({
 }) {
   const internalRef = useRef<HTMLVideoElement | null>(null);
   const ref = videoRef ?? internalRef;
+  const [hasVideo, setHasVideo] = useState(false);
+
   useEffect(() => {
-    if (ref.current && stream) {
-      ref.current.srcObject = stream;
-      void ref.current.play().catch(() => {});
-    }
+    const element = ref.current;
+    if (!element) return;
+    const detect = () => setHasVideo(element.videoWidth > 0 && element.videoHeight > 0);
+    element.addEventListener('loadeddata', detect);
+    element.addEventListener('resize', detect);
+    detect();
+    return () => {
+      element.removeEventListener('loadeddata', detect);
+      element.removeEventListener('resize', detect);
+    };
   }, [stream, ref]);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || !stream) return;
+    if (element.srcObject !== stream) element.srcObject = stream;
+    void element.play().catch(() => {
+      // Autoplay with sound can be blocked until the page is activated.
+      const retry = () => {
+        void element.play().catch(() => {});
+      };
+      document.addEventListener('click', retry, { once: true });
+      document.addEventListener('touchstart', retry, { once: true });
+    });
+  }, [stream, ref, active]);
   return (
     <div className={`video-tile ${active ? 'active' : ''}`}>
       <video ref={ref} autoPlay playsInline muted={muted} />
-      {!active && (
+      {(!active || !hasVideo) && (
         <div className="video-placeholder">
           <span className="avatar large">{name.slice(0, 1).toUpperCase()}</span>
         </div>

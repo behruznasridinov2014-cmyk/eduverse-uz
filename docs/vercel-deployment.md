@@ -121,6 +121,29 @@ object, quiz) is ready, with an embedded YouTube lesson video. Open
 **Onlayn dars**, create a room, share the code, and join from a second tab or
 another device.
 
+### Live lesson media (camera, microphone, screen)
+
+The lesson room is a WebRTC mesh. Camera, microphone and screen share are
+published directly between the browsers; only the offer/answer and ICE
+candidates travel through the API.
+
+- The site must be served over **HTTPS** — browsers only grant camera and
+  microphone access in a secure context.
+- For participants behind a strict NAT or a corporate firewall a dedicated
+  **TURN** server is required. Set `VITE_TURN_URL`, `VITE_TURN_USERNAME` and
+  `VITE_TURN_CREDENTIAL` in the Vercel project (build-time variables) and
+  redeploy. Without them the mesh falls back to public STUN/TURN relays, which
+  are rate-limited and unsuitable for a full class.
+- After every deploy run `pnpm --filter @workspace/scripts run check:lesson`
+  against a preview deployment to confirm that the media path still works.
+
+### Sign in with a QR code
+
+The QR tab of the login screen shows a QR code plus an eight-character code. A
+signed-in device approves the request from **Profil → Scan QR code**; the
+scanner uses the native `BarcodeDetector` where it exists (Chrome on Android)
+and falls back to a bundled decoder on desktop browsers.
+
 ## 5. AI features in production
 
 Everything works without any key:

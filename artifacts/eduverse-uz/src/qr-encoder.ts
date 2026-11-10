@@ -12,18 +12,19 @@
 
 const EC_LEVEL_M = { ecCodewordsPerBlock: null as number | null };
 
-// Total codewords and EC codewords per block for level M, versions 1..10.
-const RS_BLOCK_TABLE: Record<number, { total: number; data: number; ec: number; blocks: number }> = {
-  1: { total: 26, data: 16, ec: 10, blocks: 1 },
-  2: { total: 44, data: 28, ec: 16, blocks: 1 },
-  3: { total: 70, data: 44, ec: 26, blocks: 1 },
-  4: { total: 100, data: 64, ec: 18, blocks: 2 },
-  5: { total: 134, data: 86, ec: 24, blocks: 2 },
-  6: { total: 172, data: 108, ec: 16, blocks: 4 },
-  7: { total: 196, data: 124, ec: 18, blocks: 4 },
-  8: { total: 242, data: 154, ec: 22, blocks: 4 },
-  9: { total: 292, data: 182, ec: 22, blocks: 5 },
-  10: { total: 346, data: 216, ec: 26, blocks: 6 },
+// Total codewords and the block layout for level M, versions 1..10.
+// `groups` lists how many blocks hold how many data codewords each.
+const RS_BLOCK_TABLE: Record<number, { total: number; data: number; ec: number; groups: Array<{ blocks: number; data: number }> }> = {
+  1: { total: 26, data: 16, ec: 10, groups: [{ blocks: 1, data: 16 }] },
+  2: { total: 44, data: 28, ec: 16, groups: [{ blocks: 1, data: 28 }] },
+  3: { total: 70, data: 44, ec: 26, groups: [{ blocks: 1, data: 44 }] },
+  4: { total: 100, data: 64, ec: 18, groups: [{ blocks: 2, data: 32 }] },
+  5: { total: 134, data: 86, ec: 24, groups: [{ blocks: 2, data: 43 }] },
+  6: { total: 172, data: 108, ec: 16, groups: [{ blocks: 4, data: 27 }] },
+  7: { total: 196, data: 124, ec: 18, groups: [{ blocks: 4, data: 31 }] },
+  8: { total: 242, data: 154, ec: 22, groups: [{ blocks: 2, data: 38 }, { blocks: 2, data: 39 }] },
+  9: { total: 292, data: 182, ec: 22, groups: [{ blocks: 3, data: 36 }, { blocks: 2, data: 37 }] },
+  10: { total: 346, data: 216, ec: 26, groups: [{ blocks: 4, data: 43 }, { blocks: 1, data: 44 }] },
 };
 
 const ALIGNMENT_POSITIONS: Record<number, number[]> = {
@@ -63,6 +64,7 @@ export function encodeQr(text: string): boolean[][] {
   const mask = chooseMask(modules);
   applyMask(modules, mask);
   drawFormat(modules, mask);
+  drawVersion(modules, version);
 
   return modules.map((row) => row.map((cell) => Boolean(cell)));
 }
@@ -113,23 +115,29 @@ function buildCodewords(bytes: number[], version: number): { dataCodewords: numb
   }
 
   // Split into blocks and compute EC per block.
-  const blocks = spec.blocks;
-  const dataPerBlock = spec.data / blocks;
-  const ecPerBlock = spec.ec;
   const dataBlocks: number[][] = [];
-  for (let i = 0; i < blocks; i += 1) {
-    dataBlocks.push(dataCodewords.slice(i * dataPerBlock, (i + 1) * dataPerBlock));
+  let offset = 0;
+  for (const group of spec.groups) {
+    for (let i = 0; i < group.blocks; i += 1) {
+      dataBlocks.push(dataCodewords.slice(offset, offset + group.data));
+      offset += group.data;
+    }
   }
-  const ecBlocks = dataBlocks.map((block) => reedSolomon(block, ecPerBlock));
+  const ecBlocks = dataBlocks.map((block) => reedSolomon(block, spec.ec));
 
   // Interleave data then EC.
   const interleaved: number[] = [];
-  for (let i = 0; i < dataPerBlock; i += 1) {
-    for (const block of dataBlocks) interleaved.push(block[i]);
+  const maxData = Math.max(...dataBlocks.map((block) => block.length));
+  for (let i = 0; i < maxData; i += 1) {
+    for (const block of dataBlocks) {
+      if (i < block.length) interleaved.push(block[i]);
+    }
   }
   const ecInterleaved: number[] = [];
-  for (let i = 0; i < ecPerBlock; i += 1) {
-    for (const block of ecBlocks) ecInterleaved.push(block[i]);
+  for (let i = 0; i < spec.ec; i += 1) {
+    for (const block of ecBlocks) {
+      ecInterleaved.push(block[i]);
+    }
   }
   return { dataCodewords: interleaved, ecCodewords: ecInterleaved };
 }
@@ -370,28 +378,68 @@ function buildReservedMap(size: number): boolean[][] {
     mark(6, r);
     mark(r, 6);
   }
+  // Alignment patterns are function modules as well — masking them would
+  // corrupt the symbol and no scanner could read the code.
+  const version = (size - 17) / 4;
+  const positions = ALIGNMENT_POSITIONS[version] ?? [];
+  for (const row of positions) {
+    for (const col of positions) {
+      if ((row === 6 && col === 6) || (row === 6 && col === positions[positions.length - 1]) || (row === positions[positions.length - 1] && col === 6)) {
+        continue;
+      }
+      for (let r = -2; r <= 2; r += 1) for (let c = -2; c <= 2; c += 1) mark(row + r, col + c);
+    }
+  }
   return map;
 }
 
 function drawFormat(modules: (boolean | null)[][], mask: number): void {
   const size = modules.length;
   const format = formatBits(mask);
+  // First copy: column 8 (rows 0-5 and 7) plus row 8 (columns 0-5, 7 and 8).
   for (let i = 0; i < 15; i += 1) {
     const value = ((format >> i) & 1) === 1;
-    if (i < 6) modules[8][i] = value;
-    else if (i < 8) modules[8][i + 1] = value;
-    else if (i === 8) modules[7][8] = value;
-    else modules[15 - i][8] = value;
+    if (i < 6) modules[i][8] = value;
+    else if (i === 6) modules[7][8] = value;
+    else if (i === 7) modules[8][8] = value;
+    else if (i === 8) modules[8][7] = value;
+    else modules[8][14 - i] = value;
   }
+  // Second copy: row 8 (columns size-8..size-1) and column 8 (rows size-7..size-1).
   for (let i = 0; i < 8; i += 1) {
     const value = ((format >> i) & 1) === 1;
-    modules[size - 1 - i][8] = value;
+    modules[8][size - 1 - i] = value;
   }
   for (let i = 8; i < 15; i += 1) {
     const value = ((format >> i) & 1) === 1;
-    modules[8][size - 15 + i] = value;
+    modules[size - 15 + i][8] = value;
   }
   modules[size - 8][8] = true;
+}
+
+/**
+ * Version information (18 bits) for version 7 and above. Without it such a
+ * symbol cannot be read at all.
+ */
+function drawVersion(modules: (boolean | null)[][], version: number): void {
+  const size = modules.length;
+  if (version < 7) return;
+  const bits = versionBits(version);
+  for (let i = 0; i < 18; i += 1) {
+    const value = ((bits >> i) & 1) === 1;
+    const row = Math.floor(i / 3);
+    const col = size - 11 + (i % 3);
+    modules[row][col] = value;
+    modules[col][row] = value;
+  }
+}
+
+function versionBits(version: number): number {
+  let remainder = version;
+  for (let i = 0; i < 12; i += 1) {
+    remainder = (remainder << 1) ^ ((remainder >> 11) * 0b1111100100101);
+  }
+  return (version << 12) | remainder;
 }
 
 function formatBits(mask: number): number {

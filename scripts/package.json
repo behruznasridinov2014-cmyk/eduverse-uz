@@ -10,6 +10,8 @@
     "seed:demo-school": "node ./seed-demo-school.mjs",
     "telegram:webhook": "node ./set-telegram-webhook.mjs",
     "rotate:2fa-key": "tsx ./rotate-two-factor-key.mjs",
+    "check:qr": "tsx ./check-qr-encoder.mjs",
+    "check:lesson": "node ./lesson-webrtc-check.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -17,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "jsqr": "^1.4.0",
     "tsx": "catalog:"
   }
 }
