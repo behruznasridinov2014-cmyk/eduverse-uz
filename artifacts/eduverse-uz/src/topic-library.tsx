@@ -454,7 +454,10 @@ function TopicDetail({
 /* -------------------------------------------------------------------------- */
 
 function Models3dPanel({ topic }: { topic: LessonTopic }) {
-  const query = `${topic.subject} ${topic.title}`.trim();
+  // The kind of the 3D object is an English keyword ("globe", "ocean",
+  // "volcano"...) - it finds far better models than the Russian title.
+  const kind = topic.visual3d?.kind ?? '';
+  const title = `${topic.subject} ${topic.title}`.trim();
   const [models, setModels] = useState<Model3d[]>([]);
   const [activeUid, setActiveUid] = useState("");
   const [searchUrl, setSearchUrl] = useState("");
@@ -463,25 +466,29 @@ function Models3dPanel({ topic }: { topic: LessonTopic }) {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    search3dModels({ query })
-      .then((response) => {
+    const load = async () => {
+      const queries = [kind, title].filter(Boolean);
+      for (const query of queries) {
+        const response = await search3dModels({ query }).catch(() => null);
         if (!active) return;
-        const list = response.models ?? [];
-        setModels(list);
-        setActiveUid(list[0]?.uid ?? "");
-        setSearchUrl(response.searchUrl ?? "");
-      })
-      .catch(() => {
-        if (!active) return;
-        setModels([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+        const list = response?.models ?? [];
+        if (response?.searchUrl) setSearchUrl(response.searchUrl);
+        if (list.length > 0) {
+          setModels(list);
+          setActiveUid(list[0]?.uid ?? "");
+          setLoading(false);
+          return;
+        }
+      }
+      if (!active) return;
+      setModels([]);
+      setLoading(false);
+    };
+    void load();
     return () => {
       active = false;
     };
-  }, [query]);
+  }, [kind, title]);
 
   if (loading) {
     return (
