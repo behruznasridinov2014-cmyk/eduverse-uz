@@ -43963,14 +43963,23 @@ var configuredOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean)
 );
 var registrationRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "10000") || 1e4,
+  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "5") || 5,
   60 * 60 * 1e3,
-  "Try again shortly."
+  "Too many registration attempts. Try again later.",
+  "registration"
 );
 var loginRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "10000") || 1e4,
+  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "20") || 20,
   15 * 60 * 1e3,
-  "Try again shortly."
+  "Too many sign-in attempts. Try again later.",
+  "login",
+  signInKey
+);
+var loginAddressLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_LOGIN_IP_RATE_LIMIT ?? "200") || 200,
+  15 * 60 * 1e3,
+  "Too many sign-in attempts from this network. Try again later.",
+  "login-address"
 );
 var twoFactorChallengeDurationMs = 5 * 60 * 1e3;
 var twoFactorBindNonceDurationMs = 15 * 60 * 1e3;
@@ -44011,7 +44020,9 @@ function isUniqueConstraintViolation(error) {
 function requestOriginIsAllowed(req, origin) {
   if (configuredOrigins.has(origin)) return true;
   try {
-    return new URL(origin).origin === `${req.protocol}://${req.get("host")}`;
+    const host = req.get("x-forwarded-host") || req.get("host") || "";
+    const proto = req.get("x-forwarded-proto") || req.protocol;
+    return new URL(origin).origin === `${proto}://${host}`;
   } catch {
     return false;
   }
@@ -44024,8 +44035,36 @@ var requireAllowedOrigin = (req, res, next) => {
   }
   res.status(403).json({ error: "Request origin is not allowed." });
 };
-function createRateLimiter(_limit, _windowMs, _message, _scope = _message) {
-  return (_req, _res, next) => next();
+function createRateLimiter(limit, windowMs, message, scope = message, keyOf) {
+  return (req, res, next) => {
+    void (async () => {
+      const identifier = keyOf ? keyOf(req) : rateLimitIdentifier(req);
+      const retryAfterSeconds = await consumeRateLimitBucket(scope, identifier, limit, windowMs);
+      if (retryAfterSeconds === null) {
+        next();
+        return;
+      }
+      sendRateLimitResponse(res, message, retryAfterSeconds);
+    })().catch((error) => {
+      logger.error({ err: error, scope }, "Rate limit check failed");
+      next();
+    });
+  };
+}
+function rateLimitIdentifier(req) {
+  const authenticated = req.user;
+  if (authenticated?.id) return `user:${authenticated.id}`;
+  return `ip:${clientAddress(req)}`;
+}
+function clientAddress(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  const address = typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : "";
+  return address || req.ip || "unknown";
+}
+function signInKey(req) {
+  const body = req.body;
+  const login = typeof body?.login === "string" ? body.login.trim().toLowerCase() : "";
+  return `signin:${login}|${clientAddress(req)}`;
 }
 async function consumeRateLimitBucket(scope, identifier, limit, windowMs) {
   const now = /* @__PURE__ */ new Date();
@@ -44162,13 +44201,13 @@ router.post(
     const confirmPassword = getString(req.body, "confirmPassword");
     if (!username || username.length < 2 || username.length > 40 || !/^[\p{L}\p{N}_. -]+$/u.test(username)) {
       res.status(400).json({
-        error: "Username must be 2\u201340 letters, numbers, spaces, dots, _ or -."
+        error: "Username must be 2\u0432\u0402\u201C40 letters, numbers, spaces, dots, _ or -."
       });
       return;
     }
     if (!login || !/^[a-zA-Z0-9._-]{3,32}$/.test(login)) {
       res.status(400).json({
-        error: "Login must be 3\u201332 letters, numbers, dots, _ or -."
+        error: "Login must be 3\u0432\u0402\u201C32 letters, numbers, dots, _ or -."
       });
       return;
     }
@@ -44219,6 +44258,7 @@ router.post(
   "/auth/login",
   requireAllowedOrigin,
   loginRateLimiter,
+  loginAddressLimiter,
   async (req, res) => {
     if (!hasOnlyFields(req.body, ["login", "password"])) {
       res.status(400).json({ error: "Unexpected sign-in fields." });
@@ -44249,10 +44289,10 @@ router.post(
       if (!await applyUserRateLimit(
         user3.id,
         "two-factor-login-user",
-        9999,
+        5,
         twoFactorRateWindowMs,
         res,
-        "Try again shortly."
+        "Too many verification attempts. Try again later."
       )) {
         return;
       }
@@ -44327,8 +44367,18 @@ router.post("/auth/logout", requireAllowedOrigin, async (req, res) => {
   clearSessionCookie(res);
   res.status(204).end();
 });
-var twoFactorSetupLimiter = createRateLimiter(1e4, 15 * 60 * 1e3, "Try again shortly.");
-var twoFactorCodeLimiter = createRateLimiter(1e4, 15 * 60 * 1e3, "Try again shortly.");
+var twoFactorSetupLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_2FA_SETUP_RATE_LIMIT ?? "10") || 10,
+  15 * 60 * 1e3,
+  "Too many requests. Try again later.",
+  "two-factor-setup"
+);
+var twoFactorCodeLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_2FA_RATE_LIMIT ?? "5") || 5,
+  15 * 60 * 1e3,
+  "Too many verification attempts. Try again later.",
+  "two-factor-code"
+);
 router.get("/auth/2fa/status", async (req, res) => {
   const user3 = await authenticatedUserForRequest(req);
   if (!user3) {
@@ -44360,7 +44410,7 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-setup-user",
-    9999,
+    5,
     twoFactorRateWindowMs,
     res,
     "Try again shortly."
@@ -44414,7 +44464,7 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-setup-user",
-    9999,
+    5,
     twoFactorRateWindowMs,
     res,
     "Try again shortly."
@@ -44446,7 +44496,7 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-code-user",
-    9999,
+    5,
     twoFactorRateWindowMs,
     res,
     "Try again shortly."
@@ -44478,6 +44528,14 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
           codeHash: hashRecoveryCode(recoveryCode)
         }))
       );
+      const currentToken = readSessionToken(req);
+      await tx.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(
+        and(
+          eq(sessionsTable.userId, user3.id),
+          isNull(sessionsTable.revokedAt),
+          ne(sessionsTable.tokenHash, hashSessionToken(currentToken ?? ""))
+        )
+      );
     });
   } catch (requestError) {
     if (requestError instanceof TwoFactorChallengeConflict) {
@@ -44501,7 +44559,7 @@ router.post("/auth/2fa/disable", requireAllowedOrigin, twoFactorCodeLimiter, asy
   if (!await applyUserRateLimit(
     user3.id,
     "two-factor-code-user",
-    9999,
+    5,
     twoFactorRateWindowMs,
     res,
     "Try again shortly."
@@ -44648,7 +44706,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
   if (!await applyUserRateLimit(
     challenge.userId,
     "two-factor-code-user",
-    9999,
+    5,
     twoFactorRateWindowMs,
     res,
     "Try again shortly."
@@ -44788,8 +44846,30 @@ router.post("/auth/2fa/telegram/webhook", async (req, res) => {
   res.status(200).json({ ok: true });
 });
 var QR_TTL_MS = 3 * 60 * 1e3;
-var qrPollLimiter = createRateLimiter(1e4, 15 * 60 * 1e3, "Too many QR checks.");
-var qrStartLimiter = createRateLimiter(500, 15 * 60 * 1e3, "Too many QR sign-in starts.");
+var qrPollLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_POLL_RATE_LIMIT ?? "120") || 120,
+  60 * 1e3,
+  "Too many requests. Try again later.",
+  "qr-poll"
+);
+var qrStartLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_START_RATE_LIMIT ?? "10") || 10,
+  15 * 60 * 1e3,
+  "Too many QR requests. Try again later.",
+  "qr-start"
+);
+var qrApproveLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_APPROVE_RATE_LIMIT ?? "20") || 20,
+  15 * 60 * 1e3,
+  "Too many approval attempts. Try again later.",
+  "qr-approve"
+);
+var qrConsumeLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_CONSUME_RATE_LIMIT ?? "20") || 20,
+  15 * 60 * 1e3,
+  "Too many requests. Try again later.",
+  "qr-consume"
+);
 function randomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes3(8);
@@ -44800,9 +44880,7 @@ function randomCode() {
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 function effectiveStatus(row) {
-  if (row.status === "pending" || row.status === "scanned") {
-    return row.expiresAt.getTime() <= Date.now() ? "expired" : row.status;
-  }
+  if (row.expiresAt.getTime() <= Date.now()) return "expired";
   return row.status;
 }
 router.post("/auth/qr/start", requireAllowedOrigin, qrStartLimiter, async (req, res) => {
@@ -44850,6 +44928,7 @@ router.get("/auth/qr/status", qrPollLimiter, async (req, res) => {
 router.post(
   "/auth/qr/approve",
   requireAllowedOrigin,
+  qrApproveLimiter,
   async (req, res) => {
     const token = readSessionToken(req);
     if (!token) {
@@ -44890,17 +44969,30 @@ router.post(
       res.status(409).json({ error: "This QR request was already used." });
       return;
     }
+    if (status === "approved") {
+      res.status(409).json({ error: "This QR request was already approved." });
+      return;
+    }
     const sessionToken = createSessionToken();
-    await db.update(qrLoginSessionsTable).set({
+    const [approved] = await db.update(qrLoginSessionsTable).set({
       status: "approved",
       userId: approver.id,
       approvedBy: approver.id,
       issuedSessionToken: hashSessionToken(sessionToken)
-    }).where(eq(qrLoginSessionsTable.id, row.id));
+    }).where(
+      and(
+        eq(qrLoginSessionsTable.id, row.id),
+        eq(qrLoginSessionsTable.status, "pending")
+      )
+    ).returning({ id: qrLoginSessionsTable.id });
+    if (!approved) {
+      res.status(409).json({ error: "This QR request was already handled." });
+      return;
+    }
     res.json({ approved: true, expiresAt: row.expiresAt.toISOString() });
   }
 );
-router.post("/auth/qr/consume", requireAllowedOrigin, async (req, res) => {
+router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (req, res) => {
   if (!hasOnlyFields(req.body, ["deviceToken"])) {
     res.status(400).json({ error: "Unexpected QR consume fields." });
     return;
@@ -50170,8 +50262,9 @@ router3.get(
       return;
     }
     const subject = typeof req.query.subject === "string" ? req.query.subject : void 0;
-    const classFilter = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? [req.query.classId] : [];
-    const myClasses = classFilter.length ? classFilter : (await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))).map((row) => row.classId);
+    const requestedClasses = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? [req.query.classId] : [];
+    const memberClasses = (await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))).map((row) => row.classId);
+    const myClasses = requestedClasses.length ? requestedClasses.filter((classId) => memberClasses.includes(classId)) : memberClasses;
     const visibility = [
       isNull(lessonTopicsTable.classId),
       ...myClasses.length > 0 ? [inArray(lessonTopicsTable.classId, myClasses)] : []
@@ -50198,7 +50291,8 @@ router3.post("/topics", requireAuthenticatedRole("teacher", "school_director", "
   }
   let effectiveClassId = classId ?? null;
   if (effectiveClassId && !await canManage(creator.id, creator.role, effectiveClassId)) {
-    effectiveClassId = null;
+    res.status(403).json({ error: "You cannot publish a topic for this class." });
+    return;
   }
   const pkg = await generateTopicPackage(subject, grade, title);
   const ctx = effectiveClassId ? await classContext(effectiveClassId) : null;
@@ -50232,6 +50326,7 @@ router3.get(
     "platform_superadmin"
   ),
   async (req, res) => {
+    const viewer = user(res);
     if (!isValidUuid(req.params.topicId)) {
       res.status(400).json({ error: "Invalid topic identifier." });
       return;
@@ -50240,6 +50335,13 @@ router3.get(
     if (!topic) {
       res.status(404).json({ error: "Topic not found." });
       return;
+    }
+    if (topic.status !== "published" || topic.classId) {
+      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+      if (!allowed) {
+        res.status(403).json({ error: "You cannot read this topic." });
+        return;
+      }
     }
     res.json({ topic });
   }
@@ -50306,15 +50408,15 @@ router3.post(
     }
     const [target] = await db.select({ id: usersTable.id, username: usersTable.username, role: usersTable.role }).from(usersTable).where(eq(usersTable.loginNormalized, login.toLowerCase())).limit(1);
     if (!target) {
-      res.status(404).json({ error: "No account with that login exists." });
+      res.status(404).json({ error: "No matching account was found." });
       return;
     }
     if (roleRaw === "student" && target.role !== "student") {
-      res.status(400).json({ error: "A student login is required." });
+      res.status(404).json({ error: "No matching account was found." });
       return;
     }
     if (roleRaw === "teacher" && target.role !== "teacher") {
-      res.status(400).json({ error: "A teacher login is required." });
+      res.status(404).json({ error: "No matching account was found." });
       return;
     }
     const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
@@ -50401,7 +50503,7 @@ router3.post(
         try {
           const [account] = await db.insert(usersTable).values({
             username: name,
-            usernameNormalized: name.trim().toLowerCase(),
+            usernameNormalized: normalizeUsername(name),
             login,
             loginNormalized: login.toLowerCase(),
             passwordHash,
@@ -50416,8 +50518,12 @@ router3.post(
           break;
         } catch (error) {
           const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
-          if (code === "23505") continue;
-          throw error;
+          if (code !== "23505") throw error;
+          const detail = String(error.detail ?? "");
+          if (detail.includes("username_normalized")) {
+            res.status(409).json({ error: `A student with the name "${name}" already exists.` });
+            return;
+          }
         }
       }
     }
@@ -50506,26 +50612,27 @@ router3.get(
       res.status(400).json({ error: "A search query is required." });
       return;
     }
-    if (SKETCHFAB_API_KEY) {
-      try {
-        const response = await fetch(
-          `https://sketchfab.com/apiv3/search?type=models&q=${encodeURIComponent(query)}&count=6&sort=-relevance`,
-          { headers: { Authorization: `Bearer ${SKETCHFAB_API_KEY}`, Accept: "application/json" } }
-        );
-        if (!response.ok) throw new Error(`Sketchfab returned HTTP ${response.status}`);
-        const payload = await response.json();
-        const models = (payload.results ?? []).map((model) => ({
-          uid: model.uid ?? "",
-          name: model.name ?? "",
-          author: model.user?.displayName ?? "",
-          embedUrl: model.uid ? `https://sketchfab.com/models/${model.uid}/embed` : "",
-          thumbnail: model.thumbnails?.images?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? "",
-          downloadable: Boolean(model.isDownloadable)
-        })).filter((model) => model.uid);
-        res.json({ source: "sketchfab", models });
-        return;
-      } catch {
-      }
+    try {
+      const headers = { Accept: "application/json" };
+      if (SKETCHFAB_API_KEY) headers.Authorization = `Bearer ${SKETCHFAB_API_KEY}`;
+      const response = await fetch(
+        `https://api.sketchfab.com/v3/search?type=models&q=${encodeURIComponent(query)}&count=8&sort=-likeCount`,
+        { headers }
+      );
+      if (!response.ok) throw new Error(`Sketchfab returned HTTP ${response.status}`);
+      const payload = await response.json();
+      const models = (payload.results ?? []).map((model) => ({
+        uid: model.uid ?? "",
+        name: model.name ?? "",
+        author: model.user?.displayName ?? "",
+        embedUrl: model.uid ? `https://sketchfab.com/models/${model.uid}/embed` : "",
+        thumbnail: model.thumbnails?.images?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? "",
+        downloadable: Boolean(model.isDownloadable),
+        likes: model.likeCount ?? 0
+      })).filter((model) => model.uid);
+      res.json({ source: "sketchfab", models });
+      return;
+    } catch {
     }
     res.json({
       source: "link",
@@ -50554,12 +50661,17 @@ router3.post(
     const classId = readString(req.body, "classId", 64);
     if (classId !== void 0 && !isValidUuid(classId)) {
       res.status(400).json({ error: "Invalid class identifier." });
+      return;
     }
     const requestedCountRaw = isRecord2(req.body) ? Number(req.body.count) : Number.NaN;
     const count = Number.isInteger(requestedCountRaw) ? Math.max(1, Math.min(10, requestedCountRaw)) : 5;
     const [topic] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
     if (!topic) {
       res.status(404).json({ error: "Topic not found." });
+      return;
+    }
+    if (topic.createdBy !== viewer.id && !(topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false) && !isGlobalAdminRole(viewer.role)) {
+      res.status(403).json({ error: "You cannot change the test of this topic." });
       return;
     }
     const questions = await generateTopicTest(topic.subject, topic.grade, topic.title, count);
@@ -50641,15 +50753,18 @@ router3.get(
     }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
     const marks = await db.select().from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2)));
     const byStudent = new Map(marks.map((m) => [m.studentId, m]));
+    const mayManage = await canManage(viewer.id, viewer.role, classId);
     res.json({
       date: date2,
-      canManage: await canManage(viewer.id, viewer.role, classId),
+      canManage: mayManage,
       records: members.map((member) => {
         const mark = byStudent.get(member.userId);
         return {
           studentId: member.userId,
           studentName: member.username,
-          login: member.login,
+          // The login is the account identifier used to sign in — it is only
+          // shown to the people who may manage the class.
+          ...mayManage ? { login: member.login } : {},
           status: mark?.status ?? "unmarked",
           note: mark?.note ?? "",
           markedAt: mark?.updatedAt ?? null
@@ -50687,6 +50802,10 @@ router3.put(
     const rawRecords = isRecord2(req.body) && Array.isArray(req.body.records) ? req.body.records : null;
     if (!rawRecords || rawRecords.length === 0) {
       res.status(400).json({ error: "At least one attendance record is required." });
+      return;
+    }
+    if (rawRecords.length > 200) {
+      res.status(413).json({ error: "Too many attendance records in one request." });
       return;
     }
     const entries = [];
@@ -50754,6 +50873,14 @@ router3.get(
     if (viewer.role === "student" && viewer.id !== studentId) {
       res.status(403).json({ error: "You can only view your own attendance." });
       return;
+    }
+    if (viewer.role !== "student") {
+      const rows2 = await db.select({ classId: attendanceTable.classId }).from(attendanceTable).where(eq(attendanceTable.studentId, studentId));
+      const allowed = rows2.length > 0 && (await Promise.all(rows2.map((row) => canManage(viewer.id, viewer.role, row.classId)))).every(Boolean);
+      if (!allowed) {
+        res.status(403).json({ error: "You cannot view the attendance of this student." });
+        return;
+      }
     }
     const rows = await db.select({
       id: attendanceTable.id,
@@ -50861,7 +50988,9 @@ async function classRole2(userId, classId) {
 }
 async function canManage2(userId, role, classId) {
   if (isGlobalAdminRole(role)) return true;
-  if (!classId) return role === "teacher" || role === "school_director" || role === "school_admin";
+  if (!classId) {
+    return false;
+  }
   const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
   if (!ctx) return false;
   const [sRole, cRole] = await Promise.all([
@@ -50869,6 +50998,28 @@ async function canManage2(userId, role, classId) {
     classRole2(userId, classId)
   ]);
   return canManageClass(role, sRole, cRole);
+}
+async function isParticipant(userId, roomId) {
+  const [row] = await db.select({ id: lessonRoomParticipantsTable.id }).from(lessonRoomParticipantsTable).where(
+    and(
+      eq(lessonRoomParticipantsTable.roomId, roomId),
+      eq(lessonRoomParticipantsTable.userId, userId)
+    )
+  ).limit(1);
+  return Boolean(row);
+}
+async function canOpenRoom(userId, role, classId) {
+  if (classId) return canManage2(userId, role, classId);
+  if (isGlobalAdminRole(role)) return true;
+  return role === "teacher" || role === "school_director" || role === "school_admin";
+}
+async function canAccessRoom(viewer, room) {
+  if (room.hostId === viewer.id) return true;
+  if (isGlobalAdminRole(viewer.role)) return true;
+  if (room.classId && await classRole2(viewer.id, room.classId)) return true;
+  if (room.schoolId && await schoolRole2(viewer.id, room.schoolId)) return true;
+  if (!room.classId && !room.schoolId && await isParticipant(viewer.id, room.id)) return true;
+  return false;
 }
 async function roomById(roomId) {
   if (!isValidUuid(roomId)) return null;
@@ -50906,7 +51057,26 @@ router4.get(
   ),
   async (req, res) => {
     const viewer = user2(res);
-    const rows = viewer.role === "student" ? await db.select().from(lessonRoomsTable).where(eq(lessonRoomsTable.status, "open")).orderBy(desc(lessonRoomsTable.createdAt)).limit(40) : await db.select().from(lessonRoomsTable).orderBy(desc(lessonRoomsTable.createdAt)).limit(40);
+    if (viewer.role === "student" || viewer.role === "parent") {
+      const rows2 = await db.select().from(lessonRoomsTable).where(
+        and(
+          eq(lessonRoomsTable.status, "open"),
+          or(
+            inArray(
+              lessonRoomsTable.classId,
+              db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))
+            ),
+            inArray(
+              lessonRoomsTable.schoolId,
+              db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, viewer.id))
+            )
+          )
+        )
+      ).orderBy(desc(lessonRoomsTable.createdAt)).limit(40);
+      res.json({ rooms: rows2 });
+      return;
+    }
+    const rows = await db.select().from(lessonRoomsTable).orderBy(desc(lessonRoomsTable.createdAt)).limit(40);
     res.json({ rooms: rows });
   }
 );
@@ -50925,7 +51095,7 @@ router4.post(
       res.status(400).json({ error: "Invalid class identifier." });
       return;
     }
-    if (!await canManage2(host.id, host.role, classId ?? null)) {
+    if (!await canOpenRoom(host.id, host.role, classId ?? null)) {
       res.status(403).json({ error: "You cannot open a lesson for this class." });
       return;
     }
@@ -50969,9 +51139,14 @@ router4.get(
     "platform_superadmin"
   ),
   async (req, res) => {
+    const viewer = user2(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     res.json({
@@ -50993,6 +51168,7 @@ router4.get(
     "platform_superadmin"
   ),
   async (req, res) => {
+    const viewer = user2(res);
     const code = String(req.params.code ?? "").trim().toUpperCase();
     if (!/^[A-Z0-9]{3}-[A-Z0-9]{3}$/.test(code)) {
       res.status(400).json({ error: "Enter a valid join code." });
@@ -51005,6 +51181,11 @@ router4.get(
     }
     if (room.status === "ended") {
       res.status(410).json({ error: "This lesson has ended." });
+      return;
+    }
+    const openRoom = !room.classId && !room.schoolId;
+    if (!openRoom && !await canAccessRoom(viewer, room)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     res.json({ room });
@@ -51033,11 +51214,10 @@ router4.post(
       return;
     }
     const isHost = room.hostId === viewer.id;
-    if (!isHost && viewer.role === "student" && !room.classId) {
-    } else if (!isHost && viewer.role === "student" && room.classId) {
-      const cRole = await classRole2(viewer.id, room.classId);
-      if (!cRole) {
-        res.status(403).json({ error: "You are not a member of this class." });
+    if (!isHost) {
+      const openRoom = !room.classId && !room.schoolId;
+      if (!openRoom && !await canAccessRoom(viewer, room)) {
+        res.status(403).json({ error: "You are not a member of this lesson." });
         return;
       }
     }
@@ -51269,9 +51449,14 @@ router4.get(
   "/rooms/:roomId/results",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
+    const viewer = user2(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     const rows = await db.select({
@@ -51316,9 +51501,14 @@ router4.post(
   "/rooms/:roomId/award",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
+    const viewer = user2(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (room.hostId !== viewer.id && !await canManage2(viewer.id, viewer.role, room.classId)) {
+      res.status(403).json({ error: "Only the host can award a grade in this lesson." });
       return;
     }
     const studentId = readString2(req.body, "studentId", 64);
@@ -51329,12 +51519,31 @@ router4.post(
       res.status(400).json({ error: "A valid student and assignment are required." });
       return;
     }
+    if (!room.classId) {
+      res.status(400).json({ error: "This lesson is not linked to a class." });
+      return;
+    }
     const enabled = process.env.EDUVERSE_ALLOW_AUTO_GRADING !== "0";
     if (!enabled) {
       res.status(403).json({ error: "Automatic grading is disabled on this deployment." });
       return;
     }
-    const { assignmentSubmissionsTable: assignmentSubmissionsTable2 } = await Promise.resolve().then(() => (init_src(), src_exports));
+    const { assignmentSubmissionsTable: assignmentSubmissionsTable2, assignmentsTable: assignmentsTable2 } = await Promise.resolve().then(() => (init_src(), src_exports));
+    const [assignment] = await db.select({ classId: assignmentsTable2.classId }).from(assignmentsTable2).where(eq(assignmentsTable2.id, assignmentId)).limit(1);
+    if (!assignment || assignment.classId !== room.classId) {
+      res.status(403).json({ error: "The assignment does not belong to the class of this lesson." });
+      return;
+    }
+    const [member] = await db.select({ id: classMembersTable.id }).from(classMembersTable).where(
+      and(
+        eq(classMembersTable.classId, room.classId),
+        eq(classMembersTable.userId, studentId)
+      )
+    ).limit(1);
+    if (!member) {
+      res.status(403).json({ error: "The student is not a member of the class of this lesson." });
+      return;
+    }
     await db.insert(assignmentSubmissionsTable2).values({
       assignmentId,
       studentId,
@@ -51364,17 +51573,33 @@ router4.post(
       res.status(404).json({ error: "Lesson room not found." });
       return;
     }
+    if (!await canAccessRoom(viewer, room)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
+      return;
+    }
     const kind = readString2(req.body, "kind", 20);
     const to = readString2(req.body, "to", 64) ?? "all";
     if (!kind || !["offer", "answer", "ice", "chat", "control"].includes(kind)) {
       res.status(400).json({ error: "Unsupported signalling message." });
       return;
     }
+    const payload = isRecord3(req.body) ? req.body.payload ?? null : null;
+    if (payload !== null && JSON.stringify(payload).length > 32e3) {
+      res.status(413).json({ error: "The signalling message is too large." });
+      return;
+    }
+    if (kind === "chat") {
+      const text2 = isRecord3(payload) ? readString2(payload, "text", 500) : void 0;
+      if (!text2) {
+        res.status(400).json({ error: "A chat message needs a text." });
+        return;
+      }
+    }
     await appendSignal(room.id, {
       from: viewer.id,
       to,
       kind,
-      payload: isRecord3(req.body) ? req.body.payload ?? null : null
+      payload
     });
     res.json({ ok: true });
   }
@@ -51387,6 +51612,10 @@ router4.get(
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     const since = Number(req.query.since ?? 0);
@@ -51831,7 +52060,16 @@ router5.get(
       role: classMembersTable.role,
       createdAt: classMembersTable.createdAt
     }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(eq(classMembersTable.classId, String(req.params.classId))).orderBy(classMembersTable.role, usersTable.username);
-    res.json({ members });
+    const mayManage = authorization.canManage;
+    res.json({
+      members: members.map((member) => ({
+        userId: member.userId,
+        username: member.username,
+        ...mayManage ? { login: member.login, accountRole: member.accountRole } : {},
+        role: member.role,
+        createdAt: member.createdAt
+      }))
+    });
   }
 );
 router5.post(
@@ -52320,9 +52558,22 @@ var routes_default = router6;
 var app = (0, import_express7.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
-var allowedOrigins = new Set(
+var configuredOrigins2 = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").map((origin) => origin.trim()).filter(Boolean)
 );
+var allowAnyOrigin = configuredOrigins2.has("*");
+var securityHeaders = (_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+  }
+  next();
+};
+app.use(securityHeaders);
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -52345,14 +52596,49 @@ app.use(
 app.use(
   (0, import_cors.default)({
     origin(origin, callback) {
-      callback(null, !origin || allowedOrigins.has(origin));
+      if (!origin || allowAnyOrigin || configuredOrigins2.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
     },
-    credentials: true
+    credentials: !allowAnyOrigin
   })
 );
 app.use((0, import_cookie_parser.default)());
 app.use(import_express7.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "1mb" }));
-app.use(import_express7.default.urlencoded({ extended: true, limit: process.env.JSON_BODY_LIMIT ?? "1mb" }));
+app.use(import_express7.default.urlencoded({ extended: false, limit: "16kb" }));
+var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
+var originGuard = (req, res, next) => {
+  if (!unsafeMethods.has(req.method)) {
+    next();
+    return;
+  }
+  const origin = req.get("origin");
+  if (!origin) {
+    next();
+    return;
+  }
+  const allowed = configuredOrigins2.has(origin) || (() => {
+    try {
+      const host = req.get("x-forwarded-host") || req.get("host") || "";
+      const proto = req.get("x-forwarded-proto") || req.protocol;
+      return new URL(origin).origin === `${proto}://${host}`;
+    } catch {
+      return false;
+    }
+  })();
+  if (!allowed) {
+    res.status(403).json({ error: "Request origin is not allowed." });
+    return;
+  }
+  next();
+};
+app.use("/api", originGuard);
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 app.use("/api", routes_default);
 var errorHandler = (error, _req, res, next) => {
   if (res.headersSent) {

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNull, lt, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or } from "drizzle-orm";
 import { Router, type IRouter, type Response } from "express";
 import { randomBytes } from "node:crypto";
 import {
@@ -164,7 +164,12 @@ async function classRole(userId: string, classId: string): Promise<string | null
 
 async function canManage(userId: string, role: AccountRole, classId: string | null): Promise<boolean> {
   if (isGlobalAdminRole(role)) return true;
-  if (!classId) return role === "teacher" || role === "school_director" || role === "school_admin";
+  if (!classId) {
+    // Without a class there is nothing to manage — the host of the room is
+    // checked separately, otherwise any teacher could end or grade a room of
+    // another school.
+    return false;
+  }
   const [ctx] = await db
     .select({ schoolId: classesTable.schoolId })
     .from(classesTable)
@@ -176,6 +181,65 @@ async function canManage(userId: string, role: AccountRole, classId: string | nu
     classRole(userId, classId),
   ]);
   return canManageClass(role, sRole, cRole);
+}
+
+/**
+ * Membership check for a lesson room.
+ *
+ * Without it every signed-in account could read the chat, the participants and
+ * the results of every other school's lesson, and could join a room it does
+ * not belong to.
+ */
+async function isParticipant(userId: string, roomId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: lessonRoomParticipantsTable.id })
+    .from(lessonRoomParticipantsTable)
+    .where(
+      and(
+        eq(lessonRoomParticipantsTable.roomId, roomId),
+        eq(lessonRoomParticipantsTable.userId, userId),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+/**
+ * Membership check for a lesson room.
+ *
+ * Without it every signed-in account could read the chat, the participants and
+ * the results of every other school's lesson, and could join a room it does
+ * not belong to.
+ */
+/**
+ * Who may open a lesson room.
+ *
+ * With a class the teacher has to manage that class. Without a class the room
+ * is an open room (the join code is the secret) and every teacher of the
+ * platform may open one.
+ */
+async function canOpenRoom(userId: string, role: AccountRole, classId: string | null): Promise<boolean> {
+  if (classId) return canManage(userId, role, classId);
+  if (isGlobalAdminRole(role)) return true;
+  return role === "teacher" || role === "school_director" || role === "school_admin";
+}
+
+/**
+ * Membership check for a lesson room.
+ *
+ * Without it every signed-in account could read the chat, the participants and
+ * the results of every other school's lesson, and could join a room it does
+ * not belong to.
+ */
+async function canAccessRoom(viewer: RequestUser, room: { id: string; hostId: string; classId: string | null; schoolId: string | null }): Promise<boolean> {
+  if (room.hostId === viewer.id) return true;
+  if (isGlobalAdminRole(viewer.role)) return true;
+  if (room.classId && (await classRole(viewer.id, room.classId))) return true;
+  if (room.schoolId && (await schoolRole(viewer.id, room.schoolId))) return true;
+  // A room without a class and without a school is an open room: the join code
+  // is the secret. Everybody who joined it stays a participant.
+  if (!room.classId && !room.schoolId && (await isParticipant(viewer.id, room.id))) return true;
+  return false;
 }
 
 async function roomById(roomId: string) {
@@ -224,19 +288,42 @@ router.get(
   ),
   async (req, res) => {
     const viewer = user(res);
-    const rows =
-      viewer.role === "student"
-        ? await db
-            .select()
-            .from(lessonRoomsTable)
-            .where(eq(lessonRoomsTable.status, "open"))
-            .orderBy(desc(lessonRoomsTable.createdAt))
-            .limit(40)
-        : await db
-            .select()
-            .from(lessonRoomsTable)
-            .orderBy(desc(lessonRoomsTable.createdAt))
-            .limit(40);
+    if (viewer.role === "student" || viewer.role === "parent") {
+      // A student only sees the lessons of their own classes and school.
+      const rows = await db
+        .select()
+        .from(lessonRoomsTable)
+        .where(
+          and(
+            eq(lessonRoomsTable.status, "open"),
+            or(
+              inArray(
+                lessonRoomsTable.classId,
+                db
+                  .select({ classId: classMembersTable.classId })
+                  .from(classMembersTable)
+                  .where(eq(classMembersTable.userId, viewer.id)),
+              ),
+              inArray(
+                lessonRoomsTable.schoolId,
+                db
+                  .select({ schoolId: schoolMembersTable.schoolId })
+                  .from(schoolMembersTable)
+                  .where(eq(schoolMembersTable.userId, viewer.id)),
+              ),
+            ),
+          ),
+        )
+        .orderBy(desc(lessonRoomsTable.createdAt))
+        .limit(40);
+      res.json({ rooms: rows });
+      return;
+    }
+    const rows = await db
+      .select()
+      .from(lessonRoomsTable)
+      .orderBy(desc(lessonRoomsTable.createdAt))
+      .limit(40);
     res.json({ rooms: rows });
   },
 );
@@ -256,7 +343,7 @@ router.post(
       res.status(400).json({ error: "Invalid class identifier." });
       return;
     }
-    if (!(await canManage(host.id, host.role, classId ?? null))) {
+    if (!(await canOpenRoom(host.id, host.role, classId ?? null))) {
       res.status(403).json({ error: "You cannot open a lesson for this class." });
       return;
     }
@@ -309,9 +396,14 @@ router.get(
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
   async (req, res) => {
+    const viewer = user(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!(await canAccessRoom(viewer, room))) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     res.json({
@@ -329,6 +421,7 @@ router.get(
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
   async (req, res) => {
+    const viewer = user(res);
     const code = String(req.params.code ?? "").trim().toUpperCase();
     if (!/^[A-Z0-9]{3}-[A-Z0-9]{3}$/.test(code)) {
       res.status(400).json({ error: "Enter a valid join code." });
@@ -345,6 +438,11 @@ router.get(
     }
     if (room.status === "ended") {
       res.status(410).json({ error: "This lesson has ended." });
+      return;
+    }
+    const openRoom = !room.classId && !room.schoolId;
+    if (!openRoom && !(await canAccessRoom(viewer, room))) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     res.json({ room });
@@ -373,12 +471,13 @@ router.post(
       return;
     }
     const isHost = room.hostId === viewer.id;
-    if (!isHost && viewer.role === "student" && !room.classId) {
-      // open room with no class: any signed-in student may join by code
-    } else if (!isHost && viewer.role === "student" && room.classId) {
-      const cRole = await classRole(viewer.id, room.classId);
-      if (!cRole) {
-        res.status(403).json({ error: "You are not a member of this class." });
+    if (!isHost) {
+      // Everybody who is not the host has to belong to the class or the school
+      // of the lesson. A room without a class and without a school is open for
+      // everybody who knows the join code.
+      const openRoom = !room.classId && !room.schoolId;
+      if (!openRoom && !(await canAccessRoom(viewer, room))) {
+        res.status(403).json({ error: "You are not a member of this lesson." });
         return;
       }
     }
@@ -672,9 +771,14 @@ router.get(
   "/rooms/:roomId/results",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
+    const viewer = user(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!(await canAccessRoom(viewer, room))) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     const rows = await db
@@ -740,9 +844,14 @@ router.post(
   "/rooms/:roomId/award",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
+    const viewer = user(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (room.hostId !== viewer.id && !(await canManage(viewer.id, viewer.role, room.classId))) {
+      res.status(403).json({ error: "Only the host can award a grade in this lesson." });
       return;
     }
     const studentId = readString(req.body, "studentId", 64);
@@ -753,12 +862,41 @@ router.post(
       res.status(400).json({ error: "A valid student and assignment are required." });
       return;
     }
+    if (!room.classId) {
+      res.status(400).json({ error: "This lesson is not linked to a class." });
+      return;
+    }
     const enabled = process.env.EDUVERSE_ALLOW_AUTO_GRADING !== "0";
     if (!enabled) {
       res.status(403).json({ error: "Automatic grading is disabled on this deployment." });
       return;
     }
-    const { assignmentSubmissionsTable } = await import("@workspace/db");
+    // The grade may only be given for an assignment of the class of this
+    // lesson and only to a member of that class.
+    const { assignmentSubmissionsTable, assignmentsTable } = await import("@workspace/db");
+    const [assignment] = await db
+      .select({ classId: assignmentsTable.classId })
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.id, assignmentId))
+      .limit(1);
+    if (!assignment || assignment.classId !== room.classId) {
+      res.status(403).json({ error: "The assignment does not belong to the class of this lesson." });
+      return;
+    }
+    const [member] = await db
+      .select({ id: classMembersTable.id })
+      .from(classMembersTable)
+      .where(
+        and(
+          eq(classMembersTable.classId, room.classId),
+          eq(classMembersTable.userId, studentId),
+        ),
+      )
+      .limit(1);
+    if (!member) {
+      res.status(403).json({ error: "The student is not a member of the class of this lesson." });
+      return;
+    }
     await db
       .insert(assignmentSubmissionsTable)
       .values({
@@ -796,17 +934,35 @@ router.post(
       res.status(404).json({ error: "Lesson room not found." });
       return;
     }
+    if (!(await canAccessRoom(viewer, room))) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
+      return;
+    }
     const kind = readString(req.body, "kind", 20);
     const to = readString(req.body, "to", 64) ?? "all";
     if (!kind || !["offer", "answer", "ice", "chat", "control"].includes(kind)) {
       res.status(400).json({ error: "Unsupported signalling message." });
       return;
     }
+    const payload = isRecord(req.body) ? req.body.payload ?? null : null;
+    // The payload is stored in the database and sent to every participant — it
+    // has to stay small and may only contain the expected fields.
+    if (payload !== null && JSON.stringify(payload).length > 32_000) {
+      res.status(413).json({ error: "The signalling message is too large." });
+      return;
+    }
+    if (kind === "chat") {
+      const text = isRecord(payload) ? readString(payload, "text", 500) : undefined;
+      if (!text) {
+        res.status(400).json({ error: "A chat message needs a text." });
+        return;
+      }
+    }
     await appendSignal(room.id, {
       from: viewer.id,
       to,
       kind: kind as "offer" | "answer" | "ice" | "chat" | "control",
-      payload: isRecord(req.body) ? req.body.payload ?? null : null,
+      payload,
     });
     res.json({ ok: true });
   },
@@ -820,6 +976,10 @@ router.get(
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!(await canAccessRoom(viewer, room))) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
       return;
     }
     const since = Number(req.query.since ?? 0);

@@ -297,12 +297,27 @@ function RoomView({
     micOn,
     sharing,
     remoteStreams,
+    peerStates,
     toggleCamera,
     toggleMic,
     toggleShare,
     handleSignal: handleMeshSignal,
     ensurePeer,
+    reconnect,
+    flushNegotiations,
+    negotiationPending,
   } = mesh;
+
+  /* Somebody is not connected yet (or the path is blocked). */
+  const connectionProblem = useMemo(() => {
+    const states = Object.values(peerStates);
+    if (states.includes('failed')) return 'failed';
+    if (states.includes('disconnected')) return 'disconnected';
+    if (states.some((state) => state === 'connecting' || state === 'new')) {
+      return 'connecting';
+    }
+    return 'ok';
+  }, [peerStates]);
 
   /* ---- Signalling poll loop ---- */
   useEffect(() => {
@@ -331,13 +346,15 @@ function RoomView({
           await handleMeshSignal(message.from, message.kind, message.payload as SignalPayload);
         }
         onParticipants(batch.participants);
+        // Offers that are still missing are sent with the next round trip.
+        flushNegotiations();
         if (batch.roomStatus === 'ended') {
           onRefresh();
         }
       } catch {
         /* keep polling */
       }
-      if (active) timer = window.setTimeout(poll, 1500);
+      if (active) timer = window.setTimeout(poll, negotiationPending() ? 700 : 1500);
     };
 
     void poll();
@@ -474,6 +491,23 @@ function RoomView({
 
       {error && <div className="notice" role="alert">{error}</div>}
 
+      {connectionProblem !== 'ok' && (
+        <div className={`notice lesson-connection ${connectionProblem}`} role="status">
+          <span>
+            {connectionProblem === 'connecting'
+              ? copy.connectionConnecting
+              : connectionProblem === 'disconnected'
+                ? copy.connectionLost
+                : copy.connectionFailed}
+          </span>
+          {connectionProblem !== 'connecting' && (
+            <button type="button" className="btn small" onClick={reconnect}>
+              <RefreshCw size={13} /> {copy.reconnect}
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="lesson-room-grid">
         <div className="lesson-stage">
           <div className="video-grid">
@@ -494,6 +528,7 @@ function RoomView({
                   stream={remoteStreams[participant.userId] ?? null}
                   active={participant.cameraOn || participant.sharingScreen}
                   sharing={participant.sharingScreen}
+                  soundLabel={copy.soundBlocked}
                 />
               ))}
           </div>
@@ -677,6 +712,7 @@ function VideoTile({
   muted = false,
   active,
   sharing,
+  soundLabel,
 }: {
   name: string;
   stream: MediaStream | null;
@@ -684,10 +720,12 @@ function VideoTile({
   muted?: boolean;
   active: boolean;
   sharing?: boolean;
+  soundLabel?: string;
 }) {
   const internalRef = useRef<HTMLVideoElement | null>(null);
   const ref = videoRef ?? internalRef;
   const [hasVideo, setHasVideo] = useState(false);
+  const [soundBlocked, setSoundBlocked] = useState(false);
 
   useEffect(() => {
     const element = ref.current;
@@ -706,15 +744,28 @@ function VideoTile({
     const element = ref.current;
     if (!element || !stream) return;
     if (element.srcObject !== stream) element.srcObject = stream;
-    void element.play().catch(() => {
-      // Autoplay with sound can be blocked until the page is activated.
+    void element.play().then(() => setSoundBlocked(false)).catch(() => {
+      // Autoplay with sound is blocked until the page is activated.
+      setSoundBlocked(true);
       const retry = () => {
-        void element.play().catch(() => {});
+        void element.play().then(() => setSoundBlocked(false)).catch(() => {});
       };
       document.addEventListener('click', retry, { once: true });
       document.addEventListener('touchstart', retry, { once: true });
     });
   }, [stream, ref, active]);
+
+  async function enableSound() {
+    const element = ref.current;
+    if (!element) return;
+    try {
+      await element.play();
+      setSoundBlocked(false);
+    } catch {
+      setSoundBlocked(true);
+    }
+  }
+
   return (
     <div className={`video-tile ${active ? 'active' : ''}`}>
       <video ref={ref} autoPlay playsInline muted={muted} />
@@ -722,6 +773,11 @@ function VideoTile({
         <div className="video-placeholder">
           <span className="avatar large">{name.slice(0, 1).toUpperCase()}</span>
         </div>
+      )}
+      {soundBlocked && !muted && (
+        <button type="button" className="video-sound-hint" onClick={() => void enableSound()}>
+          <Mic size={13} /> {soundLabel ?? 'Sound'}
+        </button>
       )}
       <span className="video-name">
         {sharing && <MonitorUp size={12} />}
@@ -776,6 +832,11 @@ const COPY: Record<Language, Record<string, string>> = {
     micDenied: 'Доступ к микрофону не получен.',
     shareDenied: 'Демонстрация экрана отменена.',
     shareUnsupported: 'Браузер не поддерживает демонстрацию экрана.',
+    connectionConnecting: 'Соединение с участниками…',
+    connectionLost: 'Соединение с участником потеряно.',
+    connectionFailed: 'Не удалось подключиться. Проверьте интернет или нажмите «Переподключиться».',
+    reconnect: 'Переподключиться',
+    soundBlocked: 'Нажмите, чтобы включить звук',
     awardNeedsClass: 'Награда требует привязанного класса и задания.',
     awardDone: 'Отличная оценка выставлена: {name}.',
   },
@@ -821,6 +882,11 @@ const COPY: Record<Language, Record<string, string>> = {
     micDenied: 'Mikrofonga ruxsat berilmadi.',
     shareDenied: 'Ekran namoyishi bekor qilindi.',
     shareUnsupported: 'Brauzer ekran namoyishini qo‘llamaydi.',
+    connectionConnecting: 'Qatnashchilar bilan ulanmoqda…',
+    connectionLost: 'Qatnashchi bilan aloqa uzildi.',
+    connectionFailed: 'Ulanib bo‘lmadi. Internetingni tekshiring yoki «Qayta ulanish» tugmasini bosing.',
+    reconnect: 'Qayta ulanish',
+    soundBlocked: 'Ovozni yoqish uchun bosing',
     awardNeedsClass: 'Taqdirlash uchun sinf va topshiriq kerak.',
     awardDone: 'A’lo baho qo‘yildi: {name}.',
   },
@@ -866,6 +932,11 @@ const COPY: Record<Language, Record<string, string>> = {
     micDenied: 'Microphone permission was not granted.',
     shareDenied: 'Screen sharing was cancelled.',
     shareUnsupported: 'This browser cannot share the screen.',
+    connectionConnecting: 'Connecting to the participants…',
+    connectionLost: 'The connection to a participant was lost.',
+    connectionFailed: 'Could not connect. Check the internet connection or press “Reconnect”.',
+    reconnect: 'Reconnect',
+    soundBlocked: 'Tap to enable the sound',
     awardNeedsClass: 'Awarding needs a linked class and assignment.',
     awardDone: 'Top grade recorded for {name}.',
   },

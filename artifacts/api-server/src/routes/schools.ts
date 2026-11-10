@@ -661,7 +661,18 @@ router.get(
       .where(eq(classMembersTable.classId, String(req.params.classId)))
       .orderBy(classMembersTable.role, usersTable.username);
 
-    res.json({ members });
+    // The login is the account identifier used to sign in. It is only handed
+    // out to the people who may manage the class.
+    const mayManage = authorization.canManage;
+    res.json({
+      members: members.map((member) => ({
+        userId: member.userId,
+        username: member.username,
+        ...(mayManage ? { login: member.login, accountRole: member.accountRole } : {}),
+        role: member.role,
+        createdAt: member.createdAt,
+      })),
+    });
   },
 );
 

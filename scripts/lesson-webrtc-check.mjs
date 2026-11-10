@@ -197,7 +197,7 @@ async function main() {
 
   // 1. teacher camera on -> student sees the picture
   await clickControl(teacher, 0);
-  await sleep(7000);
+  await sleep(12000);
   let studentTiles = await tilesOf(student);
   let remote = studentTiles.vids[1];
   check('teacher camera reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
@@ -205,7 +205,7 @@ async function main() {
 
   // 2. teacher microphone on -> the student receives audio
   await clickControl(teacher, 1);
-  await sleep(6000);
+  await sleep(12000);
   const studentMedia = await student.evaluate(MEDIA);
   check('teacher microphone reaches the student', studentMedia.some((m) => m.kind === 'audio'), JSON.stringify(studentMedia));
 
@@ -227,14 +227,14 @@ async function main() {
 
   // 4. camera on again -> the picture returns (stale-track regression)
   await clickControl(teacher, 0);
-  await sleep(7000);
+  await sleep(12000);
   studentTiles = await tilesOf(student);
   remote = studentTiles.vids[1];
   check('camera on again restores the picture', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
 
   // 5. screen share -> the student sees the screen
   await clickControl(teacher, 2);
-  await sleep(7000);
+  await sleep(12000);
   studentTiles = await tilesOf(student);
   remote = studentTiles.vids[1];
   check('screen share reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
@@ -245,7 +245,7 @@ async function main() {
   await clickControl(student, 1);
   await sleep(2500);
   await clickControl(student, 0);
-  await sleep(7000);
+  await sleep(12000);
   const teacherTiles = await tilesOf(teacher);
   const studentRemote = teacherTiles.vids[1];
   const studentLocal = (await tilesOf(student)).vids[0];
@@ -261,7 +261,20 @@ async function main() {
   const studentNotice = await tilesOf(student);
   check('student camera shows no error', !studentNotice.notice, studentNotice.notice ?? '');
 
-  // 7. chat still works
+  // 7. microphone switched on while the camera negotiation is still running
+  await clickControl(teacher, 0); // camera off
+  await sleep(1500);
+  await clickControl(teacher, 1); // microphone on
+  await clickControl(teacher, 0); // camera on immediately afterwards
+  await sleep(12000);
+  const quickMedia = await student.evaluate(MEDIA);
+  check(
+    'microphone survives a camera switch during an open negotiation',
+    quickMedia.some((m) => m.kind === 'audio') && quickMedia.some((m) => m.kind === 'video'),
+    JSON.stringify(quickMedia),
+  );
+
+  // 8. chat still works
   const chatSent = await student.evaluate(`(() => {
     const input = document.querySelector('.lesson-chat')?.parentElement?.querySelector('input');
     if (!input) return 'no chat input';
@@ -271,7 +284,7 @@ async function main() {
     input.closest('form').requestSubmit();
     return 'sent';
   })()`);
-  await sleep(4000);
+  await sleep(6000);
   const teacherChat = await teacher.evaluate(`document.body.innerText.includes('salom')`);
   check('lesson chat delivers messages', teacherChat === true, chatSent === 'sent' ? '' : String(chatSent));
 

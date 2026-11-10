@@ -11,7 +11,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
-import { requireAuthenticatedRole } from "./auth";
+import { normalizeUsername, requireAuthenticatedRole } from "./auth";
 import {
   canManageClass,
   cleanText,
@@ -160,17 +160,19 @@ router.get(
     // Students (and parents) see global published topics plus the ones
     // assigned to the classes they belong to.
     const subject = typeof req.query.subject === "string" ? req.query.subject : undefined;
-    const classFilter = typeof req.query.classId === "string" && isValidUuid(req.query.classId)
+    const requestedClasses = typeof req.query.classId === "string" && isValidUuid(req.query.classId)
       ? [req.query.classId]
       : [];
-    const myClasses = classFilter.length
-      ? classFilter
-      : (
-          await db
-            .select({ classId: classMembersTable.classId })
-            .from(classMembersTable)
-            .where(eq(classMembersTable.userId, viewer.id))
-        ).map((row) => row.classId);
+    const memberClasses = (
+      await db
+        .select({ classId: classMembersTable.classId })
+        .from(classMembersTable)
+        .where(eq(classMembersTable.userId, viewer.id))
+    ).map((row) => row.classId);
+    // A requested class is only used when the viewer really belongs to it.
+    const myClasses = requestedClasses.length
+      ? requestedClasses.filter((classId) => memberClasses.includes(classId))
+      : memberClasses;
     const visibility = [
       isNull(lessonTopicsTable.classId),
       ...(myClasses.length > 0 ? [inArray(lessonTopicsTable.classId, myClasses)] : []),
@@ -203,11 +205,11 @@ router.post("/topics", requireAuthenticatedRole("teacher", "school_director", "s
     res.status(400).json({ error: "Invalid class identifier." });
     return;
   }
-  // If the chosen class is not manageable by the creator, publish globally
-  // instead of failing — the topic is created, everyone can see it.
+  // A topic can only be published for a class the creator may manage.
   let effectiveClassId = classId ?? null;
   if (effectiveClassId && !(await canManage(creator.id, creator.role, effectiveClassId))) {
-    effectiveClassId = null;
+    res.status(403).json({ error: "You cannot publish a topic for this class." });
+    return;
   }
 
   const pkg = await generateTopicPackage(subject, grade, title);
@@ -240,6 +242,7 @@ router.get(
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
   async (req, res) => {
+    const viewer = user(res);
     if (!isValidUuid(req.params.topicId)) {
       res.status(400).json({ error: "Invalid topic identifier." });
       return;
@@ -252,6 +255,18 @@ router.get(
     if (!topic) {
       res.status(404).json({ error: "Topic not found." });
       return;
+    }
+    // A topic is either published for everybody or bound to a class. Drafts
+    // and topics of other classes stay hidden.
+    if (topic.status !== "published" || topic.classId) {
+      const allowed =
+        topic.createdBy === viewer.id ||
+        isGlobalAdminRole(viewer.role) ||
+        (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+      if (!allowed) {
+        res.status(403).json({ error: "You cannot read this topic." });
+        return;
+      }
     }
     res.json({ topic });
   },
@@ -343,15 +358,17 @@ router.post(
       .where(eq(usersTable.loginNormalized, login.toLowerCase()))
       .limit(1);
     if (!target) {
-      res.status(404).json({ error: "No account with that login exists." });
+      // The same answer for "unknown login" and "wrong role" so that the
+      // endpoint cannot be used to find out which logins exist.
+      res.status(404).json({ error: "No matching account was found." });
       return;
     }
     if (roleRaw === "student" && target.role !== "student") {
-      res.status(400).json({ error: "A student login is required." });
+      res.status(404).json({ error: "No matching account was found." });
       return;
     }
     if (roleRaw === "teacher" && target.role !== "teacher") {
-      res.status(400).json({ error: "A teacher login is required." });
+      res.status(404).json({ error: "No matching account was found." });
       return;
     }
     const [ctx] = await db
@@ -476,7 +493,7 @@ router.post(
             .insert(usersTable)
             .values({
               username: name,
-              usernameNormalized: name.trim().toLowerCase(),
+              usernameNormalized: normalizeUsername(name),
               login,
               loginNormalized: login.toLowerCase(),
               passwordHash,
@@ -501,8 +518,15 @@ router.post(
             typeof error === "object" && error !== null && "code" in error
               ? String((error as { code?: unknown }).code)
               : "";
-          if (code === "23505") continue; // login collision, retry
-          throw error;
+          if (code !== "23505") throw error;
+          // The unique index can be on the login or on the normalised name. Only
+          // a login collision can be solved with another attempt.
+          const detail = String((error as { detail?: unknown }).detail ?? "");
+          if (detail.includes("username_normalized")) {
+            res.status(409).json({ error: `A student with the name "${name}" already exists.` });
+            return;
+          }
+          // login collision — retry with another login
         }
       }
     }
@@ -602,39 +626,43 @@ router.get(
       res.status(400).json({ error: "A search query is required." });
       return;
     }
-    if (SKETCHFAB_API_KEY) {
-      try {
-        const response = await fetch(
-          `https://sketchfab.com/apiv3/search?type=models&q=${encodeURIComponent(query)}&count=6&sort=-relevance`,
-          { headers: { Authorization: `Bearer ${SKETCHFAB_API_KEY}`, Accept: "application/json" } },
-        );
-        if (!response.ok) throw new Error(`Sketchfab returned HTTP ${response.status}`);
-        const payload = (await response.json()) as {
-          results?: Array<{
-            uid?: string;
-            name?: string;
-            user?: { displayName?: string };
-            thumbnails?: { images?: Array<{ url?: string; width?: number }> };
-            isDownloadable?: boolean;
-            viewCount?: number;
-          }>;
-        };
-        const models = (payload.results ?? [])
-          .map((model) => ({
-            uid: model.uid ?? "",
-            name: model.name ?? "",
-            author: model.user?.displayName ?? "",
-            embedUrl: model.uid ? `https://sketchfab.com/models/${model.uid}/embed` : "",
-            thumbnail:
-              model.thumbnails?.images?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? "",
-            downloadable: Boolean(model.isDownloadable),
-          }))
-          .filter((model) => model.uid);
-        res.json({ source: "sketchfab", models });
-        return;
-      } catch {
-        // fall through to the safe fallback
-      }
+    try {
+      // The public Sketchfab search works without an API token. A token is
+      // only used when the deployment has one (it raises the rate limit).
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (SKETCHFAB_API_KEY) headers.Authorization = `Bearer ${SKETCHFAB_API_KEY}`;
+      const response = await fetch(
+        `https://api.sketchfab.com/v3/search?type=models&q=${encodeURIComponent(query)}&count=8&sort=-likeCount`,
+        { headers },
+      );
+      if (!response.ok) throw new Error(`Sketchfab returned HTTP ${response.status}`);
+      const payload = (await response.json()) as {
+        results?: Array<{
+          uid?: string;
+          name?: string;
+          user?: { displayName?: string };
+          thumbnails?: { images?: Array<{ url?: string; width?: number }> };
+          isDownloadable?: boolean;
+          viewCount?: number;
+          likeCount?: number;
+        }>;
+      };
+      const models = (payload.results ?? [])
+        .map((model) => ({
+          uid: model.uid ?? "",
+          name: model.name ?? "",
+          author: model.user?.displayName ?? "",
+          embedUrl: model.uid ? `https://sketchfab.com/models/${model.uid}/embed` : "",
+          thumbnail:
+            model.thumbnails?.images?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? "",
+          downloadable: Boolean(model.isDownloadable),
+          likes: model.likeCount ?? 0,
+        }))
+        .filter((model) => model.uid);
+      res.json({ source: "sketchfab", models });
+      return;
+    } catch {
+      // fall through to the safe fallback
     }
     res.json({
       source: "link",
@@ -669,6 +697,7 @@ router.post(
     const classId = readString(req.body, "classId", 64);
     if (classId !== undefined && !isValidUuid(classId)) {
       res.status(400).json({ error: "Invalid class identifier." });
+      return;
     }
     const requestedCountRaw = isRecord(req.body) ? Number(req.body.count) : Number.NaN;
     const count = Number.isInteger(requestedCountRaw)
@@ -681,6 +710,15 @@ router.post(
       .limit(1);
     if (!topic) {
       res.status(404).json({ error: "Topic not found." });
+      return;
+    }
+    // Only the author of the topic or a manager of its class may replace it.
+    if (
+      topic.createdBy !== viewer.id &&
+      !(topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false) &&
+      !isGlobalAdminRole(viewer.role)
+    ) {
+      res.status(403).json({ error: "You cannot change the test of this topic." });
       return;
     }
     // Test can always be created for the topic — class filter is optional.
@@ -786,15 +824,18 @@ router.get(
       .where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date)));
     const byStudent = new Map(marks.map((m) => [m.studentId, m]));
 
+    const mayManage = await canManage(viewer.id, viewer.role, classId);
     res.json({
       date,
-      canManage: await canManage(viewer.id, viewer.role, classId),
+      canManage: mayManage,
       records: members.map((member) => {
         const mark = byStudent.get(member.userId);
         return {
           studentId: member.userId,
           studentName: member.username,
-          login: member.login,
+          // The login is the account identifier used to sign in — it is only
+          // shown to the people who may manage the class.
+          ...(mayManage ? { login: member.login } : {}),
           status: (mark?.status ?? "unmarked") as AttendanceStatus | "unmarked",
           note: mark?.note ?? "",
           markedAt: mark?.updatedAt ?? null,
@@ -833,6 +874,10 @@ router.put(
     const rawRecords = isRecord(req.body) && Array.isArray(req.body.records) ? req.body.records : null;
     if (!rawRecords || rawRecords.length === 0) {
       res.status(400).json({ error: "At least one attendance record is required." });
+      return;
+    }
+    if (rawRecords.length > 200) {
+      res.status(413).json({ error: "Too many attendance records in one request." });
       return;
     }
     const entries: Array<{ studentId: string; status: AttendanceStatus; note: string }> = [];
@@ -903,6 +948,21 @@ router.get(
     if (viewer.role === "student" && viewer.id !== studentId) {
       res.status(403).json({ error: "You can only view your own attendance." });
       return;
+    }
+    if (viewer.role !== "student") {
+      // A teacher or a parent may only see the attendance of students they are
+      // responsible for.
+      const rows = await db
+        .select({ classId: attendanceTable.classId })
+        .from(attendanceTable)
+        .where(eq(attendanceTable.studentId, studentId));
+      const allowed =
+        rows.length > 0 &&
+        (await Promise.all(rows.map((row) => canManage(viewer.id, viewer.role, row.classId)))).every(Boolean);
+      if (!allowed) {
+        res.status(403).json({ error: "You cannot view the attendance of this student." });
+        return;
+      }
     }
     const rows = await db
       .select({

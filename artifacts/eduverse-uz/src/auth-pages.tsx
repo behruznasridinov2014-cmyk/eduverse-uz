@@ -999,6 +999,9 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           ) : (
             <QrSignInPanel language={language} onSuccess={() => onSuccess()} />
           )}
+          <div className="auth-switch-row">
+            <QrScannerButton language={language} className="btn" />
+          </div>
           <div className="auth-switch">{copy.noAccount}</div>
         </>
       )}

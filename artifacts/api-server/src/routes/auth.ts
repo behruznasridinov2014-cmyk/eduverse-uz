@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import {
   Router,
@@ -72,14 +72,24 @@ const configuredOrigins = new Set(
     .filter(Boolean),
 );
 const registrationRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "10000") || 10000,
+  Number(process.env.EDUVERSE_REGISTRATION_RATE_LIMIT ?? "5") || 5,
   60 * 60 * 1000,
-  "Try again shortly.",
+  "Too many registration attempts. Try again later.",
+  "registration",
 );
 const loginRateLimiter = createRateLimiter(
-  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "10000") || 10000,
+  Number(process.env.EDUVERSE_LOGIN_RATE_LIMIT ?? "20") || 20,
   15 * 60 * 1000,
-  "Try again shortly.",
+  "Too many sign-in attempts. Try again later.",
+  "login",
+  signInKey,
+);
+// A second limiter stops one address from trying many different accounts.
+const loginAddressLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_LOGIN_IP_RATE_LIMIT ?? "200") || 200,
+  15 * 60 * 1000,
+  "Too many sign-in attempts from this network. Try again later.",
+  "login-address",
 );
 const twoFactorChallengeDurationMs = 5 * 60 * 1000;
 const twoFactorBindNonceDurationMs = 15 * 60 * 1000;
@@ -116,7 +126,7 @@ function hasOnlyFields(value: unknown, allowedFields: string[]): boolean {
   );
 }
 
-function normalizeUsername(username: string): string {
+export function normalizeUsername(username: string): string {
   return username.normalize("NFKC").toLowerCase();
 }
 
@@ -134,7 +144,10 @@ function requestOriginIsAllowed(req: Request, origin: string): boolean {
   if (configuredOrigins.has(origin)) return true;
 
   try {
-    return new URL(origin).origin === `${req.protocol}://${req.get("host")}`;
+    // Behind a proxy (Vercel) the public host is in `x-forwarded-host`.
+    const host = req.get("x-forwarded-host") || req.get("host") || "";
+    const proto = req.get("x-forwarded-proto") || req.protocol;
+    return new URL(origin).origin === `${proto}://${host}`;
   } catch {
     return false;
   }
@@ -149,16 +162,63 @@ export const requireAllowedOrigin: RequestHandler = (req, res, next) => {
 
   res.status(403).json({ error: "Request origin is not allowed." });
 };
-
-// Rate limits are intentionally DISABLED for this project (user request):
-// every request passes straight through. Kept as a no-op so routes keep working.
+/**
+ * Rate limiting.
+ *
+ * The buckets live in PostgreSQL, so the limit is shared between all serverless
+ * instances of a deployment (an in-memory counter would be reset on every cold
+ * start and could be bypassed by spreading the requests over instances).
+ * Authenticated requests are counted per account, anonymous ones per IP.
+ */
 export function createRateLimiter(
-  _limit: number,
-  _windowMs: number,
-  _message: string,
-  _scope = _message,
+  limit: number,
+  windowMs: number,
+  message: string,
+  scope = message,
+  keyOf?: (req: Request) => string,
 ): RequestHandler {
-  return (_req, _res, next) => next();
+  return (req, res, next) => {
+    void (async () => {
+      const identifier = keyOf ? keyOf(req) : rateLimitIdentifier(req);
+      const retryAfterSeconds = await consumeRateLimitBucket(scope, identifier, limit, windowMs);
+      if (retryAfterSeconds === null) {
+        next();
+        return;
+      }
+      sendRateLimitResponse(res, message, retryAfterSeconds);
+    })().catch((error: unknown) => {
+      // A failing rate limit must never take the API down.
+      logger.error({ err: error, scope }, "Rate limit check failed");
+      next();
+    });
+  };
+}
+
+/**
+ * The key a request is counted with: the signed-in account when there is one,
+ * otherwise the client address. `X-Forwarded-For` is only trusted because the
+ * deployment runs behind a proxy that sets it (TRUST_PROXY=1).
+ */
+function rateLimitIdentifier(req: Request): string {
+  const authenticated = (req as Request & { user?: { id?: string } }).user;
+  if (authenticated?.id) return `user:${authenticated.id}`;
+  return `ip:${clientAddress(req)}`;
+}
+
+function clientAddress(req: Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  const address = typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : "";
+  return address || req.ip || "unknown";
+}
+
+/**
+ * Sign-in attempts are counted per account *and* address. A school shares one
+ * public address, so counting the address alone would lock out a whole class.
+ */
+function signInKey(req: Request): string {
+  const body = req.body as { login?: unknown } | undefined;
+  const login = typeof body?.login === "string" ? body.login.trim().toLowerCase() : "";
+  return `signin:${login}|${clientAddress(req)}`;
 }
 
 async function consumeRateLimitBucket(
@@ -371,14 +431,14 @@ router.post(
       !/^[\p{L}\p{N}_. -]+$/u.test(username)
     ) {
       res.status(400).json({
-        error: "Username must be 2–40 letters, numbers, spaces, dots, _ or -.",
+        error: "Username must be 2вЂ“40 letters, numbers, spaces, dots, _ or -.",
       });
       return;
     }
 
     if (!login || !/^[a-zA-Z0-9._-]{3,32}$/.test(login)) {
       res.status(400).json({
-        error: "Login must be 3–32 letters, numbers, dots, _ or -.",
+        error: "Login must be 3вЂ“32 letters, numbers, dots, _ or -.",
       });
       return;
     }
@@ -442,6 +502,7 @@ router.post(
   "/auth/login",
   requireAllowedOrigin,
   loginRateLimiter,
+  loginAddressLimiter,
   async (req, res) => {
     if (!hasOnlyFields(req.body, ["login", "password"])) {
       res.status(400).json({ error: "Unexpected sign-in fields." });
@@ -488,10 +549,10 @@ router.post(
         !(await applyUserRateLimit(
           user.id,
           "two-factor-login-user",
-          9999,
+          5,
           twoFactorRateWindowMs,
           res,
-          "Try again shortly.",
+          "Too many verification attempts. Try again later.",
         ))
       ) {
         return;
@@ -595,8 +656,18 @@ router.post("/auth/logout", requireAllowedOrigin, async (req, res) => {
 /* Telegram two-factor authentication                                         */
 /* -------------------------------------------------------------------------- */
 
-const twoFactorSetupLimiter = createRateLimiter(10000, 15 * 60 * 1000, "Try again shortly.");
-const twoFactorCodeLimiter = createRateLimiter(10000, 15 * 60 * 1000, "Try again shortly.");
+const twoFactorSetupLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_2FA_SETUP_RATE_LIMIT ?? "10") || 10,
+  15 * 60 * 1000,
+  "Too many requests. Try again later.",
+  "two-factor-setup",
+);
+const twoFactorCodeLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_2FA_RATE_LIMIT ?? "5") || 5,
+  15 * 60 * 1000,
+  "Too many verification attempts. Try again later.",
+  "two-factor-code",
+);
 
 router.get("/auth/2fa/status", async (req, res) => {
   const user = await authenticatedUserForRequest(req);
@@ -636,7 +707,7 @@ router.post("/auth/2fa/setup", requireAllowedOrigin, twoFactorSetupLimiter, asyn
     !(await applyUserRateLimit(
       user.id,
       "two-factor-setup-user",
-      9999,
+5,
       twoFactorRateWindowMs,
       res,
       "Try again shortly.",
@@ -701,7 +772,7 @@ router.post("/auth/2fa/setup/resend", requireAllowedOrigin, twoFactorSetupLimite
     !(await applyUserRateLimit(
       user.id,
       "two-factor-setup-user",
-      9999,
+5,
       twoFactorRateWindowMs,
       res,
       "Try again shortly.",
@@ -736,7 +807,7 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
     !(await applyUserRateLimit(
       user.id,
       "two-factor-code-user",
-      9999,
+5,
       twoFactorRateWindowMs,
       res,
       "Try again shortly.",
@@ -783,6 +854,20 @@ router.post("/auth/2fa/enable", requireAllowedOrigin, twoFactorCodeLimiter, asyn
           codeHash: hashRecoveryCode(recoveryCode),
         })),
       );
+      // Sessions that were opened before the second factor was enabled are no
+      // longer trustworthy — they are revoked in the same transaction. The
+      // session of the current device stays alive.
+      const currentToken = readSessionToken(req);
+      await tx
+        .update(sessionsTable)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(sessionsTable.userId, user.id),
+            isNull(sessionsTable.revokedAt),
+            ne(sessionsTable.tokenHash, hashSessionToken(currentToken ?? "")),
+          ),
+        );
     });
   } catch (requestError) {
     if (requestError instanceof TwoFactorChallengeConflict) {
@@ -808,7 +893,7 @@ router.post("/auth/2fa/disable", requireAllowedOrigin, twoFactorCodeLimiter, asy
     !(await applyUserRateLimit(
       user.id,
       "two-factor-code-user",
-      9999,
+5,
       twoFactorRateWindowMs,
       res,
       "Try again shortly.",
@@ -1008,7 +1093,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
     !(await applyUserRateLimit(
       challenge.userId,
       "two-factor-code-user",
-      9999,
+5,
       twoFactorRateWindowMs,
       res,
       "Try again shortly.",
@@ -1213,8 +1298,30 @@ router.post("/auth/2fa/telegram/webhook", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 
 const QR_TTL_MS = 3 * 60 * 1000;
-const qrPollLimiter = createRateLimiter(10000, 15 * 60 * 1000, "Too many QR checks.");
-const qrStartLimiter = createRateLimiter(500, 15 * 60 * 1000, "Too many QR sign-in starts.");
+const qrPollLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_POLL_RATE_LIMIT ?? "120") || 120,
+  60 * 1000,
+  "Too many requests. Try again later.",
+  "qr-poll",
+);
+const qrStartLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_START_RATE_LIMIT ?? "10") || 10,
+  15 * 60 * 1000,
+  "Too many QR requests. Try again later.",
+  "qr-start",
+);
+const qrApproveLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_APPROVE_RATE_LIMIT ?? "20") || 20,
+  15 * 60 * 1000,
+  "Too many approval attempts. Try again later.",
+  "qr-approve",
+);
+const qrConsumeLimiter = createRateLimiter(
+  Number(process.env.EDUVERSE_QR_CONSUME_RATE_LIMIT ?? "20") || 20,
+  15 * 60 * 1000,
+  "Too many requests. Try again later.",
+  "qr-consume",
+);
 
 function randomCode(): string {
   // 8-character human-friendly code; ambiguous characters removed.
@@ -1233,14 +1340,14 @@ function effectiveStatus(row: {
   status: QrStatus;
   expiresAt: Date;
 }): QrStatus {
-  if (row.status === "pending" || row.status === "scanned") {
-    return row.expiresAt.getTime() <= Date.now() ? "expired" : row.status;
-  }
+  // Every state expires, also an approved one — otherwise a request that was
+  // approved once could be used months later.
+  if (row.expiresAt.getTime() <= Date.now()) return "expired";
   return row.status;
 }
 
 /**
- * Step 1 — a device that is NOT signed in asks for a challenge. It receives a
+ * Step 1 вЂ” a device that is NOT signed in asks for a challenge. It receives a
  * device token (kept in memory only on that device) plus a code / QR payload to
  * display. Nothing that can be replayed is stored in plain text.
  */
@@ -1274,7 +1381,7 @@ router.post("/auth/qr/start", requireAllowedOrigin, qrStartLimiter, async (req, 
 });
 
 /**
- * Step 2 — the requesting device polls for its challenge status. Once approved
+ * Step 2 вЂ” the requesting device polls for its challenge status. Once approved
  * it calls /consume.
  */
 router.get("/auth/qr/status", qrPollLimiter, async (req, res) => {
@@ -1299,13 +1406,14 @@ router.get("/auth/qr/status", qrPollLimiter, async (req, res) => {
 });
 
 /**
- * Step 3 — an already signed-in device approves the challenge by code. This is
+ * Step 3 вЂ” an already signed-in device approves the challenge by code. This is
  * the "scan from my phone" action: the phone is authenticated, the new device
  * is not.
  */
 router.post(
   "/auth/qr/approve",
   requireAllowedOrigin,
+  qrApproveLimiter,
   async (req, res) => {
     const token = readSessionToken(req);
     if (!token) {
@@ -1355,9 +1463,15 @@ router.post(
       res.status(409).json({ error: "This QR request was already used." });
       return;
     }
+    if (status === "approved") {
+      res.status(409).json({ error: "This QR request was already approved." });
+      return;
+    }
 
     const sessionToken = createSessionToken();
-    await db
+    // The approval is single shot: only a request that is still pending can be
+    // approved, so a second approval cannot replace the first one.
+    const [approved] = await db
       .update(qrLoginSessionsTable)
       .set({
         status: "approved",
@@ -1365,17 +1479,27 @@ router.post(
         approvedBy: approver.id,
         issuedSessionToken: hashSessionToken(sessionToken),
       })
-      .where(eq(qrLoginSessionsTable.id, row.id));
+      .where(
+        and(
+          eq(qrLoginSessionsTable.id, row.id),
+          eq(qrLoginSessionsTable.status, "pending"),
+        ),
+      )
+      .returning({ id: qrLoginSessionsTable.id });
+    if (!approved) {
+      res.status(409).json({ error: "This QR request was already handled." });
+      return;
+    }
 
     res.json({ approved: true, expiresAt: row.expiresAt.toISOString() });
   },
 );
 
 /**
- * Step 4 — the requesting device exchanges its device token for the session the
+ * Step 4 вЂ” the requesting device exchanges its device token for the session the
  * approving device minted. The intermediate token is stored only as a digest.
  */
-router.post("/auth/qr/consume", requireAllowedOrigin, async (req, res) => {
+router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (req, res) => {
   if (!hasOnlyFields(req.body, ["deviceToken"])) {
     res.status(400).json({ error: "Unexpected QR consume fields." });
     return;

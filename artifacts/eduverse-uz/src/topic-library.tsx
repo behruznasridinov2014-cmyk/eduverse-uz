@@ -5,17 +5,21 @@ import {
   createTopicTest,
   getMySchools,
   listTopics,
+  search3dModels,
   searchYouTube,
   type LessonTopic,
+  type Model3d,
   type QuizQuestion,
   type SchoolClass,
   type User,
 } from '@workspace/api-client-react';
 import {
   ArrowRight,
+  Box,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   Eye,
   EyeOff,
   Globe2,
@@ -439,8 +443,110 @@ function TopicDetail({
         </div>
         <Interactive3d scene={topic.visual3d} />
       </section>
+      <Models3dPanel topic={topic} />
       <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={canCreate} />
     </>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Real 3D models from the internet (Sketchfab)                                  */
+/* -------------------------------------------------------------------------- */
+
+function Models3dPanel({ topic }: { topic: LessonTopic }) {
+  const query = `${topic.subject} ${topic.title}`.trim();
+  const [models, setModels] = useState<Model3d[]>([]);
+  const [activeUid, setActiveUid] = useState("");
+  const [searchUrl, setSearchUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    search3dModels({ query })
+      .then((response) => {
+        if (!active) return;
+        const list = response.models ?? [];
+        setModels(list);
+        setActiveUid(list[0]?.uid ?? "");
+        setSearchUrl(response.searchUrl ?? "");
+      })
+      .catch(() => {
+        if (!active) return;
+        setModels([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [query]);
+
+  if (loading) {
+    return (
+      <section className="panel reveal-up">
+        <div className="section-head">
+          <h2><Box size={16} /> 3D-модели из интернета</h2>
+        </div>
+        <p className="muted" role="status">Ищем 3D-модели по теме…</p>
+      </section>
+    );
+  }
+
+  if (models.length === 0) {
+    return (
+      <section className="panel reveal-up">
+        <div className="section-head">
+          <h2><Box size={16} /> 3D-модели из интернета</h2>
+        </div>
+        <p className="muted">По этой теме сейчас нет готовых моделей.</p>
+        {searchUrl && (
+          <a className="btn" href={searchUrl} target="_blank" rel="noreferrer">
+            <ExternalLink size={13} /> Открыть поиск в Sketchfab
+          </a>
+        )}
+      </section>
+    );
+  }
+
+  const active = models.find((model) => model.uid === activeUid) ?? models[0];
+  return (
+    <section className="panel reveal-up topic-models3d">
+      <div className="section-head">
+        <div>
+          <h2><Box size={16} /> 3D-модели из интернета</h2>
+          <p className="muted">Настоящие 3D-модели — их можно вращать мышкой и рассматривать.</p>
+        </div>
+      </div>
+      <div className="topic-models3d-grid">
+        <div className="topic-models3d-stage">
+          <iframe
+            title={active.name}
+            src={active.embedUrl}
+            allow="autoplay; fullscreen; xr-spatial-tracking"
+            allowFullScreen
+          />
+          <p className="muted topic-models3d-caption">
+            <b>{active.name}</b>
+            {active.author ? ` · ${active.author}` : ''}
+          </p>
+        </div>
+        <div className="topic-models3d-list">
+          {models.map((model) => (
+            <button
+              type="button"
+              key={model.uid}
+              className={`topic-models3d-item ${model.uid === active.uid ? 'active' : ''}`}
+              onClick={() => setActiveUid(model.uid)}
+            >
+              {model.thumbnail ? <img src={model.thumbnail} alt={model.name} loading="lazy" /> : null}
+              <span>{model.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
