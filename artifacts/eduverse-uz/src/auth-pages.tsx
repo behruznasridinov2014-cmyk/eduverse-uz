@@ -1138,6 +1138,7 @@ export function AuthStatusPage({
   required = false,
   onSignIn,
   privateArea = false,
+  detail,
 }: {
   language: AppLanguage;
   onLanguageChange: (language: AppLanguage) => void;
@@ -1145,6 +1146,7 @@ export function AuthStatusPage({
   required?: boolean;
   onSignIn?: () => void;
   privateArea?: boolean;
+  detail?: string | null;
 }) {
   const copy = authCopy(language);
   return (
@@ -1153,7 +1155,9 @@ export function AuthStatusPage({
       <h2>{required ? privateArea ? copy.privateRequiredTitle : copy.signInRequired : copy.unavailableTitle}</h2>
       <p className="auth-description">{required ? privateArea ? copy.privateRequiredText : copy.signInSubtitle : copy.unavailableText}</p>
       <div className="profile-actions">
-        {required && onSignIn ? <button className="auth-submit" onClick={onSignIn}>{copy.signIn}</button> : null}
+        {detail ? <div className="auth-error" role="alert">{detail}</div> : null}
+      {detail ? <div className="auth-error" role="alert">{detail}</div> : null}
+      {required && onSignIn ? <button className="auth-submit" onClick={onSignIn}>{copy.signIn}</button> : null}
         {onRetry ? <button className="btn" onClick={onRetry}>{copy.retry}</button> : null}
         <Link href="/" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>
       </div>

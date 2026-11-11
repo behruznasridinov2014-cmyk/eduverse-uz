@@ -374,5 +374,19 @@ export async function customFetch<T = unknown>(
     throw new ApiError(response, errorData, requestInfo);
   }
 
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("json")) {
+    // A deployment behind Vercel Authentication answers with an HTML login
+    // page instead of the API. Without this hint the app just looks broken.
+    throw new ApiError(
+      response,
+      {
+        error:
+          "The deployment is protected by Vercel Authentication, so the server answers with a login page instead of the API. Turn off \"Vercel Authentication\" in Settings -> Deployment Protection (or attach your own domain to the production deployment).",
+      },
+      requestInfo,
+    );
+  }
+
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;
 }

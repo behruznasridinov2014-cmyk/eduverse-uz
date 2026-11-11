@@ -131,8 +131,8 @@ function App(){
     return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
   }
   if(auth.status==='loading')return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
-  if(auth.status==='unavailable')return <AuthStatusPage language={lang} onLanguageChange={setLang} onRetry={()=>void auth.refreshSession()}/>;
-  if(!hasLocalSession)return <AuthStatusPage language={lang} onLanguageChange={setLang} required privateArea onSignIn={()=>navigate('/login')}/>;
+  if(auth.status==='unavailable')return <AuthStatusPage language={lang} onLanguageChange={setLang} onRetry={()=>void auth.refreshSession()} detail={auth.serviceError}/>;
+  if(!hasLocalSession)return <AuthStatusPage language={lang} onLanguageChange={setLang} required privateArea onSignIn={()=>navigate('/login')} detail={auth.serviceError}/>;
   if(location==='/profile'&&!hasLocalSession)return <AuthStatusPage language={lang} onLanguageChange={setLang} required onSignIn={()=>navigate('/login')}/>;
   const protectedRoutes:Record<string,User['role'][]> = {
     '/dashboard':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],

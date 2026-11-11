@@ -564,6 +564,23 @@ function TopicDetail({
 /* Real 3D models from the internet (Sketchfab)                                  */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Search words per 3D object kind. The kind is an English keyword, but a
+ * school needs a real model - not a steampunk globe or a toy globe.
+ */
+const MODEL_QUERIES: Record<string, string> = {
+  globe: 'globe earth planet',
+  cell: 'biological cell model',
+  egg: 'egg chicken',
+  molecule: 'molecule chemistry model',
+  atom: 'atom model science',
+  heart: 'human heart anatomy model',
+  plant: 'plant leaves model',
+  orbit: 'solar system planets model',
+  volcano: 'volcano eruption model',
+  water: 'ocean water waves',
+};
+
 function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
   // The kind of the 3D object is an English keyword ("globe", "ocean",
   // "volcano"...) - it finds far better models than the Russian title.
@@ -578,7 +595,7 @@ function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
     let active = true;
     setLoading(true);
     const load = async () => {
-      const queries = [kind, title].filter(Boolean);
+      const queries = [MODEL_QUERIES[kind] ?? kind, title].filter(Boolean);
       for (const query of queries) {
         const response = await search3dModels({ query }).catch(() => null);
         if (!active) return;

@@ -31,6 +31,8 @@ export type TwoFactorChallenge = {
 type AuthStatus = 'loading' | 'anonymous' | 'authenticated' | 'offline' | 'unavailable';
 type AuthContextValue = {
   status: AuthStatus;
+  /** Why the server could not be reached (for example a protected deployment). */
+  serviceError: string | null;
   user: User | null;
   isSubmitting: boolean;
   twoFactorChallenge: TwoFactorChallenge | null;
@@ -120,6 +122,7 @@ function clearCachedUser(): void {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
+  const [serviceError, setServiceError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
@@ -243,6 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       status,
+      serviceError,
       user,
       isSubmitting,
       twoFactorChallenge,
@@ -270,6 +274,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/**
+ * Turns an API error into a short explanation. A deployment behind Vercel
+ * Authentication answers with an HTML page, and the app has to say that
+ * instead of looking broken.
+ */
+function describeServiceError(error: unknown): string {
+  if (error instanceof ApiError) {
+    const data = error.data;
+    if (typeof data === "object" && data !== null && "error" in data) {
+      const message = (data as { error?: unknown }).error;
+      if (typeof message === "string" && message.length > 0) return message;
+    }
+  }
+  return "";
 }
 
 export function useAuth(): AuthContextValue {
