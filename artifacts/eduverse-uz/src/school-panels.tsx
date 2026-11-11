@@ -56,6 +56,7 @@ import {
   type Language,
   type SchoolData,
 } from './school-data';
+import { PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
 
 const ASSIGNMENT_STATUSES = [
   'assigned',
@@ -222,6 +223,7 @@ export function ServerClassesPanel({
   const [revision, setRevision] = useState(0);
   const [draftAssignmentId, setDraftAssignmentId] = useState<string | null>(null);
   const [draftContent, setDraftContent] = useState('');
+  const [draftPhotos, setDraftPhotos] = useState<string[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [mutationError, setMutationError] = useState('');
@@ -270,13 +272,21 @@ export function ServerClassesPanel({
 
   async function submitWork(assignment: MyAssignment) {
     if (!draftContent.trim()) return;
+    if (draftPhotos.length === 0 && !assignment.mySubmission?.attachmentCount) {
+      setMutationError(t(language, 'Add at least one photo of your notebook.', 'Добавьте хотя бы одно фото тетради.', 'Daftaringizning kamida bitta rasmini qo‘shing.'));
+      return;
+    }
     setBusyId(assignment.id);
     setMutationError('');
     setNotice('');
     try {
-      await submitAssignment(assignment.id, { content: draftContent.trim() });
+      await submitAssignment(assignment.id, {
+        content: draftContent.trim(),
+        ...(draftPhotos.length ? { attachments: draftPhotos } : {}),
+      });
       setDraftAssignmentId(null);
       setDraftContent('');
+      setDraftPhotos([]);
       setNotice(
         t(
           language,
@@ -438,11 +448,27 @@ export function ServerClassesPanel({
                       </span>
                     </div>
                     <p className="muted school-assignment-copy">{assignment.description}</p>
+                    {assignment.topicTitle && (
+                      <button type="button" className="hw-topic-link" onClick={() => onOpen('/topics')}>
+                        <BookOpen size={14} />
+                        {t(language, 'Theory', 'Теория', 'Nazariya')}: {assignment.topicTitle}
+                        <ArrowRight size={13} />
+                      </button>
+                    )}
                     {submission && (
                       <div className="callout school-submission-copy">
                         <b>{t(language, 'Your submission', 'Ваша работа', 'Sizning topshirig‘ingiz')}</b>
                         <br />
                         {submission.content}
+                        {(submission.attachmentCount ?? 0) > 0 && (
+                          <SubmissionPhotos
+                            assignmentId={assignment.id}
+                            studentId={submission.studentId}
+                            count={submission.attachmentCount ?? 0}
+                            language={language}
+                            refreshKey={submission.updatedAt}
+                          />
+                        )}
                         {submission.feedback && (
                           <>
                             <br />
@@ -455,6 +481,14 @@ export function ServerClassesPanel({
                             · {t(language, 'Score', 'Оценка', 'Ball')}: {submission.score}
                           </>
                         )}
+                        {submission.signature && (
+                          <SignatureStamp
+                            signature={submission.signature}
+                            signedBy={submission.signedBy}
+                            signedAt={submission.signedAt}
+                            language={language}
+                          />
+                        )}
                       </div>
                     )}
                     {canSubmit && (
@@ -462,21 +496,30 @@ export function ServerClassesPanel({
                         {isEditing ? (
                           <>
                             <div className="control">
+                              <label>{t(language, '1. Do it in your notebook, then photograph it', '1. Выполните в тетради и сфотографируйте', '1. Daftarda bajaring va suratga oling')}</label>
+                              <PhotoPicker
+                                photos={draftPhotos}
+                                onChange={setDraftPhotos}
+                                language={language}
+                                existingCount={submission?.attachmentCount ?? 0}
+                              />
+                            </div>
+                            <div className="control">
                               <label htmlFor={`submit-${assignment.id}`}>
-                                {t(language, 'Your answer', 'Ваш ответ', 'Javobingiz')}
+                                {t(language, '2. In your own words: what did you understand?', '2. Своими словами: что вы поняли?', '2. O‘z so‘zingiz bilan: nimani tushundingiz?')}
                               </label>
                               <textarea
                                 id={`submit-${assignment.id}`}
                                 value={draftContent}
                                 onChange={(event) => setDraftContent(event.target.value)}
-                                placeholder={t(language, 'Write your response…', 'Напишите ответ…', 'Javobingizni yozing…')}
+                                placeholder={t(language, 'A few sentences about the topic…', 'Несколько предложений о теме…', 'Mavzu haqida bir necha gap…')}
                               />
                             </div>
                             <div className="row">
                               <button
                                 type="button"
                                 className="btn primary"
-                                disabled={!draftContent.trim() || busyId === assignment.id}
+                                disabled={!draftContent.trim() || busyId === assignment.id || (draftPhotos.length === 0 && !submission?.attachmentCount)}
                                 onClick={() => void submitWork(assignment)}
                               >
                                 <Send size={14} />
@@ -490,6 +533,7 @@ export function ServerClassesPanel({
                                 onClick={() => {
                                   setDraftAssignmentId(null);
                                   setDraftContent('');
+                                  setDraftPhotos([]);
                                 }}
                               >
                                 {t(language, 'Cancel', 'Отмена', 'Bekor qilish')}
@@ -503,6 +547,7 @@ export function ServerClassesPanel({
                             onClick={() => {
                               setDraftAssignmentId(assignment.id);
                               setDraftContent(submission?.content ?? '');
+                              setDraftPhotos([]);
                               setNotice('');
                               setMutationError('');
                             }}
@@ -534,6 +579,7 @@ type ReviewDraft = {
   status: string;
   score: string;
   feedback: string;
+  signature: string | null;
 };
 
 export function ServerTeachingPanel({
@@ -544,7 +590,8 @@ export function ServerTeachingPanel({
   language: Language;
 }) {
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [form, setForm] = useState({ title: '', subject: 'Mathematics', description: '', dueAt: '' });
+  const [form, setForm] = useState({ title: '', subject: 'Mathematics', description: '', dueAt: '', topicId: '' });
+  const [topics, setTopics] = useState<LessonTopic[]>([]);
   const [creating, setCreating] = useState(false);
   const [busyAssignmentId, setBusyAssignmentId] = useState<string | null>(null);
   const [reviewAssignmentId, setReviewAssignmentId] = useState<string | null>(null);
@@ -563,6 +610,10 @@ export function ServerTeachingPanel({
     [school.assignments, activeClassId],
   );
   const reviewAssignment = classAssignments.find((item) => item.id === reviewAssignmentId) ?? null;
+
+  useEffect(() => {
+    listTopics().then((response) => setTopics(response.topics ?? [])).catch(() => setTopics([]));
+  }, []);
 
   useEffect(() => {
     if (!reviewAssignmentId) {
@@ -585,6 +636,7 @@ export function ServerTeachingPanel({
                 status: submission.status,
                 score: submission.score === null || submission.score === undefined ? '' : String(submission.score),
                 feedback: submission.feedback,
+                signature: null,
               },
             ]),
           ),
@@ -613,9 +665,15 @@ export function ServerTeachingPanel({
         subject: form.subject.trim(),
         description: form.description.trim(),
         dueAt: form.dueAt ? new Date(form.dueAt).toISOString() : null,
+        ...(form.topicId
+          ? {
+              topicId: form.topicId,
+              topicTitle: topics.find((topic) => topic.id === form.topicId)?.title ?? '',
+            }
+          : {}),
       };
       await createAssignment(activeClassId, payload);
-      setForm({ title: '', subject: form.subject, description: '', dueAt: '' });
+      setForm({ title: '', subject: form.subject, description: '', dueAt: '', topicId: '' });
       setNotice(
         t(language, 'Assignment published to the server.', 'Задание опубликовано на сервере.', 'Topshiriq serverga joylandi.'),
       );
@@ -672,6 +730,7 @@ export function ServerTeachingPanel({
         status: current[studentId]?.status ?? 'submitted',
         score: current[studentId]?.score ?? '',
         feedback: current[studentId]?.feedback ?? '',
+        signature: current[studentId]?.signature ?? null,
         ...patch,
       },
     }));
@@ -689,6 +748,7 @@ export function ServerTeachingPanel({
         status: draft.status as ReviewSubmissionRequest['status'],
         score: draft.score.trim() === '' ? null : Number(draft.score),
         feedback: draft.feedback,
+        ...(draft.signature ? { signature: draft.signature } : {}),
       };
       await reviewSubmission(reviewAssignmentId, studentId, payload);
       setNotice(t(language, 'Review saved.', 'Проверка сохранена.', 'Tekshiruv saqlandi.'));
@@ -778,6 +838,19 @@ export function ServerTeachingPanel({
               </div>
             </div>
             <div className="control">
+              <label htmlFor="server-assignment-topic">{t(language, 'Linked 3D theory topic', 'Связанная тема 3D-теории', 'Bog‘langan 3D nazariya mavzusi')}</label>
+              <select
+                id="server-assignment-topic"
+                value={form.topicId}
+                onChange={(event) => setForm({ ...form, topicId: event.target.value })}
+              >
+                <option value="">{t(language, 'No topic', 'Без темы', 'Mavzusiz')}</option>
+                {topics.map((topic) => (
+                  <option value={topic.id} key={topic.id}>{topic.subject} · {topic.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="control">
               <label htmlFor="server-assignment-description">{t(language, 'Instructions', 'Инструкции', 'Ko‘rsatmalar')}</label>
               <textarea
                 id="server-assignment-description"
@@ -832,7 +905,16 @@ export function ServerTeachingPanel({
                         <b>{submission.studentName}</b>
                         <span className="tag">{formatStatus(submission.status)}</span>
                       </div>
-                      <p className="muted school-assignment-copy">{submission.content}</p>
+                      <SubmissionPhotos
+                        assignmentId={reviewAssignment.id}
+                        studentId={submission.studentId}
+                        count={submission.attachmentCount ?? 0}
+                        language={language}
+                        refreshKey={submission.updatedAt}
+                      />
+                      <p className="muted school-assignment-copy">
+                        <b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}
+                      </p>
                       <div className="grid grid-2" style={{ gap: 8 }}>
                         <div className="control">
                           <label htmlFor={`review-status-${submission.studentId}`}>{t(language, 'Status', 'Статус', 'Holat')}</label>
@@ -865,6 +947,21 @@ export function ServerTeachingPanel({
                           value={draft.feedback}
                           onChange={(event) => updateDraft(submission.studentId, { feedback: event.target.value })}
                           maxLength={4000}
+                        />
+                      </div>
+                      <div className="control" style={{ marginTop: 8 }}>
+                        <label>{t(language, 'Teacher signature', 'Подпись учителя', 'O‘qituvchi imzosi')}</label>
+                        {submission.signature && !draft.signature && (
+                          <SignatureStamp
+                            signature={submission.signature}
+                            signedBy={submission.signedBy}
+                            signedAt={submission.signedAt}
+                            language={language}
+                          />
+                        )}
+                        <SignaturePad
+                          language={language}
+                          onChange={(dataUrl) => updateDraft(submission.studentId, { signature: dataUrl })}
                         />
                       </div>
                       <button

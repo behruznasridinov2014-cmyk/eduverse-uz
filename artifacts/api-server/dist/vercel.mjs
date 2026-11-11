@@ -28263,7 +28263,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "D:\\MyData\\Desktop\\eduverse-uz\\artifacts\\api-server\\dist";
+        const outputDir = "D:\\MyData\\Desktop\\eduverse-uz\\.claude\\worktrees\\eduverse-audit-fixes-90b31c\\artifacts\\api-server\\dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -42592,7 +42592,7 @@ var init_auth = __esm({
 });
 
 // ../../lib/db/src/schema/school.ts
-var schoolMemberRoleEnum, classMemberRoleEnum, assignmentStatusEnum, lessonModeEnum, schoolsTable, schoolMembersTable, classesTable, classMembersTable, assignmentsTable, assignmentSubmissionsTable, lessonsTable;
+var schoolMemberRoleEnum, classMemberRoleEnum, assignmentStatusEnum, lessonModeEnum, schoolsTable, schoolMembersTable, classesTable, classMembersTable, assignmentsTable, assignmentSubmissionsTable, submissionFilesTable, lessonsTable;
 var init_school = __esm({
   "../../lib/db/src/schema/school.ts"() {
     "use strict";
@@ -42650,6 +42650,8 @@ var init_school = __esm({
       title: text("title").notNull(),
       subject: text("subject").notNull(),
       description: text("description").notNull(),
+      topicId: text("topic_id"),
+      topicTitle: text("topic_title"),
       dueAt: timestamp("due_at", { withTimezone: true }),
       status: assignmentStatusEnum("status").notNull().default("assigned"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -42663,6 +42665,10 @@ var init_school = __esm({
       content: text("content").notNull(),
       score: integer("score"),
       feedback: text("feedback").notNull().default(""),
+      attachmentCount: integer("attachment_count").notNull().default(0),
+      signature: text("signature"),
+      signedBy: text("signed_by"),
+      signedAt: timestamp("signed_at", { withTimezone: true }),
       submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [
@@ -42670,6 +42676,13 @@ var init_school = __esm({
       index("assignment_submissions_student_idx").on(table.studentId),
       index("assignment_submissions_assignment_status_idx").on(table.assignmentId, table.status)
     ]);
+    submissionFilesTable = pgTable("submission_files", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      submissionId: uuid("submission_id").notNull().references(() => assignmentSubmissionsTable.id, { onDelete: "cascade" }),
+      position: integer("position").notNull().default(0),
+      data: text("data").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("submission_files_submission_idx").on(table.submissionId)]);
     lessonsTable = pgTable("lessons", {
       id: uuid("id").defaultRandom().primaryKey(),
       classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
@@ -42943,6 +42956,7 @@ __export(schema_exports, {
   schoolsTable: () => schoolsTable,
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
+  submissionFilesTable: () => submissionFilesTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
@@ -42990,6 +43004,7 @@ __export(src_exports, {
   schoolsTable: () => schoolsTable,
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
+  submissionFilesTable: () => submissionFilesTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
@@ -51645,7 +51660,61 @@ var lesson_rooms_default = router4;
 init_drizzle_orm();
 var import_express5 = __toESM(require_express2(), 1);
 init_src();
+
+// src/lib/homework-schema.ts
+init_src();
+var STATEMENTS = [
+  "ALTER TABLE assignments ADD COLUMN IF NOT EXISTS topic_id text",
+  "ALTER TABLE assignments ADD COLUMN IF NOT EXISTS topic_title text",
+  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS attachment_count integer NOT NULL DEFAULT 0",
+  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS signature text",
+  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS signed_by text",
+  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS signed_at timestamptz",
+  `CREATE TABLE IF NOT EXISTS submission_files (
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     submission_id uuid NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
+     position integer NOT NULL DEFAULT 0,
+     data text NOT NULL,
+     created_at timestamptz NOT NULL DEFAULT now()
+   )`,
+  "CREATE INDEX IF NOT EXISTS submission_files_submission_idx ON submission_files(submission_id)"
+];
+var pending = null;
+function ensureHomeworkSchema() {
+  if (!pending) {
+    pending = (async () => {
+      for (const statement of STATEMENTS) await pool.query(statement);
+    })().catch((error) => {
+      pending = null;
+      throw error;
+    });
+  }
+  return pending;
+}
+
+// src/routes/schools.ts
 var router5 = (0, import_express5.Router)();
+router5.use(async (_req, _res, next) => {
+  try {
+    await ensureHomeworkSchema();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+var IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+var MAX_PHOTOS = 4;
+var MAX_PHOTO_CHARS = 9e5;
+var MAX_SIGNATURE_CHARS = 15e4;
+function readPhotos(body) {
+  if (!isRecord4(body) || !Object.prototype.hasOwnProperty.call(body, "attachments")) return void 0;
+  const value = body.attachments;
+  if (!Array.isArray(value) || value.length > MAX_PHOTOS) return null;
+  for (const item of value) {
+    if (typeof item !== "string" || item.length > MAX_PHOTO_CHARS || !IMAGE_DATA_URL.test(item)) return null;
+  }
+  return value;
+}
 function currentUser(res) {
   return res.locals.authenticatedUser;
 }
@@ -52177,6 +52246,8 @@ var assignmentSelection = {
   title: assignmentsTable.title,
   subject: assignmentsTable.subject,
   description: assignmentsTable.description,
+  topicId: assignmentsTable.topicId,
+  topicTitle: assignmentsTable.topicTitle,
   dueAt: assignmentsTable.dueAt,
   status: assignmentsTable.status,
   createdAt: assignmentsTable.createdAt,
@@ -52263,6 +52334,8 @@ router5.post(
       title,
       subject,
       description,
+      topicId: readString3(req.body, "topicId", 80) || null,
+      topicTitle: readString3(req.body, "topicTitle", 180) || null,
       dueAt: dueAtResult.value,
       status: requestedStatus
     }).returning();
@@ -52394,6 +52467,10 @@ router5.get(
       content: assignmentSubmissionsTable.content,
       score: assignmentSubmissionsTable.score,
       feedback: assignmentSubmissionsTable.feedback,
+      attachmentCount: assignmentSubmissionsTable.attachmentCount,
+      signature: assignmentSubmissionsTable.signature,
+      signedBy: assignmentSubmissionsTable.signedBy,
+      signedAt: assignmentSubmissionsTable.signedAt,
       submittedAt: assignmentSubmissionsTable.submittedAt,
       updatedAt: assignmentSubmissionsTable.updatedAt
     }).from(assignmentSubmissionsTable).innerJoin(usersTable, eq(assignmentSubmissionsTable.studentId, usersTable.id)).where(eq(assignmentSubmissionsTable.assignmentId, assignmentId)).orderBy(desc(assignmentSubmissionsTable.submittedAt));
@@ -52418,14 +52495,34 @@ router5.post(
     }
     const content = readString3(req.body, "content", 1e4);
     if (!content) {
-      res.status(400).json({ error: "Submission content is required." });
+      res.status(400).json({ error: "A short written explanation is required." });
+      return;
+    }
+    const photos = readPhotos(req.body);
+    if (photos === null) {
+      res.status(400).json({ error: `Attach up to ${MAX_PHOTOS} JPEG, PNG or WebP photos (each under ~650 KB).` });
+      return;
+    }
+    const [existing] = await db.select({
+      id: assignmentSubmissionsTable.id,
+      attachmentCount: assignmentSubmissionsTable.attachmentCount,
+      status: assignmentSubmissionsTable.status,
+      signedAt: assignmentSubmissionsTable.signedAt
+    }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, user3.id))).limit(1);
+    if (!photos?.length && !existing?.attachmentCount) {
+      res.status(400).json({ error: "Attach at least one photo of your notebook." });
+      return;
+    }
+    if (existing?.signedAt && existing.status === "checked") {
+      res.status(409).json({ error: "This work is already checked and signed." });
       return;
     }
     const [submission] = await db.insert(assignmentSubmissionsTable).values({
       assignmentId,
       studentId: user3.id,
       content,
-      status: "submitted"
+      status: "submitted",
+      attachmentCount: photos?.length ?? 0
     }).onConflictDoUpdate({
       target: [
         assignmentSubmissionsTable.assignmentId,
@@ -52435,10 +52532,40 @@ router5.post(
         content,
         status: "submitted",
         submittedAt: /* @__PURE__ */ new Date(),
-        updatedAt: /* @__PURE__ */ new Date()
+        updatedAt: /* @__PURE__ */ new Date(),
+        ...photos?.length ? { attachmentCount: photos.length } : {}
       }
     }).returning();
+    if (photos?.length) {
+      await db.delete(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id));
+      await db.insert(submissionFilesTable).values(
+        photos.map((data, position) => ({ submissionId: submission.id, position, data }))
+      );
+    }
     res.status(201).json({ submission });
+  }
+);
+router5.get(
+  "/assignments/:assignmentId/submissions/:studentId/files",
+  requireAuthenticatedRole(...ACCOUNT_ROLES),
+  async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const user3 = currentUser(res);
+    const context = await authorizeAssignment(user3, assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    const isOwner = user3.id === studentId && context.authorization.canSubmit;
+    if (!isOwner && !context.authorization.canReview) {
+      forbidden(res, "Submission access denied.");
+      return;
+    }
+    const files = await db.select({ id: submissionFilesTable.id, position: submissionFilesTable.position, data: submissionFilesTable.data }).from(submissionFilesTable).innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id)).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId))).orderBy(submissionFilesTable.position);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json({ files });
   }
 );
 router5.patch(
@@ -52458,11 +52585,27 @@ router5.patch(
       forbidden(res, "Submission review access denied.");
       return;
     }
-    if (!hasField(req.body, "status") && !hasField(req.body, "score") && !hasField(req.body, "feedback")) {
+    if (!hasField(req.body, "status") && !hasField(req.body, "score") && !hasField(req.body, "feedback") && !hasField(req.body, "signature")) {
       res.status(400).json({ error: "No review changes were provided." });
       return;
     }
     const changes = { updatedAt: /* @__PURE__ */ new Date() };
+    if (hasField(req.body, "signature")) {
+      const rawSignature = req.body.signature;
+      if (rawSignature === null) {
+        changes.signature = null;
+        changes.signedBy = null;
+        changes.signedAt = null;
+      } else if (typeof rawSignature === "string" && rawSignature.length <= MAX_SIGNATURE_CHARS && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(rawSignature)) {
+        const [signer] = await db.select({ username: usersTable.username }).from(usersTable).where(eq(usersTable.id, user3.id)).limit(1);
+        changes.signature = rawSignature;
+        changes.signedBy = signer?.username ?? "teacher";
+        changes.signedAt = /* @__PURE__ */ new Date();
+      } else {
+        res.status(400).json({ error: "Signature must be a small PNG image." });
+        return;
+      }
+    }
     if (hasField(req.body, "status")) {
       const status = req.body.status;
       if (!isReviewableSubmissionStatus(status)) {
@@ -52616,7 +52759,7 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express7.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "1mb" }));
+app.use(import_express7.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
 app.use(import_express7.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
