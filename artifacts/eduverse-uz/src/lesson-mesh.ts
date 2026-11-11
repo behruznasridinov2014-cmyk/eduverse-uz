@@ -82,8 +82,15 @@ export function iceServers(): RTCIceServer[] {
       ...(turnCred ? { credential: turnCred } : {}),
     });
   } else {
+    // Public relays without an own server. They are rate-limited, so several
+    // of them are offered: as soon as one answers, the connection is up.
     servers.push({
-      urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:relay.metered.ca:80',
+        'turn:relay.metered.ca:443',
+      ],
       username: 'openrelayproject',
       credential: 'openrelayproject',
     });
@@ -342,9 +349,9 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       pc.onconnectionstatechange = () => {
         onPeerStateRef.current?.(remoteUserId, pc.connectionState);
         setPeerStates((current) => ({ ...current, [remoteUserId]: pc.connectionState }));
-        if (pc.connectionState === 'failed') {
-          // The path is broken (usually a blocked UDP port) — try a new ICE
-          // round with the relay servers.
+        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+          // The path is broken (a blocked UDP port, a changed network). A new
+          // ICE round with the relay servers usually repairs it.
           try {
             pc.restartIce();
           } catch {

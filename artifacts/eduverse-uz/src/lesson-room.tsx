@@ -328,7 +328,7 @@ function RoomView({
       try {
         // The server holds the request until a message arrives, so the next
         // offer is seen in a fraction of a second instead of a full poll cycle.
-        const batch = await pollLessonSignals(room.id, { since: lastSeq.current, wait: 8000 });
+        const batch = await pollLessonSignals(room.id, { since: lastSeq.current, wait: 6000 });
         lastSeq.current = batch.lastSeq;
         for (const message of batch.messages) {
           const username =

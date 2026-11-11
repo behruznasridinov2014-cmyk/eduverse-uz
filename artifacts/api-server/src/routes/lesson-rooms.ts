@@ -988,7 +988,7 @@ router.get(
     // offer would need a full poll cycle (seconds on a serverless deployment)
     // and the microphone would only be heard after a noticeable delay.
     const waitMs = Math.min(
-      Math.max(Number(req.query.wait ?? "8000") || 0, 0),
+      Math.max(Number(req.query.wait ?? "6000") || 0, 0),
       20_000,
     );
     const deadline = Date.now() + waitMs;

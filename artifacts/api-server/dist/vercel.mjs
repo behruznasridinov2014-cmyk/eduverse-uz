@@ -51621,7 +51621,7 @@ router4.get(
     const since = Number(req.query.since ?? 0);
     const cursor = Number.isFinite(since) ? since : 0;
     const waitMs = Math.min(
-      Math.max(Number(req.query.wait ?? "8000") || 0, 0),
+      Math.max(Number(req.query.wait ?? "6000") || 0, 0),
       2e4
     );
     const deadline = Date.now() + waitMs;
