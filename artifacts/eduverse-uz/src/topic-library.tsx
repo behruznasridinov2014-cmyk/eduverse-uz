@@ -545,6 +545,7 @@ function TopicDetail({
 
       <SlidesPanel topic={topic} copy={copy} />
       <FactsPanel topic={topic} copy={copy} />
+      <Models3dPanel topic={topic} copy={copy} />
       <section className="panel reveal-up">
         <div className="section-head">
           <div>
@@ -554,7 +555,6 @@ function TopicDetail({
         </div>
         <Interactive3d scene={topic.visual3d} language={language} />
       </section>
-      <Models3dPanel topic={topic} copy={copy} />
       <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={canCreate} />
     </>
   );
