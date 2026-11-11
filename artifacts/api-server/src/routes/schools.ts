@@ -9,10 +9,12 @@ import {
   db,
   schoolMembersTable,
   schoolsTable,
+  submissionFilesTable,
   usersTable,
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
+import { ensureHomeworkSchema } from "../lib/homework-schema";
 import {
   ASSIGNMENT_STATUSES,
   GLOBAL_ADMIN_ROLES,
@@ -40,6 +42,30 @@ import {
 } from "../lib/school-access";
 
 const router: IRouter = Router();
+
+router.use(async (_req, _res, next) => {
+  try {
+    await ensureHomeworkSchema();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+const IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+const MAX_PHOTOS = 4;
+const MAX_PHOTO_CHARS = 900_000;
+const MAX_SIGNATURE_CHARS = 150_000;
+
+function readPhotos(body: unknown): string[] | null | undefined {
+  if (!isRecord(body) || !Object.prototype.hasOwnProperty.call(body, "attachments")) return undefined;
+  const value = body.attachments;
+  if (!Array.isArray(value) || value.length > MAX_PHOTOS) return null;
+  for (const item of value) {
+    if (typeof item !== "string" || item.length > MAX_PHOTO_CHARS || !IMAGE_DATA_URL.test(item)) return null;
+  }
+  return value as string[];
+}
 
 type AuthenticatedRequestUser = { id: string; role: AccountRole };
 
@@ -806,6 +832,8 @@ const assignmentSelection = {
   title: assignmentsTable.title,
   subject: assignmentsTable.subject,
   description: assignmentsTable.description,
+  topicId: assignmentsTable.topicId,
+  topicTitle: assignmentsTable.topicTitle,
   dueAt: assignmentsTable.dueAt,
   status: assignmentsTable.status,
   createdAt: assignmentsTable.createdAt,
@@ -924,6 +952,8 @@ router.post(
         title,
         subject,
         description,
+        topicId: readString(req.body, "topicId", 80) || null,
+        topicTitle: readString(req.body, "topicTitle", 180) || null,
         dueAt: dueAtResult.value,
         status: requestedStatus,
       })
@@ -1094,6 +1124,10 @@ router.get(
         content: assignmentSubmissionsTable.content,
         score: assignmentSubmissionsTable.score,
         feedback: assignmentSubmissionsTable.feedback,
+        attachmentCount: assignmentSubmissionsTable.attachmentCount,
+        signature: assignmentSubmissionsTable.signature,
+        signedBy: assignmentSubmissionsTable.signedBy,
+        signedAt: assignmentSubmissionsTable.signedAt,
         submittedAt: assignmentSubmissionsTable.submittedAt,
         updatedAt: assignmentSubmissionsTable.updatedAt,
       })
@@ -1126,7 +1160,31 @@ router.post(
 
     const content = readString(req.body, "content", 10_000);
     if (!content) {
-      res.status(400).json({ error: "Submission content is required." });
+      res.status(400).json({ error: "A short written explanation is required." });
+      return;
+    }
+    const photos = readPhotos(req.body);
+    if (photos === null) {
+      res.status(400).json({ error: `Attach up to ${MAX_PHOTOS} JPEG, PNG or WebP photos (each under ~650 KB).` });
+      return;
+    }
+
+    const [existing] = await db
+      .select({
+        id: assignmentSubmissionsTable.id,
+        attachmentCount: assignmentSubmissionsTable.attachmentCount,
+        status: assignmentSubmissionsTable.status,
+        signedAt: assignmentSubmissionsTable.signedAt,
+      })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, user.id)))
+      .limit(1);
+    if (!photos?.length && !existing?.attachmentCount) {
+      res.status(400).json({ error: "Attach at least one photo of your notebook." });
+      return;
+    }
+    if (existing?.signedAt && existing.status === "checked") {
+      res.status(409).json({ error: "This work is already checked and signed." });
       return;
     }
 
@@ -1137,6 +1195,7 @@ router.post(
         studentId: user.id,
         content,
         status: "submitted",
+        attachmentCount: photos?.length ?? 0,
       })
       .onConflictDoUpdate({
         target: [
@@ -1148,11 +1207,48 @@ router.post(
           status: "submitted",
           submittedAt: new Date(),
           updatedAt: new Date(),
+          ...(photos?.length ? { attachmentCount: photos.length } : {}),
         },
       })
       .returning();
 
+    if (photos?.length) {
+      await db.delete(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id));
+      await db.insert(submissionFilesTable).values(
+        photos.map((data, position) => ({ submissionId: submission.id, position, data })),
+      );
+    }
+
     res.status(201).json({ submission });
+  },
+);
+
+router.get(
+  "/assignments/:assignmentId/submissions/:studentId/files",
+  requireAuthenticatedRole(...ACCOUNT_ROLES),
+  async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const user = currentUser(res);
+    const context = await authorizeAssignment(user, assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    const isOwner = user.id === studentId && context.authorization.canSubmit;
+    if (!isOwner && !context.authorization.canReview) {
+      forbidden(res, "Submission access denied.");
+      return;
+    }
+    const files = await db
+      .select({ id: submissionFilesTable.id, position: submissionFilesTable.position, data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id))
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .orderBy(submissionFilesTable.position);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.json({ files });
   },
 );
 
@@ -1174,7 +1270,7 @@ router.patch(
       forbidden(res, "Submission review access denied.");
       return;
     }
-    if (!hasField(req.body, "status") && !hasField(req.body, "score") && !hasField(req.body, "feedback")) {
+    if (!hasField(req.body, "status") && !hasField(req.body, "score") && !hasField(req.body, "feedback") && !hasField(req.body, "signature")) {
       res.status(400).json({ error: "No review changes were provided." });
       return;
     }
@@ -1183,8 +1279,36 @@ router.patch(
       status?: (typeof ASSIGNMENT_STATUSES)[number];
       score?: number | null;
       feedback?: string;
+      signature?: string | null;
+      signedBy?: string | null;
+      signedAt?: Date | null;
       updatedAt: Date;
     } = { updatedAt: new Date() };
+
+    if (hasField(req.body, "signature")) {
+      const rawSignature = (req.body as Record<string, unknown>).signature;
+      if (rawSignature === null) {
+        changes.signature = null;
+        changes.signedBy = null;
+        changes.signedAt = null;
+      } else if (
+        typeof rawSignature === "string" &&
+        rawSignature.length <= MAX_SIGNATURE_CHARS &&
+        /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(rawSignature)
+      ) {
+        const [signer] = await db
+          .select({ username: usersTable.username })
+          .from(usersTable)
+          .where(eq(usersTable.id, user.id))
+          .limit(1);
+        changes.signature = rawSignature;
+        changes.signedBy = signer?.username ?? "teacher";
+        changes.signedAt = new Date();
+      } else {
+        res.status(400).json({ error: "Signature must be a small PNG image." });
+        return;
+      }
+    }
 
     if (hasField(req.body, "status")) {
       const status = (req.body as Record<string, unknown>).status;

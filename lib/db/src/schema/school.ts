@@ -67,6 +67,8 @@ export const assignmentsTable = pgTable("assignments", {
   title: text("title").notNull(),
   subject: text("subject").notNull(),
   description: text("description").notNull(),
+  topicId: text("topic_id"),
+  topicTitle: text("topic_title"),
   dueAt: timestamp("due_at", { withTimezone: true }),
   status: assignmentStatusEnum("status").notNull().default("assigned"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -81,6 +83,10 @@ export const assignmentSubmissionsTable = pgTable("assignment_submissions", {
   content: text("content").notNull(),
   score: integer("score"),
   feedback: text("feedback").notNull().default(""),
+  attachmentCount: integer("attachment_count").notNull().default(0),
+  signature: text("signature"),
+  signedBy: text("signed_by"),
+  signedAt: timestamp("signed_at", { withTimezone: true }),
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
@@ -88,6 +94,15 @@ export const assignmentSubmissionsTable = pgTable("assignment_submissions", {
   index("assignment_submissions_student_idx").on(table.studentId),
   index("assignment_submissions_assignment_status_idx").on(table.assignmentId, table.status),
 ]);
+
+/** Notebook photos of a submission, stored as compressed data URLs (free-tier friendly). */
+export const submissionFilesTable = pgTable("submission_files", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  submissionId: uuid("submission_id").notNull().references(() => assignmentSubmissionsTable.id, { onDelete: "cascade" }),
+  position: integer("position").notNull().default(0),
+  data: text("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("submission_files_submission_idx").on(table.submissionId)]);
 
 export const lessonsTable = pgTable("lessons", {
   id: uuid("id").defaultRandom().primaryKey(),

@@ -1114,6 +1114,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /assignments/{assignmentId}/submissions/{studentId}/files:
+    get:
+      operationId: getSubmissionFiles
+      tags: [schools]
+      summary: Notebook photos of a submission (owner or reviewer only)
+      security:
+        - SessionCookie: []
+      parameters:
+        - $ref: "#/components/parameters/AssignmentId"
+        - $ref: "#/components/parameters/StudentId"
+      responses:
+        "200":
+          description: Submission photos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionFilesResponse"
+        "403":
+          description: Submission access denied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /me/assignments:
     get:
       operationId: getMyAssignments
@@ -1763,6 +1786,12 @@ paths:
           required: false
           schema:
             type: integer
+        - name: wait
+          in: query
+          required: false
+          description: How long the server holds the request until a message arrives (ms).
+          schema:
+            type: integer
       responses:
         "200":
           description: Signalling batch
@@ -2249,6 +2278,10 @@ components:
           type: string
         description:
           type: string
+        topicId:
+          type: [string, "null"]
+        topicTitle:
+          type: [string, "null"]
         dueAt:
           type: [string, "null"]
           format: date-time
@@ -2304,6 +2337,15 @@ components:
           type: [integer, "null"]
         feedback:
           type: string
+        attachmentCount:
+          type: integer
+        signature:
+          type: [string, "null"]
+        signedBy:
+          type: [string, "null"]
+        signedAt:
+          type: [string, "null"]
+          format: date-time
         submittedAt:
           type: string
           format: date-time
@@ -2401,6 +2443,12 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
+        topicId:
+          type: string
+          maxLength: 80
+        topicTitle:
+          type: string
+          maxLength: 180
         dueAt:
           type: [string, "null"]
           format: date-time
@@ -2434,6 +2482,12 @@ components:
           type: string
           minLength: 1
           maxLength: 10000
+        attachments:
+          type: array
+          maxItems: 4
+          items:
+            type: string
+            maxLength: 900000
       required: [content]
     ReviewSubmissionRequest:
       type: object
@@ -2449,6 +2503,28 @@ components:
         feedback:
           type: string
           maxLength: 4000
+        signature:
+          type: [string, "null"]
+          maxLength: 150000
+    SubmissionFile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        position:
+          type: integer
+        data:
+          type: string
+      required: [id, position, data]
+    SubmissionFilesResponse:
+      type: object
+      properties:
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubmissionFile"
+      required: [files]
     MySchoolsResponse:
       type: object
       properties:

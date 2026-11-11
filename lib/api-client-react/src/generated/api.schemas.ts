@@ -217,6 +217,10 @@ export interface Assignment {
   subject: string;
   description: string;
   /** @nullable */
+  topicId?: string | null;
+  /** @nullable */
+  topicTitle?: string | null;
+  /** @nullable */
   dueAt?: string | null;
   status: AssignmentStatus;
   createdAt: string;
@@ -242,6 +246,13 @@ export interface Submission {
   /** @nullable */
   score?: number | null;
   feedback: string;
+  attachmentCount?: number;
+  /** @nullable */
+  signature?: string | null;
+  /** @nullable */
+  signedBy?: string | null;
+  /** @nullable */
+  signedAt?: string | null;
   submittedAt: string;
   updatedAt: string;
 }
@@ -315,6 +326,10 @@ export interface CreateAssignmentRequest {
      * @maxLength 4000
      */
   description: string;
+  /** @maxLength 80 */
+  topicId?: string;
+  /** @maxLength 180 */
+  topicTitle?: string;
   /** @nullable */
   dueAt?: string | null;
 }
@@ -346,6 +361,11 @@ export interface SubmitAssignmentRequest {
      * @maxLength 10000
      */
   content: string;
+  /**
+     * @maxItems 4
+     * @items.maxLength 900000
+     */
+  attachments?: string[];
 }
 
 export type ReviewSubmissionRequestStatus = typeof ReviewSubmissionRequestStatus[keyof typeof ReviewSubmissionRequestStatus];
@@ -369,6 +389,21 @@ export interface ReviewSubmissionRequest {
   score?: number | null;
   /** @maxLength 4000 */
   feedback?: string;
+  /**
+     * @maxLength 150000
+     * @nullable
+     */
+  signature?: string | null;
+}
+
+export interface SubmissionFile {
+  id: string;
+  position: number;
+  data: string;
+}
+
+export interface SubmissionFilesResponse {
+  files: SubmissionFile[];
 }
 
 export interface MySchoolsResponse {
@@ -1034,7 +1069,9 @@ date?: string;
 
 export type PollLessonSignalsParams = {
 since?: number;
-/** How long the server holds the request until a message arrives (ms). */
+/**
+ * How long the server holds the request until a message arrives (ms).
+ */
 wait?: number;
 };
 

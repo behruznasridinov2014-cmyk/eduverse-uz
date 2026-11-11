@@ -98,6 +98,7 @@ import type {
   StudentQuestionRequest,
   StudentQuestionResponse,
   SubjectsResponse,
+  SubmissionFilesResponse,
   SubmissionResponse,
   SubmissionsResponse,
   SubmitAssignmentRequest,
@@ -3506,6 +3507,115 @@ export const useReviewSubmission = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getReviewSubmissionMutationOptions(options), queryClient);
     }
+
+export const getGetSubmissionFilesUrl = (assignmentId: string,
+    studentId: string,) => {
+
+
+
+
+  return `/api/assignments/${assignmentId}/submissions/${studentId}/files`
+}
+
+/**
+ * @summary Notebook photos of a submission (owner or reviewer only)
+ */
+export const getSubmissionFiles = async (assignmentId: string,
+    studentId: string, options?: Parameters<typeof customFetch>[1]): Promise<SubmissionFilesResponse> => {
+
+  return customFetch<SubmissionFilesResponse>(getGetSubmissionFilesUrl(assignmentId,studentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSubmissionFilesQueryKey = (assignmentId: string,
+    studentId: string,) => {
+    return [
+    `/api/assignments/${assignmentId}/submissions/${studentId}/files`
+    ] as const;
+    }
+
+
+export const getGetSubmissionFilesQueryOptions = <TData = Awaited<ReturnType<typeof getSubmissionFiles>>, TError = ErrorType<ErrorResponse>>(assignmentId: string,
+    studentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmissionFiles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSubmissionFilesQueryKey(assignmentId,studentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSubmissionFiles>>> = ({ signal }) => getSubmissionFiles(assignmentId,studentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: assignmentId !== null && assignmentId !== undefined && studentId !== null && studentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSubmissionFiles>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSubmissionFilesQueryResult = NonNullable<Awaited<ReturnType<typeof getSubmissionFiles>>>
+export type GetSubmissionFilesQueryError = ErrorType<ErrorResponse>
+
+
+export function useGetSubmissionFiles<TData = Awaited<ReturnType<typeof getSubmissionFiles>>, TError = ErrorType<ErrorResponse>>(
+ assignmentId: string,
+    studentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmissionFiles>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSubmissionFiles>>,
+          TError,
+          Awaited<ReturnType<typeof getSubmissionFiles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSubmissionFiles<TData = Awaited<ReturnType<typeof getSubmissionFiles>>, TError = ErrorType<ErrorResponse>>(
+ assignmentId: string,
+    studentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmissionFiles>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSubmissionFiles>>,
+          TError,
+          Awaited<ReturnType<typeof getSubmissionFiles>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSubmissionFiles<TData = Awaited<ReturnType<typeof getSubmissionFiles>>, TError = ErrorType<ErrorResponse>>(
+ assignmentId: string,
+    studentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmissionFiles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Notebook photos of a submission (owner or reviewer only)
+ */
+
+export function useGetSubmissionFiles<TData = Awaited<ReturnType<typeof getSubmissionFiles>>, TError = ErrorType<ErrorResponse>>(
+ assignmentId: string,
+    studentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSubmissionFiles>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSubmissionFilesQueryOptions(assignmentId,studentId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetMyAssignmentsUrl = () => {
 

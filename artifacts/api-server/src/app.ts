@@ -70,7 +70,7 @@ app.use(
   }),
 );
 app.use(cookieParser());
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "1mb" }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
 // The API only speaks JSON — a form body parser is not needed and widens the
 // attack surface.
 app.use(express.urlencoded({ extended: false, limit: "16kb" }));
