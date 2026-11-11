@@ -777,6 +777,8 @@ h3 { font-size:14px;margin:0 0 8px;font-weight:600; }
 .video-placeholder{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(150deg,#26344a,#1b2536)}
 .video-placeholder .avatar{width:64px;height:64px;font-size:24px;background:rgba(255,255,255,.16);color:#eaf1f8}
 .video-name{position:absolute;left:10px;bottom:10px;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:rgba(15,24,36,.55);backdrop-filter:blur(8px);color:#eaf1f8;font-size:11px}
+.lesson-person-link{width:7px;height:7px;border-radius:50%;background:#8a94a0;display:inline-block}
+.lesson-person-link.on{background:#5fd39a;box-shadow:0 0 0 3px rgba(95,211,154,.18)}
 .video-sound-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.35);background:rgba(196,74,74,.85);backdrop-filter:blur(8px);color:#fff;font-size:11px;cursor:pointer;z-index:2}
 .video-sound-hint:hover{background:rgba(214,90,90,.95)}
 .topic-models3d-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start}

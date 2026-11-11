@@ -580,17 +580,22 @@ function RoomView({
               <button type="button" className="btn small" onClick={onRefresh}><RefreshCw size={12} /></button>
             </div>
             <div className="stack lesson-people">
-              {participants.map((participant) => (
-                <div className="lesson-person" key={participant.userId}>
-                  <span className="avatar">{participant.username.slice(0, 1).toUpperCase()}</span>
-                  <span className="lesson-person-name">{participant.username}</span>
-                  <span className="lesson-person-icons">
-                    <Camera size={12} className={participant.cameraOn ? 'on' : 'off'} />
-                    <Mic size={12} className={participant.micOn ? 'on' : 'off'} />
-                    {participant.sharingScreen && <MonitorUp size={12} className="on" />}
-                  </span>
-                </div>
-              ))}
+              {participants.map((participant) => {
+                const state = participant.userId === user.id ? 'connected' : peerStates[participant.userId] ?? 'new';
+                const connected = state === 'connected';
+                return (
+                  <div className="lesson-person" key={participant.userId}>
+                    <span className="avatar">{participant.username.slice(0, 1).toUpperCase()}</span>
+                    <span className="lesson-person-name">{participant.username}</span>
+                    <span className="lesson-person-icons">
+                      <Camera size={12} className={participant.cameraOn ? 'on' : 'off'} />
+                      <Mic size={12} className={participant.micOn ? 'on' : 'off'} />
+                      {participant.sharingScreen && <MonitorUp size={12} className="on" />}
+                      <span className={`lesson-person-link ${connected ? 'on' : 'off'}`} title={connected ? copy.connected : copy.connecting} />
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
@@ -833,12 +838,14 @@ const COPY: Record<Language, Record<string, string>> = {
     cameraDenied: 'Доступ к камере не получен.',
     micDenied: 'Доступ к микрофону не получен.',
     shareDenied: 'Демонстрация экрана отменена.',
-    shareUnsupported: 'Браузер не поддерживает демонстрацию экрана.',
+    shareUnsupported: 'Этот браузер не умеет показывать экран (iPhone/Safari). Откройте урок в Chrome на Android или на компьютере.',
     connectionConnecting: 'Соединение с участниками…',
     connectionLost: 'Соединение с участником потеряно.',
     connectionFailed: 'Не удалось подключиться. Проверьте интернет или нажмите «Переподключиться».',
     reconnect: 'Переподключиться',
     soundBlocked: 'Нажмите, чтобы включить звук',
+    connected: 'Соединение установлено',
+    connecting: 'Подключение…',
     awardNeedsClass: 'Награда требует привязанного класса и задания.',
     awardDone: 'Отличная оценка выставлена: {name}.',
   },
@@ -883,12 +890,14 @@ const COPY: Record<Language, Record<string, string>> = {
     cameraDenied: 'Kameraga ruxsat berilmadi.',
     micDenied: 'Mikrofonga ruxsat berilmadi.',
     shareDenied: 'Ekran namoyishi bekor qilindi.',
-    shareUnsupported: 'Brauzer ekran namoyishini qo‘llamaydi.',
+    shareUnsupported: 'Bu brauzer ekran ko‘rsata olmaydi (iPhone/Safari). Darsni Android yoki kompyuterda Chrome’da oching.',
     connectionConnecting: 'Qatnashchilar bilan ulanmoqda…',
     connectionLost: 'Qatnashchi bilan aloqa uzildi.',
     connectionFailed: 'Ulanib bo‘lmadi. Internetingni tekshiring yoki «Qayta ulanish» tugmasini bosing.',
     reconnect: 'Qayta ulanish',
     soundBlocked: 'Ovozni yoqish uchun bosing',
+    connected: 'Ulanish o‘rnatildi',
+    connecting: 'Ulanmoqda…',
     awardNeedsClass: 'Taqdirlash uchun sinf va topshiriq kerak.',
     awardDone: 'A’lo baho qo‘yildi: {name}.',
   },
@@ -933,12 +942,14 @@ const COPY: Record<Language, Record<string, string>> = {
     cameraDenied: 'Camera permission was not granted.',
     micDenied: 'Microphone permission was not granted.',
     shareDenied: 'Screen sharing was cancelled.',
-    shareUnsupported: 'This browser cannot share the screen.',
+    shareUnsupported: 'This browser cannot share the screen (iPhone/Safari). Open the lesson in Chrome on Android or on a computer.',
     connectionConnecting: 'Connecting to the participants…',
     connectionLost: 'The connection to a participant was lost.',
     connectionFailed: 'Could not connect. Check the internet connection or press “Reconnect”.',
     reconnect: 'Reconnect',
     soundBlocked: 'Tap to enable the sound',
+    connected: 'Connected',
+    connecting: 'Connecting…',
     awardNeedsClass: 'Awarding needs a linked class and assignment.',
     awardDone: 'Top grade recorded for {name}.',
   },

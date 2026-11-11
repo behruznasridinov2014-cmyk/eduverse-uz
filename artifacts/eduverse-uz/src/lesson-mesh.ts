@@ -199,15 +199,20 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
         if (kind === 'video') peer.videoSender = sender;
         else peer.audioSender = sender;
         needsOffer = true;
-      } else if (sender.track !== track) {
-        await sender.replaceTrack(track).catch(() => {});
-      }
-      // A transceiver that was created by a remote offer is receive-only until
-      // it is allowed to send, otherwise the peer keeps receiving silence.
-      const transceiver = peer.pc.getTransceivers().find((item) => item.sender === sender);
-      if (transceiver && transceiver.direction === 'recvonly') {
-        transceiver.direction = 'sendrecv';
-        needsOffer = true;
+      } else {
+        // A transceiver that was created by a remote offer is receive-only until
+        // it is allowed to send, otherwise the peer keeps receiving silence.
+        // The direction has to be restored BEFORE the track is put in, otherwise
+        // the browser refuses to send it.
+        const transceiver = peer.pc.getTransceivers().find((item) => item.sender === sender);
+        if (transceiver && transceiver.direction === 'recvonly') {
+          transceiver.direction = 'sendrecv';
+          needsOffer = true;
+        }
+        if (sender.track !== track) {
+          const replaced = await sender.replaceTrack(track).then(() => true).catch(() => false);
+          if (!replaced && track) needsOffer = true;
+        }
       }
       return needsOffer;
     },
@@ -237,7 +242,8 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
   const mediaSignature = useCallback(
     (peer: PeerRecord): string => {
       void peer;
-      return [videoTrackToPublish()?.id ?? '', micTrack()?.id ?? ''].join('|');
+      const screen = screenStreamRef.current?.getVideoTracks().find((track) => track.readyState === 'live');
+      return [videoTrackToPublish()?.id ?? '', micTrack()?.id ?? '', screen?.id ?? ''].join('|');
     },
     [videoTrackToPublish, micTrack],
   );
@@ -459,6 +465,59 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
     return localStreamRef.current;
   }, []);
 
+  /**
+   * Opens the camera and the microphone.
+   *
+   * Both devices are requested in ONE call and the unused track is only
+   * disabled. On iOS a second getUserMedia call stops the microphone of the
+   * first one, so a separate call for the microphone would stay silent.
+   */
+  const acquireDevices = useCallback(
+    async (needVideo: boolean, needAudio: boolean) => {
+      const stream = ensureLocalStream();
+      const videoTrack = stream.getVideoTracks().find((item) => item.readyState === 'live') ?? null;
+      const audioTrack = stream.getAudioTracks().find((item) => item.readyState === 'live') ?? null;
+      const missingVideo = needVideo && !videoTrack;
+      const missingAudio = needAudio && !audioTrack;
+      if (!missingVideo && !missingAudio) return stream;
+
+      // When the camera is added to an existing microphone, both are requested
+      // again - iOS only keeps a microphone that came with a camera.
+      const requestAudio = missingAudio || (missingVideo && Boolean(audioTrack));
+      const acquired = await navigator.mediaDevices.getUserMedia({
+        video: missingVideo,
+        audio: requestAudio,
+      });
+      const newVideo = acquired.getVideoTracks()[0] ?? null;
+      const newAudio = acquired.getAudioTracks()[0] ?? null;
+      if (missingVideo && !newVideo) {
+        acquired.getTracks().forEach((item) => item.stop());
+        throw new Error('no video track');
+      }
+      if (requestAudio && !newAudio) {
+        acquired.getTracks().forEach((item) => item.stop());
+        throw new Error('no audio track');
+      }
+      if (missingVideo && newVideo) {
+        for (const old of stream.getVideoTracks()) {
+          stream.removeTrack(old);
+          old.stop();
+        }
+        stream.addTrack(newVideo);
+      }
+      if (requestAudio && newAudio) {
+        for (const old of stream.getAudioTracks()) {
+          stream.removeTrack(old);
+          old.stop();
+        }
+        stream.addTrack(newAudio);
+      }
+      setLocalStream(stream);
+      return stream;
+    },
+    [ensureLocalStream],
+  );
+
   const toggleCamera = useCallback(async () => {
     if (cameraOnRef.current) {
       localStreamRef.current?.getVideoTracks().forEach((track) => {
@@ -471,18 +530,9 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       return;
     }
     try {
-      const stream = ensureLocalStream();
-      let track = stream.getVideoTracks().find((item) => item.readyState === 'live');
-      if (!track) {
-        const acquired = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-        track = acquired.getVideoTracks()[0] ?? null;
-        if (!track) {
-          acquired.getTracks().forEach((item) => item.stop());
-          throw new Error('no video track');
-        }
-        stream.addTrack(track);
-        setLocalStream(stream);
-      }
+      const stream = await acquireDevices(true, micOnRef.current);
+      const track = stream.getVideoTracks().find((item) => item.readyState === 'live');
+      if (!track) throw new Error('no video track');
       track.enabled = true;
       cameraOnRef.current = true;
       setCameraOn(true);
@@ -491,7 +541,7 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
     } catch {
       onErrorRef.current?.('camera');
     }
-  }, [ensureLocalStream, publishToAll, reportPresence]);
+  }, [acquireDevices, publishToAll, reportPresence]);
 
   const toggleMic = useCallback(async () => {
     if (micOnRef.current) {
@@ -505,18 +555,9 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       return;
     }
     try {
-      const stream = ensureLocalStream();
-      let track = stream.getAudioTracks().find((item) => item.readyState === 'live');
-      if (!track) {
-        const acquired = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        track = acquired.getAudioTracks()[0] ?? null;
-        if (!track) {
-          acquired.getTracks().forEach((item) => item.stop());
-          throw new Error('no audio track');
-        }
-        stream.addTrack(track);
-        setLocalStream(stream);
-      }
+      const stream = await acquireDevices(false, true);
+      const track = stream.getAudioTracks().find((item) => item.readyState === 'live');
+      if (!track) throw new Error('no audio track');
       track.enabled = true;
       micOnRef.current = true;
       setMicOn(true);
@@ -525,7 +566,7 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
     } catch {
       onErrorRef.current?.('mic');
     }
-  }, [ensureLocalStream, publishToAll, reportPresence]);
+  }, [acquireDevices, publishToAll, reportPresence]);
 
   const stopSharing = useCallback(() => {
     screenStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -543,6 +584,7 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       return;
     }
     if (!navigator.mediaDevices?.getDisplayMedia) {
+      // iOS Safari has no screen capture at all.
       onErrorRef.current?.('share-unsupported');
       return;
     }
