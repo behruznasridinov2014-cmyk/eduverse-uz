@@ -51,10 +51,10 @@ const BOOKS:Book[]=[
   {id:'fizika-7-daftar',title:'Физика 7 класс — тетрадь',subject:'Physics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'ink',pdf:'/books/fizika-7-daftar.pdf'},
   {id:'biologiya-7-daftar',title:'Биология 7 класс — тетрадь',subject:'Biology',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'sage',pdf:'/books/biologiya-7-daftar.pdf'},
   {id:'kimyo-7-daftar',title:'Химия 7 класс — тетрадь',subject:'Chemistry',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'alt',pdf:'/books/kimyo-7-daftar.pdf'},
-  {id:'matematika-7-darslik',title:'Математика 7 класс — учебник',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'',pdfUrl:'https://idum.uz/ru/maktab_darsliklari'},
-  {id:'fizika-7-darslik',title:'Физика 7 класс — учебник',subject:'Physics',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'ink',pdfUrl:'https://idum.uz/ru/maktab_darsliklari'},
-  {id:'biologiya-7-darslik',title:'Биология 7 класс — учебник',subject:'Biology',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'sage',pdfUrl:'https://idum.uz/ru/maktab_darsliklari'},
-  {id:'kimyo-7-darslik',title:'Химия 7 класс — учебник',subject:'Chemistry',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'alt',pdfUrl:'https://idum.uz/ru/maktab_darsliklari'},
+  {id:'matematika-7-darslik',title:'Математика 7 класс — учебник',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'',pdf:'/books/matematika-7-darslik.pdf'},
+  {id:'fizika-7-darslik',title:'Физика 7 класс — учебник',subject:'Physics',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'ink',pdf:'/books/fizika-7-darslik.pdf'},
+  {id:'biologiya-7-darslik',title:'Биология 7 класс — учебник',subject:'Biology',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'sage',pdf:'/books/biologiya-7-darslik.pdf'},
+  {id:'kimyo-7-darslik',title:'Химия 7 класс — учебник',subject:'Chemistry',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'alt',pdf:'/books/kimyo-7-darslik.pdf'},
 ];
 const AI_PREVIEW_QUESTIONS:Record<string,{prompt:string;choices:string[];correct:string;explanation:string}>={
   Mathematics:{prompt:'Which ratio is equivalent to 2:3?',choices:['4:6','3:4','2:6','6:9'],correct:'4:6',explanation:'Both parts of 2:3 are multiplied by 2, so 4:6 keeps the same relationship.'},
