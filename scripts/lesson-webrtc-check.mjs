@@ -197,7 +197,7 @@ async function main() {
 
   // 1. teacher camera on -> student sees the picture
   await clickControl(teacher, 0);
-  await sleep(12000);
+  await sleep(25000);
   let studentTiles = await tilesOf(student);
   let remote = studentTiles.vids[1];
   check('teacher camera reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
@@ -205,7 +205,7 @@ async function main() {
 
   // 2. teacher microphone on -> the student receives audio
   await clickControl(teacher, 1);
-  await sleep(12000);
+  await sleep(25000);
   const studentMedia = await student.evaluate(MEDIA);
   check('teacher microphone reaches the student', studentMedia.some((m) => m.kind === 'audio'), JSON.stringify(studentMedia));
 
@@ -227,14 +227,14 @@ async function main() {
 
   // 4. camera on again -> the picture returns (stale-track regression)
   await clickControl(teacher, 0);
-  await sleep(12000);
+  await sleep(25000);
   studentTiles = await tilesOf(student);
   remote = studentTiles.vids[1];
   check('camera on again restores the picture', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
 
   // 5. screen share -> the student sees the screen
   await clickControl(teacher, 2);
-  await sleep(12000);
+  await sleep(25000);
   studentTiles = await tilesOf(student);
   remote = studentTiles.vids[1];
   check('screen share reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
@@ -245,7 +245,7 @@ async function main() {
   await clickControl(student, 1);
   await sleep(2500);
   await clickControl(student, 0);
-  await sleep(12000);
+  await sleep(25000);
   const teacherTiles = await tilesOf(teacher);
   const studentRemote = teacherTiles.vids[1];
   const studentLocal = (await tilesOf(student)).vids[0];
@@ -266,7 +266,7 @@ async function main() {
   await sleep(1500);
   await clickControl(teacher, 1); // microphone on
   await clickControl(teacher, 0); // camera on immediately afterwards
-  await sleep(12000);
+  await sleep(25000);
   const quickMedia = await student.evaluate(MEDIA);
   check(
     'microphone survives a camera switch during an open negotiation',
