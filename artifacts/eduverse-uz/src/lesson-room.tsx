@@ -543,7 +543,7 @@ function RoomView({
                   <h2>{topic.title}</h2>
                 </div>
               </div>
-              <Interactive3d scene={topic.visual3d} height={260} compact />
+              <Interactive3d scene={topic.visual3d} height={260} compact language={language} />
               <details className="lesson-facts">
                 <summary>{copy.studyFacts}</summary>
                 <div className="stack" style={{ marginTop: 10 }}>
@@ -561,9 +561,12 @@ function RoomView({
             <button type="button" className={`ctrl ${cameraOn ? 'on' : ''}`} onClick={() => void toggleCamera()}>
               {cameraOn ? <Camera size={18} /> : <CameraOff size={18} />}
             </button>
-            <button type="button" className={`ctrl ${micOn ? 'on' : ''}`} onClick={() => void toggleMic()}>
-              {micOn ? <Mic size={18} /> : <MicOff size={18} />}
-            </button>
+            <span className="ctrl-wrap">
+              <button type="button" className={`ctrl ${micOn ? 'on' : ''}`} onClick={() => void toggleMic()}>
+                {micOn ? <Mic size={18} /> : <MicOff size={18} />}
+              </button>
+              {micOn && <MicLevel stream={localStream} active={micOn} />}
+            </span>
             <button type="button" className={`ctrl ${sharing ? 'on' : ''}`} onClick={() => void toggleShare()}>
               <MonitorUp size={18} />
             </button>
@@ -709,6 +712,54 @@ function RoomView({
         </aside>
       </div>
     </div>
+  );
+}
+
+
+/**
+ * Shows the level of the local microphone. It answers the question "does my
+ * microphone work?" without waiting for the other side to say something.
+ */
+function MicLevel({ stream, active }: { stream: MediaStream | null; active: boolean }) {
+  const [level, setLevel] = useState(0);
+
+  useEffect(() => {
+    if (!stream || !active) {
+      setLevel(0);
+      return;
+    }
+    const tracks = stream.getAudioTracks();
+    if (tracks.length === 0) return;
+    const context = new AudioContext();
+    const source = context.createMediaStreamSource(new MediaStream(tracks));
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    let frame = 0;
+    const tick = () => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (const value of data) {
+        const sample = (value - 128) / 128;
+        sum += sample * sample;
+      }
+      const rms = Math.sqrt(sum / data.length);
+      setLevel(Math.min(1, rms * 5));
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      source.disconnect();
+      void context.close();
+    };
+  }, [stream, active]);
+
+  return (
+    <span className="mic-level" title="Уровень микрофона">
+      <i style={{ transform: `scaleX(${Math.max(0.04, level)})` }} />
+    </span>
   );
 }
 

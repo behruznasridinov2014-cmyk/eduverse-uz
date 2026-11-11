@@ -1,5 +1,5 @@
 ﻿import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
-import { Router, type IRouter, type Response } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import {
   ACCOUNT_ROLES,
   assignmentSubmissionsTable,
@@ -80,8 +80,9 @@ function hasField(body: unknown, key: string): boolean {
   return isRecord(body) && Object.prototype.hasOwnProperty.call(body, key);
 }
 
-function invalidParam(names: string[]): string | undefined {
-  return names.find((name) => !isValidUuid(name));
+function invalidParam(req: Request, names: string[]): string | undefined {
+  // The value of the parameter is checked, not its name.
+  return names.find((name) => !isValidUuid(String(req.params[name] ?? "")));
 }
 
 async function schoolMembershipRole(
@@ -163,7 +164,7 @@ async function authorizeClass(
 }
 
 function requireUuidParams(res: Response, ...names: string[]): boolean {
-  if (invalidParam(names)) {
+  if (invalidParam(res.req, names)) {
     res.status(400).json({ error: "A valid resource identifier is required." });
     return false;
   }

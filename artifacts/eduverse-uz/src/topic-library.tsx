@@ -70,6 +70,17 @@ type Copy = {
   classLabel: string;
   noClasses: string;
   factsHidden: string;
+  modelsTitle: string;
+  modelsHint: string;
+  modelsSearching: string;
+  modelsEmpty: string;
+  modelsSearch: string;
+  videoTitle: string;
+  videoHint: string;
+  videoBadge: string;
+  videoSearching: string;
+  videoEmpty: string;
+  quizHint: string;
 };
 
 const COPY: Record<Language, Copy> = {
@@ -105,6 +116,17 @@ const COPY: Record<Language, Copy> = {
     classLabel: 'Класс',
     noClasses: 'Нет привязанных классов — тема будет доступна всем.',
     factsHidden: 'Факты скрыты. Нажмите на иконку, чтобы прочитать.',
+    modelsTitle: '3D-модели из интернета',
+    modelsHint: 'Настоящие 3D-модели — их можно вращать мышкой и рассматривать.',
+    modelsSearching: 'Ищем 3D-модели по теме…',
+    modelsEmpty: 'По этой теме сейчас нет готовых моделей.',
+    modelsSearch: 'Открыть поиск в Sketchfab',
+    videoTitle: 'Видео по теме',
+    videoHint: 'Смотрите объяснение прямо здесь или найдите больше видео ниже.',
+    videoBadge: 'Видео',
+    videoSearching: 'Ищем видео по теме…',
+    videoEmpty: '{copy.videoEmpty}',
+    quizHint: '{copy.quizHint}',
   },
   Uzbek: {
     eyebrow: 'AI · O‘QUV PAKETLARI',
@@ -138,6 +160,17 @@ const COPY: Record<Language, Copy> = {
     classLabel: 'Sinf',
     noClasses: 'Bog‘langan sinf yo‘q — mavzu hammaga ochiq bo‘ladi.',
     factsHidden: 'Faktlar yashirilgan. O‘qish uchun belgini bosing.',
+    modelsTitle: 'Internetdan 3D-modellar',
+    modelsHint: 'Haqiqiy 3D-modellar — sich ularni aylantirib ko‘rishingiz mumkin.',
+    modelsSearching: 'Mavzu bo‘yicha 3D-modellar izlanmoqda…',
+    modelsEmpty: 'Bu mavzu uchun tayyor modellar yo‘q.',
+    modelsSearch: 'Sketchfab’da qidirishni ochish',
+    videoTitle: 'Mavzu bo‘yicha video',
+    videoHint: 'Tushuntirishni shu yerda ko‘ring yoki quyida ko‘proq videolar toping.',
+    videoBadge: 'Video',
+    videoSearching: 'Mavzu bo‘yicha video izlanmoqda…',
+    videoEmpty: 'Video topilmadi. Qidiruvni oching — rolik tanlab olamiz.',
+    quizHint: 'Mavzu bo‘yicha savollarga javob bering. O‘qituvchi bu testni barcha o‘quvchilarda ko‘radi.',
   },
   English: {
     eyebrow: 'AI · LESSON PACKAGES',
@@ -171,6 +204,17 @@ const COPY: Record<Language, Copy> = {
     classLabel: 'Class',
     noClasses: 'No linked class — the topic is open to everyone.',
     factsHidden: 'Facts are hidden. Tap the icon to read them.',
+    modelsTitle: '3D models from the internet',
+    modelsHint: 'Real 3D models — you can turn them with the mouse and look around.',
+    modelsSearching: 'Looking for 3D models on this topic…',
+    modelsEmpty: 'There are no ready-made models for this topic yet.',
+    modelsSearch: 'Open the Sketchfab search',
+    videoTitle: 'Video on the topic',
+    videoHint: 'Watch the explanation right here or find more videos below.',
+    videoBadge: 'Video',
+    videoSearching: 'Looking for a video on this topic…',
+    videoEmpty: 'No video found yet. Open the search and we will pick one.',
+    quizHint: 'Answer the questions about the topic. The teacher sees this test with every student of the topic.',
   },
 };
 
@@ -273,7 +317,7 @@ export function TopicLibraryPage({
         </span>
       </div>
 
-      {isTeacher && (
+      {isTeacher && topics.length === 0 && (
         <section className="panel topic-builder reveal-up">
           <div className="section-head">
             <div>
@@ -344,6 +388,63 @@ export function TopicLibraryPage({
         </section>
       )}
 
+      {isTeacher && topics.length > 0 && (
+        <section className="panel topic-builder reveal-up">
+          <div className="section-head">
+            <div>
+              <h2>1 · {copy.subject}</h2>
+              <p className="muted">{copy.topicTitle}</p>
+            </div>
+          </div>
+          <div className="subject-picker">
+            {SUBJECT_OPTIONS.map((option) => (
+              <button
+                key={option.slug}
+                type="button"
+                className={`subject-option ${subject === option.slug ? 'active' : ''}`}
+                onClick={() => {
+                  setSubject(option.slug);
+                  setTitle(TOPIC_SUGGESTIONS[option.slug]?.[0] ?? '');
+                }}
+              >
+                <span>{option.label[language]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-2" style={{ gap: 12 }}>
+            <div className="control">
+              <label htmlFor="topic-title-2">{copy.topicTitle}</label>
+              <input
+                id="topic-title-2"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                maxLength={160}
+              />
+            </div>
+            <div className="control">
+              <label htmlFor="topic-class-2">{copy.classLabel}</label>
+              <select id="topic-class-2" value={classId} onChange={(event) => setClassId(event.target.value)}>
+                <option value="">{copy.noClasses}</option>
+                {classes.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} · {item.academicYear}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {error && <div className="notice" role="alert">{error}</div>}
+          <button
+            type="button"
+            className="btn primary topic-generate"
+            disabled={busy || !title.trim()}
+            onClick={() => void generate()}
+          >
+            {busy ? copy.generating : copy.generate}
+          </button>
+        </section>
+      )}
+
       <div className="topic-layout">
         <aside className="topic-list panel">
           <div className="section-head">
@@ -379,7 +480,7 @@ export function TopicLibraryPage({
 
         <div className="topic-detail">
           {selected ? (
-            <TopicDetail topic={selected} copy={copy} onOpenRoom={onOpenRoom} canCreate={isTeacher} />
+            <TopicDetail topic={selected} copy={copy} language={language} onOpenRoom={onOpenRoom} canCreate={isTeacher} />
           ) : (
             <section className="panel topic-empty">
               <GraduationCap size={28} />
@@ -398,11 +499,13 @@ export function TopicLibraryPage({
 function TopicDetail({
   topic,
   copy,
+  language,
   onOpenRoom,
   canCreate = false,
 }: {
   topic: LessonTopic;
   copy: Copy;
+  language: Language;
   onOpenRoom: (topicId: string) => void;
   canCreate?: boolean;
 }) {
@@ -430,7 +533,7 @@ function TopicDetail({
         </div>
       </section>
 
-      <VideoPanel topic={topic} />
+      <VideoPanel topic={topic} copy={copy} />
 
       <SlidesPanel topic={topic} copy={copy} />
       <FactsPanel topic={topic} copy={copy} />
@@ -441,9 +544,9 @@ function TopicDetail({
             <p className="muted">{topic.visual3d.label}</p>
           </div>
         </div>
-        <Interactive3d scene={topic.visual3d} />
+        <Interactive3d scene={topic.visual3d} language={language} />
       </section>
-      <Models3dPanel topic={topic} />
+      <Models3dPanel topic={topic} copy={copy} />
       <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={canCreate} />
     </>
   );
@@ -453,7 +556,7 @@ function TopicDetail({
 /* Real 3D models from the internet (Sketchfab)                                  */
 /* -------------------------------------------------------------------------- */
 
-function Models3dPanel({ topic }: { topic: LessonTopic }) {
+function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
   // The kind of the 3D object is an English keyword ("globe", "ocean",
   // "volcano"...) - it finds far better models than the Russian title.
   const kind = topic.visual3d?.kind ?? '';
@@ -494,9 +597,9 @@ function Models3dPanel({ topic }: { topic: LessonTopic }) {
     return (
       <section className="panel reveal-up">
         <div className="section-head">
-          <h2><Box size={16} /> 3D-модели из интернета</h2>
+          <h2><Box size={16} /> {copy.modelsTitle}</h2>
         </div>
-        <p className="muted" role="status">Ищем 3D-модели по теме…</p>
+        <p className="muted" role="status">{copy.modelsSearching}</p>
       </section>
     );
   }
@@ -507,10 +610,10 @@ function Models3dPanel({ topic }: { topic: LessonTopic }) {
         <div className="section-head">
           <h2><Box size={16} /> 3D-модели из интернета</h2>
         </div>
-        <p className="muted">По этой теме сейчас нет готовых моделей.</p>
+        <p className="muted">{copy.modelsEmpty}</p>
         {searchUrl && (
           <a className="btn" href={searchUrl} target="_blank" rel="noreferrer">
-            <ExternalLink size={13} /> Открыть поиск в Sketchfab
+            <ExternalLink size={13} /> {copy.modelsSearch}
           </a>
         )}
       </section>
@@ -523,7 +626,7 @@ function Models3dPanel({ topic }: { topic: LessonTopic }) {
       <div className="section-head">
         <div>
           <h2><Box size={16} /> 3D-модели из интернета</h2>
-          <p className="muted">Настоящие 3D-модели — их можно вращать мышкой и рассматривать.</p>
+          <p className="muted">{copy.modelsHint}</p>
         </div>
       </div>
       <div className="topic-models3d-grid">
@@ -561,7 +664,7 @@ function Models3dPanel({ topic }: { topic: LessonTopic }) {
 /* YouTube lesson video (from the internet, found by topic)                   */
 /* -------------------------------------------------------------------------- */
 
-function VideoPanel({ topic }: { topic: LessonTopic }) {
+function VideoPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
   const query = `${topic.subject} ${topic.title} урок 7 класс`;
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
   const [videoId, setVideoId] = useState<string>("");
@@ -591,13 +694,13 @@ function VideoPanel({ topic }: { topic: LessonTopic }) {
     <section className="panel reveal-up topic-video">
       <div className="section-head">
         <div>
-          <h2><MonitorPlay size={16} /> Видео по теме</h2>
-          <p className="muted">Смотрите объяснение прямо здесь или найдите больше видео ниже.</p>
+          <h2><MonitorPlay size={16} /> {copy.videoTitle}</h2>
+          <p className="muted">{copy.videoHint}</p>
         </div>
-        <span className="tag red">Видео</span>
+        <span className="tag red">{copy.videoBadge}</span>
       </div>
       {loading ? (
-        <p className="muted" role="status">Ищем видео по теме…</p>
+        <p className="muted" role="status">{copy.videoSearching}</p>
       ) : embedSrc ? (
         <div className="video-embed">
           <iframe

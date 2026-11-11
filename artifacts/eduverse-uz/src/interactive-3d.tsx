@@ -20,6 +20,14 @@ type Part = Visual3d['parts'][number];
 
 export type Scene = Visual3d;
 
+type Language = 'Uzbek' | 'Русский' | 'English';
+
+const TOOL_LABELS: Record<Language, { zoomOut: string; zoomIn: string; rotate: string; reset: string }> = {
+  Uzbek: { zoomOut: 'Kichraytirish', zoomIn: 'Kattalashtirish', rotate: 'Aylantirish', reset: 'Tiklash' },
+  'Русский': { zoomOut: 'Уменьшить', zoomIn: 'Увеличить', rotate: 'Вращение', reset: 'Сбросить' },
+  English: { zoomOut: 'Zoom out', zoomIn: 'Zoom in', rotate: 'Rotate', reset: 'Reset' },
+};
+
 type DragState =
   | { mode: 'rotate'; x: number; y: number; rotX: number; rotY: number }
   | { mode: 'part'; id: string; x: number; y: number; offset: [number, number] };
@@ -28,11 +36,14 @@ export function Interactive3d({
   scene,
   height = 360,
   compact = false,
+  language = 'Русский',
 }: {
   scene: Scene;
   height?: number;
   compact?: boolean;
+  language?: Language;
 }) {
+  const labels = TOOL_LABELS[language] ?? TOOL_LABELS['Русский'];
   const [rotX, setRotX] = useState(-18);
   const [rotY, setRotY] = useState(24);
   const [zoom, setZoom] = useState(1);
@@ -190,16 +201,16 @@ export function Interactive3d({
           <span>{compact ? scene.interactions[0] : scene.interactions.join(' · ')}</span>
         </div>
         <div className="row" style={{ gap: 6 }}>
-          <button type="button" className="btn small" onClick={() => setZoom((v) => clamp(v - 0.2, 0.5, 2.6))} aria-label="Уменьшить">
+          <button type="button" className="btn small" onClick={() => setZoom((v) => clamp(v - 0.2, 0.5, 2.6))} aria-label={labels.zoomOut}>
             <ZoomOut size={14} />
           </button>
-          <button type="button" className="btn small" onClick={() => setZoom((v) => clamp(v + 0.2, 0.5, 2.6))} aria-label="Увеличить">
+          <button type="button" className="btn small" onClick={() => setZoom((v) => clamp(v + 0.2, 0.5, 2.6))} aria-label={labels.zoomIn}>
             <ZoomIn size={14} />
           </button>
-          <button type="button" className={`btn small ${autoRotate ? 'primary' : ''}`} onClick={() => setAutoRotate((v) => !v)} aria-label="Вращение">
+          <button type="button" className={`btn small ${autoRotate ? 'primary' : ''}`} onClick={() => setAutoRotate((v) => !v)} aria-label={labels.rotate}>
             {autoRotate ? <RotateCcw size={14} /> : <TouchpadOff size={14} />}
           </button>
-          <button type="button" className="btn small" onClick={reset} aria-label="Сбросить">
+          <button type="button" className="btn small" onClick={reset} aria-label={labels.reset}>
             <Maximize2 size={14} />
           </button>
         </div>

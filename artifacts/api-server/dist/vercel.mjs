@@ -51659,8 +51659,8 @@ function readString3(body, key, maxLength = 200) {
 function hasField(body, key) {
   return isRecord4(body) && Object.prototype.hasOwnProperty.call(body, key);
 }
-function invalidParam(names) {
-  return names.find((name) => !isValidUuid(name));
+function invalidParam(req, names) {
+  return names.find((name) => !isValidUuid(String(req.params[name] ?? "")));
 }
 async function schoolMembershipRole(userId, schoolId) {
   const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(
@@ -51710,7 +51710,7 @@ async function authorizeClass(user3, classId) {
   };
 }
 function requireUuidParams(res, ...names) {
-  if (invalidParam(names)) {
+  if (invalidParam(res.req, names)) {
     res.status(400).json({ error: "A valid resource identifier is required." });
     return false;
   }

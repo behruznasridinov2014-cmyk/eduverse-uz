@@ -200,6 +200,19 @@ async function main() {
   await sleep(25000);
   let studentTiles = await tilesOf(student);
   let remote = studentTiles.vids[1];
+  if (!remote || remote.w === 0) {
+    // The path can be blocked (a school firewall, a rate-limited relay). The
+    // room offers a reconnect button - it has to recover the lesson.
+    console.log('  ... no picture yet, trying the reconnect button');
+    await teacher.evaluate(`(() => {
+      const button = [...document.querySelectorAll('button')].find((b) => /Переподключить|Qayta ulanish|Reconnect/i.test(b.textContent || ''));
+      if (button) { button.click(); return 'reconnect clicked'; }
+      return 'no reconnect button';
+    })()`);
+    await sleep(25000);
+    studentTiles = await tilesOf(student);
+    remote = studentTiles.vids[1];
+  }
   check('teacher camera reaches the student', Boolean(remote && remote.w > 0), remote ? `${remote.w}x${remote.h}` : 'no tile');
   check('teacher camera shows no error', !studentTiles.notice, studentTiles.notice ?? '');
 
