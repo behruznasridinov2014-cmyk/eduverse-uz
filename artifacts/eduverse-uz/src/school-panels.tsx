@@ -491,7 +491,7 @@ export function ServerClassesPanel({
                         )}
                       </div>
                     )}
-                    {canSubmit && (
+                    {canSubmit && !(submission?.signedAt && submission.status === 'checked') && (
                       <div className="stack" style={{ gap: 8 }}>
                         {isEditing ? (
                           <>
