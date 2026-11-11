@@ -81,6 +81,8 @@ type Copy = {
   videoSearching: string;
   videoEmpty: string;
   quizHint: string;
+  createTest: string;
+  creatingTest: string;
 };
 
 const COPY: Record<Language, Copy> = {
@@ -126,7 +128,9 @@ const COPY: Record<Language, Copy> = {
     videoBadge: 'Видео',
     videoSearching: 'Ищем видео по теме…',
     videoEmpty: '{copy.videoEmpty}',
-    quizHint: '{copy.quizHint}',
+    quizHint: 'Ответьте на вопросы по теме. Учитель видит этот тест у всех учеников темы.',
+    createTest: 'Создать тест',
+    creatingTest: 'Создаём тест…',
   },
   Uzbek: {
     eyebrow: 'AI · O‘QUV PAKETLARI',
@@ -171,6 +175,8 @@ const COPY: Record<Language, Copy> = {
     videoSearching: 'Mavzu bo‘yicha video izlanmoqda…',
     videoEmpty: 'Video topilmadi. Qidiruvni oching — rolik tanlab olamiz.',
     quizHint: 'Mavzu bo‘yicha savollarga javob bering. O‘qituvchi bu testni barcha o‘quvchilarda ko‘radi.',
+    createTest: 'Test yaratish',
+    creatingTest: 'Test yaratilmoqda…',
   },
   English: {
     eyebrow: 'AI · LESSON PACKAGES',
@@ -215,6 +221,8 @@ const COPY: Record<Language, Copy> = {
     videoSearching: 'Looking for a video on this topic…',
     videoEmpty: 'No video found yet. Open the search and we will pick one.',
     quizHint: 'Answer the questions about the topic. The teacher sees this test with every student of the topic.',
+    createTest: 'Create the test',
+    creatingTest: 'Creating the test…',
   },
 };
 
@@ -856,7 +864,7 @@ function QuizPanel({ topic, copy, onOpenRoom, canCreate = false }: { topic: Less
       {canCreate && (
         <div className="row" style={{ marginBottom: 12 }}>
           <button type="button" className="btn primary small" disabled={generating} onClick={() => void generate()}>
-            {generating ? 'Создаём тест…' : 'Создать тест'}
+            {generating ? copy.creatingTest : copy.createTest}
           </button>
           {genNotice && <span className="tag green">{genNotice}</span>}
           {genError && <span className="tag red">{genError}</span>}
