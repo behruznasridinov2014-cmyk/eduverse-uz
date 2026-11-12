@@ -5,6 +5,7 @@ import {
   assignIndividualRoomTests,
   awardRoomWinner,
   createLessonRoom,
+  customFetch,
   endLessonRoom,
   findLessonRoomByCode,
   getLessonRoom,
@@ -214,9 +215,10 @@ export function LessonRoomPage({
       room={room}
       participants={participants}
       topic={topics.find((topic) => topic.id === room.topicId) ?? null}
+      topics={topics}
       user={user}
       language={language}
-      isHost={mode === 'host'}
+      isHost={mode === 'host' || room.hostId === user.id}
       onRefresh={() => void refreshParticipants(room.id)}
       onParticipants={setParticipants}
       onLeave={() => void leave()}
@@ -237,7 +239,8 @@ export function LessonRoomPage({
 function RoomView({
   room,
   participants,
-  topic,
+  topic: initialTopic,
+  topics,
   user,
   language,
   isHost,
@@ -252,6 +255,7 @@ function RoomView({
   room: LessonRoom;
   participants: LessonParticipant[];
   topic: LessonTopic | null;
+  topics: LessonTopic[];
   user: User;
   language: Language;
   isHost: boolean;
@@ -272,6 +276,37 @@ function RoomView({
   const [testAnswer, setTestAnswer] = useState('');
   const [testFeedback, setTestFeedback] = useState('');
   const [testStarted, setTestStarted] = useState(false);
+  const [topic, setTopic] = useState<LessonTopic | null>(initialTopic);
+  const [info, setInfo] = useState('');
+  const [testsBusy, setTestsBusy] = useState(false);
+
+  /* ---- Topic of the lesson (3D object + facts), shared with everybody ---- */
+  const loadRoomTopic = useCallback(async () => {
+    try {
+      const response = await customFetch<{ topic: LessonTopic | null }>(`/api/rooms/${room.id}/topic`, { method: 'GET' });
+      setTopic(response.topic);
+    } catch {
+      /* the lesson works without a topic */
+    }
+  }, [room.id]);
+
+  useEffect(() => {
+    void loadRoomTopic();
+  }, [loadRoomTopic]);
+
+  async function changeTopic(topicId: string) {
+    setError('');
+    try {
+      const response = await customFetch<{ topic: LessonTopic | null }>(`/api/rooms/${room.id}/topic`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topicId: topicId || null }),
+      });
+      setTopic(response.topic);
+    } catch (requestError) {
+      setError(describe(requestError, language));
+    }
+  }
 
   const participantsRef = useRef<LessonParticipant[]>([]);
   const lastSeq = useRef(0);
@@ -342,6 +377,7 @@ function RoomView({
             const event = (message.payload as { event?: string })?.event;
             if (event === 'individual-tests-started' || event === 'test-started') void loadMyTest();
             if (event === 'ended') onRefresh();
+            if (event === 'topic') void loadRoomTopic();
             continue;
           }
           if (message.kind === 'chat') {
@@ -428,11 +464,17 @@ function RoomView({
 
   async function startIndividualTests() {
     setError('');
+    setInfo('');
+    setTestsBusy(true);
     try {
-      await assignIndividualRoomTests(room.id);
+      const response = await assignIndividualRoomTests(room.id);
+      const count = (response as { assigned?: number }).assigned ?? 0;
+      setInfo(copy.testsSent.replace('{n}', String(count)));
       await loadResults();
     } catch (requestError) {
       setError(describe(requestError, language));
+    } finally {
+      setTestsBusy(false);
     }
   }
 
@@ -496,6 +538,10 @@ function RoomView({
       </div>
 
       {error && <div className="notice" role="alert">{error}</div>}
+      {info && <div className="notice success" role="status">{info}</div>}
+      {isHost && participants.length <= 1 && (
+        <div className="notice lesson-invite" role="status">{copy.inviteHint.replace('{code}', room.code)}</div>
+      )}
 
       {connectionProblem !== 'ok' && (
         <div className={`notice lesson-connection ${connectionProblem}`} role="status">
@@ -539,8 +585,20 @@ function RoomView({
               ))}
           </div>
 
-          {topic && (
+          {(topic || isHost) && (
             <section className="panel lesson-topic-panel">
+              {isHost && (
+                <div className="control lesson-topic-picker">
+                  <label htmlFor="room-topic">{copy.chooseTopic}</label>
+                  <select id="room-topic" value={topic?.id ?? ''} onChange={(event) => void changeTopic(event.target.value)}>
+                    <option value="">{copy.noTopic}</option>
+                    {[...new Map(topics.map((item) => [`${item.subject} · ${item.title}`, item])).values()].map((item) => (
+                      <option key={item.id} value={item.id}>{item.subject} · {item.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {topic && (<>
               <div className="section-head">
                 <div>
                   <div className="eyebrow">{topic.subject}</div>
@@ -558,6 +616,8 @@ function RoomView({
                   ))}
                 </div>
               </details>
+              </>)}
+              {!topic && isHost && <p className="muted">{copy.topicEmpty}</p>}
             </section>
           )}
 
@@ -633,8 +693,8 @@ function RoomView({
             <section className="panel">
               <div className="section-head"><h2><Sparkles size={15} /> {copy.teachPanel}</h2></div>
               <div className="stack">
-                <button type="button" className="btn primary" onClick={() => void startIndividualTests()}>
-                  <Sparkles size={14} /> {copy.startIndividual}
+                <button type="button" className="btn primary" disabled={testsBusy} onClick={() => void startIndividualTests()}>
+                  {testsBusy ? <RefreshCw size={14} className="school-spin" /> : <Sparkles size={14} />} {copy.startIndividual}
                 </button>
                 <button type="button" className="btn" onClick={() => void endRoom()}>
                   <X size={14} /> {copy.endLesson}
@@ -872,6 +932,9 @@ const COPY: Record<Language, Record<string, string>> = {
     participants: 'Участники',
     chat: 'Чат урока',
     chatEmpty: 'Сообщений пока нет.',
+    testsSent: 'Тесты отправлены ученикам: {n}. Каждый видит только свой вопрос.',
+    inviteHint: 'Сообщите ученикам код {code}. Каждый ученик входит со своего устройства и под своим аккаунтом. Для проверки на одном компьютере откройте ученика в окне инкогнито (Ctrl+Shift+N).',
+    topicEmpty: 'Выберите тему — ученики увидят 3D-объект и факты.',
     chatPlaceholder: 'Написать сообщение…',
     teachPanel: 'Управление уроком',
     startIndividual: 'Старт индивидуальных ИИ-тестов',
@@ -924,6 +987,9 @@ const COPY: Record<Language, Record<string, string>> = {
     participants: 'Qatnashchilar',
     chat: 'Dars chati',
     chatEmpty: 'Hozircha xabar yo‘q.',
+    testsSent: 'Testlar o‘quvchilarga yuborildi: {n}. Har kim faqat o‘z savolini ko‘radi.',
+    inviteHint: 'O‘quvchilarga {code} kodini ayting. Har bir o‘quvchi o‘z qurilmasidan va o‘z hisobidan kiradi. Bitta kompyuterda sinash uchun o‘quvchini inkognito oynada oching (Ctrl+Shift+N).',
+    topicEmpty: 'Mavzuni tanlang — o‘quvchilar 3D obyekt va faktlarni ko‘radi.',
     chatPlaceholder: 'Xabar yozish…',
     teachPanel: 'Darsni boshqarish',
     startIndividual: 'Individual AI testlarni boshlash',
@@ -976,6 +1042,9 @@ const COPY: Record<Language, Record<string, string>> = {
     participants: 'Participants',
     chat: 'Lesson chat',
     chatEmpty: 'No messages yet.',
+    testsSent: 'Tests sent to {n} students. Each one sees only their own question.',
+    inviteHint: 'Give the students the code {code}. Every student joins from their own device and account. To try it on one computer, open the student in an incognito window (Ctrl+Shift+N).',
+    topicEmpty: 'Choose a topic — students will see the 3D object and facts.',
     chatPlaceholder: 'Write a message…',
     teachPanel: 'Lesson controls',
     startIndividual: 'Start individual AI tests',

@@ -50402,7 +50402,7 @@ router3.get(
       return;
     }
     if (topic.status !== "published" || topic.classId) {
-      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? topic.status === "published" ? await canViewClass(viewer.id, viewer.role, topic.classId) : await canManage(viewer.id, viewer.role, topic.classId) : false);
       if (!allowed) {
         res.status(403).json({ error: "You cannot read this topic." });
         return;
@@ -51423,6 +51423,64 @@ router4.post(
       );
     }
     res.json({ ok: true });
+  }
+);
+router4.get(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user2(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room) && !await isParticipant(viewer.id, room.id)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
+      return;
+    }
+    if (!room.topicId) {
+      res.json({ topic: null });
+      return;
+    }
+    const [topic] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, room.topicId)).limit(1);
+    res.json({ topic: topic ?? null });
+  }
+);
+router4.put(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user2(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (room.hostId !== viewer.id && !await canManage2(viewer.id, viewer.role, room.classId)) {
+      res.status(403).json({ error: "Only the host can change the lesson topic." });
+      return;
+    }
+    const topicId = readString2(req.body, "topicId", 64) ?? null;
+    if (topicId && !isValidUuid(topicId)) {
+      res.status(400).json({ error: "Invalid topic identifier." });
+      return;
+    }
+    let topic = null;
+    if (topicId) {
+      const [row] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+      if (!row) {
+        res.status(404).json({ error: "Topic not found." });
+        return;
+      }
+      topic = row;
+    }
+    await db.update(lessonRoomsTable).set({
+      topicId,
+      ...topic ? { subject: topic.subject, title: topic.title } : {}
+    }).where(eq(lessonRoomsTable.id, room.id));
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "topic", topicId } });
+    res.json({ topic });
   }
 );
 router4.get(

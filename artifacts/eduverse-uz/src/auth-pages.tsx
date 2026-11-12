@@ -892,6 +892,9 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
   const [code, setCode] = useState('');
   const [resendNotice, setResendNotice] = useState('');
   const qrCode = typeof window === 'undefined' ? '' : (new URLSearchParams(window.location.search).get('qr') ?? '');
+  // A phone signs in with login and password. "Sign in with a QR code" is for a
+  // computer: the code shown here is scanned by a phone that is already signed in.
+  const isPhone = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -969,16 +972,19 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
         </form>
       ) : (
         <>
-          <div className="auth-tabs" role="tablist" aria-label={copy.signIn}>
+          {auth.accountNotice?.kind === 'signed-out' && (
+            <div className="notice" role="status">{language === 'Uzbek' ? 'Boshqa oynada hisobdan chiqildi. Qaytadan kiring.' : language === 'Русский' ? 'В другой вкладке выполнен выход. Войдите снова.' : 'You were signed out in another tab. Please sign in again.'}</div>
+          )}
+          {!isPhone && <div className="auth-tabs" role="tablist" aria-label={copy.signIn}>
             <button type="button" role="tab" aria-selected={tab === 'code'} className={`auth-tab ${tab === 'code' ? 'active' : ''}`} onClick={() => setTab('code')}>
               <LockKeyhole size={15} /> {qrCopy.tabCode}
             </button>
             <button type="button" role="tab" aria-selected={tab === 'qr'} className={`auth-tab ${tab === 'qr' ? 'active' : ''}`} onClick={() => setTab('qr')}>
               <Smartphone size={15} /> {qrCopy.tabQr}
             </button>
-          </div>
+          </div>}
 
-          {tab === 'code' ? (
+          {tab === 'code' || (isPhone && !qrCode) ? (
             <form className="auth-form" onSubmit={submit}>
               <label className="auth-field" htmlFor="account-login">
                 <span>{copy.login}</span>
@@ -999,9 +1005,6 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           ) : (
             <QrSignInPanel language={language} onSuccess={() => onSuccess()} />
           )}
-          <div className="auth-switch-row">
-            <QrScannerButton language={language} className="btn" />
-          </div>
           <div className="auth-switch">{copy.noAccount}</div>
         </>
       )}
@@ -1156,7 +1159,6 @@ export function AuthStatusPage({
       <p className="auth-description">{required ? privateArea ? copy.privateRequiredText : copy.signInSubtitle : copy.unavailableText}</p>
       <div className="profile-actions">
         {detail ? <div className="auth-error" role="alert">{detail}</div> : null}
-      {detail ? <div className="auth-error" role="alert">{detail}</div> : null}
       {required && onSignIn ? <button className="auth-submit" onClick={onSignIn}>{copy.signIn}</button> : null}
         {onRetry ? <button className="btn" onClick={onRetry}>{copy.retry}</button> : null}
         <Link href="/" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>

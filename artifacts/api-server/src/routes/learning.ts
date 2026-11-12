@@ -262,7 +262,13 @@ router.get(
       const allowed =
         topic.createdBy === viewer.id ||
         isGlobalAdminRole(viewer.role) ||
-        (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+        (topic.classId
+          ? topic.status === "published"
+            // Members of the class read the published topic (it is shown in
+            // their online lesson); only managers see drafts.
+            ? await canViewClass(viewer.id, viewer.role, topic.classId)
+            : await canManage(viewer.id, viewer.role, topic.classId)
+          : false);
       if (!allowed) {
         res.status(403).json({ error: "You cannot read this topic." });
         return;

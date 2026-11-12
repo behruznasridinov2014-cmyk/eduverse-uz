@@ -43,7 +43,16 @@ type AuthContextValue = {
   signIn2fa: (code: string) => Promise<void>;
   resend2fa: () => Promise<TwoFactorResendResponse>;
   cancelTwoFactor: () => void;
+  /**
+   * Set when another tab of the same browser signed in with a different
+   * account or signed out. All tabs share one session cookie, so this tab now
+   * acts as that account and has to say so instead of failing with 401/403.
+   */
+  accountNotice: AccountNotice | null;
+  dismissAccountNotice: () => void;
 };
+
+export type AccountNotice = { kind: 'switched'; username: string } | { kind: 'signed-out' };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const CACHED_USER_KEY = 'eduverse:last-authenticated-user';
@@ -127,6 +136,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [twoFactorChallenge, setTwoFactorChallenge] = useState<TwoFactorChallenge | null>(null);
   const sessionRevision = useRef(0);
+  const [accountNotice, setAccountNotice] = useState<AccountNotice | null>(null);
+  const userRef = useRef<User | null>(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // One browser = one session cookie for every tab. When another tab signs in
+  // as somebody else (or signs out), this tab is re-synchronised immediately.
+  useEffect(() => {
+    let lastCheck = 0;
+    const check = async () => {
+      const current = userRef.current;
+      if (!current) return;
+      lastCheck = Date.now();
+      try {
+        const fresh = readUserResponse(await getCurrentUser());
+        if (fresh.id !== current.id) {
+          ++sessionRevision.current;
+          cacheUser(fresh);
+          setUser(fresh);
+          setStatus('authenticated');
+          setAccountNotice({ kind: 'switched', username: fresh.username });
+        }
+      } catch (error) {
+        if (isUnauthorized(error)) {
+          ++sessionRevision.current;
+          clearCachedUser();
+          setUser(null);
+          setStatus('anonymous');
+          setAccountNotice({ kind: 'signed-out' });
+        }
+      }
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === CACHED_USER_KEY) void check();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastCheck > 4000) void check();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+  const dismissAccountNotice = useCallback(() => setAccountNotice(null), []);
 
   const refreshSession = useCallback(async () => {
     const revision = ++sessionRevision.current;
@@ -173,6 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cacheUser(authenticatedUser);
         setUser(authenticatedUser);
         setStatus('authenticated');
+        setAccountNotice(null);
       }
     } finally {
       setIsSubmitting(false);
@@ -257,8 +316,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn2fa,
       resend2fa,
       cancelTwoFactor,
+      accountNotice,
+      dismissAccountNotice,
     }),
     [
+      accountNotice,
+      dismissAccountNotice,
       status,
       user,
       isSubmitting,
