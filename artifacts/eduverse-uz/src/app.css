@@ -1095,3 +1095,20 @@ h3 { font-size:14px;margin:0 0 8px;font-weight:600; }
 .hw-topic-link{display:inline-flex;align-items:center;gap:6px;margin:4px 0;padding:6px 10px;border-radius:999px;border:1px solid #cfd6ee;background:rgba(110,100,230,.07);color:#3d3a9e;font-size:13px;cursor:pointer;transition:background .18s}
 .hw-topic-link:hover{background:rgba(110,100,230,.15)}
 @media (max-width:520px){.hw-photo-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---- In-app PDF reader ---- */
+.pdfv { display: flex; flex-direction: column; border: 1px solid var(--line, #e3e6ea); border-radius: 14px; overflow: hidden; background: #1b1a22; outline: none; }
+.pdfv.is-wide { position: fixed; inset: 0; z-index: 60; border-radius: 0; }
+.pdfv-bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #14131a; color: #eee; flex-wrap: wrap; }
+.pdfv-spacer { flex: 1; }
+.pdfv-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 8px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; background: rgba(255,255,255,.06); color: inherit; cursor: pointer; font: inherit; font-size: 13px; }
+.pdfv-btn:hover:not(:disabled) { background: rgba(255,255,255,.14); }
+.pdfv-btn:disabled { opacity: .4; cursor: default; }
+.pdfv-page { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.pdfv-page input { width: 56px; height: 34px; text-align: center; border-radius: 9px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: inherit; font: inherit; }
+.pdfv-stage { position: relative; overflow: auto; height: min(78vh, 980px); padding: 14px; display: flex; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+.pdfv.is-wide .pdfv-stage { height: calc(100vh - 54px); }
+.pdfv-canvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,.45); transition: opacity .15s; flex: none; }
+.pdfv-canvas.is-busy { opacity: .6; }
+.pdfv-note { position: absolute; inset: 0; display: grid; place-items: center; color: #ccc; text-align: center; padding: 20px; gap: 10px; }
+@media (max-width: 640px) { .pdfv-fit { display: none; } .pdfv-stage { height: 72vh; padding: 6px; } }

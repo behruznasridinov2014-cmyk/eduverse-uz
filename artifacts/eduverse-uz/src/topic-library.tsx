@@ -325,7 +325,7 @@ export function TopicLibraryPage({
         </span>
       </div>
 
-      {isTeacher && topics.length === 0 && (
+      {isTeacher && (
         <section className="panel topic-builder reveal-up">
           <div className="section-head">
             <div>
@@ -391,63 +391,6 @@ export function TopicLibraryPage({
             onClick={() => void generate()}
           >
             {busy ? <RefreshCw className="school-spin" size={15} /> : <Sparkles size={15} />}
-            {busy ? copy.generating : copy.generate}
-          </button>
-        </section>
-      )}
-
-      {isTeacher && topics.length > 0 && (
-        <section className="panel topic-builder reveal-up">
-          <div className="section-head">
-            <div>
-              <h2>1 · {copy.subject}</h2>
-              <p className="muted">{copy.topicTitle}</p>
-            </div>
-          </div>
-          <div className="subject-picker">
-            {SUBJECT_OPTIONS.map((option) => (
-              <button
-                key={option.slug}
-                type="button"
-                className={`subject-option ${subject === option.slug ? 'active' : ''}`}
-                onClick={() => {
-                  setSubject(option.slug);
-                  setTitle(TOPIC_SUGGESTIONS[option.slug]?.[0] ?? '');
-                }}
-              >
-                <span>{option.label[language]}</span>
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-2" style={{ gap: 12 }}>
-            <div className="control">
-              <label htmlFor="topic-title-2">{copy.topicTitle}</label>
-              <input
-                id="topic-title-2"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                maxLength={160}
-              />
-            </div>
-            <div className="control">
-              <label htmlFor="topic-class-2">{copy.classLabel}</label>
-              <select id="topic-class-2" value={classId} onChange={(event) => setClassId(event.target.value)}>
-                <option value="">{copy.noClasses}</option>
-                {classes.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {item.academicYear}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          {error && <div className="notice" role="alert">{error}</div>}
-          <button
-            type="button"
-            className="btn primary topic-generate"
-            disabled={busy || !title.trim()}
-            onClick={() => void generate()}
-          >
             {busy ? copy.generating : copy.generate}
           </button>
         </section>

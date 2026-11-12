@@ -66,6 +66,20 @@ export type MeshError = 'camera' | 'mic' | 'share-denied' | 'share-unsupported' 
  * production (set VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL at
  * build time).
  */
+let serverIce: RTCIceServer[] = [];
+
+/** Loads relay servers configured on the API (Cloudflare TURN or a custom TURN). */
+export async function loadServerIceServers(): Promise<void> {
+  try {
+    const response = await fetch('/api/ice-servers', { credentials: 'include' });
+    if (!response.ok) return;
+    const body = (await response.json()) as { iceServers?: RTCIceServer[] };
+    if (Array.isArray(body.iceServers)) serverIce = body.iceServers;
+  } catch {
+    /* STUN-only fallback below */
+  }
+}
+
 export function iceServers(): RTCIceServer[] {
   const turnUrl = import.meta.env.VITE_TURN_URL;
   const turnUser = import.meta.env.VITE_TURN_USERNAME;
@@ -75,7 +89,9 @@ export function iceServers(): RTCIceServer[] {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
   ];
-  if (turnUrl) {
+  if (serverIce.length) {
+    servers.push(...serverIce);
+  } else if (turnUrl) {
     servers.push({
       urls: turnUrl,
       ...(turnUser ? { username: turnUser } : {}),

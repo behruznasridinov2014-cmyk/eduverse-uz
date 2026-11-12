@@ -51059,6 +51059,69 @@ async function participants(roomId) {
     leftAt: lessonRoomParticipantsTable.leftAt
   }).from(lessonRoomParticipantsTable).innerJoin(usersTable, eq(lessonRoomParticipantsTable.userId, usersTable.id)).where(and(eq(lessonRoomParticipantsTable.roomId, roomId), isNull(lessonRoomParticipantsTable.leftAt))).orderBy(asc(lessonRoomParticipantsTable.joinedAt));
 }
+var iceCache = null;
+async function loadIceServers() {
+  if (iceCache && iceCache.expires > Date.now()) {
+    return { servers: iceCache.servers, relay: true };
+  }
+  const keyId = process.env.CLOUDFLARE_TURN_KEY_ID;
+  const token = process.env.CLOUDFLARE_TURN_API_TOKEN;
+  if (keyId && token) {
+    try {
+      const response = await fetch(
+        `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({ ttl: 86400 }),
+          signal: AbortSignal.timeout(5e3)
+        }
+      );
+      if (response.ok) {
+        const body = await response.json();
+        const servers = Array.isArray(body.iceServers) ? body.iceServers : [];
+        if (servers.length) {
+          iceCache = { expires: Date.now() + 6 * 60 * 60 * 1e3, servers };
+          return { servers, relay: true };
+        }
+      }
+      logger.warn({ status: response.status }, "Cloudflare TURN credentials request failed");
+    } catch (error) {
+      logger.warn({ err: error }, "Cloudflare TURN credentials request failed");
+    }
+  }
+  const urls = (process.env.TURN_URLS ?? "").split(",").map((value) => value.trim()).filter(Boolean);
+  if (urls.length) {
+    return {
+      servers: [
+        {
+          urls,
+          ...process.env.TURN_USERNAME ? { username: process.env.TURN_USERNAME } : {},
+          ...process.env.TURN_CREDENTIAL ? { credential: process.env.TURN_CREDENTIAL } : {}
+        }
+      ],
+      relay: true
+    };
+  }
+  return { servers: [], relay: false };
+}
+router4.get(
+  "/ice-servers",
+  requireAuthenticatedRole(
+    "student",
+    "teacher",
+    "school_director",
+    "school_admin",
+    "education_admin",
+    "ministry_admin",
+    "platform_superadmin"
+  ),
+  async (_req, res) => {
+    const result = await loadIceServers();
+    res.set("Cache-Control", "private, no-store");
+    res.json({ iceServers: result.servers, relay: result.relay });
+  }
+);
 router4.get(
   "/rooms",
   requireAuthenticatedRole(

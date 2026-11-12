@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "jsqr": "1.4.0"
+    "jsqr": "1.4.0",
+    "pdfjs-dist": "4.10.38"
   }
 }

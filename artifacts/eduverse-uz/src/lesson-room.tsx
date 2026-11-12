@@ -45,7 +45,7 @@ import {
   X,
 } from 'lucide-react';
 import { Interactive3d } from './interactive-3d';
-import { useLessonMesh } from './lesson-mesh';
+import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
 
 /* -------------------------------------------------------------------------- */
@@ -66,6 +66,9 @@ export function LessonRoomPage({
 
   const [topics, setTopics] = useState<LessonTopic[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState(prefillTopicId ?? '');
+  useEffect(() => {
+    void loadServerIceServers();
+  }, []);
   const [room, setRoom] = useState<LessonRoom | null>(null);
   const [participants, setParticipants] = useState<LessonParticipant[]>([]);
   const [joinCode, setJoinCode] = useState('');
