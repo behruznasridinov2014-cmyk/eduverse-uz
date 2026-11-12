@@ -410,3 +410,16 @@ a { color: var(--violet-300); }
   .panel form > .btn, .panel > .btn.primary, .topic-generate { width: 100%; }
   .filters .control { min-width: 100%; }
 }
+
+/* ---------- library cards with real covers ---------- */
+.book-card { gap: 16px; min-height: 0; align-items: stretch; }
+.book-cover { width: 104px; height: auto; aspect-ratio: 3 / 4; padding: 0; overflow: hidden; cursor: pointer; border-radius: 8px; display: block; flex: none; background: #20163a; border: 1px solid var(--glass-line); }
+.book-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s; }
+.book-card:hover .book-cover img { transform: scale(1.04); }
+.book-cover .cover-title { display: grid; place-items: center; height: 100%; padding: 10px; text-align: center; }
+.book-info { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.book-info > * { width: 100%; }
+.book-info .tag { width: auto; }
+.book-title { font-family: 'Literata', Georgia, serif; font-size: 16px; line-height: 1.25; margin: 0; color: #fff; }
+.book-info p { margin: 0; }
+.book-info .row-between { margin-top: auto !important; }

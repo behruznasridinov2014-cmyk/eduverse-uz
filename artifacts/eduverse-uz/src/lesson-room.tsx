@@ -47,6 +47,7 @@ import {
 import { Interactive3d } from './interactive-3d';
 import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
+import { friendlyError } from './errors';
 
 /* -------------------------------------------------------------------------- */
 
@@ -1010,12 +1011,5 @@ const COPY: Record<Language, Record<string, string>> = {
 };
 
 function describe(error: unknown, language: Language): string {
-  if (error instanceof ApiError) {
-    if (typeof error.data === 'object' && error.data !== null && 'error' in error.data) {
-      const message = (error.data as { error?: unknown }).error;
-      if (typeof message === 'string') return message;
-    }
-    return `HTTP ${error.status}`;
-  }
-  return language === 'Русский' ? 'Не удалось выполнить действие.' : 'Amalni bajarib bo‘lmadi.';
+  return friendlyError(error, language, { en: 'The action failed.', ru: 'Не удалось выполнить действие.', uz: 'Amalni bajarib bo‘lmadi.' });
 }

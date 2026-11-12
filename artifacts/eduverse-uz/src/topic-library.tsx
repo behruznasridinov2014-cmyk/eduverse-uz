@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { Interactive3d } from './interactive-3d';
 import type { Language } from './school-data';
+import { friendlyError } from './errors';
 
 /* -------------------------------------------------------------------------- */
 
@@ -320,9 +321,6 @@ export function TopicLibraryPage({
           <h1>{isTeacher ? copy.titleTeacher : copy.titleStudent}</h1>
           <p className="page-subtitle">{isTeacher ? copy.subtitleTeacher : copy.subtitleStudent}</p>
         </div>
-        <span className={`tag ${aiConfigured ? 'green' : 'blue'}`}>
-          <Sparkles size={13} /> {aiConfigured ? copy.aiOn : copy.aiOff}
-        </span>
       </div>
 
       {isTeacher && (
@@ -879,12 +877,5 @@ function onOpenRoom(_topicId: string) {
 }
 
 function describe(error: unknown, language: Language): string {
-  if (error instanceof ApiError) {
-    if (typeof error.data === 'object' && error.data !== null && 'error' in error.data) {
-      const message = (error.data as { error?: unknown }).error;
-      if (typeof message === 'string') return message;
-    }
-    return `HTTP ${error.status}`;
-  }
-  return language === 'Русский' ? 'Не удалось загрузить данные.' : 'Маълумотларни юклаб бўлмади.';
+  return friendlyError(error, language, { en: 'The data could not be loaded.', ru: 'Не удалось загрузить данные.', uz: 'Ma’lumotlarni yuklab bo‘lmadi.' });
 }

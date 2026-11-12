@@ -25,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Language } from './school-data';
+import { friendlyError } from './errors';
 
 type MarkStatus = Exclude<AttendanceStatus, 'unmarked'>;
 
@@ -394,12 +395,5 @@ function MetricCard({ icon, label, value }: { icon: React.ReactNode; label: stri
 }
 
 function describe(error: unknown, language: Language): string {
-  if (error instanceof ApiError) {
-    if (typeof error.data === 'object' && error.data !== null && 'error' in error.data) {
-      const message = (error.data as { error?: unknown }).error;
-      if (typeof message === 'string') return message;
-    }
-    return `HTTP ${error.status}`;
-  }
-  return language === 'Русский' ? 'Не удалось загрузить давомат.' : 'Davomatni yuklab bo‘lmadi.';
+  return friendlyError(error, language, { en: 'Attendance could not be loaded.', ru: 'Не удалось загрузить давомат.', uz: 'Davomatni yuklab bo‘lmadi.' });
 }

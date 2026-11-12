@@ -16249,7 +16249,7 @@ var require_object_inspect = __commonJS({
         var s = "<" + $toLowerCase.call(String(obj.nodeName));
         var attrs = obj.attributes || [];
         for (var i = 0; i < attrs.length; i++) {
-          s += " " + attrs[i].name + "=" + wrapQuotes(quote(attrs[i].value), "double", opts);
+          s += " " + attrs[i].name + "=" + wrapQuotes(quote2(attrs[i].value), "double", opts);
         }
         s += ">";
         if (obj.childNodes && obj.childNodes.length) {
@@ -16352,7 +16352,7 @@ var require_object_inspect = __commonJS({
       var quoteChar = quotes[style];
       return quoteChar + s + quoteChar;
     }
-    function quote(s) {
+    function quote2(s) {
       return $replace.call(String(s), /"/g, "&quot;");
     }
     function canTrustToString(obj) {
@@ -17425,8 +17425,8 @@ var require_get_intrinsic = __commonJS({
         throw new $SyntaxError("invalid intrinsic syntax, expected opening `%`");
       }
       var result = [];
-      $replace(string, rePropName, function(match, number, quote, subString) {
-        result[result.length] = quote ? $replace(subString, reEscapeChar, "$1") : number || match;
+      $replace(string, rePropName, function(match, number, quote2, subString) {
+        result[result.length] = quote2 ? $replace(subString, reEscapeChar, "$1") : number || match;
       });
       return result;
     };
@@ -32644,27 +32644,27 @@ var require_postgres_array = __commonJS({
         }
       }
       parse(nested) {
-        var character, parser, quote;
+        var character, parser, quote2;
         this.consumeDimensions();
         while (!this.isEof()) {
           character = this.nextCharacter();
-          if (character.value === "{" && !quote) {
+          if (character.value === "{" && !quote2) {
             this.dimension++;
             if (this.dimension > 1) {
               parser = new _ArrayParser(this.source.substr(this.position - 1), this.transform);
               this.entries.push(parser.parse(true));
               this.position += parser.position - 2;
             }
-          } else if (character.value === "}" && !quote) {
+          } else if (character.value === "}" && !quote2) {
             this.dimension--;
             if (!this.dimension) {
               this.newEntry();
               if (nested) return this.entries;
             }
           } else if (character.value === '"' && !character.escaped) {
-            if (quote) this.newEntry(true);
-            quote = !quote;
-          } else if (character.value === "," && !quote) {
+            if (quote2) this.newEntry(true);
+            quote2 = !quote2;
+          } else if (character.value === "," && !quote2) {
             this.newEntry();
           } else {
             this.record(character.value);
@@ -39541,7 +39541,7 @@ var init_select2 = __esm({
       dialect;
       cacheConfig = void 0;
       usedTables = /* @__PURE__ */ new Set();
-      constructor({ table, fields, isPartialSelect, session, dialect, withList, distinct }) {
+      constructor({ table, fields, isPartialSelect, session, dialect: dialect2, withList, distinct }) {
         super();
         this.config = {
           withList,
@@ -39552,7 +39552,7 @@ var init_select2 = __esm({
         };
         this.isPartialSelect = isPartialSelect;
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this._ = {
           selectedFields: fields,
           config: this.config
@@ -40219,14 +40219,14 @@ var init_select2 = __esm({
       static [entityKind] = "PgSelect";
       /** @internal */
       _prepare(name) {
-        const { session, config, dialect, joinsNotNullableMap, authToken, cacheConfig, usedTables } = this;
+        const { session, config, dialect: dialect2, joinsNotNullableMap, authToken, cacheConfig, usedTables } = this;
         if (!session) {
           throw new Error("Cannot execute a query on a query builder. Please use a database instance instead.");
         }
         const { fields } = config;
         return tracer.startActiveSpan("drizzle.prepareQuery", () => {
           const fieldsList = orderSelectedFields(fields);
-          const query = session.prepareQuery(dialect.sqlToQuery(this.getSQL()), fieldsList, name, true, void 0, {
+          const query = session.prepareQuery(dialect2.sqlToQuery(this.getSQL()), fieldsList, name, true, void 0, {
             type: "select",
             tables: [...usedTables]
           }, cacheConfig);
@@ -40287,9 +40287,9 @@ var init_query_builder2 = __esm({
       static [entityKind] = "PgQueryBuilder";
       dialect;
       dialectConfig;
-      constructor(dialect) {
-        this.dialect = is(dialect, PgDialect) ? dialect : void 0;
-        this.dialectConfig = is(dialect, PgDialect) ? void 0 : dialect;
+      constructor(dialect2) {
+        this.dialect = is(dialect2, PgDialect) ? dialect2 : void 0;
+        this.dialectConfig = is(dialect2, PgDialect) ? void 0 : dialect2;
       }
       $with = (alias, selection) => {
         const queryBuilder = this;
@@ -40621,6 +40621,50 @@ var init_view = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/pg-core/utils.js
+function getTableConfig(table) {
+  const columns = Object.values(table[Table.Symbol.Columns]);
+  const indexes = [];
+  const checks = [];
+  const primaryKeys = [];
+  const foreignKeys = Object.values(table[PgTable.Symbol.InlineForeignKeys]);
+  const uniqueConstraints = [];
+  const name = table[Table.Symbol.Name];
+  const schema = table[Table.Symbol.Schema];
+  const policies = [];
+  const enableRLS = table[PgTable.Symbol.EnableRLS];
+  const extraConfigBuilder = table[PgTable.Symbol.ExtraConfigBuilder];
+  if (extraConfigBuilder !== void 0) {
+    const extraConfig = extraConfigBuilder(table[Table.Symbol.ExtraConfigColumns]);
+    const extraValues = Array.isArray(extraConfig) ? extraConfig.flat(1) : Object.values(extraConfig);
+    for (const builder of extraValues) {
+      if (is(builder, IndexBuilder)) {
+        indexes.push(builder.build(table));
+      } else if (is(builder, CheckBuilder)) {
+        checks.push(builder.build(table));
+      } else if (is(builder, UniqueConstraintBuilder)) {
+        uniqueConstraints.push(builder.build(table));
+      } else if (is(builder, PrimaryKeyBuilder)) {
+        primaryKeys.push(builder.build(table));
+      } else if (is(builder, ForeignKeyBuilder)) {
+        foreignKeys.push(builder.build(table));
+      } else if (is(builder, PgPolicy)) {
+        policies.push(builder);
+      }
+    }
+  }
+  return {
+    columns,
+    indexes,
+    foreignKeys,
+    checks,
+    primaryKeys,
+    uniqueConstraints,
+    name,
+    schema,
+    policies,
+    enableRLS
+  };
+}
 function extractUsedTable(table) {
   if (is(table, PgTable)) {
     return [table[Schema] ? `${table[Schema]}.${table[Table.Symbol.BaseName]}` : table[Table.Symbol.BaseName]];
@@ -40640,6 +40684,12 @@ var init_utils3 = __esm({
     init_sql();
     init_subquery();
     init_table();
+    init_checks();
+    init_foreign_keys();
+    init_indexes();
+    init_policies();
+    init_primary_keys();
+    init_unique_constraint();
   }
 });
 
@@ -40655,10 +40705,10 @@ var init_delete = __esm({
     init_utils();
     init_utils3();
     PgDeleteBase = class extends QueryPromise {
-      constructor(table, session, dialect, withList) {
+      constructor(table, session, dialect2, withList) {
         super();
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.config = { table, withList };
       }
       static [entityKind] = "PgDelete";
@@ -40765,10 +40815,10 @@ var init_insert = __esm({
     init_utils3();
     init_query_builder2();
     PgInsertBuilder = class {
-      constructor(table, session, dialect, withList, overridingSystemValue_) {
+      constructor(table, session, dialect2, withList, overridingSystemValue_) {
         this.table = table;
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.withList = withList;
         this.overridingSystemValue_ = overridingSystemValue_;
       }
@@ -40818,10 +40868,10 @@ var init_insert = __esm({
       }
     };
     PgInsertBase = class extends QueryPromise {
-      constructor(table, values, session, dialect, withList, select, overridingSystemValue_) {
+      constructor(table, values, session, dialect2, withList, select, overridingSystemValue_) {
         super();
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.config = { table, values, withList, select, overridingSystemValue_ };
       }
       static [entityKind] = "PgInsert";
@@ -40966,10 +41016,10 @@ var init_refresh_materialized_view = __esm({
     init_query_promise();
     init_tracing();
     PgRefreshMaterializedView = class extends QueryPromise {
-      constructor(view, session, dialect) {
+      constructor(view, session, dialect2) {
         super();
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.config = { view };
       }
       static [entityKind] = "PgRefreshMaterializedView";
@@ -41041,10 +41091,10 @@ var init_update = __esm({
     init_view_common();
     init_utils3();
     PgUpdateBuilder = class {
-      constructor(table, session, dialect, withList) {
+      constructor(table, session, dialect2, withList) {
         this.table = table;
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.withList = withList;
       }
       static [entityKind] = "PgUpdateBuilder";
@@ -41064,10 +41114,10 @@ var init_update = __esm({
       }
     };
     PgUpdateBase = class extends QueryPromise {
-      constructor(table, set, session, dialect, withList) {
+      constructor(table, set, session, dialect2, withList) {
         super();
         this.session = session;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.config = { set, table, withList, joins: [] };
         this.tableName = getTableLikeName(table);
         this.joinsNotNullableMap = typeof this.tableName === "string" ? { [this.tableName]: true } : {};
@@ -41333,13 +41383,13 @@ var init_query = __esm({
     init_relations();
     init_tracing();
     RelationalQueryBuilder = class {
-      constructor(fullSchema, schema, tableNamesMap, table, tableConfig, dialect, session) {
+      constructor(fullSchema, schema, tableNamesMap, table, tableConfig, dialect2, session) {
         this.fullSchema = fullSchema;
         this.schema = schema;
         this.tableNamesMap = tableNamesMap;
         this.table = table;
         this.tableConfig = tableConfig;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.session = session;
       }
       static [entityKind] = "PgRelationalQueryBuilder";
@@ -41371,14 +41421,14 @@ var init_query = __esm({
       }
     };
     PgRelationalQuery = class extends QueryPromise {
-      constructor(fullSchema, schema, tableNamesMap, table, tableConfig, dialect, session, config, mode) {
+      constructor(fullSchema, schema, tableNamesMap, table, tableConfig, dialect2, session, config, mode) {
         super();
         this.fullSchema = fullSchema;
         this.schema = schema;
         this.tableNamesMap = tableNamesMap;
         this.table = table;
         this.tableConfig = tableConfig;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.session = session;
         this.config = config;
         this.mode = mode;
@@ -41496,8 +41546,8 @@ var init_db = __esm({
     init_raw();
     init_refresh_materialized_view();
     PgDatabase = class {
-      constructor(dialect, session, schema) {
-        this.dialect = dialect;
+      constructor(dialect2, session, schema) {
+        this.dialect = dialect2;
         this.session = session;
         this._ = schema ? {
           schema: schema.schema,
@@ -41519,7 +41569,7 @@ var init_db = __esm({
               this._.tableNamesMap,
               schema.fullSchema[tableName],
               columns,
-              dialect,
+              dialect2,
               session
             );
           }
@@ -42021,8 +42071,8 @@ var init_session = __esm({
       }
     };
     PgSession = class {
-      constructor(dialect) {
-        this.dialect = dialect;
+      constructor(dialect2) {
+        this.dialect = dialect2;
       }
       static [entityKind] = "PgSession";
       /** @internal */
@@ -42056,8 +42106,8 @@ var init_session = __esm({
       }
     };
     PgTransaction = class extends PgDatabase {
-      constructor(dialect, session, schema, nestedIndex = 0) {
-        super(dialect, session, schema);
+      constructor(dialect2, session, schema, nestedIndex = 0) {
+        super(dialect2, session, schema);
         this.schema = schema;
         this.nestedIndex = nestedIndex;
       }
@@ -42283,8 +42333,8 @@ var init_session2 = __esm({
       }
     };
     NodePgSession = class _NodePgSession extends PgSession {
-      constructor(client, dialect, schema, options = {}) {
-        super(dialect);
+      constructor(client, dialect2, schema, options = {}) {
+        super(dialect2);
         this.client = client;
         this.schema = schema;
         this.options = options;
@@ -42358,7 +42408,7 @@ var init_session2 = __esm({
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/node-postgres/driver.js
 function construct(client, config = {}) {
-  const dialect = new PgDialect({ casing: config.casing });
+  const dialect2 = new PgDialect({ casing: config.casing });
   let logger2;
   if (config.logger === true) {
     logger2 = new DefaultLogger();
@@ -42377,9 +42427,9 @@ function construct(client, config = {}) {
       tableNamesMap: tablesConfig.tableNamesMap
     };
   }
-  const driver = new NodePgDriver(client, dialect, { logger: logger2, cache: config.cache });
+  const driver = new NodePgDriver(client, dialect2, { logger: logger2, cache: config.cache });
   const session = driver.createSession(schema);
-  const db2 = new NodePgDatabase(dialect, session, schema);
+  const db2 = new NodePgDatabase(dialect2, session, schema);
   db2.$client = client;
   db2.$cache = config.cache;
   if (db2.$cache) {
@@ -42416,9 +42466,9 @@ var init_driver = __esm({
     init_utils();
     init_session2();
     NodePgDriver = class {
-      constructor(client, dialect, options = {}) {
+      constructor(client, dialect2, options = {}) {
         this.client = client;
-        this.dialect = dialect;
+        this.dialect = dialect2;
         this.options = options;
       }
       static [entityKind] = "NodePgDriver";
@@ -51723,48 +51773,7 @@ var lesson_rooms_default = router4;
 init_drizzle_orm();
 var import_express5 = __toESM(require_express2(), 1);
 init_src();
-
-// src/lib/homework-schema.ts
-init_src();
-var STATEMENTS = [
-  "ALTER TABLE assignments ADD COLUMN IF NOT EXISTS topic_id text",
-  "ALTER TABLE assignments ADD COLUMN IF NOT EXISTS topic_title text",
-  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS attachment_count integer NOT NULL DEFAULT 0",
-  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS signature text",
-  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS signed_by text",
-  "ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS signed_at timestamptz",
-  `CREATE TABLE IF NOT EXISTS submission_files (
-     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-     submission_id uuid NOT NULL REFERENCES assignment_submissions(id) ON DELETE CASCADE,
-     position integer NOT NULL DEFAULT 0,
-     data text NOT NULL,
-     created_at timestamptz NOT NULL DEFAULT now()
-   )`,
-  "CREATE INDEX IF NOT EXISTS submission_files_submission_idx ON submission_files(submission_id)"
-];
-var pending = null;
-function ensureHomeworkSchema() {
-  if (!pending) {
-    pending = (async () => {
-      for (const statement of STATEMENTS) await pool.query(statement);
-    })().catch((error) => {
-      pending = null;
-      throw error;
-    });
-  }
-  return pending;
-}
-
-// src/routes/schools.ts
 var router5 = (0, import_express5.Router)();
-router5.use(async (_req, _res, next) => {
-  try {
-    await ensureHomeworkSchema();
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
 var IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 var MAX_PHOTOS = 4;
 var MAX_PHOTO_CHARS = 9e5;
@@ -52761,9 +52770,163 @@ router5.get(
 );
 var schools_default = router5;
 
+// src/lib/schema-sync.ts
+init_drizzle_orm();
+init_pg_core();
+init_src();
+init_src();
+var dialect = new PgDialect();
+var quote = (name) => `"${name.replace(/"/g, '""')}"`;
+var literal = (value) => `'${value.replace(/'/g, "''")}'`;
+function defaultSql(column) {
+  if (!column.hasDefault || column.default === void 0) return null;
+  const value = column.default;
+  if (is(value, SQL)) return dialect.sqlToQuery(value).sql;
+  const type = column.getSQLType();
+  if (value === null) return "NULL";
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "string") return literal(value);
+  if (/json/i.test(type)) return `${literal(JSON.stringify(value))}::${type}`;
+  if (Array.isArray(value)) {
+    return value.length === 0 ? `'{}'` : `ARRAY[${value.map((item) => literal(String(item))).join(",")}]::${type}`;
+  }
+  return literal(String(value));
+}
+function columnDefinition(column, forCreate) {
+  const fallback = defaultSql(column);
+  const parts = [quote(column.name), column.getSQLType()];
+  if (forCreate && column.primary) parts.push("PRIMARY KEY");
+  if (column.notNull && (forCreate || fallback !== null)) parts.push("NOT NULL");
+  if (fallback !== null) parts.push(`DEFAULT ${fallback}`);
+  return parts.join(" ");
+}
+async function run(statement, fatal = false) {
+  try {
+    await pool.query(statement);
+  } catch (error) {
+    if (fatal) throw error;
+    logger.warn({ err: error, statement: statement.slice(0, 160) }, "schema sync statement skipped");
+  }
+}
+async function syncEnums() {
+  const enums = Object.values(src_exports).filter((value) => isPgEnum(value));
+  if (!enums.length) return;
+  const { rows } = await pool.query(
+    "SELECT t.typname, e.enumlabel FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid"
+  );
+  const existing = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    if (!existing.has(row.typname)) existing.set(row.typname, /* @__PURE__ */ new Set());
+    existing.get(row.typname).add(row.enumlabel);
+  }
+  for (const item of enums) {
+    const labels = existing.get(item.enumName);
+    if (!labels) {
+      await run(`CREATE TYPE ${quote(item.enumName)} AS ENUM (${item.enumValues.map(literal).join(", ")})`);
+      continue;
+    }
+    for (const value of item.enumValues) {
+      if (!labels.has(value)) await run(`ALTER TYPE ${quote(item.enumName)} ADD VALUE IF NOT EXISTS ${literal(value)}`);
+    }
+  }
+}
+async function syncTables() {
+  const tables = Object.values(src_exports).filter((value) => is(value, PgTable));
+  const { rows } = await pool.query(
+    "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public'"
+  );
+  const existing = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    if (!existing.has(row.table_name)) existing.set(row.table_name, /* @__PURE__ */ new Set());
+    existing.get(row.table_name).add(row.column_name);
+  }
+  const created = [];
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    const known = existing.get(config.name);
+    if (!known) {
+      const definitions = config.columns.map((column) => columnDefinition(column, true));
+      for (const key of config.primaryKeys) {
+        definitions.push(`PRIMARY KEY (${key.columns.map((column) => quote(column.name)).join(", ")})`);
+      }
+      await run(`CREATE TABLE IF NOT EXISTS ${quote(config.name)} (${definitions.join(", ")})`);
+      created.push(config.name);
+      continue;
+    }
+    for (const column of config.columns) {
+      if (!known.has(column.name)) {
+        await run(`ALTER TABLE ${quote(config.name)} ADD COLUMN IF NOT EXISTS ${columnDefinition(column, false)}`);
+      }
+    }
+  }
+  return { created };
+}
+async function syncConstraints() {
+  const tables = Object.values(src_exports).filter((value) => is(value, PgTable));
+  const { rows } = await pool.query("SELECT conname FROM pg_constraint");
+  const constraints = new Set(rows.map((row) => row.conname));
+  const { rows: indexRows } = await pool.query(
+    "SELECT indexname FROM pg_indexes WHERE schemaname = 'public'"
+  );
+  const indexes = new Set(indexRows.map((row) => row.indexname));
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    for (const index2 of config.indexes) {
+      const name = index2.config.name;
+      if (!name || indexes.has(name)) continue;
+      const columns = index2.config.columns.map((column) => is(column, SQL) ? null : quote(column.name)).filter((column) => column !== null);
+      if (!columns.length) continue;
+      await run(
+        `CREATE ${index2.config.unique ? "UNIQUE " : ""}INDEX IF NOT EXISTS ${quote(name)} ON ${quote(config.name)} (${columns.join(", ")})`
+      );
+    }
+    for (const unique of config.uniqueConstraints) {
+      const name = unique.name;
+      if (!name || constraints.has(name) || indexes.has(name)) continue;
+      await run(
+        `CREATE UNIQUE INDEX IF NOT EXISTS ${quote(name)} ON ${quote(config.name)} (${unique.columns.map((column) => quote(column.name)).join(", ")})`
+      );
+    }
+    for (const foreignKey of config.foreignKeys) {
+      const name = foreignKey.getName();
+      if (constraints.has(name)) continue;
+      const reference = foreignKey.reference();
+      const target = getTableConfig(reference.foreignTable).name;
+      const onDelete = foreignKey.onDelete ? ` ON DELETE ${foreignKey.onDelete.toUpperCase()}` : "";
+      await run(
+        `ALTER TABLE ${quote(config.name)} ADD CONSTRAINT ${quote(name)} FOREIGN KEY (${reference.columns.map((column) => quote(column.name)).join(", ")}) REFERENCES ${quote(target)} (${reference.foreignColumns.map((column) => quote(column.name)).join(", ")})${onDelete}`
+      );
+    }
+  }
+}
+var pending = null;
+function ensureSchema() {
+  if (!databaseIsConfigured()) return Promise.resolve();
+  if (!pending) {
+    pending = (async () => {
+      await syncEnums();
+      const { created } = await syncTables();
+      await syncConstraints();
+      if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
+    })().catch((error) => {
+      pending = null;
+      throw error;
+    });
+  }
+  return pending;
+}
+
 // src/routes/index.ts
 var router6 = (0, import_express6.Router)();
 router6.use(health_default);
+router6.use(async (_req, _res, next) => {
+  try {
+    await ensureSchema();
+  } catch (error) {
+    logger.error({ err: error }, "database schema sync failed");
+  }
+  next();
+});
 router6.use(auth_default);
 router6.use(learning_default);
 router6.use(lesson_rooms_default);

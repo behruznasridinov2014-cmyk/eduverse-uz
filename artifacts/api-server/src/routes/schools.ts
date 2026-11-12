@@ -14,7 +14,6 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
-import { ensureHomeworkSchema } from "../lib/homework-schema";
 import {
   ASSIGNMENT_STATUSES,
   GLOBAL_ADMIN_ROLES,
@@ -42,15 +41,6 @@ import {
 } from "../lib/school-access";
 
 const router: IRouter = Router();
-
-router.use(async (_req, _res, next) => {
-  try {
-    await ensureHomeworkSchema();
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
 
 const IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_PHOTOS = 4;

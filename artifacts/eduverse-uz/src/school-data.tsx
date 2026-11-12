@@ -63,7 +63,7 @@ export function describeSchoolError(error: unknown): string {
     }
     return `The school service returned HTTP ${error.status}.`;
   }
-  return 'The school service is unreachable. Local samples remain available offline.';
+  return 'No connection to the school service. Check the internet and try again.';
 }
 
 /**

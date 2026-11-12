@@ -171,15 +171,15 @@ export function SchoolScopeSummary({ school, language }: { school: SchoolData; l
           {school.status === 'ready'
             ? t(
                 language,
-                'Rosters, classes, and assignments come from the authenticated school API.',
-                'Списки, классы и задания загружаются из школьного API.',
-                'Ro‘yxatlar, sinflar va topshiriqlar maktab API’sidan olinadi.',
+                'Rosters, classes and assignments of your school.',
+                'Списки, классы и задания вашей школы.',
+                'Maktabingizning ro‘yxatlari, sinflari va topshiriqlari.',
               )
             : t(
                 language,
-                'Clearly-labelled local samples remain available when the server cannot be reached.',
-                'Явно помеченные локальные образцы доступны, если сервер недоступен.',
-                'Server ishlamasa, aniq belgilangan mahalliy namunalar mavjud.',
+                'School data is not available right now. Refresh in a moment.',
+                'Данные школы сейчас недоступны. Обновите чуть позже.',
+                'Maktab ma’lumotlari hozir mavjud emas. Birozdan so‘ng yangilang.',
               )}
         </span>
       </div>
@@ -306,20 +306,6 @@ export function ServerClassesPanel({
 
   return (
     <>
-      <div className="notice school-connected-notice" style={{ marginBottom: 16 }}>
-        <ShieldCheck size={16} />
-        <span>
-          <b>{t(language, 'Server class records', 'Данные классов с сервера', 'Serverdagi sinf ma’lumotlari')}</b>
-          {' — '}
-          {t(
-            language,
-            'Only classes linked to this account are shown. Rosters and assignments are read from the school API.',
-            'Показаны только классы, связанные с этим аккаунтом. Списки и задания загружаются из школьного API.',
-            'Faqat shu hisobga bog‘langan sinflar ko‘rsatiladi. Ro‘yxat va topshiriqlar maktab API’sidan olinadi.',
-          )}
-        </span>
-      </div>
-
       <div className="grid grid-3">
         {school.classes.map((item) => (
           <button
@@ -763,20 +749,6 @@ export function ServerTeachingPanel({
 
   return (
     <>
-      <div className="notice school-connected-notice" style={{ marginBottom: 16 }}>
-        <ShieldCheck size={16} />
-        <span>
-          <b>{t(language, 'Server teaching workspace', 'Кабинет учителя на сервере', 'Serverdagi o‘qituvchi kabineti')}</b>
-          {' — '}
-          {t(
-            language,
-            'Assignments and reviews below are stored by the school API. The local drafting tools further down stay in this browser.',
-            'Задания и проверки ниже хранятся в школьном API. Инструменты черновиков ниже остаются в браузере.',
-            'Quyidagi topshiriq va tekshiruvlar maktab API’sida saqlanadi. Pastdagi qoralama vositalar brauzerda qoladi.',
-          )}
-        </span>
-      </div>
-
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
 
@@ -994,7 +966,7 @@ export function ServerTeachingPanel({
 
       <Panel style={{ marginTop: 16 }}>
         <SectionHead
-          title={t(language, 'Class assignments on the server', 'Задания класса на сервере', 'Serverdagi sinf topshiriqlari')}
+          title={t(language, 'Class assignments', 'Задания класса', 'Sinf topshiriqlari')}
           detail={activeClass ? `${activeClass.schoolName ?? ''} · ${activeClass.name}` : undefined}
           tag={<span className="tag green">{classAssignments.length}</span>}
         />
@@ -1410,12 +1382,12 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
   return (
     <Panel className="school-admin-panel">
       <SectionHead
-        title={t(language, 'Organizations on the server', 'Организации на сервере', 'Serverdagi tashkilotlar')}
+        title={t(language, 'Schools', 'Школы', 'Maktablar')}
         detail={t(
           language,
-          'Global administrators can create and inspect real school records. The local demo lists below are separate.',
-          'Глобальные администраторы могут создавать и просматривать реальные школы. Локальные демо-списки ниже не связаны с ними.',
-          'Global administratorlar haqiqiy maktab yozuvlarini yaratishi va ko‘rishi mumkin. Pastdagi mahalliy demo ro‘yxatlar alohida.',
+          'Create schools and manage who belongs to them.',
+          'Создавайте школы и управляйте их составом.',
+          'Global administratorlar maktab yozuvlarini yaratishi va ko‘rishi mumkin.',
         )}
         tag={
           <div className="row">
