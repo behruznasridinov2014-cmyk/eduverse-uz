@@ -45,7 +45,7 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { Interactive3d } from './interactive-3d';
+import { TopicModels } from './topic-library';
 import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
@@ -236,6 +236,14 @@ export function LessonRoomPage({
 
 /* -------------------------------------------------------------------------- */
 
+type TestItemView = { prompt: string; choices: string[]; answer: string | null; correct: string | null; explanation: string | null };
+type RankRow = RoomRankEntry & {
+  total?: number;
+  answeredCount?: number;
+  correctCount?: number;
+  items?: Array<{ prompt: string; answer: string | null; correct: string; isCorrect: boolean }>;
+};
+
 function RoomView({
   room,
   participants,
@@ -271,9 +279,10 @@ function RoomView({
   const localVideo = useRef<HTMLVideoElement | null>(null);
   const [chat, setChat] = useState<Array<{ from: string; text: string }>>([]);
   const [chatDraft, setChatDraft] = useState('');
-  const [results, setResults] = useState<{ ranking: RoomRankEntry[] }>({ ranking: [] });
-  const [myTest, setMyTest] = useState<{ question: QuizQuestion | null; answer: string | null } | null>(null);
+  const [results, setResults] = useState<{ ranking: RankRow[] }>({ ranking: [] });
+  const [myTest, setMyTest] = useState<{ items: TestItemView[] } | null>(null);
   const [testAnswer, setTestAnswer] = useState('');
+  const [testIndex, setTestIndex] = useState(0);
   const [testFeedback, setTestFeedback] = useState('');
   const [testStarted, setTestStarted] = useState(false);
   const [topic, setTopic] = useState<LessonTopic | null>(initialTopic);
@@ -378,6 +387,7 @@ function RoomView({
             if (event === 'individual-tests-started' || event === 'test-started') void loadMyTest();
             if (event === 'ended') onRefresh();
             if (event === 'topic') void loadRoomTopic();
+            if (event === 'test-progress') void loadResults();
             continue;
           }
           if (message.kind === 'chat') {
@@ -422,9 +432,13 @@ function RoomView({
   /* ---- Individual AI test for a student ---- */
   const loadMyTest = useCallback(async () => {
     try {
-      const response = await getMyRoomTest(room.id);
-      setMyTest({ question: response.question ?? null, answer: response.answer ?? null });
-      setTestAnswer(response.answer ?? '');
+      const response = await customFetch<{ items?: TestItemView[] }>(`/api/rooms/${room.id}/my-test`, { method: 'GET' });
+      const items = response.items ?? [];
+      setMyTest({ items });
+      const next = items.findIndex((item) => item.answer === null);
+      setTestIndex(next === -1 ? Math.max(0, items.length - 1) : next);
+      setTestAnswer('');
+      if (next === 0) setTestStarted(false);
     } catch {
       /* ignore */
     }
@@ -437,18 +451,28 @@ function RoomView({
   async function submitTest() {
     if (!testAnswer.trim()) return;
     try {
-      const result = await answerMyRoomTest(room.id, { answer: testAnswer });
-      setTestFeedback(result.correct ? copy.correct : copy.incorrect);
-      void loadMyTest();
+      const result = await customFetch<{ items: TestItemView[] }>(`/api/rooms/${room.id}/my-test`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index: testIndex, answer: testAnswer }),
+      });
+      setMyTest({ items: result.items });
     } catch (requestError) {
       setError(describe(requestError, language));
     }
   }
 
+  function nextQuestion() {
+    if (!myTest) return;
+    const next = myTest.items.findIndex((item) => item.answer === null);
+    setTestIndex(next === -1 ? myTest.items.length : next);
+    setTestAnswer('');
+  }
+
   /* ---- Gamified results ---- */
   const loadResults = useCallback(async () => {
     try {
-      const response = await getRoomResults(room.id);
+      const response = await customFetch<{ ranking: RankRow[] }>(`/api/rooms/${room.id}/results`, { method: 'GET' });
       setResults({ ranking: response.ranking });
     } catch {
       /* ignore */
@@ -605,7 +629,7 @@ function RoomView({
                   <h2>{topic.title}</h2>
                 </div>
               </div>
-              <Interactive3d scene={topic.visual3d} height={260} compact language={language} />
+              <TopicModels topic={topic} language={language} />
               <details className="lesson-facts">
                 <summary>{copy.studyFacts}</summary>
                 <div className="stack" style={{ marginTop: 10 }}>
@@ -703,56 +727,78 @@ function RoomView({
             </section>
           )}
 
-          {myTest?.question && (
-            <section className="panel lesson-test">
-              <div className="section-head">
-                <h2><Play size={15} /> {copy.myTest}</h2>
-                {myTest.answer && <span className="tag green"><Check size={12} /> {copy.answered}</span>}
-              </div>
-              {!myTest.answer && !testStarted ? (
-                <div className="test-confirm">
-                  <p className="lesson-test-question">{copy.testConfirm}</p>
-                  <p className="muted">{copy.testConfirmHint}</p>
-                  <div className="row" style={{ gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-                    <button type="button" className="btn primary" onClick={() => setTestStarted(true)}>
+          {myTest && myTest.items.length > 0 && (() => {
+            const items = myTest.items;
+            const total = items.length;
+            const answeredCount = items.filter((item) => item.answer !== null).length;
+            const rightCount = items.filter((item) => item.answer !== null && item.answer === item.correct).length;
+            const current = items[testIndex];
+            return (
+              <section className="panel lesson-test">
+                <div className="section-head">
+                  <h2><Play size={15} /> {copy.myTest}</h2>
+                  <span className="tag">{Math.min(answeredCount + (current && current.answer === null ? 1 : 0), total)} / {total}</span>
+                </div>
+                <div className="test-progress"><span style={{ width: `${(answeredCount / total) * 100}%` }} /></div>
+                {!testStarted && answeredCount === 0 ? (
+                  <div className="test-confirm">
+                    <p className="lesson-test-question">{copy.testConfirm}</p>
+                    <p className="muted">{copy.testConfirmHint}</p>
+                    <button type="button" className="btn primary" style={{ marginTop: 10 }} onClick={() => setTestStarted(true)}>
                       <Check size={14} /> {copy.testReady}
                     </button>
-                    <button type="button" className="btn" onClick={() => setTestFeedback(copy.testNotReady)}>
-                      <X size={14} /> {copy.testNotReadyBtn}
-                    </button>
                   </div>
-                  {testFeedback && testFeedback === copy.testNotReady && (
-                    <div className="callout" style={{ marginTop: 10 }}>{copy.testStudyHint}</div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <p className="lesson-test-question">{myTest.question.prompt}</p>
-                  <div className="stack">
-                    {myTest.question.choices.map((choice) => (
-                      <button
-                        key={choice}
-                        type="button"
-                        className={`answer-choice ${testAnswer === choice ? 'chosen' : ''} ${myTest.answer && choice === myTest.question?.correct ? 'correct' : ''}`}
-                        onClick={() => setTestAnswer(choice)}
-                        disabled={Boolean(myTest.answer)}
-                      >
-                        {choice}
+                ) : !current ? (
+                  <div className="test-done">
+                    <b>{rightCount} / {total}</b>
+                    <p className="muted">{copy.testDone}</p>
+                    <div className="stack">
+                      {items.map((item, index) => (
+                        <div className={`test-review ${item.answer === item.correct ? 'right' : 'wrong'}`} key={index}>
+                          <span>{index + 1}. {item.prompt}</span>
+                          {item.answer !== item.correct && <small>{copy.rightAnswer}: {item.correct}</small>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="lesson-test-question">{current.prompt}</p>
+                    <div className="stack">
+                      {current.choices.map((choice) => (
+                        <button
+                          key={choice}
+                          type="button"
+                          className={`answer-choice ${(current.answer ?? testAnswer) === choice ? 'chosen' : ''} ${current.answer !== null && choice === current.correct ? 'correct' : ''} ${current.answer === choice && choice !== current.correct ? 'wrong' : ''}`}
+                          onClick={() => setTestAnswer(choice)}
+                          disabled={current.answer !== null}
+                        >
+                          {choice}
+                        </button>
+                      ))}
+                    </div>
+                    {current.answer === null ? (
+                      <button type="button" className="btn primary" style={{ marginTop: 10 }} disabled={!testAnswer} onClick={() => void submitTest()}>
+                        <Send size={14} /> {copy.submitAnswer}
                       </button>
-                    ))}
-                  </div>
-                  {!myTest.answer && (
-                    <button type="button" className="btn primary" style={{ marginTop: 10 }} disabled={!testAnswer} onClick={() => void submitTest()}>
-                      <Send size={14} /> {copy.submitAnswer}
-                    </button>
-                  )}
-                </>
-              )}
-              {testFeedback && testFeedback !== copy.testNotReady && <div className="callout" style={{ marginTop: 10 }}>{testFeedback}</div>}
-            </section>
-          )}
+                    ) : (
+                      <>
+                        <div className="callout" style={{ marginTop: 10 }}>
+                          <b>{current.answer === current.correct ? copy.correct : copy.incorrect}</b>
+                          {current.explanation ? <><br />{current.explanation}</> : null}
+                        </div>
+                        <button type="button" className="btn primary" style={{ marginTop: 10 }} onClick={nextQuestion}>
+                          {answeredCount === total ? copy.testFinish : copy.testNext}
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </section>
+            );
+          })()}
 
-          {isHost && results.ranking.length > 0 && (
+          {isHost && results.ranking.some((entry) => (entry.total ?? 0) > 0) && (
             <section className="panel lesson-ranking">
               <div className="section-head">
                 <h2><Trophy size={15} /> {copy.ranking}</h2>
@@ -761,15 +807,29 @@ function RoomView({
                 </button>
               </div>
               <div className="stack">
-                {results.ranking.map((entry, index) => (
-                  <div className={`lesson-rank ${index === 0 ? 'top' : ''}`} key={entry.studentId}>
-                    <span className="rank-pos">
-                      {index === 0 ? <Crown size={15} /> : index + 1}
-                    </span>
-                    <span className="rank-name">{entry.studentName}</span>
-                    <span className="rank-score">{entry.score}</span>
-                  </div>
-                ))}
+                {results.ranking.filter((entry) => (entry.total ?? 0) > 0).map((entry, index) => {
+                  const wrong = (entry.items ?? []).filter((item) => item.answer !== null && !item.isCorrect);
+                  return (
+                    <details className={`lesson-rank ${index === 0 && entry.answered ? 'top' : ''}`} key={entry.studentId}>
+                      <summary>
+                        <span className="rank-pos">{index === 0 && entry.answered ? <Crown size={15} /> : index + 1}</span>
+                        <span className="rank-name">{entry.studentName}</span>
+                        <span className="rank-score">
+                          {entry.answered ? `${entry.correctCount} / ${entry.total}` : `${copy.inProgress} ${entry.answeredCount}/${entry.total}`}
+                        </span>
+                      </summary>
+                      <div className="rank-detail">
+                        {(entry.items ?? []).map((item, itemIndex) => (
+                          <div className={`test-review ${item.answer === null ? 'pending' : item.isCorrect ? 'right' : 'wrong'}`} key={itemIndex}>
+                            <span>{itemIndex + 1}. {item.prompt}</span>
+                            {item.answer !== null && !item.isCorrect && <small>{copy.studentAnswer}: {item.answer} · {copy.rightAnswer}: {item.correct}</small>}
+                          </div>
+                        ))}
+                        {entry.answered && <p className="muted">{wrong.length === 0 ? copy.allRight : copy.needsHelp.replace('{n}', String(wrong.length))}</p>}
+                      </div>
+                    </details>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -940,6 +1000,14 @@ const COPY: Record<Language, Record<string, string>> = {
     startIndividual: 'Старт индивидуальных ИИ-тестов',
     endLesson: 'Завершить урок',
     myTest: 'Мой тест',
+    testDone: 'Тест завершён. Учитель видит ваш результат.',
+    rightAnswer: 'Верно',
+    studentAnswer: 'Ответ',
+    testNext: 'Следующий вопрос',
+    testFinish: 'Показать результат',
+    inProgress: 'Отвечает',
+    allRight: 'Все ответы верные.',
+    needsHelp: 'Ошибок: {n}. Эти вопросы стоит объяснить ещё раз.',
     answered: 'Отвечено',
     submitAnswer: 'Отправить ответ',
     testConfirm: 'Вы входите в индивидуальный тест по теме. Вопрос только для вас.',
@@ -995,6 +1063,14 @@ const COPY: Record<Language, Record<string, string>> = {
     startIndividual: 'Individual AI testlarni boshlash',
     endLesson: 'Darsni tugatish',
     myTest: 'Mening testim',
+    testDone: 'Test tugadi. O‘qituvchi natijangizni ko‘radi.',
+    rightAnswer: 'To‘g‘ri',
+    studentAnswer: 'Javob',
+    testNext: 'Keyingi savol',
+    testFinish: 'Natijani ko‘rish',
+    inProgress: 'Javob bermoqda',
+    allRight: 'Barcha javoblar to‘g‘ri.',
+    needsHelp: 'Xatolar: {n}. Bu savollarni yana tushuntirish kerak.',
     answered: 'Javob berildi',
     submitAnswer: 'Javobni yuborish',
     testConfirm: 'Siz mavzu bo‘yicha individual testga kirmoqdasiz. Savol faqat siz uchun.',
@@ -1050,6 +1126,14 @@ const COPY: Record<Language, Record<string, string>> = {
     startIndividual: 'Start individual AI tests',
     endLesson: 'End lesson',
     myTest: 'My test',
+    testDone: 'Test finished. Your teacher sees the result.',
+    rightAnswer: 'Correct',
+    studentAnswer: 'Answer',
+    testNext: 'Next question',
+    testFinish: 'Show result',
+    inProgress: 'Answering',
+    allRight: 'All answers are correct.',
+    needsHelp: 'Mistakes: {n}. These questions need another explanation.',
     answered: 'Answered',
     submitAnswer: 'Submit answer',
     testConfirm: 'You are entering your individual topic test. The question is for you only.',

@@ -147,6 +147,8 @@ export const lessonRoomParticipantsTable = pgTable(
     testExplanation: text("test_explanation").notNull().default(""),
     testAnswer: text("test_answer"),
     testScore: integer("test_score"),
+    // Several questions per student: [{prompt, choices, correct, explanation, answer}]
+    testItems: jsonb("test_items").notNull().default([]),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
   },

@@ -522,6 +522,11 @@ const MODEL_QUERIES: Record<string, string> = {
   water: 'ocean water waves',
 };
 
+/** The same web 3D models, reusable in the live lesson. */
+export function TopicModels({ topic, language }: { topic: LessonTopic; language: Language }) {
+  return <Models3dPanel topic={topic} copy={COPY[language]} />;
+}
+
 function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
   // The kind of the 3D object is an English keyword ("globe", "ocean",
   // "volcano"...) - it finds far better models than the Russian title.
@@ -574,7 +579,7 @@ function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
     return (
       <section className="panel reveal-up">
         <div className="section-head">
-          <h2><Box size={16} /> 3D-модели из интернета</h2>
+          <h2><Box size={16} /> {copy.modelsTitle}</h2>
         </div>
         <p className="muted">{copy.modelsEmpty}</p>
         {searchUrl && (
@@ -591,7 +596,7 @@ function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
     <section className="panel reveal-up topic-models3d">
       <div className="section-head">
         <div>
-          <h2><Box size={16} /> 3D-модели из интернета</h2>
+          <h2><Box size={16} /> {copy.modelsTitle}</h2>
           <p className="muted">{copy.modelsHint}</p>
         </div>
       </div>

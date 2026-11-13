@@ -32,7 +32,6 @@ import type { AppLanguage } from './localization';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
-import { TwoFactorSettings } from './two-factor-settings';
 
 type AuthCopy = {
   signIn: string;
@@ -1095,40 +1094,37 @@ export function ProfilePage({
     }
   }
 
-  const locale = language === 'Uzbek' ? 'uz-UZ' : language === 'Русский' ? 'ru-RU' : 'en-US';
+  const locale = language === 'Русский' ? 'ru-RU' : 'en-GB';
+  const text = (uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
   return (
-    <section className="profile-page" data-locale-preserve="true">
-      <div className="profile-heading">
+    <section className="profile" data-locale-preserve="true">
+      <div className="profile-head">
+        <span className="avatar">{user.username.slice(0, 1).toLocaleUpperCase()}</span>
         <div>
-          <div className="auth-eyebrow">EDUVERSE-UZ</div>
-          <h1>{copy.profile}</h1>
-          <p>{copy.accountDetails}</p>
+          <h1>{user.username}</h1>
+          <p>{ROLE_LABELS[language][user.role]}</p>
         </div>
-        <div className="profile-avatar">{user.username.slice(0, 1).toLocaleUpperCase(locale)}</div>
       </div>
-      <div className="profile-card">
-        <div className="profile-identity">
-          <div className="profile-avatar large">{user.username.slice(0, 1).toLocaleUpperCase(locale)}</div>
-          <div><h2>{user.username}</h2><p>@{user.login}</p></div>
-          <span className="profile-status"><span/> {copy.profile}</span>
+      <div className="panel">
+        <h2>{text('Hisob ma’lumotlari', 'Данные аккаунта', 'Account')}</h2>
+        <div className="profile-rows">
+          <div className="profile-row"><span>{copy.username}</span><b>{user.username}</b></div>
+          <div className="profile-row"><span>{copy.login}</span><b>{user.login}</b></div>
+          <div className="profile-row"><span>{copy.role}</span><b>{ROLE_LABELS[language][user.role]}</b></div>
+          <div className="profile-row"><span>{copy.createdAt}</span><b>{new Date(user.createdAt).toLocaleDateString(locale, { dateStyle: 'long' })}</b></div>
         </div>
-        <div className="profile-details">
-          <div><span>{copy.username}</span><b>{user.username}</b></div>
-          <div><span>{copy.login}</span><b>{user.login}</b></div>
-          <div><span>{copy.createdAt}</span><b>{new Date(user.createdAt).toLocaleDateString(locale, { dateStyle: 'long' })}</b></div>
-          <div><span>{copy.role}</span><b>{ROLE_LABELS[language][user.role]}</b></div>
-        </div>
-        <TwoFactorSettings language={language} />
-        <p className="auth-note profile-note">{copy.emailNotice}</p>
-        {error && <FormError>{error}</FormError>}
-        <div className="profile-actions">
-          <QrScannerButton language={language} className="btn" />
-          <Link href="/" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>
-          <button className="btn danger" onClick={() => void signOut()} disabled={auth.isSubmitting}>
-            {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={16}/> : <LogOut size={16}/>}
-            {copy.logout}
-          </button>
-        </div>
+      </div>
+      <div className="panel">
+        <h2>{text('Boshqa qurilmada kirish', 'Вход на другом устройстве', 'Sign in on another device')}</h2>
+        <p className="muted">{text('Kompyuterdagi kirish sahifasida QR kodni oching va uni shu telefon bilan skanerlang.', 'Откройте QR-код на странице входа на компьютере и отсканируйте его этим телефоном.', 'Open the QR code on the sign-in page of a computer and scan it with this phone.')}</p>
+        <div className="profile-buttons"><QrScannerButton language={language} className="btn" /></div>
+      </div>
+      {error && <FormError>{error}</FormError>}
+      <div className="profile-buttons">
+        <button className="btn danger" onClick={() => void signOut()} disabled={auth.isSubmitting}>
+          {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={16}/> : <LogOut size={16}/>}
+          {copy.logout}
+        </button>
       </div>
     </section>
   );

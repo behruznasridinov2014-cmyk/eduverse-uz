@@ -27,15 +27,16 @@ import {
   Minus, Monitor, MoreHorizontal, Pen, Plus, Presentation, RotateCcw, Save, Search, Send,
   Settings, Shapes, ShieldCheck, Sparkles, Timer, Trash2, Undo2, Upload, Users, Video,
   Wifi, X, ZoomIn, ZoomOut,
+  Atom, BookMarked, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Mavzular va 3D','Attendance':'Davomat',Homework:'Uy vazifalari'},
-  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Темы и 3D','Attendance':'Давомат',Homework:'Домашние задания'},
-  English:{Overview:'Overview',Classes:'Classes','Topics & 3D':'Topics & 3D','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
+  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari'},
+  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания'},
+  English:{Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -69,6 +70,14 @@ function App(){
   const userRole=auth.user?.role;
   const visible=userRole?ROLE_NAV[userRole].map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
+  const [langChanging,setLangChanging]=useState(false);
+  function changeLang(value:Lang){
+    if(value===lang)return;
+    setLangChanging(true);
+    // The text is swapped in the middle of the fade, so the change feels smooth.
+    window.setTimeout(()=>setLang(value),300);
+    window.setTimeout(()=>setLangChanging(false),950);
+  }
   function navigate(href:string){setLocation(href);setMobileOpen(false)}
   const routeMatch=location.match(/^\/read\/([^/]+)/);const book=routeMatch?BOOKS.find(b=>b.id===routeMatch[1]):undefined;
   const lessonRoomMatch=location.match(/^\/lesson(?:\/([^/]+))?/);const lessonTopicId=lessonRoomMatch?.[1];
@@ -106,7 +115,7 @@ function App(){
   const pageTitle=location==='/profile'?authCopy(lang).profile:book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
   const membership=school.memberships[0];
   const notice=auth.accountNotice;
-  return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`}>
+  return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`} data-lang-changing={langChanging?'':undefined}>
     <aside className="sidebar" aria-label="EDUVERSE">
       <button className="sidebar-close" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}><X size={18}/></button>
       <Link href="/dashboard" className="brand" onClick={()=>setMobileOpen(false)}>
@@ -132,7 +141,8 @@ function App(){
         <div className="top-actions">
           {auth.status==='offline'&&<button type="button" className="tag gold" onClick={()=>void auth.refreshSession()}>{lang==='Uzbek'?'Internet yo‘q':lang==='Русский'?'Нет связи':'Offline'}</button>}
           <div className="lang-switch" role="group" aria-label="Language">
-            {(['Uzbek','Русский','English'] as Lang[]).map(value=><button key={value} type="button" className={lang===value?'active':''} onClick={()=>setLang(value)}>{value==='Uzbek'?'UZ':value==='Русский'?'RU':'EN'}</button>)}
+            <span className="lang-thumb" aria-hidden="true" style={{transform:`translateX(${(['Uzbek','Русский','English'] as Lang[]).indexOf(lang)*40}px)`}}/>
+            {(['Uzbek','Русский','English'] as Lang[]).map(value=><button key={value} type="button" className={lang===value?'active':''} onClick={()=>changeLang(value)}>{value==='Uzbek'?'UZ':value==='Русский'?'RU':'EN'}</button>)}
           </div>
           {auth.user&&<Link href="/profile" className="top-avatar" aria-label={auth.user.username} title={auth.user.username}><span className="avatar">{auth.user.username.slice(0,1).toLocaleUpperCase()}</span></Link>}
         </div>
@@ -169,17 +179,17 @@ function App(){
  }
 type NavItem={label:string;href:string;icon:typeof Home;tone:string};
 const NAV_ITEMS:NavItem[]=[
-  {label:'Overview',href:'/dashboard',icon:Home,tone:'slate'},
-  {label:'Lesson room',href:'/lesson',icon:Video,tone:'blue'},
-  {label:'Topics & 3D',href:'/topics',icon:Sparkles,tone:'violet'},
-  {label:'Attendance',href:'/attendance',icon:ClipboardCheck,tone:'green'},
-  {label:'Teacher workspace',href:'/teacher',icon:GraduationCap,tone:'orange'},
-  {label:'Homework',href:'/classes',icon:FileText,tone:'orange'},
+  {label:'Overview',href:'/dashboard',icon:LayoutDashboard,tone:'slate'},
+  {label:'Lesson room',href:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:'Topics & 3D',href:'/topics',icon:Atom,tone:'violet'},
+  {label:'Attendance',href:'/attendance',icon:CalendarCheck2,tone:'green'},
+  {label:'Teacher workspace',href:'/teacher',icon:NotebookPen,tone:'orange'},
+  {label:'Homework',href:'/classes',icon:NotebookPen,tone:'orange'},
   {label:'Classes',href:'/classes',icon:Users,tone:'teal'},
-  {label:'Interactive board',href:'/board',icon:Presentation,tone:'pink'},
-  {label:'Textbook library',href:'/library',icon:Library,tone:'teal'},
-  {label:'Family view',href:'/parent',icon:Users,tone:'orange'},
-  {label:'School insights',href:'/school',icon:Activity,tone:'blue'},
+  {label:'Interactive board',href:'/board',icon:PenTool,tone:'pink'},
+  {label:'Textbook library',href:'/library',icon:BookMarked,tone:'teal'},
+  {label:'Family view',href:'/parent',icon:UserRound,tone:'orange'},
+  {label:'School insights',href:'/school',icon:School,tone:'blue'},
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
@@ -193,9 +203,9 @@ const ROLE_NAV:Record<User['role'],string[]>={
   platform_superadmin:['Overview','Administration'],
 };
 const NAV_SHORT:Record<Lang,Record<string,string>>={
-  Uzbek:{Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'3D','Attendance':'Davomat','Teacher workspace':'Vazifalar',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
-  Русский:{Overview:'Главная','Lesson room':'Урок','Topics & 3D':'3D','Attendance':'Давомат','Teacher workspace':'Задания',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
-  English:{Overview:'Home','Lesson room':'Lesson','Topics & 3D':'3D','Attendance':'Attendance','Teacher workspace':'Tasks',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
+  Uzbek:{Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Attendance':'Davomat','Teacher workspace':'Vazifalar',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
+  Русский:{Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Attendance':'Давомат','Teacher workspace':'Задания',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
+  English:{Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Attendance':'Attendance','Teacher workspace':'Tasks',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
 };
 function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
 function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
@@ -210,32 +220,32 @@ type HomeAction={label:Record<Lang,string>;description:Record<Lang,string>;path:
 const L=(uz:string,ru:string,en:string):Record<Lang,string>=>({Uzbek:uz,Русский:ru,English:en});
 const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
  student:[
-  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi bergan kodni kiriting.','Введите код от учителя.','Enter the code from your teacher.'),path:'/lesson',icon:Video,tone:'blue'},
-  {label:L('Mavzular va 3D','Темы и 3D','Topics & 3D'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/topics',icon:Sparkles,tone:'violet'},
-  {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:FileText,tone:'orange'},
-  {label:L('Darsliklar','Учебники','Textbooks'),description:L('7-sinf darsliklari va daftarlar.','Учебники и тетради 7 класса.','Grade 7 textbooks and workbooks.'),path:'/library',icon:Library,tone:'teal'},
+  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi bergan kodni kiriting.','Введите код от учителя.','Enter the code from your teacher.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/topics',icon:Atom,tone:'violet'},
+  {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
+  {label:L('Darsliklar','Учебники','Textbooks'),description:L('7-sinf darsliklari va daftarlar.','Учебники и тетради 7 класса.','Grade 7 textbooks and workbooks.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  teacher:[
-  {label:L('Onlayn dars boshlash','Начать онлайн-урок','Start a lesson'),description:L('Kamera, ovoz, ekran, chat va testlar.','Камера, звук, экран, чат и тесты.','Camera, sound, screen, chat and tests.'),path:'/lesson',icon:Video,tone:'blue'},
-  {label:L('Mavzu va 3D yaratish','Создать тему и 3D','Create a topic'),description:L('Fan va mavzuni yozing — slaydlar, 3D va test tayyor.','Напишите тему — слайды, 3D и тест готовы.','Type a topic — slides, 3D and a quiz are ready.'),path:'/topics',icon:Sparkles,tone:'violet'},
-  {label:L('Davomat','Давомат','Attendance'),description:L('Kim kelganini bir bosishda belgilang.','Отметьте присутствие в один клик.','Mark attendance in one click.'),path:'/attendance',icon:ClipboardCheck,tone:'green'},
-  {label:L('Uy vazifasi berish','Выдать задание','Assign homework'),description:L('Topshiriq bering, daftar rasmlarini tekshiring.','Выдайте задание и проверьте фото тетрадей.','Assign work and check notebook photos.'),path:'/teacher',icon:GraduationCap,tone:'orange'},
-  {label:L('Interaktiv doska','Интерактивная доска','Board'),description:L('Chizing va tushuntiring.','Рисуйте и объясняйте.','Draw and explain.'),path:'/board',icon:Presentation,tone:'pink'},
-  {label:L('Darsliklar','Учебники','Textbooks'),description:L('Darslikni ochib, sinfga ko‘rsating.','Откройте учебник и покажите классу.','Open a textbook and show the class.'),path:'/library',icon:Library,tone:'teal'},
+  {label:L('Onlayn dars boshlash','Начать онлайн-урок','Start a lesson'),description:L('Kamera, ovoz, ekran, chat va testlar.','Камера, звук, экран, чат и тесты.','Camera, sound, screen, chat and tests.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('Fan va mavzuni yozing — slaydlar, 3D va test tayyor.','Напишите тему — слайды, 3D и тест готовы.','Type a topic — slides, 3D and a quiz are ready.'),path:'/topics',icon:Atom,tone:'violet'},
+  {label:L('Davomat','Давомат','Attendance'),description:L('Kim kelganini bir bosishda belgilang.','Отметьте присутствие в один клик.','Mark attendance in one click.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
+  {label:L('Uy vazifasi berish','Выдать задание','Assign homework'),description:L('Topshiriq bering, daftar rasmlarini tekshiring.','Выдайте задание и проверьте фото тетрадей.','Assign work and check notebook photos.'),path:'/teacher',icon:NotebookPen,tone:'orange'},
+  {label:L('Interaktiv doska','Интерактивная доска','Board'),description:L('Chizing va tushuntiring.','Рисуйте и объясняйте.','Draw and explain.'),path:'/board',icon:PenTool,tone:'pink'},
+  {label:L('Darsliklar','Учебники','Textbooks'),description:L('Darslikni ochib, sinfga ko‘rsating.','Откройте учебник и покажите классу.','Open a textbook and show the class.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  parent:[
   {label:L('Farzandim','Мой ребёнок','My child'),description:L('Baholar va uy vazifalari.','Оценки и домашние задания.','Grades and homework.'),path:'/parent',icon:Users,tone:'orange'},
-  {label:L('Darsliklar','Учебники','Textbooks'),description:L('Birga o‘qish uchun.','Читать вместе с ребёнком.','Read together.'),path:'/library',icon:Library,tone:'teal'},
+  {label:L('Darsliklar','Учебники','Textbooks'),description:L('Birga o‘qish uchun.','Читать вместе с ребёнком.','Read together.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  school_director:[
-  {label:L('Maktab boshqaruvi','Управление школой','School'),description:L('Sinflar, o‘qituvchilar va o‘quvchilar.','Классы, учителя и ученики.','Classes, teachers and students.'),path:'/school',icon:Activity,tone:'blue'},
+  {label:L('Maktab boshqaruvi','Управление школой','School'),description:L('Sinflar, o‘qituvchilar va o‘quvchilar.','Классы, учителя и ученики.','Classes, teachers and students.'),path:'/school',icon:School,tone:'blue'},
   {label:L('Sinflar','Классы','Classes'),description:L('Sinf ro‘yxatlari va topshiriqlar.','Списки классов и задания.','Class lists and assignments.'),path:'/classes',icon:Users,tone:'teal'},
-  {label:L('Davomat','Давомат','Attendance'),description:L('Sinflar bo‘yicha davomat.','Посещаемость по классам.','Attendance by class.'),path:'/attendance',icon:ClipboardCheck,tone:'green'},
+  {label:L('Davomat','Давомат','Attendance'),description:L('Sinflar bo‘yicha davomat.','Посещаемость по классам.','Attendance by class.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
  ],
  school_admin:[
-  {label:L('Maktab boshqaruvi','Управление школой','School'),description:L('Sinflar, o‘qituvchilar va o‘quvchilar.','Классы, учителя и ученики.','Classes, teachers and students.'),path:'/school',icon:Activity,tone:'blue'},
+  {label:L('Maktab boshqaruvi','Управление школой','School'),description:L('Sinflar, o‘qituvchilar va o‘quvchilar.','Классы, учителя и ученики.','Classes, teachers and students.'),path:'/school',icon:School,tone:'blue'},
   {label:L('Sinflar','Классы','Classes'),description:L('Sinf ro‘yxatlari va topshiriqlar.','Списки классов и задания.','Class lists and assignments.'),path:'/classes',icon:Users,tone:'teal'},
-  {label:L('Davomat','Давомат','Attendance'),description:L('Sinflar bo‘yicha davomat.','Посещаемость по классам.','Attendance by class.'),path:'/attendance',icon:ClipboardCheck,tone:'green'},
+  {label:L('Davomat','Давомат','Attendance'),description:L('Sinflar bo‘yicha davomat.','Посещаемость по классам.','Attendance by class.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
  ],
  education_admin:[{label:L('Maktablar','Школы','Schools'),description:L('Maktablarni yarating va boshqaring.','Создавайте школы и управляйте ими.','Create and manage schools.'),path:'/admin',icon:Settings,tone:'slate'}],
  ministry_admin:[{label:L('Maktablar','Школы','Schools'),description:L('Maktablarni yarating va boshqaring.','Создавайте школы и управляйте ими.','Create and manage schools.'),path:'/admin',icon:Settings,tone:'slate'}],
@@ -297,6 +307,17 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
      <ArrowRight className="home-go"/>
     </button>)}
    </div>
+  </>}
+  {user.role==='student'&&school.assignments.length>0&&<>
+   <h2 className="home-section-title">{language==='Uzbek'?'Mening baholarim':language==='Русский'?'Мои оценки':'My grades'}</h2>
+   <div className="panel"><table className="grade-table"><thead><tr><th>{language==='Uzbek'?'Topshiriq':language==='Русский'?'Задание':'Assignment'}</th><th>{language==='Uzbek'?'Holat':language==='Русский'?'Статус':'Status'}</th><th>{language==='Uzbek'?'Baho':language==='Русский'?'Оценка':'Grade'}</th></tr></thead><tbody>
+    {school.assignments.slice(0,8).map(item=>{
+     const submission=item.mySubmission;
+     const score=typeof submission?.score==='number'?submission.score:null;
+     const state=!submission?L('Bajarilmagan','Не сдано','Not submitted'):score!==null?L('Tekshirildi','Проверено','Checked'):L('Tekshirilmoqda','На проверке','In review');
+     return <tr key={item.id}><td><b>{item.title}</b><br/><span className="muted">{item.subject}</span></td><td>{state[language]}</td><td>{score!==null?<span className="grade-mark">{Math.max(2,Math.min(5,Math.round(score/20)))}</span>:'—'}</td></tr>;
+    })}
+   </tbody></table></div>
   </>}
   {steps&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Qanday ishlaydi':language==='Русский'?'Как это работает':'How it works'}</h2>
@@ -384,7 +405,7 @@ function ClassesPage({school,user,language,onOpen}:{school:SchoolData;user:User;
 }
 function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;user:User;language:Lang;goBoard:()=>void;onOpen:(path:string)=>void}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Homework and classes','Задания и классы','Vazifalar va sinflar')} subtitle={text('Assign homework tied to a topic, check notebook photos, grade and sign.','Выдавайте задания по теме, проверяйте фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini tekshiring, baholang va imzo qo‘ying.')}><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles/> {text('Topics & 3D','Темы и 3D','Mavzular va 3D')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Board','Доска','Doska')}</button></PageHeading>
+ return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Homework and classes','Задания и классы','Vazifalar va sinflar')} subtitle={text('Assign homework tied to a topic, check notebook photos, grade and sign.','Выдавайте задания по теме, проверяйте фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini tekshiring, baholang va imzo qo‘ying.')}><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles/> {text('Lesson topic','Тема урока','Dars mavzusi')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Board','Доска','Doska')}</button></PageHeading>
   {school.status==='ready'&&school.hasServerClasses
    ?<div className="page-stack"><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
    :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet. Ask your school administrator to add you to a class.','К вашему аккаунту ещё не привязан класс. Попросите администратора школы добавить вас в класс.','Hisobingizga hali sinf biriktirilmagan. Maktab administratoridan so‘rang.')}</span></div>}</>;

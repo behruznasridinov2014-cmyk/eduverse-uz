@@ -42,7 +42,36 @@ function columnDefinition(column: AnyPgColumn, forCreate: boolean): string {
   // A NOT NULL column can only be added to a table with rows when it has a default.
   if (column.notNull && (forCreate || fallback !== null)) parts.push("NOT NULL");
   if (fallback !== null) parts.push(`DEFAULT ${fallback}`);
+  const identity = identityOf(column);
+  if (identity) parts.push(`GENERATED ${identity} AS IDENTITY`);
   return parts.join(" ");
+}
+
+/** "ALWAYS" / "BY DEFAULT" for identity columns (auto-numbered cursors). */
+function identityOf(column: AnyPgColumn): string | null {
+  const identity = (column as unknown as { generatedIdentity?: { type?: string } }).generatedIdentity;
+  if (!identity) return null;
+  return identity.type === "byDefault" ? "BY DEFAULT" : "ALWAYS";
+}
+
+/**
+ * A table created by an older version of this sync has identity columns as
+ * plain NOT NULL numbers, so every insert fails. Empty tables are repaired.
+ */
+async function syncIdentities(): Promise<void> {
+  const tables = (Object.values(schema) as unknown[]).filter((value): value is PgTable => is(value, PgTable));
+  const { rows } = await pool.query<{ table_name: string; column_name: string }>(
+    "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND is_identity = 'YES'",
+  );
+  const existing = new Set(rows.map((row) => `${row.table_name}.${row.column_name}`));
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    for (const column of config.columns) {
+      const identity = identityOf(column);
+      if (!identity || existing.has(`${config.name}.${column.name}`)) continue;
+      await run(`ALTER TABLE ${quote(config.name)} ALTER COLUMN ${quote(column.name)} ADD GENERATED ${identity} AS IDENTITY`);
+    }
+  }
 }
 
 async function run(statement: string, fatal = false): Promise<void> {
@@ -165,6 +194,7 @@ export function ensureSchema(): Promise<void> {
     pending = (async () => {
       await syncEnums();
       const { created } = await syncTables();
+      await syncIdentities();
       await syncConstraints();
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {

@@ -42882,6 +42882,8 @@ var init_learning = __esm({
         testExplanation: text("test_explanation").notNull().default(""),
         testAnswer: text("test_answer"),
         testScore: integer("test_score"),
+        // Several questions per student: [{prompt, choices, correct, explanation, answer}]
+        testItems: jsonb("test_items").notNull().default([]),
         joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
         leftAt: timestamp("left_at", { withTimezone: true })
       },
@@ -51483,6 +51485,32 @@ router4.put(
     res.json({ topic });
   }
 );
+function readItems(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => isRecord3(item) && typeof item.prompt === "string" && Array.isArray(item.choices) && typeof item.correct === "string");
+}
+function shuffled(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = randomBytes5(1)[0] % (i + 1);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+function studentView(items) {
+  return items.map((item) => ({
+    prompt: item.prompt,
+    choices: item.choices,
+    answer: item.answer ?? null,
+    correct: item.answer ? item.correct : null,
+    explanation: item.answer ? item.explanation : null
+  }));
+}
+function scoreOf(items) {
+  if (!items.length) return 0;
+  const right = items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length;
+  return Math.round(right / items.length * 100);
+}
 router4.get(
   "/rooms/:roomId/my-test",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
@@ -51499,15 +51527,13 @@ router4.get(
         eq(lessonRoomParticipantsTable.userId, viewer.id)
       )
     ).limit(1);
+    const items = readItems(me?.testItems);
+    const done = items.length > 0 && items.every((item) => item.answer !== null);
     res.json({
-      question: me && me.testPrompt ? {
-        prompt: me.testPrompt,
-        choices: me.testChoices,
-        correct: me.testCorrect,
-        explanation: me.testExplanation
-      } : null,
-      answer: me?.testAnswer ?? null,
-      score: me?.testScore ?? null
+      items: studentView(items),
+      question: null,
+      answer: done ? "done" : null,
+      score: done ? scoreOf(items) : null
     });
   }
 );
@@ -51531,15 +51557,25 @@ router4.put(
       res.status(409).json({ error: "Join the lesson before answering the test." });
       return;
     }
+    const items = readItems(me.testItems);
     const answer = readString2(req.body, "answer", 300);
-    if (!answer) {
+    const indexRaw = isRecord3(req.body) ? Number(req.body.index ?? 0) : 0;
+    const index2 = Number.isInteger(indexRaw) ? indexRaw : 0;
+    const item = items[index2];
+    if (!answer || !item) {
       res.status(400).json({ error: "An answer is required." });
       return;
     }
-    const correct = me.testCorrect && answer.trim() === me.testCorrect.trim();
-    const score = correct ? 100 : 0;
-    await db.update(lessonRoomParticipantsTable).set({ testAnswer: answer, testScore: score }).where(eq(lessonRoomParticipantsTable.id, me.id));
-    res.json({ correct, score, explanation: me.testExplanation });
+    if (item.answer !== null) {
+      res.status(409).json({ error: "This question is already answered." });
+      return;
+    }
+    item.answer = answer;
+    const correct = answer.trim() === item.correct.trim();
+    const done = items.every((entry) => entry.answer !== null);
+    await db.update(lessonRoomParticipantsTable).set({ testItems: items, testAnswer: done ? "done" : null, testScore: scoreOf(items) }).where(eq(lessonRoomParticipantsTable.id, me.id));
+    await appendSignal(room.id, { from: viewer.id, to: room.hostId, kind: "control", payload: { event: "test-progress" } });
+    res.json({ correct, score: scoreOf(items), explanation: item.explanation, items: studentView(items), done });
   }
 );
 router4.post(
@@ -51611,20 +51647,19 @@ router4.post(
       res.status(409).json({ error: "No students have joined this lesson yet." });
       return;
     }
-    const { generateStudentQuestion: generateStudentQuestion2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const { generateTopicTest: generateTopicTest2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const pool2 = await generateTopicTest2(room.subject || "\u0413\u0435\u043E\u0433\u0440\u0430\u0444\u0438\u044F", 7, room.title, 8);
+    const perStudent = Math.min(5, pool2.length);
     let assigned = 0;
     for (const student of students) {
-      const question = await generateStudentQuestion2(room.subject || "\u0413\u0435\u043E\u0433\u0440\u0430\u0444\u0438\u044F", room.title, student.username, {
-        difficulty: "core"
-      });
-      await db.update(lessonRoomParticipantsTable).set({
-        testPrompt: question.prompt,
-        testChoices: question.choices,
-        testCorrect: question.correct,
-        testExplanation: question.explanation,
-        testAnswer: null,
-        testScore: null
-      }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
+      const items = shuffled(pool2).slice(0, perStudent).map((question) => ({
+        prompt: question.prompt,
+        choices: shuffled(question.choices),
+        correct: question.correct,
+        explanation: question.explanation,
+        answer: null
+      }));
+      await db.update(lessonRoomParticipantsTable).set({ testItems: items, testAnswer: null, testScore: null }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
       assigned += 1;
     }
     await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
@@ -51650,9 +51685,28 @@ router4.get(
       username: usersTable.username,
       score: lessonRoomParticipantsTable.testScore,
       answer: lessonRoomParticipantsTable.testAnswer,
-      role: lessonRoomParticipantsTable.role
+      role: lessonRoomParticipantsTable.role,
+      items: lessonRoomParticipantsTable.testItems
     }).from(lessonRoomParticipantsTable).innerJoin(usersTable, eq(lessonRoomParticipantsTable.userId, usersTable.id)).where(eq(lessonRoomParticipantsTable.roomId, room.id));
-    const students = rows.filter((r) => r.role === "student").map((r) => ({ studentId: r.userId, studentName: r.username, score: r.score ?? 0, answered: r.answer !== null })).sort((a, b) => b.score - a.score);
+    const detailed = room.hostId === viewer.id || await canManage2(viewer.id, viewer.role, room.classId);
+    const students = rows.filter((r) => r.role === "student").map((r) => {
+      const items = readItems(r.items);
+      return {
+        studentId: r.userId,
+        studentName: r.username,
+        score: r.score ?? 0,
+        answered: r.answer !== null,
+        total: items.length,
+        answeredCount: items.filter((item) => item.answer !== null).length,
+        correctCount: items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length,
+        items: detailed ? items.map((item) => ({
+          prompt: item.prompt,
+          answer: item.answer,
+          correct: item.correct,
+          isCorrect: item.answer !== null && item.answer.trim() === item.correct.trim()
+        })) : []
+      };
+    }).sort((a, b) => b.score - a.score);
     const attempts = await db.select().from(quizAttemptsTable).where(eq(quizAttemptsTable.roomId, room.id)).orderBy(desc(quizAttemptsTable.score)).limit(3);
     res.json({ room, ranking: students, bonusWinners: attempts });
   }
@@ -52856,7 +52910,29 @@ function columnDefinition(column, forCreate) {
   if (forCreate && column.primary) parts.push("PRIMARY KEY");
   if (column.notNull && (forCreate || fallback !== null)) parts.push("NOT NULL");
   if (fallback !== null) parts.push(`DEFAULT ${fallback}`);
+  const identity = identityOf(column);
+  if (identity) parts.push(`GENERATED ${identity} AS IDENTITY`);
   return parts.join(" ");
+}
+function identityOf(column) {
+  const identity = column.generatedIdentity;
+  if (!identity) return null;
+  return identity.type === "byDefault" ? "BY DEFAULT" : "ALWAYS";
+}
+async function syncIdentities() {
+  const tables = Object.values(src_exports).filter((value) => is(value, PgTable));
+  const { rows } = await pool.query(
+    "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND is_identity = 'YES'"
+  );
+  const existing = new Set(rows.map((row) => `${row.table_name}.${row.column_name}`));
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    for (const column of config.columns) {
+      const identity = identityOf(column);
+      if (!identity || existing.has(`${config.name}.${column.name}`)) continue;
+      await run(`ALTER TABLE ${quote(config.name)} ALTER COLUMN ${quote(column.name)} ADD GENERATED ${identity} AS IDENTITY`);
+    }
+  }
 }
 async function run(statement, fatal = false) {
   try {
@@ -52964,6 +53040,7 @@ function ensureSchema() {
     pending = (async () => {
       await syncEnums();
       const { created } = await syncTables();
+      await syncIdentities();
       await syncConstraints();
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
