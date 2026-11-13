@@ -922,23 +922,54 @@ function VideoTile({
     };
   }, [stream, ref]);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Picture: the video element is always muted, so the browser never blocks it.
   useEffect(() => {
     const element = ref.current;
     if (!element || !stream) return;
     if (element.srcObject !== stream) element.srcObject = stream;
-    void element.play().then(() => setSoundBlocked(false)).catch(() => {
-      // Autoplay with sound is blocked until the page is activated.
-      setSoundBlocked(true);
-      const retry = () => {
-        void element.play().then(() => setSoundBlocked(false)).catch(() => {});
-      };
-      document.addEventListener('click', retry, { once: true });
-      document.addEventListener('touchstart', retry, { once: true });
-    });
+    void element.play().catch(() => {});
   }, [stream, ref, active]);
 
+  // Sound: a separate audio element that is re-attached whenever the set of
+  // audio tracks changes. A microphone that is switched on after the camera
+  // adds its track to an already playing stream, and a video element does not
+  // reliably start playing such a late track.
+  useEffect(() => {
+    const element = audioRef.current;
+    if (!element || !stream || muted) return;
+    let signature = '';
+    const attach = () => {
+      const tracks = stream.getAudioTracks().filter((track) => track.readyState === 'live');
+      const next = tracks.map((track) => track.id).join(',');
+      if (next === signature && (next === '' || !element.paused)) return;
+      signature = next;
+      if (!tracks.length) {
+        element.srcObject = null;
+        return;
+      }
+      element.srcObject = new MediaStream(tracks);
+      element.volume = 1;
+      void element.play().then(() => setSoundBlocked(false)).catch(() => setSoundBlocked(true));
+    };
+    attach();
+    const timer = window.setInterval(attach, 700);
+    const retry = () => {
+      void element.play().then(() => setSoundBlocked(false)).catch(() => {});
+    };
+    document.addEventListener('click', retry);
+    document.addEventListener('touchstart', retry);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('click', retry);
+      document.removeEventListener('touchstart', retry);
+      element.srcObject = null;
+    };
+  }, [stream, muted]);
+
   async function enableSound() {
-    const element = ref.current;
+    const element = audioRef.current;
     if (!element) return;
     try {
       await element.play();
@@ -950,7 +981,8 @@ function VideoTile({
 
   return (
     <div className={`video-tile ${active ? 'active' : ''}`}>
-      <video ref={ref} autoPlay playsInline muted={muted} />
+      <video ref={ref} autoPlay playsInline muted />
+      {!muted && <audio ref={audioRef} autoPlay />}
       {(!active || !hasVideo) && (
         <div className="video-placeholder">
           <span className="avatar large">{name.slice(0, 1).toUpperCase()}</span>
