@@ -13,6 +13,7 @@ import {
   getRoomResults,
   joinLessonRoom,
   leaveLessonRoom,
+  listLessonRooms,
   listTopics,
   pollLessonSignals,
   sendLessonSignal,
@@ -46,6 +47,7 @@ import {
   X,
 } from 'lucide-react';
 import { TopicModels } from './topic-library';
+import { AiTutor } from './extras';
 import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
@@ -72,12 +74,31 @@ export function LessonRoomPage({
     void loadServerIceServers();
   }, []);
   const [room, setRoom] = useState<LessonRoom | null>(null);
+  const [openRooms, setOpenRooms] = useState<LessonRoom[]>([]);
   const [participants, setParticipants] = useState<LessonParticipant[]>([]);
   const [joinCode, setJoinCode] = useState('');
   const [mode, setMode] = useState<'idle' | 'host' | 'guest'>('idle');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Rooms this account can return to: the lesson survives a page change or
+  // an accidental tab close until the host ends it.
+  const loadOpenRooms = useCallback(async () => {
+    try {
+      const response = await listLessonRooms();
+      const mine = response.rooms.filter(
+        (item) => item.status !== 'ended' && (isTeacher ? item.hostId === user.id : true),
+      );
+      setOpenRooms(mine.slice(0, 5));
+    } catch {
+      /* lobby works without the list */
+    }
+  }, [isTeacher, user.id]);
+
+  useEffect(() => {
+    if (mode === 'idle') void loadOpenRooms();
+  }, [mode, loadOpenRooms]);
 
   useEffect(() => {
     void (async () => {
@@ -126,6 +147,33 @@ export function LessonRoomPage({
     }
   }
 
+  async function rejoin(target: LessonRoom) {
+    setBusy(true);
+    setError('');
+    try {
+      const joined = await joinLessonRoom(target.id);
+      setRoom(joined.room);
+      setParticipants(joined.participants);
+      setMode(target.hostId === user.id ? 'host' : 'guest');
+    } catch (requestError) {
+      setError(describe(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function endFromLobby(target: LessonRoom) {
+    setBusy(true);
+    try {
+      await endLessonRoom(target.id);
+      await loadOpenRooms();
+    } catch (requestError) {
+      setError(describe(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function joinByCode() {
     if (!joinCode.trim()) return;
     setBusy(true);
@@ -166,6 +214,27 @@ export function LessonRoomPage({
           </div>
         </div>
         {error && <div className="notice" role="alert">{error}</div>}
+        {openRooms.length > 0 && (
+          <section className="panel open-rooms">
+            <div className="section-head"><h2><Video size={16} /> {copy.openRooms}</h2></div>
+            <div className="stack">
+              {openRooms.map((item) => (
+                <div className="open-room-row" key={item.id}>
+                  <span className="open-room-code">{item.code}</span>
+                  <span className="open-room-title">{item.title}{item.subject ? ` · ${item.subject}` : ''}</span>
+                  <button type="button" className="btn small primary" disabled={busy} onClick={() => void rejoin(item)}>
+                    {copy.rejoin}
+                  </button>
+                  {item.hostId === user.id && (
+                    <button type="button" className="btn small" disabled={busy} onClick={() => void endFromLobby(item)}>
+                      {copy.endLesson}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         <div className="grid grid-2">
           {isTeacher && (
             <section className="panel reveal-up lobby-card">
@@ -378,6 +447,26 @@ function RoomView({
     }
     return 'ok';
   }, [peerStates]);
+
+  /* ---- Leaving by navigation or tab close ----
+   * The participant row is closed so others stop calling this peer, but the
+   * room itself stays open: the lobby offers to return until the host ends it.
+   */
+  useEffect(() => {
+    const leaveQuietly = () => {
+      try {
+        void fetch(`/api/rooms/${room.id}/leave`, { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' } });
+      } catch {
+        /* closing anyway */
+      }
+    };
+    window.addEventListener('pagehide', leaveQuietly);
+    return () => {
+      window.removeEventListener('pagehide', leaveQuietly);
+      leaveQuietly();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room.id]);
 
   /* ---- Signalling poll loop (long poll) ---- */
   useEffect(() => {
@@ -701,6 +790,8 @@ function RoomView({
               })}
             </div>
           </section>
+
+          <AiTutor language={language} topicId={topic?.id ?? null} compact />
 
           <section className="panel">
             <div className="section-head"><h2>{copy.chat}</h2></div>
@@ -1037,6 +1128,8 @@ const COPY: Record<Language, Record<string, string>> = {
     participants: 'Участники',
     chat: 'Чат урока',
     chatEmpty: 'Сообщений пока нет.',
+    openRooms: 'Ваши открытые уроки',
+    rejoin: 'Вернуться',
     testsSent: 'Тесты отправлены ученикам: {n}. Каждый видит только свой вопрос.',
     inviteHint: 'Сообщите ученикам код {code}. Каждый ученик входит со своего устройства и под своим аккаунтом. Для проверки на одном компьютере откройте ученика в окне инкогнито (Ctrl+Shift+N).',
     topicEmpty: 'Выберите тему — ученики увидят 3D-объект и факты.',
@@ -1104,6 +1197,8 @@ const COPY: Record<Language, Record<string, string>> = {
     participants: 'Qatnashchilar',
     chat: 'Dars chati',
     chatEmpty: 'Hozircha xabar yo‘q.',
+    openRooms: 'Ochiq darslaringiz',
+    rejoin: 'Qaytish',
     testsSent: 'Testlar o‘quvchilarga yuborildi: {n}. Har kim faqat o‘z savolini ko‘radi.',
     inviteHint: 'O‘quvchilarga {code} kodini ayting. Har bir o‘quvchi o‘z qurilmasidan va o‘z hisobidan kiradi. Bitta kompyuterda sinash uchun o‘quvchini inkognito oynada oching (Ctrl+Shift+N).',
     topicEmpty: 'Mavzuni tanlang — o‘quvchilar 3D obyekt va faktlarni ko‘radi.',
@@ -1171,6 +1266,8 @@ const COPY: Record<Language, Record<string, string>> = {
     participants: 'Participants',
     chat: 'Lesson chat',
     chatEmpty: 'No messages yet.',
+    openRooms: 'Your open lessons',
+    rejoin: 'Return',
     testsSent: 'Tests sent to {n} students. Each one sees only their own question.',
     inviteHint: 'Give the students the code {code}. Every student joins from their own device and account. To try it on one computer, open the student in an incognito window (Ctrl+Shift+N).',
     topicEmpty: 'Choose a topic — students will see the 3D object and facts.',

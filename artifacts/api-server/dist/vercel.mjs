@@ -43116,6 +43116,7 @@ var init_src = __esm({
 var ai_content_exports = {};
 __export(ai_content_exports, {
   SUPPORTED_SUBJECTS: () => SUPPORTED_SUBJECTS,
+  answerTutorQuestion: () => answerTutorQuestion,
   fetchWikipediaFact: () => fetchWikipediaFact,
   generateLocalPackage: () => generateLocalPackage,
   generateStudentQuestion: () => generateStudentQuestion,
@@ -43523,6 +43524,19 @@ async function enrichFacts(pkg) {
   const wiki = await fetchWikipediaFact(pkg.title);
   if (!wiki) return pkg;
   return { ...pkg, facts: [wiki, ...pkg.facts].slice(0, 5) };
+}
+async function answerTutorQuestion(question, context) {
+  const raw = await callModel([
+    {
+      role: "system",
+      content: "\u0422\u044B \u2014 \u0448\u043A\u043E\u043B\u044C\u043D\u044B\u0439 \u0418\u0418-\u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A EDUVERSE \u0434\u043B\u044F \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u043A\u0440\u0430\u0442\u043A\u043E (\u0434\u043E 120 \u0441\u043B\u043E\u0432), \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u044F\u0437\u044B\u043A\u043E\u043C, \u043D\u0430 \u044F\u0437\u044B\u043A\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u0430 (\u0443\u0437\u0431\u0435\u043A\u0441\u043A\u0438\u0439, \u0440\u0443\u0441\u0441\u043A\u0438\u0439 \u0438\u043B\u0438 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439). \u041E\u0431\u044A\u044F\u0441\u043D\u044F\u0439 \u043F\u043E \u0448\u0430\u0433\u0430\u043C, \u043F\u0440\u0438\u0432\u043E\u0434\u0438 \u043E\u0434\u0438\u043D \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u043F\u0440\u0438\u043C\u0435\u0440. \u041D\u0435 \u0432\u044B\u0434\u0443\u043C\u044B\u0432\u0430\u0439 \u0444\u0430\u043A\u0442\u044B, \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0439 \u043D\u0430 \u0442\u0435\u043C\u044B \u0432\u043D\u0435 \u0448\u043A\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u2014 \u0432\u0435\u0436\u043B\u0438\u0432\u043E \u0432\u0435\u0440\u043D\u0438 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043A \u0443\u0447\u0451\u0431\u0435."
+    },
+    {
+      role: "user",
+      content: `\u0422\u0435\u043C\u0430 \u0443\u0440\u043E\u043A\u0430: ${context.title ?? "\u043D\u0435 \u0432\u044B\u0431\u0440\u0430\u043D\u0430"} (${context.subject ?? "\u043F\u0440\u0435\u0434\u043C\u0435\u0442 \u043D\u0435 \u0443\u043A\u0430\u0437\u0430\u043D"}). ${context.facts?.length ? `\u0424\u0430\u043A\u0442\u044B \u0442\u0435\u043C\u044B: ${context.facts.slice(0, 5).join(" | ")}. ` : ""}\u0412\u043E\u043F\u0440\u043E\u0441: ${question}`
+    }
+  ]);
+  return raw ? raw.trim().slice(0, 2e3) : null;
 }
 async function generateTopicTest(subject, grade, title, count = 5) {
   const questionCount = Math.max(1, Math.min(10, count));
@@ -51090,6 +51104,32 @@ router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles)
     };
   });
   res.json({ assignments, rows });
+});
+var tutorLimiter = createRateLimiter(30, 10 * 60 * 1e3, "Too many AI questions. Wait a few minutes.", "ai-tutor");
+router3.post("/ai/tutor", requireAuthenticatedRole(...everyRole), tutorLimiter, async (req, res) => {
+  const question = readString(req.body, "question", 500);
+  if (!question) {
+    res.status(400).json({ error: "A question is required." });
+    return;
+  }
+  const topicId = readString(req.body, "topicId", 64);
+  let context = {};
+  if (topicId && isValidUuid(topicId)) {
+    const [topic] = await db.select({ subject: lessonTopicsTable.subject, title: lessonTopicsTable.title, facts: lessonTopicsTable.facts }).from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+    if (topic) {
+      context = {
+        subject: topic.subject,
+        title: topic.title,
+        facts: Array.isArray(topic.facts) ? topic.facts.map((fact) => fact?.text ?? "").filter(Boolean) : []
+      };
+    }
+  }
+  const answer = await answerTutorQuestion(question, context);
+  if (!answer) {
+    res.status(503).json({ error: "The AI assistant is not available right now." });
+    return;
+  }
+  res.json({ answer });
 });
 router3.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), async (_req, res) => {
   const viewer = user(res);

@@ -14,7 +14,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
-import { normalizeUsername, requireAuthenticatedRole } from "./auth";
+import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
 import {
   canManageClass,
   cleanText,
@@ -23,6 +23,7 @@ import {
   isValidUuid,
 } from "../lib/school-access";
 import {
+  answerTutorQuestion,
   generateStudentQuestion,
   generateTopicPackage,
   generateTopicTest,
@@ -1152,6 +1153,44 @@ router.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles),
 /* -------------------------------------------------------------------------- */
 /* The viewer's own attendance summary                                         */
 /* -------------------------------------------------------------------------- */
+
+const tutorLimiter = createRateLimiter(30, 10 * 60 * 1000, "Too many AI questions. Wait a few minutes.", "ai-tutor");
+
+/**
+ * AI tutor: answers a free question, grounded in a topic when one is given.
+ * Available to every signed-in school role; rate limited per account/IP.
+ */
+router.post("/ai/tutor", requireAuthenticatedRole(...everyRole), tutorLimiter, async (req, res) => {
+  const question = readString(req.body, "question", 500);
+  if (!question) {
+    res.status(400).json({ error: "A question is required." });
+    return;
+  }
+  const topicId = readString(req.body, "topicId", 64);
+  let context: { subject?: string; title?: string; facts?: string[] } = {};
+  if (topicId && isValidUuid(topicId)) {
+    const [topic] = await db
+      .select({ subject: lessonTopicsTable.subject, title: lessonTopicsTable.title, facts: lessonTopicsTable.facts })
+      .from(lessonTopicsTable)
+      .where(eq(lessonTopicsTable.id, topicId))
+      .limit(1);
+    if (topic) {
+      context = {
+        subject: topic.subject,
+        title: topic.title,
+        facts: Array.isArray(topic.facts)
+          ? (topic.facts as Array<{ text?: string }>).map((fact) => fact?.text ?? "").filter(Boolean)
+          : [],
+      };
+    }
+  }
+  const answer = await answerTutorQuestion(question, context);
+  if (!answer) {
+    res.status(503).json({ error: "The AI assistant is not available right now." });
+    return;
+  }
+  res.json({ answer });
+});
 
 router.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), async (_req, res) => {
   const viewer = user(res);

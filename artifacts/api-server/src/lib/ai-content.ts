@@ -703,6 +703,30 @@ async function enrichFacts(pkg: GeneratedTopicPackage): Promise<GeneratedTopicPa
 /* Per-student differentiated questions                                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Free-form tutoring answer for a student or teacher question, grounded in
+ * the current topic. Returns null when no AI key is configured.
+ */
+export async function answerTutorQuestion(
+  question: string,
+  context: { subject?: string; title?: string; facts?: string[] },
+): Promise<string | null> {
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        "Ты — школьный ИИ-помощник EDUVERSE для Узбекистана. Отвечай кратко (до 120 слов), простым языком, на языке вопроса (узбекский, русский или английский). Объясняй по шагам, приводи один маленький пример. Не выдумывай факты, не отвечай на темы вне школьной программы — вежливо верни разговор к учёбе.",
+    },
+    {
+      role: "user",
+      content: `Тема урока: ${context.title ?? "не выбрана"} (${context.subject ?? "предмет не указан"}). ${
+        context.facts?.length ? `Факты темы: ${context.facts.slice(0, 5).join(" | ")}. ` : ""
+      }Вопрос: ${question}`,
+    },
+  ]);
+  return raw ? raw.trim().slice(0, 2000) : null;
+}
+
 export async function generateTopicTest(
   subject: string,
   grade: number,

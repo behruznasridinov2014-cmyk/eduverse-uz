@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
-import { CalendarCheck2, Megaphone, RefreshCw, Send, TableProperties, Trash2 } from 'lucide-react';
+import { Bot, CalendarCheck2, Megaphone, RefreshCw, Send, TableProperties, Trash2 } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { friendlyError } from './errors';
 
@@ -231,6 +231,73 @@ export function AttendanceSummary({ language }: { language: Language }) {
         <span><b>{data.absent}</b>{t(language, 'Kelmadi', 'Не был', 'Absent')}</span>
         <span><b>{data.excused}</b>{t(language, 'Sababli', 'По причине', 'Excused')}</span>
       </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* AI tutor: a question box grounded in the current topic                      */
+/* -------------------------------------------------------------------------- */
+
+export function AiTutor({ language, topicId, compact = false }: { language: Language; topicId: string | null; compact?: boolean }) {
+  const [question, setQuestion] = useState('');
+  const [thread, setThread] = useState<Array<{ q: string; a: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function ask(event: FormEvent) {
+    event.preventDefault();
+    const text = question.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const response = await customFetch<{ answer: string }>('/api/ai/tutor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text, ...(topicId ? { topicId } : {}) }),
+      });
+      setThread((current) => [...current.slice(-4), { q: text, a: response.answer }]);
+      setQuestion('');
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className={`panel ai-tutor ${compact ? 'compact' : ''}`}>
+      <div className="section-head">
+        <h2><Bot size={16} /> {t(language, 'AI yordamchi', 'ИИ-помощник', 'AI assistant')}</h2>
+      </div>
+      {thread.length === 0 && (
+        <p className="muted">{t(language,
+          'Mavzu bo‘yicha savol bering — qisqa va tushunarli javob olasiz.',
+          'Задайте вопрос по теме — получите короткое понятное объяснение.',
+          'Ask a question about the topic — you get a short, clear explanation.')}</p>
+      )}
+      <div className="ai-thread">
+        {thread.map((item, index) => (
+          <div className="ai-pair" key={index}>
+            <div className="ai-q">{item.q}</div>
+            <div className="ai-a">{item.a}</div>
+          </div>
+        ))}
+      </div>
+      {error && <div className="notice" role="alert">{error}</div>}
+      <form className="row ai-form" onSubmit={ask}>
+        <input
+          className="input"
+          value={question}
+          maxLength={500}
+          onChange={(event) => setQuestion(event.target.value)}
+          placeholder={t(language, 'Savolingiz…', 'Ваш вопрос…', 'Your question…')}
+        />
+        <button type="submit" className="btn primary" disabled={busy || !question.trim()} aria-label="AI">
+          {busy ? <RefreshCw size={15} className="school-spin" /> : <Send size={15} />}
+        </button>
+      </form>
     </section>
   );
 }
