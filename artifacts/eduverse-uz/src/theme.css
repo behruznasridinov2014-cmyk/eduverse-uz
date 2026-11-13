@@ -622,3 +622,7 @@ details.lesson-rank summary::-webkit-details-marker { display: none; }
 .attendance-counts span { display: grid; gap: 2px; padding: 10px; background: var(--surface-2); border-radius: 6px; color: var(--text-3); font-size: 12px; }
 .attendance-counts b { color: var(--text); font-size: 18px; }
 @media (max-width: 760px) { .attendance-counts { grid-template-columns: 1fr 1fr; } .announce-form .btn { width: 100%; } }
+
+/* remote microphone level inside the name label: shows that the other side is heard */
+.video-name .mic-level { position: static; transform: none; display: inline-block; width: 36px; height: 4px; margin-left: 8px; vertical-align: middle; box-shadow: none; background: rgba(255, 255, 255, 0.25); }
+.video-name .mic-level i { background: var(--champagne); }

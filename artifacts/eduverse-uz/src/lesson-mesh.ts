@@ -122,7 +122,7 @@ export type LessonMeshOptions = {
   /** Reports the local media state so the roster can show the right icons. */
   onPresence?: (patch: MeshPresence) => void;
   /** Called when a local device cannot be opened. */
-  onError?: (error: Exclude<MeshError, null>) => void;
+  onError?: (error: Exclude<MeshError, null>, reason?: string) => void;
   /** Reports the connection state of one peer. */
   onPeerState?: (userId: string, state: RTCPeerConnectionState) => void;
 };
@@ -546,6 +546,7 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       return;
     }
     try {
+      if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('insecure'), { name: 'InsecureContext' });
       const stream = await acquireDevices(true, micOnRef.current);
       const track = stream.getVideoTracks().find((item) => item.readyState === 'live');
       if (!track) throw new Error('no video track');
@@ -554,8 +555,8 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       setCameraOn(true);
       publishToAll();
       reportPresence({ cameraOn: true });
-    } catch {
-      onErrorRef.current?.('camera');
+    } catch (error) {
+      onErrorRef.current?.('camera', (error as { name?: string })?.name);
     }
   }, [acquireDevices, publishToAll, reportPresence]);
 
@@ -571,6 +572,7 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       return;
     }
     try {
+      if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('insecure'), { name: 'InsecureContext' });
       const stream = await acquireDevices(false, true);
       const track = stream.getAudioTracks().find((item) => item.readyState === 'live');
       if (!track) throw new Error('no audio track');
@@ -579,8 +581,8 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       setMicOn(true);
       publishToAll();
       reportPresence({ micOn: true });
-    } catch {
-      onErrorRef.current?.('mic');
+    } catch (error) {
+      onErrorRef.current?.('mic', (error as { name?: string })?.name);
     }
   }, [acquireDevices, publishToAll, reportPresence]);
 

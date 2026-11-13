@@ -330,9 +330,21 @@ function RoomView({
     onPresence: (patch) => {
       void setLessonPresence(room.id, patch);
     },
-    onError: (kind) => {
+    onError: (kind, reason) => {
       if (kind === 'camera') setError(copy.cameraDenied);
-      else if (kind === 'mic') setError(copy.micDenied);
+      else if (kind === 'mic') {
+        setError(
+          reason === 'NotAllowedError' || reason === 'SecurityError'
+            ? copy.micDenied
+            : reason === 'NotFoundError' || reason === 'OverconstrainedError'
+              ? copy.micMissing
+              : reason === 'NotReadableError' || reason === 'AbortError'
+                ? copy.micBusy
+                : reason === 'InsecureContext'
+                  ? copy.micInsecure
+                  : copy.micDenied,
+        );
+      }
       else if (kind === 'share-denied') setError(copy.shareDenied);
       else if (kind === 'share-unsupported') setError(copy.shareUnsupported);
     },
@@ -996,6 +1008,7 @@ function VideoTile({
       <span className="video-name">
         {sharing && <MonitorUp size={12} />}
         {name}
+        {!muted && stream && stream.getAudioTracks().length > 0 && <MicLevel stream={stream} active />}
       </span>
     </div>
   );
@@ -1054,7 +1067,11 @@ const COPY: Record<Language, Record<string, string>> = {
     ranking: 'Рейтинг класса',
     award: 'Наградить 1 место',
     cameraDenied: 'Доступ к камере не получен.',
-    micDenied: 'Доступ к микрофону не получен.',
+    micDenied: 'Нет доступа к микрофону. Нажмите значок замка слева от адреса сайта → Микрофон → Разрешить и обновите страницу.',
+    micMissing: 'Микрофон не найден. Подключите микрофон или наушники с микрофоном и обновите страницу.',
+    micBusy: 'Микрофон занят другой программой или вкладкой (Zoom, Telegram, другая вкладка). Закройте её и нажмите на микрофон снова.',
+    micInsecure: 'Микрофон работает только на защищённом адресе https://.',
+    micHint: 'Микрофон включён. Полоска показывает, что вас слышно.',
     shareDenied: 'Демонстрация экрана отменена.',
     shareUnsupported: 'Этот браузер не умеет показывать экран (iPhone/Safari). Откройте урок в Chrome на Android или на компьютере.',
     connectionConnecting: 'Соединение с участниками…',
@@ -1117,7 +1134,11 @@ const COPY: Record<Language, Record<string, string>> = {
     ranking: 'Sinf reytingi',
     award: '1-o‘rinni taqdirlash',
     cameraDenied: 'Kameraga ruxsat berilmadi.',
-    micDenied: 'Mikrofonga ruxsat berilmadi.',
+    micDenied: 'Mikrofonga ruxsat yo‘q. Sayt manzili chap tomondagi qulf belgisini bosing → Mikrofon → Ruxsat berish va sahifani yangilang.',
+    micMissing: 'Mikrofon topilmadi. Mikrofon yoki quloqchinni ulang va sahifani yangilang.',
+    micBusy: 'Mikrofonni boshqa dastur yoki oyna band qilgan (Zoom, Telegram, boshqa oyna). Uni yoping va mikrofonni qayta bosing.',
+    micInsecure: 'Mikrofon faqat himoyalangan https:// manzilda ishlaydi.',
+    micHint: 'Mikrofon yoqilgan. Chiziq sizning ovozingiz eshitilayotganini ko‘rsatadi.',
     shareDenied: 'Ekran namoyishi bekor qilindi.',
     shareUnsupported: 'Bu brauzer ekran ko‘rsata olmaydi (iPhone/Safari). Darsni Android yoki kompyuterda Chrome’da oching.',
     connectionConnecting: 'Qatnashchilar bilan ulanmoqda…',
@@ -1180,7 +1201,11 @@ const COPY: Record<Language, Record<string, string>> = {
     ranking: 'Class ranking',
     award: 'Award 1st place',
     cameraDenied: 'Camera permission was not granted.',
-    micDenied: 'Microphone permission was not granted.',
+    micDenied: 'No microphone access. Click the lock icon left of the address → Microphone → Allow, then reload the page.',
+    micMissing: 'No microphone found. Plug in a microphone or headset and reload the page.',
+    micBusy: 'The microphone is used by another app or tab (Zoom, Telegram, another tab). Close it and press the microphone again.',
+    micInsecure: 'The microphone only works on a secure https:// address.',
+    micHint: 'Microphone is on. The bar shows that you can be heard.',
     shareDenied: 'Screen sharing was cancelled.',
     shareUnsupported: 'This browser cannot share the screen (iPhone/Safari). Open the lesson in Chrome on Android or on a computer.',
     connectionConnecting: 'Connecting to the participants…',
