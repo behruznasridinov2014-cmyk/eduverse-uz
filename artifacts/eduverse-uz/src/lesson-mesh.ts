@@ -55,6 +55,39 @@ type PeerRecord = {
   offeredSignature: string;
 };
 
+/**
+ * Virtual devices (Steam Streaming Microphone, VB-Cable, Stereo Mix, OBS...)
+ * record silence unless a program feeds them, yet Chrome often remembers one
+ * of them as the microphone of a site. When that happens the lesson stays
+ * silent, so a real microphone is opened instead.
+ */
+const VIRTUAL_MIC = /steam|virtual|vb-?audio|cable|voicemeeter|stereo mix|stereomix|obs|loopback|nvidia broadcast|krisp|\bnull\b/i;
+
+async function preferRealMicrophone(stream: MediaStream, withVideo: boolean): Promise<MediaStream> {
+  try {
+    const track = stream.getAudioTracks()[0];
+    if (!track || !VIRTUAL_MIC.test(track.label)) return stream;
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(
+      (device) => device.kind === 'audioinput' && device.deviceId && !VIRTUAL_MIC.test(device.label),
+    );
+    // "default" and "communications" are aliases; the Windows default comes first.
+    const real = devices.find((device) => device.deviceId === 'default') ?? devices[0];
+    if (!real) return stream;
+    const better = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: real.deviceId } } });
+    const betterTrack = better.getAudioTracks()[0];
+    if (!betterTrack) return stream;
+    stream.getAudioTracks().forEach((item) => {
+      stream.removeTrack(item);
+      item.stop();
+    });
+    stream.addTrack(betterTrack);
+    void withVideo;
+    return stream;
+  } catch {
+    return stream;
+  }
+}
+
 export type MeshError = 'camera' | 'mic' | 'share-denied' | 'share-unsupported' | null;
 
 /**
@@ -500,10 +533,11 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
       // When the camera is added to an existing microphone, both are requested
       // again - iOS only keeps a microphone that came with a camera.
       const requestAudio = missingAudio || (missingVideo && Boolean(audioTrack));
-      const acquired = await navigator.mediaDevices.getUserMedia({
+      let acquired = await navigator.mediaDevices.getUserMedia({
         video: missingVideo,
         audio: requestAudio,
       });
+      if (requestAudio) acquired = await preferRealMicrophone(acquired, missingVideo);
       const newVideo = acquired.getVideoTracks()[0] ?? null;
       const newAudio = acquired.getAudioTracks()[0] ?? null;
       if (missingVideo && !newVideo) {
