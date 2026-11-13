@@ -9,6 +9,7 @@ import { LessonRoomPage } from './lesson-room';
 import { TopicLibraryPage } from './topic-library';
 import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
+import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
 import {
@@ -308,6 +309,8 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     </button>)}
    </div>
   </>}
+  {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
+  {user.role==='student'&&<AttendanceSummary language={language}/>}
   {user.role==='student'&&school.assignments.length>0&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Mening baholarim':language==='Русский'?'Мои оценки':'My grades'}</h2>
    <div className="panel"><table className="grade-table"><thead><tr><th>{language==='Uzbek'?'Topshiriq':language==='Русский'?'Задание':'Assignment'}</th><th>{language==='Uzbek'?'Holat':language==='Русский'?'Статус':'Status'}</th><th>{language==='Uzbek'?'Baho':language==='Русский'?'Оценка':'Grade'}</th></tr></thead><tbody>
@@ -407,7 +410,7 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Homework and classes','Задания и классы','Vazifalar va sinflar')} subtitle={text('Assign homework tied to a topic, check notebook photos, grade and sign.','Выдавайте задания по теме, проверяйте фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini tekshiring, baholang va imzo qo‘ying.')}><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles/> {text('Lesson topic','Тема урока','Dars mavzusi')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Board','Доска','Doska')}</button></PageHeading>
   {school.status==='ready'&&school.hasServerClasses
-   ?<div className="page-stack"><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
+   ?<div className="page-stack"><GradeJournal school={school} language={language}/><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
    :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet. Ask your school administrator to add you to a class.','К вашему аккаунту ещё не привязан класс. Попросите администратора школы добавить вас в класс.','Hisobingizga hali sinf biriktirilmagan. Maktab administratoridan so‘rang.')}</span></div>}</>;
 }
 function ParentPage({language}:{language:Lang}){

@@ -42749,7 +42749,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -42975,6 +42975,17 @@ var init_learning = __esm({
         index("qr_login_sessions_expires_idx").on(table.expiresAt)
       ]
     );
+    classAnnouncementsTable = pgTable(
+      "class_announcements",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+        authorId: uuid("author_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        body: text("body").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => [index("class_announcements_class_idx").on(table.classId)]
+    );
   }
 });
 
@@ -42988,6 +42999,7 @@ __export(schema_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
@@ -43033,6 +43045,7 @@ __export(src_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
@@ -50970,6 +50983,127 @@ router3.get(
     });
   }
 );
+var everyRole = [
+  "student",
+  "teacher",
+  "parent",
+  "school_director",
+  "school_admin",
+  "education_admin",
+  "ministry_admin",
+  "platform_superadmin"
+];
+var staffRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router3.get("/me/announcements", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const memberClasses = (await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))).map((row) => row.classId);
+  if (!memberClasses.length) {
+    res.json({ announcements: [] });
+    return;
+  }
+  const rows = await db.select({
+    id: classAnnouncementsTable.id,
+    classId: classAnnouncementsTable.classId,
+    className: classesTable.name,
+    authorId: classAnnouncementsTable.authorId,
+    authorName: usersTable.username,
+    body: classAnnouncementsTable.body,
+    createdAt: classAnnouncementsTable.createdAt
+  }).from(classAnnouncementsTable).innerJoin(classesTable, eq(classAnnouncementsTable.classId, classesTable.id)).innerJoin(usersTable, eq(classAnnouncementsTable.authorId, usersTable.id)).where(inArray(classAnnouncementsTable.classId, memberClasses)).orderBy(desc(classAnnouncementsTable.createdAt)).limit(20);
+  res.json({ announcements: rows });
+});
+router3.post("/classes/:classId/announcements", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!await canManage(viewer.id, viewer.role, classId)) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const body = readString(req.body, "body", 600);
+  if (!body) {
+    res.status(400).json({ error: "The announcement text is required." });
+    return;
+  }
+  const [created] = await db.insert(classAnnouncementsTable).values({ classId, authorId: viewer.id, body }).returning();
+  res.status(201).json({ announcement: created });
+});
+router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const id = String(req.params.announcementId);
+  if (!isValidUuid(id)) {
+    res.status(400).json({ error: "Invalid announcement identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [row] = await db.select().from(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id)).limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Announcement not found." });
+    return;
+  }
+  if (row.authorId !== viewer.id && !await canManage(viewer.id, viewer.role, row.classId)) {
+    res.status(403).json({ error: "You cannot delete this announcement." });
+    return;
+  }
+  await db.delete(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id));
+  res.status(204).end();
+});
+router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!await canManage(viewer.id, viewer.role, classId)) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const [students, assignments, attendance] = await Promise.all([
+    db.select({ id: usersTable.id, name: usersTable.username }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username)),
+    db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.classId, classId)).orderBy(asc(assignmentsTable.createdAt)).limit(30),
+    db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(eq(attendanceTable.classId, classId))
+  ]);
+  const submissions = assignments.length ? await db.select({
+    assignmentId: assignmentSubmissionsTable.assignmentId,
+    studentId: assignmentSubmissionsTable.studentId,
+    score: assignmentSubmissionsTable.score
+  }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const rows = students.map((student) => {
+    const cells = assignments.map((assignment) => {
+      const submission = submissions.find((item) => item.assignmentId === assignment.id && item.studentId === student.id);
+      if (!submission) return { state: "missing", grade: null };
+      if (submission.score === null) return { state: "review", grade: null };
+      return { state: "graded", grade: Math.max(2, Math.min(5, Math.round(submission.score / 20))) };
+    });
+    const grades = cells.map((cell) => cell.grade).filter((grade) => grade !== null);
+    const marks = attendance.filter((item) => item.studentId === student.id);
+    const attended = marks.filter((item) => item.status === "present" || item.status === "late").length;
+    return {
+      studentId: student.id,
+      studentName: student.name,
+      cells,
+      average: grades.length ? Math.round(grades.reduce((sum, grade) => sum + grade, 0) / grades.length * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null
+    };
+  });
+  res.json({ assignments, rows });
+});
+router3.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const rows = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, viewer.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(200);
+  const count = (status) => rows.filter((row) => row.status === status).length;
+  res.json({
+    total: rows.length,
+    present: count("present"),
+    late: count("late"),
+    absent: count("absent"),
+    excused: count("excused"),
+    recent: rows.slice(0, 10)
+  });
+});
 var learning_default = router3;
 
 // src/routes/lesson-rooms.ts

@@ -244,3 +244,16 @@ export const qrLoginSessionsTable = pgTable(
     index("qr_login_sessions_expires_idx").on(table.expiresAt),
   ],
 );
+
+/** Short messages from a teacher to a whole class (shown on the home page). */
+export const classAnnouncementsTable = pgTable(
+  "class_announcements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("class_announcements_class_idx").on(table.classId)],
+);

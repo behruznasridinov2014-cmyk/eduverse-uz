@@ -604,3 +604,21 @@ details.lesson-rank summary::-webkit-details-marker { display: none; }
 .grade-table th { color: var(--text-3); font-weight: 600; }
 .grade-mark { display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; border-radius: 4px; background: var(--surface-3); color: var(--champagne); font-weight: 800; }
 @media (max-width: 760px) { .profile-head { padding: 16px; } .profile-row { flex-direction: column; gap: 2px; } .profile-row b { text-align: left; } }
+
+/* ---------- announcements, journal, attendance summary ---------- */
+.announce-form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.announce-form .input { flex: 1 1 220px; }
+.announce-form select.input { flex: 0 0 auto; }
+.announce-list { display: grid; gap: 8px; }
+.announce-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--surface-2); border-left: 3px solid var(--champagne); border-radius: 6px; animation: ev-rise .8s var(--ease) both; }
+.announce-item p { margin: 0 0 4px; color: var(--text); }
+.announce-item small { color: var(--text-3); }
+.journal-scroll { overflow-x: auto; }
+.journal-table th, .journal-table td { white-space: nowrap; }
+.journal-table td:first-child, .journal-table th:first-child { position: sticky; left: 0; background: var(--surface); }
+.journal-average { color: var(--champagne); }
+.attendance-percent { font-size: 22px; color: var(--champagne); }
+.attendance-counts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.attendance-counts span { display: grid; gap: 2px; padding: 10px; background: var(--surface-2); border-radius: 6px; color: var(--text-3); font-size: 12px; }
+.attendance-counts b { color: var(--text); font-size: 18px; }
+@media (max-width: 760px) { .attendance-counts { grid-template-columns: 1fr 1fr; } .announce-form .btn { width: 100%; } }
