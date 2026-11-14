@@ -637,3 +637,41 @@ details.lesson-rank summary::-webkit-details-marker { display: none; }
 .ai-a { justify-self: start; max-width: 92%; padding: 10px 12px; border-radius: 8px 8px 8px 2px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font-size: 13px; white-space: pre-wrap; animation: ev-rise .6s var(--ease) both; }
 .ai-form .input { flex: 1; }
 .ai-tutor.compact .ai-a { max-height: 220px; overflow-y: auto; }
+
+/* ---------- 3D chemistry lab ---------- */
+.chem-lab { display: grid; gap: 16px; }
+.chem-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+.chem-stage { padding: 0; overflow: hidden; background: radial-gradient(circle at 50% 40%, #1F1F25, #0A0A0B 75%); }
+.chem-canvas { display: block; width: 100%; cursor: grab; touch-action: none; }
+.chem-canvas:active { cursor: grabbing; }
+.chem-caption { padding: 12px 16px; border-top: 1px solid var(--line); color: var(--text-2); }
+.chem-formula { color: var(--champagne); font-weight: 800; margin-left: 6px; }
+.chem-atoms { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.chem-atom { display: grid; justify-items: center; gap: 4px; padding: 10px 6px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; }
+.chem-atom small { color: var(--text-3); font-size: 11px; }
+.chem-ball { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; font-weight: 800; font-size: 13px; box-shadow: inset -4px -5px 10px rgba(0,0,0,.35); }
+.chem-count { display: flex; align-items: center; gap: 6px; }
+.chem-count b { min-width: 16px; text-align: center; }
+.chem-count .btn.small { min-height: 26px; padding: 0 7px; }
+.chem-result { margin-top: 12px; padding: 12px 14px; border-radius: 6px; background: var(--surface-2); border: 1px dashed var(--line-2); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; transition: border-color .6s var(--ease), background .6s var(--ease); }
+.chem-result span { font-weight: 800; letter-spacing: .04em; }
+.chem-result.ok { border-style: solid; border-color: var(--ok); background: rgba(53,196,141,.08); }
+.chem-facts { margin: 0; padding-left: 18px; color: var(--text-2); display: grid; gap: 6px; }
+.chem-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.chem-presets .tag { cursor: pointer; }
+.chem-mix { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 14px; border-bottom: 1px solid var(--line); }
+.chem-mix .input { flex: 1 1 160px; }
+.chem-plus { font-size: 22px; font-weight: 800; color: var(--champagne); }
+.chem-flask-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; padding: 8px; }
+.chem-mini { display: grid; justify-items: center; gap: 4px; background: rgba(255,255,255,.02); border-radius: 6px; }
+.chem-mini small { color: var(--text-2); padding-bottom: 8px; }
+.chem-reaction { padding: 6px 14px 16px; animation: ev-pop .9s var(--ease) both; }
+.chem-reaction p { color: var(--text-2); margin: 6px 0 0; }
+.chem-equation { font-size: 22px; font-weight: 800; text-align: center; padding: 14px 0 6px; color: var(--text); letter-spacing: .02em; }
+.effect-flame .chem-equation { animation: chem-glow 1.6s var(--ease) both; }
+@keyframes chem-glow { 0% { color: #fff; text-shadow: 0 0 0 transparent; } 30% { color: #FFB347; text-shadow: 0 0 22px rgba(255,140,40,.8); } 100% { color: var(--text); text-shadow: none; } }
+.effect-heat .chem-equation { animation: chem-heat 1.4s var(--ease) both; }
+@keyframes chem-heat { 0% { opacity: 0; transform: scale(.94); } 60% { color: #F2B443; } 100% { opacity: 1; transform: none; } }
+.chem-reaction-pick { text-align: left; padding: 10px 12px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font: 700 13px var(--font); cursor: pointer; transition: border-color .4s var(--ease); }
+.chem-reaction-pick:hover { border-color: var(--ev-primary); }
+@media (max-width: 900px) { .chem-grid { grid-template-columns: 1fr; } .chem-equation { font-size: 18px; } }

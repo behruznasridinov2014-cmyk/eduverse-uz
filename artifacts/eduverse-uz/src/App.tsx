@@ -9,6 +9,7 @@ import { LessonRoomPage } from './lesson-room';
 import { TopicLibraryPage } from './topic-library';
 import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
+import { ChemLabPage } from './chem-lab';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
@@ -28,16 +29,16 @@ import {
   Minus, Monitor, MoreHorizontal, Pen, Plus, Presentation, RotateCcw, Save, Search, Send,
   Settings, Shapes, ShieldCheck, Sparkles, Timer, Trash2, Undo2, Upload, Users, Video,
   Wifi, X, ZoomIn, ZoomOut,
-  Atom, BookMarked, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
+  Atom, BookMarked, FlaskConical, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari'},
-  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания'},
-  English:{Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
+  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D laboratoriya'},
+  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-лаборатория'},
+  English:{Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D lab','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -108,6 +109,7 @@ function App(){
     '/school':['school_director','school_admin'],
     '/admin':['education_admin','ministry_admin','platform_superadmin'],
     '/board':['teacher'],
+    '/lab':['student','teacher'],
     '/lesson':['student','teacher'],
   };
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
@@ -168,6 +170,7 @@ function App(){
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} goBoard={()=>navigate('/board')}/>
         :location==='/board'?<BoardPage/>
+        :location==='/lab'?<ChemLabPage language={lang}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
         :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
         :location==='/topics'&&auth.user?<TopicLibraryPage user={auth.user} language={lang} onOpenRoom={topicId=>navigate('/lesson/'+topicId)}/>
@@ -187,6 +190,7 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Teacher workspace',href:'/teacher',icon:NotebookPen,tone:'orange'},
   {label:'Homework',href:'/classes',icon:NotebookPen,tone:'orange'},
   {label:'Classes',href:'/classes',icon:Users,tone:'teal'},
+  {label:'Chemistry lab',href:'/lab',icon:FlaskConical,tone:'pink'},
   {label:'Interactive board',href:'/board',icon:PenTool,tone:'pink'},
   {label:'Textbook library',href:'/library',icon:BookMarked,tone:'teal'},
   {label:'Family view',href:'/parent',icon:UserRound,tone:'orange'},
@@ -194,8 +198,8 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Lesson room','Topics & 3D','Homework','Textbook library'],
-  teacher:['Overview','Lesson room','Topics & 3D','Attendance','Teacher workspace','Interactive board','Textbook library'],
+  student:['Overview','Lesson room','Topics & 3D','Chemistry lab','Homework','Textbook library'],
+  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Interactive board','Textbook library'],
   parent:['Overview','Family view','Textbook library'],
   school_director:['Overview','School insights','Classes','Attendance'],
   school_admin:['Overview','School insights','Classes','Attendance'],
@@ -224,6 +228,7 @@ const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
   {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi bergan kodni kiriting.','Введите код от учителя.','Enter the code from your teacher.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
   {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/topics',icon:Atom,tone:'violet'},
   {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
+  {label:L('3D laboratoriya','3D-лаборатория','3D lab'),description:L('Atomlardan molekula yig‘ing va reaksiyalarni ko‘ring.','Собирайте молекулы из атомов и смотрите реакции.','Build molecules from atoms and watch reactions.'),path:'/lab',icon:FlaskConical,tone:'pink'},
   {label:L('Darsliklar','Учебники','Textbooks'),description:L('7-sinf darsliklari va daftarlar.','Учебники и тетради 7 класса.','Grade 7 textbooks and workbooks.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  teacher:[
@@ -231,6 +236,7 @@ const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
   {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('Fan va mavzuni yozing — slaydlar, 3D va test tayyor.','Напишите тему — слайды, 3D и тест готовы.','Type a topic — slides, 3D and a quiz are ready.'),path:'/topics',icon:Atom,tone:'violet'},
   {label:L('Davomat','Давомат','Attendance'),description:L('Kim kelganini bir bosishda belgilang.','Отметьте присутствие в один клик.','Mark attendance in one click.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
   {label:L('Uy vazifasi berish','Выдать задание','Assign homework'),description:L('Topshiriq bering, daftar rasmlarini tekshiring.','Выдайте задание и проверьте фото тетрадей.','Assign work and check notebook photos.'),path:'/teacher',icon:NotebookPen,tone:'orange'},
+  {label:L('3D laboratoriya','3D-лаборатория','3D lab'),description:L('Molekula va reaksiyalarni sinfga 3D da ko‘rsating.','Показывайте классу молекулы и реакции в 3D.','Show molecules and reactions in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
   {label:L('Interaktiv doska','Интерактивная доска','Board'),description:L('Chizing va tushuntiring.','Рисуйте и объясняйте.','Draw and explain.'),path:'/board',icon:PenTool,tone:'pink'},
   {label:L('Darsliklar','Учебники','Textbooks'),description:L('Darslikni ochib, sinfga ko‘rsating.','Откройте учебник и покажите классу.','Open a textbook and show the class.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
