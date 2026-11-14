@@ -86,7 +86,7 @@ function Pendulum({ language }: { language: Language }) {
       // trail
       context.beginPath();
       s.trail.forEach(([x, y], i) => (i ? context.lineTo(x, y) : context.moveTo(x, y)));
-      context.strokeStyle = 'rgba(214, 209, 196, 0.35)';
+      context.strokeStyle = 'rgba(184, 161, 219, 0.35)';
       context.lineWidth = 2;
       context.stroke();
       // string
@@ -100,8 +100,8 @@ function Pendulum({ language }: { language: Language }) {
       const r = 18;
       const grad = context.createRadialGradient(bob.x - 6, bob.y - 6, 2, bob.x, bob.y, r);
       grad.addColorStop(0, '#FFFFFF');
-      grad.addColorStop(0.3, '#E02544');
-      grad.addColorStop(1, '#5A0614');
+      grad.addColorStop(0.3, '#8A71BA');
+      grad.addColorStop(1, '#3A2C5C');
       context.fillStyle = grad;
       context.beginPath();
       context.arc(bob.x, bob.y, r, 0, Math.PI * 2);
@@ -119,8 +119,8 @@ function Pendulum({ language }: { language: Language }) {
         context.font = '600 11px DM Sans, sans-serif';
         context.fillText(label, x - 2, h - 6);
       };
-      bar(18, potential, '#D6D1C4', 'Eп');
-      bar(46, 1 - potential, '#E02544', 'Eк');
+      bar(18, potential, '#B8A1DB', 'Eп');
+      bar(46, 1 - potential, '#8A71BA', 'Eк');
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
@@ -193,7 +193,7 @@ function Circuit({ language }: { language: Language }) {
         return [box.l, box.b - (d - 2 * wTop - hSide)];
       };
       if (closed) {
-        context.fillStyle = '#D6D1C4';
+        context.fillStyle = '#B8A1DB';
         for (let d = offset; d < perimeter; d += 40) {
           const [x, y] = at(d);
           context.beginPath();
@@ -232,7 +232,7 @@ function Circuit({ language }: { language: Language }) {
       // resistor (right)
       context.fillStyle = '#141417';
       context.fillRect(box.r - 14, by - 30, 28, 60);
-      context.strokeStyle = '#D6D1C4';
+      context.strokeStyle = '#B8A1DB';
       context.lineWidth = 2;
       context.strokeRect(box.r - 14, by - 30, 28, 60);
       context.fillStyle = '#F2F2F3';

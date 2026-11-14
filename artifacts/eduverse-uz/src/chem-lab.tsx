@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlaskConical, Minus, Plus, RotateCcw, Sparkles, Atom } from 'lucide-react';
 import { AiTutor } from './extras';
 import { PhysicsLab } from './physics-lab';
+import { MathLab, WebModelsLab } from './studio-labs';
 import type { Language } from './school-data';
 
 /**
@@ -309,7 +310,16 @@ function shade(hex: string): string {
 
 export function ChemLabPage({ language }: { language: Language }) {
   const tx = (text: Txt) => text[language];
-  const [subject, setSubject] = useState<'chem' | 'phys'>('chem');
+  type Subject = 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
+  const [subject, setSubject] = useState<Subject>('chem');
+  const SUBJECTS: Array<[Subject, Txt, string]> = [
+    ['chem', L('Kimyo', 'Химия', 'Chemistry'), '⚗'],
+    ['phys', L('Fizika', 'Физика', 'Physics'), '⚛'],
+    ['math', L('Matematika', 'Математика', 'Maths'), '△'],
+    ['bio', L('Biologiya', 'Биология', 'Biology'), '❦'],
+    ['geo', L('Geografiya', 'География', 'Geography'), '◍'],
+    ['any', L('Istalgan mavzu', 'Любая тема', 'Any topic'), '✦'],
+  ];
   const [mode, setMode] = useState<'build' | 'react'>('build');
   const [counts, setCounts] = useState<Record<string, number>>({ H: 2, O: 1 });
   const [selected, setSelected] = useState<Molecule>(MOLECULES.find((m) => m.id === 'h2o')!);
@@ -346,14 +356,17 @@ export function ChemLabPage({ language }: { language: Language }) {
       <div className="page-heading">
         <div>
           <div className="row lab-subjects">
-            <button type="button" className={`btn small ${subject === 'chem' ? 'primary' : ''}`} onClick={() => setSubject('chem')}>{tx(L('Kimyo', 'Химия', 'Chemistry'))}</button>
-            <button type="button" className={`btn small ${subject === 'phys' ? 'primary' : ''}`} onClick={() => setSubject('phys')}>{tx(L('Fizika', 'Физика', 'Physics'))}</button>
+            {SUBJECTS.map(([key, label, icon]) => (
+              <button type="button" key={key} className={`studio-tab ${subject === key ? 'active' : ''}`} onClick={() => setSubject(key)}>
+                <span>{icon}</span>{tx(label)}
+              </button>
+            ))}
           </div>
-          <h1>{tx(L('3D laboratoriya', '3D-лаборатория', '3D lab'))}</h1>
+          <h1>{tx(L('3D studiya', '3D-студия', '3D studio'))}</h1>
           <p className="page-subtitle">{tx(L(
-            'Atomlarni yig‘ing — molekula 3D da paydo bo‘ladi. Moddalarni aralashtiring — reaksiyani ko‘ring.',
-            'Соберите атомы — молекула появится в 3D. Смешайте вещества — увидите реакцию.',
-            'Combine atoms — the molecule appears in 3D. Mix substances — watch the reaction.'))}</p>
+            'Kimyo, fizika, matematika, biologiya, geografiya — hammasini 3D da aylantiring, o‘zgartiring va tekshiring.',
+            'Химия, физика, математика, биология, география — крутите, меняйте и проверяйте всё в 3D.',
+            'Chemistry, physics, maths, biology, geography — rotate, change and test everything in 3D.'))}</p>
         </div>
         {subject === 'chem' && <div className="row chem-tabs">
           <button type="button" className={`btn ${mode === 'build' ? 'primary' : ''}`} onClick={() => setMode('build')}><Atom /> {tx(L('Molekula yig‘ish', 'Собрать молекулу', 'Build a molecule'))}</button>
@@ -361,7 +374,7 @@ export function ChemLabPage({ language }: { language: Language }) {
         </div>}
       </div>
 
-      {subject === 'phys' ? <PhysicsLab language={language} /> : mode === 'build' ? (
+      {subject === 'phys' ? <PhysicsLab language={language} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
             <MoleculeView molecule={shown} />

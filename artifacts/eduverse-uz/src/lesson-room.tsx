@@ -305,6 +305,8 @@ export function LessonRoomPage({
 
 /* -------------------------------------------------------------------------- */
 
+const LARGE_CLASS = 6;
+
 type TestItemView = { prompt: string; choices: string[]; answer: string | null; correct: string | null; explanation: string | null };
 type RankRow = RoomRankEntry & {
   total?: number;
@@ -522,13 +524,17 @@ function RoomView({
     participantsRef.current = participants;
   }, [participants]);
 
-  /* Everybody connects to everybody as soon as both sides are in the room. */
+  /* Small groups: everybody sees everybody. Large classes (more than 6
+   * people): a student connects only to the teacher, so a class of 30 needs
+   * 30 connections instead of 435 and weak school internet keeps up. */
+  const largeClass = participants.length > LARGE_CLASS;
   useEffect(() => {
     for (const participant of participants) {
       if (participant.userId === user.id) continue;
+      if (largeClass && !isHost && participant.userId !== room.hostId) continue;
       ensurePeer(participant.userId, participant.username);
     }
-  }, [participants, user.id, ensurePeer]);
+  }, [participants, user.id, ensurePeer, largeClass, isHost, room.hostId]);
 
   /* ---- Individual AI test for a student ---- */
   const loadMyTest = useCallback(async () => {
@@ -664,6 +670,9 @@ function RoomView({
 
       {error && <div className="notice" role="alert">{error}</div>}
       {info && <div className="notice success" role="status">{info}</div>}
+      {largeClass && (
+        <div className="notice" role="status">{copy.largeClass}</div>
+      )}
       {isHost && participants.length <= 1 && (
         <div className="notice lesson-invite" role="status">{copy.inviteHint.replace('{code}', room.code)}</div>
       )}
@@ -698,6 +707,7 @@ function RoomView({
             />
             {participants
               .filter((participant) => participant.userId !== user.id)
+              .filter((participant) => !largeClass || isHost || participant.userId === room.hostId)
               .map((participant) => (
                 <VideoTile
                   key={participant.userId}
@@ -1129,6 +1139,7 @@ const COPY: Record<Language, Record<string, string>> = {
     chat: 'Чат урока',
     chatEmpty: 'Сообщений пока нет.',
     openRooms: 'Ваши открытые уроки',
+    largeClass: 'Режим большого класса: ученики видят и слышат учителя, учитель видит всех. Так урок работает даже на слабом интернете.',
     rejoin: 'Вернуться',
     testsSent: 'Тесты отправлены ученикам: {n}. Каждый видит только свой вопрос.',
     inviteHint: 'Сообщите ученикам код {code}. Каждый ученик входит со своего устройства и под своим аккаунтом. Для проверки на одном компьютере откройте ученика в окне инкогнито (Ctrl+Shift+N).',
@@ -1198,6 +1209,7 @@ const COPY: Record<Language, Record<string, string>> = {
     chat: 'Dars chati',
     chatEmpty: 'Hozircha xabar yo‘q.',
     openRooms: 'Ochiq darslaringiz',
+    largeClass: 'Katta sinf rejimi: o‘quvchilar o‘qituvchini ko‘radi va eshitadi, o‘qituvchi hammani ko‘radi. Sekin internetda ham dars ishlaydi.',
     rejoin: 'Qaytish',
     testsSent: 'Testlar o‘quvchilarga yuborildi: {n}. Har kim faqat o‘z savolini ko‘radi.',
     inviteHint: 'O‘quvchilarga {code} kodini ayting. Har bir o‘quvchi o‘z qurilmasidan va o‘z hisobidan kiradi. Bitta kompyuterda sinash uchun o‘quvchini inkognito oynada oching (Ctrl+Shift+N).',
@@ -1267,6 +1279,7 @@ const COPY: Record<Language, Record<string, string>> = {
     chat: 'Lesson chat',
     chatEmpty: 'No messages yet.',
     openRooms: 'Your open lessons',
+    largeClass: 'Large class mode: students see and hear the teacher, the teacher sees everyone. Works even on slow internet.',
     rejoin: 'Return',
     testsSent: 'Tests sent to {n} students. Each one sees only their own question.',
     inviteHint: 'Give the students the code {code}. Every student joins from their own device and account. To try it on one computer, open the student in an incognito window (Ctrl+Shift+N).',

@@ -1332,6 +1332,46 @@ router.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res)
 /* Director dashboard                                                          */
 /* -------------------------------------------------------------------------- */
 
+/** Full export of a school's people with class, average grade and attendance. */
+router.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot export this school." });
+    return;
+  }
+  const people = await db
+    .select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role })
+    .from(schoolMembersTable)
+    .innerJoin(usersTable, eq(schoolMembersTable.userId, usersTable.id))
+    .where(eq(schoolMembersTable.schoolId, schoolId))
+    .orderBy(asc(schoolMembersTable.role), asc(usersTable.username));
+  const ids = people.map((row) => row.id);
+  const memberships = ids.length
+    ? await db.select({ userId: classMembersTable.userId, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(inArray(classMembersTable.userId, ids), eq(classesTable.schoolId, schoolId)))
+    : [];
+  const marks = ids.length ? await db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(inArray(attendanceTable.studentId, ids)) : [];
+  const scores = ids.length ? await db.select({ studentId: assignmentSubmissionsTable.studentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.studentId, ids)) : [];
+  const cell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = ["role;name;login;classes;average_grade;attendance_percent"];
+  for (const person of people) {
+    const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
+    const own = marks.filter((row) => row.studentId === person.id);
+    const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score! / 20))));
+    const average = grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : "";
+    lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round((attended / own.length) * 100) : ""].map(cell).join(";"));
+  }
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="eduverse-school.csv"');
+  res.send("\uFEFF" + lines.join("\n"));
+});
+
 router.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   if (!isValidUuid(schoolId)) {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { CalendarCheck2, GraduationCap, Link2, NotebookPen, RefreshCw, School, Users, Video } from 'lucide-react';
+import { CalendarCheck2, Download, GraduationCap, Link2, NotebookPen, RefreshCw, School, Users, Video } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
 
@@ -153,7 +153,10 @@ export function DirectorDashboard({ schoolId, language }: { schoolId: string; la
       <section className="panel">
         <div className="section-head">
           <h2><School size={16} /> {t(language, 'Sinflar bo‘yicha', 'По классам', 'By class')}</h2>
-          <button type="button" className="btn small" onClick={() => void load()}><RefreshCw size={14} /></button>
+          <div className="row">
+            <a className="btn small" href={`/api/schools/${schoolId}/export.csv`} download><Download size={14} /> {t(language, 'Excel ga yuklash', 'Выгрузить в Excel', 'Export to Excel')}</a>
+            <button type="button" className="btn small" onClick={() => void load()}><RefreshCw size={14} /></button>
+          </div>
         </div>
         {data.perClass.length === 0 ? <p className="muted">{t(language, 'Sinflar yo‘q.', 'Классов нет.', 'No classes.')}</p> : (
           <div className="journal-scroll">
