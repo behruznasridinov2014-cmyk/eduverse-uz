@@ -257,3 +257,19 @@ export const classAnnouncementsTable = pgTable(
   },
   (table) => [index("class_announcements_class_idx").on(table.classId)],
 );
+
+/** A parent account linked to a student account (set by school staff). */
+export const parentLinksTable = pgTable(
+  "parent_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("parent_links_parent_student_unique").on(table.parentId, table.studentId),
+    index("parent_links_student_idx").on(table.studentId),
+  ],
+);

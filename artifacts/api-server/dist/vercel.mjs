@@ -42749,7 +42749,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -42986,6 +42986,20 @@ var init_learning = __esm({
       },
       (table) => [index("class_announcements_class_idx").on(table.classId)]
     );
+    parentLinksTable = pgTable(
+      "parent_links",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        createdBy: uuid("created_by").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => [
+        uniqueIndex("parent_links_parent_student_unique").on(table.parentId, table.studentId),
+        index("parent_links_student_idx").on(table.studentId)
+      ]
+    );
   }
 });
 
@@ -43011,6 +43025,7 @@ __export(schema_exports, {
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  parentLinksTable: () => parentLinksTable,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
@@ -43059,6 +43074,7 @@ __export(src_exports, {
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  parentLinksTable: () => parentLinksTable,
   pool: () => pool,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
@@ -51142,6 +51158,117 @@ router3.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), as
     absent: count("absent"),
     excused: count("excused"),
     recent: rows.slice(0, 10)
+  });
+});
+var managerRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router3.post("/parents/links", requireAuthenticatedRole(...managerRoles), async (req, res) => {
+  const viewer = user(res);
+  const parentLogin = readString(req.body, "parentLogin", 64)?.toLowerCase();
+  const studentLogin = readString(req.body, "studentLogin", 64)?.toLowerCase();
+  if (!parentLogin || !studentLogin) {
+    res.status(400).json({ error: "Parent and student logins are required." });
+    return;
+  }
+  const [parent] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, parentLogin)).limit(1);
+  const [student] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, studentLogin)).limit(1);
+  if (!parent || parent.role !== "parent" || !student || student.role !== "student") {
+    res.status(404).json({ error: "No matching parent and student accounts were found." });
+    return;
+  }
+  const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, student.id));
+  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManage(viewer.id, viewer.role, row.classId)))).some(Boolean);
+  if (!allowed) {
+    res.status(403).json({ error: "You can only link parents of your own students." });
+    return;
+  }
+  await db.insert(parentLinksTable).values({ parentId: parent.id, studentId: student.id, createdBy: viewer.id }).onConflictDoNothing();
+  for (const row of classes) {
+    const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, row.classId)).limit(1);
+    if (ctx) await db.insert(schoolMembersTable).values({ schoolId: ctx.schoolId, userId: parent.id, role: "parent" }).onConflictDoNothing();
+  }
+  res.status(201).json({ linked: true, parent: parent.name, student: student.name });
+});
+router3.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res) => {
+  const viewer = user(res);
+  const links = await db.select({ id: usersTable.id, name: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(parentLinksTable.studentId, usersTable.id)).where(eq(parentLinksTable.parentId, viewer.id));
+  const children = [];
+  for (const child of links) {
+    const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(eq(classMembersTable.userId, child.id), eq(classMembersTable.role, "student")));
+    const classIds = classes.map((item) => item.id);
+    const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)).orderBy(desc(assignmentsTable.createdAt)).limit(20) : [];
+    const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, feedback: assignmentSubmissionsTable.feedback }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, child.id), inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))) : [];
+    const homework = assignments.map((item) => {
+      const sub = submissions.find((row) => row.assignmentId === item.id);
+      return {
+        ...item,
+        state: !sub ? "missing" : sub.score === null ? "review" : "graded",
+        grade: sub && sub.score !== null ? Math.max(2, Math.min(5, Math.round(sub.score / 20))) : null,
+        feedback: sub?.feedback ?? ""
+      };
+    });
+    const marks = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, child.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(60);
+    const attended = marks.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades = homework.map((item) => item.grade).filter((grade) => grade !== null);
+    children.push({
+      id: child.id,
+      name: child.name,
+      classes: classes.map((item) => item.name),
+      average: grades.length ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null,
+      absences: marks.filter((row) => row.status === "absent").slice(0, 5).map((row) => row.date),
+      homework
+    });
+  }
+  res.json({ children });
+});
+router3.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot view this school." });
+    return;
+  }
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  const classIds = classes.map((item) => item.id);
+  const members = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(eq(schoolMembersTable.schoolId, schoolId));
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+  const marks = classIds.length ? await db.select({ classId: attendanceTable.classId, status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(inArray(attendanceTable.classId, classIds)) : [];
+  const recent = marks.filter((row) => row.date >= since);
+  const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)) : [];
+  const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const lessons = await db.select({ id: lessonRoomsTable.id, classId: lessonRoomsTable.classId, createdAt: lessonRoomsTable.createdAt }).from(lessonRoomsTable).where(eq(lessonRoomsTable.schoolId, schoolId));
+  const percent = (rows) => rows.length ? Math.round(rows.filter((row) => row.status === "present" || row.status === "late").length / rows.length * 100) : null;
+  const gradeOf = (score) => Math.max(2, Math.min(5, Math.round(score / 20)));
+  const graded = submissions.filter((row) => row.score !== null).map((row) => gradeOf(row.score));
+  const perClass = classes.map((item) => {
+    const classAssignments = assignments.filter((row) => row.classId === item.id).map((row) => row.id);
+    const classGrades = submissions.filter((row) => row.score !== null && classAssignments.includes(row.assignmentId)).map((row) => gradeOf(row.score));
+    return {
+      id: item.id,
+      name: item.name,
+      attendancePercent: percent(recent.filter((row) => row.classId === item.id)),
+      assignments: classAssignments.length,
+      average: classGrades.length ? Math.round(classGrades.reduce((a, b) => a + b, 0) / classGrades.length * 10) / 10 : null,
+      lessons: lessons.filter((row) => row.classId === item.id).length
+    };
+  });
+  res.json({
+    students: members.filter((row) => row.role === "student").length,
+    teachers: members.filter((row) => row.role === "teacher").length,
+    parents: members.filter((row) => row.role === "parent").length,
+    classes: classes.length,
+    attendancePercent: percent(recent),
+    absentToday: marks.filter((row) => row.date === (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) && row.status === "absent").length,
+    assignments: assignments.length,
+    toReview: submissions.filter((row) => row.score === null).length,
+    average: graded.length ? Math.round(graded.reduce((a, b) => a + b, 0) / graded.length * 10) / 10 : null,
+    lessons30d: lessons.filter((row) => row.createdAt.getTime() > Date.now() - 30 * 24 * 60 * 60 * 1e3).length,
+    perClass
   });
 });
 var learning_default = router3;

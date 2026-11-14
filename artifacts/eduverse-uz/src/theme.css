@@ -675,3 +675,18 @@ details.lesson-rank summary::-webkit-details-marker { display: none; }
 .chem-reaction-pick { text-align: left; padding: 10px 12px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font: 700 13px var(--font); cursor: pointer; transition: border-color .4s var(--ease); }
 .chem-reaction-pick:hover { border-color: var(--ev-primary); }
 @media (max-width: 900px) { .chem-grid { grid-template-columns: 1fr; } .chem-equation { font-size: 18px; } }
+
+/* ---------- cabinets (parent, director) ---------- */
+.cabinet { display: grid; gap: 16px; }
+.cabinet-hero { display: flex; align-items: center; gap: 14px; padding: 18px 20px; background: linear-gradient(120deg, #242429, #141417 75%); border: 1px solid var(--line-2); border-radius: 8px; }
+.cabinet-hero .avatar { width: 52px; height: 52px; font-size: 22px; }
+.cabinet-hero h2 { font-size: 20px; margin: 0; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { display: grid; gap: 4px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; animation: ev-rise .8s var(--ease) both; }
+.kpi-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 6px; background: rgba(200, 16, 46, 0.12); color: var(--ev-primary); margin-bottom: 4px; }
+.kpi b { font-size: 26px; color: var(--champagne); }
+.kpi span:last-child { color: var(--text-3); font-size: 13px; }
+.kpi.warn { border-color: rgba(242, 180, 67, 0.5); }
+.kpi.warn b { color: var(--warn); }
+.row-warn td { background: rgba(242, 180, 67, 0.06); }
+.cabinet-tabs { gap: 8px; }
