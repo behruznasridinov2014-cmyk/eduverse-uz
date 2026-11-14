@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlaskConical, Minus, Plus, RotateCcw, Sparkles, Atom } from 'lucide-react';
+import type { User } from '@workspace/api-client-react';
 import { AiTutor } from './extras';
 import { PhysicsLab } from './physics-lab';
 import { MathLab, WebModelsLab } from './studio-labs';
@@ -308,7 +309,7 @@ function shade(hex: string): string {
 
 /* ------------------------------------------------------------------------ */
 
-export function ChemLabPage({ language }: { language: Language }) {
+export function ChemLabPage({ language, user }: { language: Language; user: User }) {
   const tx = (text: Txt) => text[language];
   type Subject = 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
   const [subject, setSubject] = useState<Subject>('chem');
@@ -374,7 +375,7 @@ export function ChemLabPage({ language }: { language: Language }) {
         </div>}
       </div>
 
-      {subject === 'phys' ? <PhysicsLab language={language} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
+      {subject === 'phys' ? <PhysicsLab language={language} user={user} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
             <MoleculeView molecule={shown} />

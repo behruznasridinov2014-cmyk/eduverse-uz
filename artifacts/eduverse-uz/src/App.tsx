@@ -12,6 +12,7 @@ import { AttendancePage } from './attendance-page';
 import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet, ParentLinkForm } from './cabinets';
 import { LessonPlanner, SchoolImport, TelegramConnect } from './school-tools';
+import { LabReports } from './lab-work';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
@@ -172,7 +173,7 @@ function App(){
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} goBoard={()=>navigate('/board')}/>
         :location==='/board'?<BoardPage/>
-        :location==='/lab'?<ChemLabPage language={lang}/>
+        :location==='/lab'&&auth.user?<ChemLabPage language={lang} user={auth.user}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
         :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
         :location==='/topics'&&auth.user?<TopicLibraryPage user={auth.user} language={lang} onOpenRoom={topicId=>navigate('/lesson/'+topicId)}/>
@@ -418,7 +419,7 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Homework and classes','Задания и классы','Vazifalar va sinflar')} subtitle={text('Assign homework tied to a topic, check notebook photos, grade and sign.','Выдавайте задания по теме, проверяйте фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini tekshiring, baholang va imzo qo‘ying.')}><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles/> {text('Lesson topic','Тема урока','Dars mavzusi')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Board','Доска','Doska')}</button></PageHeading>
   {school.status==='ready'&&school.hasServerClasses
-   ?<div className="page-stack"><LessonPlanner language={language}/><GradeJournal school={school} language={language}/><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div><ParentLinkForm language={language}/></div>
+   ?<div className="page-stack"><LessonPlanner language={language}/><GradeJournal school={school} language={language}/><LabReports language={language}/><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div><ParentLinkForm language={language}/></div>
    :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet. Ask your school administrator to add you to a class.','К вашему аккаунту ещё не привязан класс. Попросите администратора школы добавить вас в класс.','Hisobingizga hali sinf biriktirilmagan. Maktab administratoridan so‘rang.')}</span></div>}</>;
 }
 function ParentPage({language}:{language:Lang}){

@@ -282,3 +282,15 @@ export const telegramNotifyTable = pgTable("telegram_notify", {
   nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
+
+/** A virtual lab report done by a student (measurements, result, grade). */
+export const labReportsTable = pgTable("lab_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  lab: text("lab").notNull(),
+  data: jsonb("data").notNull().default({}),
+  result: text("result").notNull().default(""),
+  errorPercent: integer("error_percent"),
+  grade: integer("grade"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("lab_reports_student_idx").on(table.studentId)]);

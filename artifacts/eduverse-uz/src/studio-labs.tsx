@@ -125,11 +125,11 @@ export function MathLab({ language }: { language: Language }) {
           face.forEach((i, k) => (k ? context.lineTo(proj[i]!.x, proj[i]!.y) : context.moveTo(proj[i]!.x, proj[i]!.y)));
           context.closePath();
           const light = Math.max(0.15, Math.min(0.55, 0.38 - z * 0.06));
-          context.fillStyle = `rgba(121, 96, 168, ${light})`;
+          context.fillStyle = `rgba(184, 149, 90, ${light})`;
           context.fill();
         }
       }
-      context.strokeStyle = '#B8A1DB';
+      context.strokeStyle = '#D6C9B5';
       context.lineWidth = 1.6;
       for (const [p, q] of geo.edges) {
         context.beginPath();

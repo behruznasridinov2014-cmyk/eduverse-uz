@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import type { User } from '@workspace/api-client-react';
 import type { Language } from './school-data';
+import { PendulumLabWork } from './lab-work';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -9,15 +11,16 @@ const t = (language: Language, uz: string, ru: string, en: string) =>
  * law). Real formulas drive the animation, so what students change on the
  * sliders is what they would measure in a real experiment.
  */
-export function PhysicsLab({ language }: { language: Language }) {
-  const [mode, setMode] = useState<'pendulum' | 'circuit'>('pendulum');
+export function PhysicsLab({ language, user }: { language: Language; user: User }) {
+  const [mode, setMode] = useState<'pendulum' | 'circuit' | 'work'>('pendulum');
   return (
     <div className="stack">
       <div className="row">
         <button type="button" className={`btn ${mode === 'pendulum' ? 'primary' : ''}`} onClick={() => setMode('pendulum')}>{t(language, 'Mayatnik', 'Маятник', 'Pendulum')}</button>
         <button type="button" className={`btn ${mode === 'circuit' ? 'primary' : ''}`} onClick={() => setMode('circuit')}>{t(language, 'Elektr zanjiri', 'Электрическая цепь', 'Electric circuit')}</button>
+        <button type="button" className={`btn ${mode === 'work' ? 'primary' : ''}`} onClick={() => setMode('work')}>★ {t(language, 'Laboratoriya ishi (baho bilan)', 'Лабораторная работа (с оценкой)', 'Lab work (graded)')}</button>
       </div>
-      {mode === 'pendulum' ? <Pendulum language={language} /> : <Circuit language={language} />}
+      {mode === 'pendulum' ? <Pendulum language={language} /> : mode === 'circuit' ? <Circuit language={language} /> : <PendulumLabWork language={language} user={user} />}
     </div>
   );
 }
@@ -86,7 +89,7 @@ function Pendulum({ language }: { language: Language }) {
       // trail
       context.beginPath();
       s.trail.forEach(([x, y], i) => (i ? context.lineTo(x, y) : context.moveTo(x, y)));
-      context.strokeStyle = 'rgba(184, 161, 219, 0.35)';
+      context.strokeStyle = 'rgba(214, 201, 181, 0.35)';
       context.lineWidth = 2;
       context.stroke();
       // string
@@ -100,8 +103,8 @@ function Pendulum({ language }: { language: Language }) {
       const r = 18;
       const grad = context.createRadialGradient(bob.x - 6, bob.y - 6, 2, bob.x, bob.y, r);
       grad.addColorStop(0, '#FFFFFF');
-      grad.addColorStop(0.3, '#8A71BA');
-      grad.addColorStop(1, '#3A2C5C');
+      grad.addColorStop(0.3, '#C9A86A');
+      grad.addColorStop(1, '#4A3A22');
       context.fillStyle = grad;
       context.beginPath();
       context.arc(bob.x, bob.y, r, 0, Math.PI * 2);
@@ -119,8 +122,8 @@ function Pendulum({ language }: { language: Language }) {
         context.font = '600 11px DM Sans, sans-serif';
         context.fillText(label, x - 2, h - 6);
       };
-      bar(18, potential, '#B8A1DB', 'Eп');
-      bar(46, 1 - potential, '#8A71BA', 'Eк');
+      bar(18, potential, '#D6C9B5', 'Eп');
+      bar(46, 1 - potential, '#C9A86A', 'Eк');
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
@@ -193,7 +196,7 @@ function Circuit({ language }: { language: Language }) {
         return [box.l, box.b - (d - 2 * wTop - hSide)];
       };
       if (closed) {
-        context.fillStyle = '#B8A1DB';
+        context.fillStyle = '#D6C9B5';
         for (let d = offset; d < perimeter; d += 40) {
           const [x, y] = at(d);
           context.beginPath();
@@ -232,7 +235,7 @@ function Circuit({ language }: { language: Language }) {
       // resistor (right)
       context.fillStyle = '#141417';
       context.fillRect(box.r - 14, by - 30, 28, 60);
-      context.strokeStyle = '#B8A1DB';
+      context.strokeStyle = '#D6C9B5';
       context.lineWidth = 2;
       context.strokeRect(box.r - 14, by - 30, 28, 60);
       context.fillStyle = '#F2F2F3';

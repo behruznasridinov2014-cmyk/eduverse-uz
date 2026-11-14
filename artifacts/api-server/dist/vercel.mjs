@@ -42749,7 +42749,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43007,6 +43007,16 @@ var init_learning = __esm({
       nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
+    labReportsTable = pgTable("lab_reports", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      lab: text("lab").notNull(),
+      data: jsonb("data").notNull().default({}),
+      result: text("result").notNull().default(""),
+      errorPercent: integer("error_percent"),
+      grade: integer("grade"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("lab_reports_student_idx").on(table.studentId)]);
   }
 });
 
@@ -43024,6 +43034,7 @@ __export(schema_exports, {
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  labReportsTable: () => labReportsTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
   lessonRoomSignalsTable: () => lessonRoomSignalsTable,
@@ -43074,6 +43085,7 @@ __export(src_exports, {
   classesTable: () => classesTable,
   databaseIsConfigured: () => databaseIsConfigured,
   db: () => db,
+  labReportsTable: () => labReportsTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
   lessonRoomSignalsTable: () => lessonRoomSignalsTable,
@@ -53632,6 +53644,59 @@ router6.post(
     res.json({ plan, ai: isAiConfigured() });
   }
 );
+var LABS = /* @__PURE__ */ new Set(["pendulum"]);
+function gradePendulum(rows) {
+  const valid = rows.filter((row) => row.length > 0.05 && row.length <= 5 && row.period > 0.1 && row.period < 10);
+  if (valid.length < 3) return null;
+  const estimates = valid.map((row) => 4 * Math.PI * Math.PI * row.length / (row.period * row.period));
+  const g = estimates.reduce((a, b) => a + b, 0) / estimates.length;
+  const reference = 9.81;
+  const errorPercent = Math.round(Math.abs(g - reference) / reference * 100);
+  const distinct = new Set(valid.map((row) => row.length.toFixed(2))).size;
+  let grade = errorPercent <= 5 ? 5 : errorPercent <= 10 ? 4 : errorPercent <= 20 ? 3 : 2;
+  if (distinct < 3) grade = Math.min(grade, 3);
+  return { g: Math.round(g * 100) / 100, errorPercent, grade, rows: valid };
+}
+router6.post("/labs/reports", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const lab = isRecord5(req.body) && typeof req.body.lab === "string" ? req.body.lab : "";
+  if (!LABS.has(lab)) {
+    res.status(400).json({ error: "Unknown lab." });
+    return;
+  }
+  const rawRows = isRecord5(req.body) && Array.isArray(req.body.rows) ? req.body.rows.slice(0, 12) : [];
+  const rows = rawRows.map((row) => isRecord5(row) ? { length: Number(row.length), period: Number(row.period) } : null).filter((row) => row !== null && Number.isFinite(row.length) && Number.isFinite(row.period));
+  const graded = gradePendulum(rows);
+  if (!graded) {
+    res.status(400).json({ error: "At least three valid measurements are required." });
+    return;
+  }
+  const conclusion = cleanText(isRecord5(req.body) ? req.body.conclusion : void 0, 1e3) ?? "";
+  const [report] = await db.insert(labReportsTable).values({ studentId: viewer.id, lab, data: { rows: graded.rows, g: graded.g, conclusion }, result: `g = ${graded.g} m/s\xB2`, errorPercent: graded.errorPercent, grade: graded.grade }).returning();
+  res.status(201).json({ report, g: graded.g, errorPercent: graded.errorPercent, grade: graded.grade });
+});
+router6.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (_req, res) => {
+  const viewer = viewerOf(res);
+  let studentIds = [viewer.id];
+  if (viewer.role !== "student") {
+    const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
+    const classIds = classes.map((row) => row.classId);
+    const students = classIds.length ? await db.select({ userId: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student"))) : [];
+    studentIds = [...new Set(students.map((row) => row.userId))];
+    if (isGlobalAdminRole(viewer.role) || viewer.role === "school_director" || viewer.role === "school_admin") {
+      const schools = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, viewer.id));
+      const schoolIds = schools.map((row) => row.schoolId);
+      const all = schoolIds.length ? await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(and(inArray(schoolMembersTable.schoolId, schoolIds), eq(schoolMembersTable.role, "student"))) : [];
+      studentIds = [.../* @__PURE__ */ new Set([...studentIds, ...all.map((row) => row.userId)])];
+    }
+  }
+  if (!studentIds.length) {
+    res.json({ reports: [] });
+    return;
+  }
+  const reports = await db.select({ id: labReportsTable.id, lab: labReportsTable.lab, result: labReportsTable.result, errorPercent: labReportsTable.errorPercent, grade: labReportsTable.grade, data: labReportsTable.data, createdAt: labReportsTable.createdAt, studentName: usersTable.username }).from(labReportsTable).innerJoin(usersTable, eq(labReportsTable.studentId, usersTable.id)).where(inArray(labReportsTable.studentId, studentIds)).orderBy(desc(labReportsTable.createdAt)).limit(100);
+  res.json({ reports });
+});
 var school_tools_default = router6;
 
 // src/lib/schema-sync.ts
