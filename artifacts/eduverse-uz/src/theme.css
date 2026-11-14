@@ -727,3 +727,18 @@ details.lesson-rank summary::-webkit-details-marker { display: none; }
   .plan-doc { background: #fff !important; color: #000 !important; border: 0 !important; }
   .plan-doc * { color: #000 !important; }
 }
+
+/* ---------- real-life scene ---------- */
+.life-scene { display: grid; grid-template-columns: 120px 1fr; gap: 16px; align-items: center; animation: ev-rise .8s var(--ease) both; }
+.life-scene p { margin: 0; color: var(--text-2); }
+.life-vessel { position: relative; height: 130px; border: 2px solid rgba(214,209,196,.45); border-top: 0; border-radius: 0 0 14px 14px; overflow: hidden; background: rgba(255,255,255,.02); }
+.life-gas .life-vessel { border-top: 2px solid rgba(214,209,196,.45); border-radius: 14px; }
+.life-gas i { position: absolute; bottom: -10px; width: 8px; height: 8px; border-radius: 50%; background: var(--tint); opacity: .7; animation: life-float linear infinite; }
+@keyframes life-float { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: .75; } 50% { transform: translate(8px, -70px); } 100% { transform: translate(-6px, -150px); opacity: 0; } }
+.life-liquid { position: absolute; left: 0; right: 0; bottom: 0; height: 62%; background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 55%, transparent), color-mix(in srgb, var(--tint) 30%, transparent)); animation: life-wave 3.5s ease-in-out infinite; }
+@keyframes life-wave { 0%, 100% { transform: skewY(-2deg); } 50% { transform: skewY(2deg); } }
+.life-liquid + i, .life-liquid ~ i { position: absolute; bottom: 4px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.7); animation: life-bubble 2.6s ease-in infinite; }
+@keyframes life-bubble { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-70px); opacity: 0; } }
+.life-crystals { position: absolute; inset: auto 6px 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.life-crystals span { aspect-ratio: 1; background: linear-gradient(135deg, #FFFFFF, #CFCFD6); border-radius: 2px; box-shadow: inset -3px -3px 0 rgba(0,0,0,.12); animation: ev-pop .8s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .life-gas i, .life-liquid, .life-liquid ~ i { animation: none; } }

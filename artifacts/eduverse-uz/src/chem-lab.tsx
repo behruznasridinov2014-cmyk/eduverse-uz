@@ -29,6 +29,48 @@ const ELEMENTS: Record<El, { color: string; r: number; name: Txt }> = {
 };
 
 type Atom3 = { el: El; p: [number, number, number] };
+const VALENCE: Record<El, number> = { H: 1, C: 4, N: 3, O: 2, Na: 1, Cl: 1, S: 2 };
+
+/**
+ * Builds a 3D model for ANY set of atoms: the atom with the highest valence
+ * sits in the centre, the others spread evenly on a sphere around it. The
+ * student always sees what they made, plus whether it can exist.
+ */
+function sandboxMolecule(counts: Record<string, number>): Molecule | null {
+  const atoms: El[] = [];
+  for (const [el, n] of Object.entries(counts)) for (let i = 0; i < n; i += 1) atoms.push(el as El);
+  if (atoms.length === 0) return null;
+  atoms.sort((a, b) => VALENCE[b] - VALENCE[a]);
+  const [center, ...rest] = atoms;
+  const placed: Atom3[] = [{ el: center!, p: [0, 0, 0] }];
+  const bonds: Array<[number, number, number?]> = [];
+  rest.forEach((el, i) => {
+    // Fibonacci sphere: even spacing for any count
+    const k = rest.length;
+    const y = k === 1 ? 0 : 1 - (2 * (i + 0.5)) / k;
+    const r = Math.sqrt(1 - y * y);
+    const phi = i * Math.PI * (3 - Math.sqrt(5));
+    const d = 1.1 + ELEMENTS[el].r * 0.6;
+    placed.push({ el, p: [Math.cos(phi) * r * d, y * d, Math.sin(phi) * r * d] });
+    bonds.push([0, i + 1]);
+  });
+  const formula = Object.entries(counts).map(([el, n]) => `${el}${n > 1 ? n : ''}`).join('');
+  return {
+    id: 'sandbox', formula, name: L('Sizning molekulangiz', 'Ваша молекула', 'Your molecule'),
+    atoms: placed, bonds, facts: [], state: L('Noma’lum', 'Неизвестно', 'Unknown'),
+  };
+}
+
+/** Valence check: can these atoms form one neutral molecule? */
+function valenceReport(counts: Record<string, number>): { ok: boolean; free: number } {
+  const atoms = Object.entries(counts).flatMap(([el, n]) => Array.from({ length: n }, () => VALENCE[el as El]));
+  if (atoms.length < 2) return { ok: false, free: atoms[0] ?? 0 };
+  const total = atoms.reduce((a, b) => a + b, 0);
+  const max = Math.max(...atoms);
+  // a connected structure needs an even bond count and enough bonds to link every atom
+  const ok = total % 2 === 0 && total >= 2 * (atoms.length - 1) && max <= total - max;
+  return { ok, free: total % 2 };
+}
 type Molecule = {
   id: string;
   formula: string;
@@ -38,91 +80,92 @@ type Molecule = {
   facts: Txt[];
   state: Txt;
   danger?: Txt;
+  life?: Txt;
 };
 
 const t = 1.0;
 // Geometry: simple, readable coordinates (Å-like units).
 const MOLECULES: Molecule[] = [
   {
-    id: 'h2', formula: 'H₂', name: L('Vodorod', 'Водород', 'Hydrogen'),
+    id: 'h2', life: L('Shar va raketalar yoqilg‘isi — rangsiz, hidsiz gaz.', 'Воздушные шары и ракетное топливо — бесцветный газ без запаха.', 'Balloons and rocket fuel — colourless, odourless gas.'), formula: 'H₂', name: L('Vodorod', 'Водород', 'Hydrogen'),
     atoms: [{ el: 'H', p: [-0.37, 0, 0] }, { el: 'H', p: [0.37, 0, 0] }], bonds: [[0, 1]],
     state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Eng yengil gaz.', 'Самый лёгкий газ.', 'The lightest gas.'), L('Yonadi, suv hosil qiladi.', 'Горит, образуя воду.', 'Burns to form water.')],
     danger: L('Havo bilan portlovchi aralashma.', 'С воздухом образует гремучую смесь.', 'Explosive mixture with air.'),
   },
   {
-    id: 'o2', formula: 'O₂', name: L('Kislorod', 'Кислород', 'Oxygen'),
+    id: 'o2', life: L('Biz nafas olayotgan havo; suyuq kislorod — och ko‘k rangda.', 'Воздух, которым мы дышим; жидкий кислород — бледно-голубой.', 'The air we breathe; liquid oxygen is pale blue.'), formula: 'O₂', name: L('Kislorod', 'Кислород', 'Oxygen'),
     atoms: [{ el: 'O', p: [-0.6, 0, 0] }, { el: 'O', p: [0.6, 0, 0] }], bonds: [[0, 1, 2]],
     state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Havoning 21%.', 'Составляет 21% воздуха.', '21% of air.'), L('Nafas olish va yonish uchun kerak.', 'Нужен для дыхания и горения.', 'Needed for breathing and burning.')],
   },
   {
-    id: 'n2', formula: 'N₂', name: L('Azot', 'Азот', 'Nitrogen'),
+    id: 'n2', life: L('Havoning asosiy qismi; suyuq azot −196 °C da qaynaydi.', 'Основная часть воздуха; жидкий азот кипит при −196 °C.', 'Most of the air; liquid nitrogen boils at −196 °C.'), formula: 'N₂', name: L('Azot', 'Азот', 'Nitrogen'),
     atoms: [{ el: 'N', p: [-0.55, 0, 0] }, { el: 'N', p: [0.55, 0, 0] }], bonds: [[0, 1, 3]],
     state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Havoning 78%.', 'Составляет 78% воздуха.', '78% of air.'), L('Uch bog‘ — juda barqaror.', 'Тройная связь — очень устойчив.', 'Triple bond — very stable.')],
   },
   {
-    id: 'h2o', formula: 'H₂O', name: L('Suv', 'Вода', 'Water'),
+    id: 'h2o', life: L('Stakandagi suv, muz va bug‘ — bitta modda uch holatda.', 'Вода в стакане, лёд и пар — одно вещество в трёх состояниях.', 'Water in a glass, ice and steam — one substance, three states.'), formula: 'H₂O', name: L('Suv', 'Вода', 'Water'),
     atoms: [{ el: 'O', p: [0, 0, 0] }, { el: 'H', p: [-0.76, 0.59, 0] }, { el: 'H', p: [0.76, 0.59, 0] }],
     bonds: [[0, 1], [0, 2]], state: L('Suyuqlik', 'Жидкость', 'Liquid'),
     facts: [L('Burchak 104,5° — molekula qutbli.', 'Угол 104,5° — молекула полярная.', 'Angle 104.5° — a polar molecule.'), L('100 °C da qaynaydi, 0 °C da muzlaydi.', 'Кипит при 100 °C, замерзает при 0 °C.', 'Boils at 100 °C, freezes at 0 °C.')],
   },
   {
-    id: 'co2', formula: 'CO₂', name: L('Karbonat angidrid', 'Углекислый газ', 'Carbon dioxide'),
+    id: 'co2', life: L('Gazli suvdagi pufakchalar va quruq muz.', 'Пузырьки в газировке и «сухой лёд».', 'Bubbles in soda and dry ice.'), formula: 'CO₂', name: L('Karbonat angidrid', 'Углекислый газ', 'Carbon dioxide'),
     atoms: [{ el: 'C', p: [0, 0, 0] }, { el: 'O', p: [-1.16, 0, 0] }, { el: 'O', p: [1.16, 0, 0] }],
     bonds: [[0, 1, 2], [0, 2, 2]], state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Chiziqli molekula, 180°.', 'Линейная молекула, 180°.', 'Linear molecule, 180°.'), L('O‘simliklar fotosintezda yutadi.', 'Растения поглощают при фотосинтезе.', 'Plants absorb it in photosynthesis.')],
   },
   {
-    id: 'ch4', formula: 'CH₄', name: L('Metan', 'Метан', 'Methane'),
+    id: 'ch4', life: L('Gaz plitasidagi ko‘k olov.', 'Голубое пламя газовой плиты.', 'The blue flame of a gas stove.'), formula: 'CH₄', name: L('Metan', 'Метан', 'Methane'),
     atoms: [{ el: 'C', p: [0, 0, 0] }, { el: 'H', p: [0.63, 0.63, 0.63] }, { el: 'H', p: [-0.63, -0.63, 0.63] }, { el: 'H', p: [-0.63, 0.63, -0.63] }, { el: 'H', p: [0.63, -0.63, -0.63] }],
     bonds: [[0, 1], [0, 2], [0, 3], [0, 4]], state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Tetraedr, burchak 109,5°.', 'Тетраэдр, угол 109,5°.', 'Tetrahedron, 109.5°.'), L('Tabiiy gazning asosi.', 'Основа природного газа.', 'Main part of natural gas.')],
     danger: L('Yonuvchan.', 'Горючий.', 'Flammable.'),
   },
   {
-    id: 'nh3', formula: 'NH₃', name: L('Ammiak', 'Аммиак', 'Ammonia'),
+    id: 'nh3', life: L('Novshadil spirti hidi, o‘g‘itlar.', 'Запах нашатырного спирта, удобрения.', 'Smell of smelling salts, fertilisers.'), formula: 'NH₃', name: L('Ammiak', 'Аммиак', 'Ammonia'),
     atoms: [{ el: 'N', p: [0, 0.3, 0] }, { el: 'H', p: [0.94, -0.08, 0] }, { el: 'H', p: [-0.47, -0.08, 0.81] }, { el: 'H', p: [-0.47, -0.08, -0.81] }],
     bonds: [[0, 1], [0, 2], [0, 3]], state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Piramida shakli, 107°.', 'Пирамидальная форма, 107°.', 'Pyramid shape, 107°.'), L('O‘g‘itlar ishlab chiqarishda.', 'Используется для удобрений.', 'Used to make fertilisers.')],
     danger: L('O‘tkir hidli, zaharli.', 'Резкий запах, ядовит.', 'Pungent, toxic.'),
   },
   {
-    id: 'hcl', formula: 'HCl', name: L('Xlorid kislota', 'Хлороводород', 'Hydrogen chloride'),
+    id: 'hcl', life: L('Me’da shirasi; suvdagi eritmasi — xlorid kislota.', 'Желудочный сок; раствор в воде — соляная кислота.', 'Stomach acid; dissolved in water it is hydrochloric acid.'), formula: 'HCl', name: L('Xlorid kislota', 'Хлороводород', 'Hydrogen chloride'),
     atoms: [{ el: 'H', p: [-0.64, 0, 0] }, { el: 'Cl', p: [0.64, 0, 0] }], bonds: [[0, 1]],
     state: L('Gaz (suvda — kislota)', 'Газ (в воде — кислота)', 'Gas (acid in water)'),
     facts: [L('Me’da shirasida bor.', 'Есть в желудочном соке.', 'Found in stomach acid.')],
     danger: L('Kuchli kislota.', 'Сильная кислота.', 'Strong acid.'),
   },
   {
-    id: 'nacl', formula: 'NaCl', name: L('Osh tuzi', 'Поваренная соль', 'Table salt'),
+    id: 'nacl', life: L('Oshxonadagi tuz — oq kub kristallar.', 'Соль на кухне — белые кубические кристаллы.', 'Kitchen salt — white cubic crystals.'), formula: 'NaCl', name: L('Osh tuzi', 'Поваренная соль', 'Table salt'),
     atoms: [{ el: 'Na', p: [-0.75, 0, 0] }, { el: 'Cl', p: [0.85, 0, 0] }], bonds: [[0, 1]],
     state: L('Qattiq kristall', 'Твёрдый кристалл', 'Solid crystal'),
     facts: [L('Ion bog‘: Na⁺ va Cl⁻.', 'Ионная связь: Na⁺ и Cl⁻.', 'Ionic bond: Na⁺ and Cl⁻.'), L('801 °C da eriydi.', 'Плавится при 801 °C.', 'Melts at 801 °C.')],
   },
   {
-    id: 'naoh', formula: 'NaOH', name: L('O‘yuvchi natriy', 'Гидроксид натрия', 'Sodium hydroxide'),
+    id: 'naoh', life: L('Sovun va quvur tozalagich.', 'Мыло и средство для прочистки труб.', 'Soap and drain cleaner.'), formula: 'NaOH', name: L('O‘yuvchi natriy', 'Гидроксид натрия', 'Sodium hydroxide'),
     atoms: [{ el: 'Na', p: [-1.2, 0, 0] }, { el: 'O', p: [0.3, 0, 0] }, { el: 'H', p: [1.05, 0.5, 0] }],
     bonds: [[0, 1], [1, 2]], state: L('Qattiq', 'Твёрдое вещество', 'Solid'),
     facts: [L('Kuchli ishqor.', 'Сильная щёлочь.', 'Strong base.'), L('Sovun tayyorlashda.', 'Используется для мыла.', 'Used to make soap.')],
     danger: L('Terini kuydiradi.', 'Разъедает кожу.', 'Burns skin.'),
   },
   {
-    id: 'h2s', formula: 'H₂S', name: L('Vodorod sulfid', 'Сероводород', 'Hydrogen sulfide'),
+    id: 'h2s', life: L('Vulqonlar va mineral buloqlar yaqinidagi hid.', 'Запах у вулканов и минеральных источников.', 'The smell near volcanoes and hot springs.'), formula: 'H₂S', name: L('Vodorod sulfid', 'Сероводород', 'Hydrogen sulfide'),
     atoms: [{ el: 'S', p: [0, 0, 0] }, { el: 'H', p: [-0.96, 0.65, 0] }, { el: 'H', p: [0.96, 0.65, 0] }],
     bonds: [[0, 1], [0, 2]], state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Chirigan tuxum hidi.', 'Запах тухлых яиц.', 'Smells of rotten eggs.')],
     danger: L('Zaharli.', 'Ядовит.', 'Toxic.'),
   },
   {
-    id: 'so2', formula: 'SO₂', name: L('Oltingugurt dioksidi', 'Сернистый газ', 'Sulfur dioxide'),
+    id: 'so2', life: L('Vulqon tutuni, quritilgan mevalarni saqlash.', 'Вулканический дым, консервирование сухофруктов.', 'Volcanic smoke, preserving dried fruit.'), formula: 'SO₂', name: L('Oltingugurt dioksidi', 'Сернистый газ', 'Sulfur dioxide'),
     atoms: [{ el: 'S', p: [0, 0.2, 0] }, { el: 'O', p: [-1.24, -0.45, 0] }, { el: 'O', p: [1.24, -0.45, 0] }],
     bonds: [[0, 1, 2], [0, 2, 2]], state: L('Gaz', 'Газ', 'Gas'),
     facts: [L('Burchak 119°.', 'Угол 119°.', 'Angle 119°.'), L('Kislotali yomg‘ir sababi.', 'Причина кислотных дождей.', 'Causes acid rain.')],
   },
   {
-    id: 'c2h5oh', formula: 'C₂H₅OH', name: L('Etanol', 'Этанол', 'Ethanol'),
+    id: 'c2h5oh', life: L('Dezinfeksiya vositasi, ko‘k olov bilan yonadi.', 'Антисептик, горит голубым пламенем.', 'Hand sanitiser, burns with a blue flame.'), formula: 'C₂H₅OH', name: L('Etanol', 'Этанол', 'Ethanol'),
     atoms: [
       { el: 'C', p: [-0.75, 0, 0] }, { el: 'C', p: [0.75, 0, 0] }, { el: 'O', p: [1.4, 1.15, 0] },
       { el: 'H', p: [2.3, 1.05, 0] }, { el: 'H', p: [-1.15, 1.0, 0.1] }, { el: 'H', p: [-1.15, -0.5, 0.85] },
@@ -276,9 +319,12 @@ export function ChemLabPage({ language }: { language: Language }) {
   const [animKey, setAnimKey] = useState(0);
 
   const match = useMemo(() => MOLECULES.find((molecule) => sameCounts(countsOf(molecule), counts)) ?? null, [counts]);
+  const sandbox = useMemo(() => (match ? null : sandboxMolecule(counts)), [match, counts]);
+  const report = useMemo(() => valenceReport(counts), [counts]);
   useEffect(() => {
     if (match) setSelected(match);
   }, [match]);
+  const shown = match ?? sandbox ?? selected;
 
   const change = (el: El, delta: number) =>
     setCounts((current) => {
@@ -318,9 +364,9 @@ export function ChemLabPage({ language }: { language: Language }) {
       {subject === 'phys' ? <PhysicsLab language={language} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
-            <MoleculeView molecule={selected} />
+            <MoleculeView molecule={shown} />
             <div className="chem-caption">
-              <b>{tx(selected.name)}</b> <span className="chem-formula">{selected.formula}</span>
+              <b>{tx(shown.name)}</b> <span className="chem-formula">{shown.formula}</span>
               <span className="muted"> · {tx(L('aylantirish uchun torting', 'потяните, чтобы вращать', 'drag to rotate'))}</span>
             </div>
           </div>
@@ -346,7 +392,15 @@ export function ChemLabPage({ language }: { language: Language }) {
                 <span>{formula}</span>
                 <b>{match ? `= ${tx(match.name)}` : tx(L('Bunday modda ro‘yxatda yo‘q — AI dan so‘rang', 'Такого вещества нет в списке — спросите ИИ', 'Not in the list — ask the AI'))}</b>
               </div>
+              {!match && sandbox && (
+                <div className={`notice ${report.ok ? 'success' : ''}`}>
+                  {report.ok
+                    ? tx(L('Valentlik mos keladi: bunday molekula bo‘lishi mumkin. Nomini AI dan so‘rang.', 'Валентности сходятся: такая молекула может существовать. Спросите ИИ, как она называется.', 'Valences fit: such a molecule can exist. Ask the AI for its name.'))
+                    : tx(L('Valentlik mos emas: atomlarda bo‘sh bog‘lar qoldi. Haqiqiy hayotda bunday zarracha barqaror emas — u boshqa atomlarni o‘ziga tortadi.', 'Валентности не сходятся: у атомов остались свободные связи. В реальной жизни такая частица неустойчива — она сразу притянет другие атомы.', 'Valences do not fit: free bonds remain. In real life such a particle is unstable and grabs other atoms.'))}
+                </div>
+              )}
             </section>
+            {match && <RealLife molecule={match} language={language} />}
             <section className="panel">
               <div className="section-head"><h2>{tx(L('Xossalari', 'Свойства', 'Properties'))}</h2><span className="tag">{tx(selected.state)}</span></div>
               <ul className="chem-facts">{selected.facts.map((fact, i) => <li key={i}>{tx(fact)}</li>)}</ul>
@@ -422,3 +476,23 @@ export function ChemLabPage({ language }: { language: Language }) {
 }
 
 void t;
+
+/** "How it looks in real life": gas in a jar, liquid in a glass, or crystals. */
+function RealLife({ molecule, language }: { molecule: Molecule; language: Language }) {
+  const state = molecule.state.English.toLowerCase();
+  const kind = state.startsWith('gas') ? 'gas' : state.startsWith('liquid') ? 'liquid' : 'solid';
+  const tint = molecule.id === 'o2' ? '#9FC5FF' : molecule.id === 'h2s' || molecule.id === 'so2' ? '#E8DC8A' : molecule.id === 'c2h5oh' ? '#E8F0FF' : '#BFD8FF';
+  return (
+    <section className="panel real-life">
+      <div className="section-head"><h2>{language === 'Uzbek' ? 'Haqiqiy hayotda' : language === 'Русский' ? 'В реальной жизни' : 'In real life'}</h2></div>
+      <div className={`life-scene life-${kind}`} style={{ ['--tint' as string]: tint }} key={molecule.id}>
+        <div className="life-vessel">
+          {kind === 'gas' && Array.from({ length: 14 }, (_, i) => <i key={i} style={{ left: `${8 + ((i * 37) % 84)}%`, animationDelay: `${(i % 7) * 0.45}s`, animationDuration: `${3 + (i % 4)}s` }} />)}
+          {kind === 'liquid' && <><div className="life-liquid" />{Array.from({ length: 6 }, (_, i) => <i key={i} style={{ left: `${15 + i * 13}%`, animationDelay: `${i * 0.6}s` }} />)}</>}
+          {kind === 'solid' && <div className="life-crystals">{Array.from({ length: 9 }, (_, i) => <span key={i} style={{ animationDelay: `${i * 0.12}s` }} />)}</div>}
+        </div>
+        <p>{molecule.life ? molecule.life[language] : ''}</p>
+      </div>
+    </section>
+  );
+}
