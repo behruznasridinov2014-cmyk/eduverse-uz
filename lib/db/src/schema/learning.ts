@@ -273,3 +273,12 @@ export const parentLinksTable = pgTable(
     index("parent_links_student_idx").on(table.studentId),
   ],
 );
+
+/** Telegram chat that receives school notifications for an account. */
+export const telegramNotifyTable = pgTable("telegram_notify", {
+  userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+  chatId: text("chat_id"),
+  nonce: text("nonce"),
+  nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);

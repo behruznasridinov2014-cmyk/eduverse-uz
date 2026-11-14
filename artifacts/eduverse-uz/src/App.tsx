@@ -11,6 +11,7 @@ import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
 import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet, ParentLinkForm } from './cabinets';
+import { LessonPlanner, SchoolImport, TelegramConnect } from './school-tools';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
@@ -417,20 +418,20 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Homework and classes','Задания и классы','Vazifalar va sinflar')} subtitle={text('Assign homework tied to a topic, check notebook photos, grade and sign.','Выдавайте задания по теме, проверяйте фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini tekshiring, baholang va imzo qo‘ying.')}><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles/> {text('Lesson topic','Тема урока','Dars mavzusi')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Board','Доска','Doska')}</button></PageHeading>
   {school.status==='ready'&&school.hasServerClasses
-   ?<div className="page-stack"><GradeJournal school={school} language={language}/><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div><ParentLinkForm language={language}/></div>
+   ?<div className="page-stack"><LessonPlanner language={language}/><GradeJournal school={school} language={language}/><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div><ParentLinkForm language={language}/></div>
    :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet. Ask your school administrator to add you to a class.','К вашему аккаунту ещё не привязан класс. Попросите администратора школы добавить вас в класс.','Hisobingizga hali sinf biriktirilmagan. Maktab administratoridan so‘rang.')}</span></div>}</>;
 }
 function ParentPage({language}:{language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('Family view','Кабинет семьи','Oila kabineti')} title={text('Your child’s learning','Учёба вашего ребёнка','Farzandingiz ta’limi')} subtitle={text('Grades, attendance and homework in one place.','Оценки, посещаемость и домашние задания в одном месте.','Baholar, davomat va uy vazifalari bir joyda.')}/>
-  <ParentCabinet language={language}/></>;
+  <ParentCabinet language={language}/><div style={{marginTop:16}}><TelegramConnect language={language}/></div></>;
 }
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
   <SchoolScopeSummary school={school} language={language}/>
   {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
+   ?<div style={{marginTop:16,display:'grid',gap:16}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolImport schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 

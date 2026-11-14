@@ -690,3 +690,40 @@ details.lesson-rank summary::-webkit-details-marker { display: none; }
 .kpi.warn b { color: var(--warn); }
 .row-warn td { background: rgba(242, 180, 67, 0.06); }
 .cabinet-tabs { gap: 8px; }
+
+/* ---------- import, planner, physics ---------- */
+.import-area { width: 100%; min-height: 150px; padding: 12px; border-radius: 6px; background: var(--bg-2); border: 1px solid var(--line-2); color: var(--text); font: 13px/1.5 ui-monospace, Consolas, monospace; resize: vertical; margin-bottom: 12px; }
+.import-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.import-result { margin-top: 16px; display: grid; gap: 10px; }
+.login-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.login-card { display: grid; gap: 4px; padding: 12px; border: 1px dashed var(--line-2); border-radius: 6px; background: var(--surface-2); }
+.login-card small { color: var(--text-3); font-size: 11px; }
+.login-card code { color: var(--champagne); font-weight: 700; }
+.planner-form { display: grid; grid-template-columns: 1.3fr .8fr .7fr 2fr auto; gap: 8px; margin: 10px 0; }
+.plan-doc { margin-top: 12px; padding: 18px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); animation: ev-rise .8s var(--ease) both; }
+.plan-doc h3 { font-size: 18px; margin: 0 0 8px; }
+.plan-doc h4 { font-size: 13px; color: var(--champagne); text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 6px; }
+.plan-doc ul, .plan-doc ol { margin: 0; padding-left: 20px; color: var(--text-2); display: grid; gap: 4px; }
+.plan-steps { display: grid; gap: 8px; }
+.plan-step { display: flex; gap: 12px; align-items: flex-start; }
+.plan-step p { margin: 2px 0 0; color: var(--text-2); }
+.plan-min { flex: none; min-width: 44px; padding: 4px 6px; text-align: center; border-radius: 4px; background: rgba(200,16,46,.15); color: #FF8A9B; font-weight: 800; }
+.lab-subjects { gap: 6px; margin-bottom: 8px; }
+.lab-slider { display: grid; gap: 6px; margin-bottom: 14px; }
+.lab-slider span { display: flex; justify-content: space-between; color: var(--text-2); font-size: 13px; font-weight: 600; }
+.lab-slider b { color: var(--champagne); }
+.lab-slider input { width: 100%; accent-color: var(--ev-primary); }
+.lab-formula { font: 700 15px ui-monospace, Consolas, monospace; color: var(--text-2); }
+.lab-value { font-size: 22px; margin: 6px 0; }
+.lab-value b { color: var(--champagne); }
+@media (max-width: 900px) { .planner-form { grid-template-columns: 1fr 1fr; } .planner-topic { grid-column: 1 / -1; } }
+@media print {
+  body, .app-shell, .content { background: #fff !important; color: #000 !important; }
+  .sidebar, .topbar, .mobile-nav, .account-banner, .page-heading, .notice, .import-area, .import-summary, .btn, textarea { display: none !important; }
+  .content > *:not(.page-stack):not(section) { display: none !important; }
+  .panel { border: 0 !important; background: #fff !important; padding: 0 !important; }
+  .login-card { break-inside: avoid; background: #fff !important; border: 1px dashed #999 !important; color: #000 !important; }
+  .login-card code, .login-card small { color: #000 !important; }
+  .plan-doc { background: #fff !important; color: #000 !important; border: 0 !important; }
+  .plan-doc * { color: #000 !important; }
+}

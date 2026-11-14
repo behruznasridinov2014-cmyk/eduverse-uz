@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlaskConical, Minus, Plus, RotateCcw, Sparkles, Atom } from 'lucide-react';
 import { AiTutor } from './extras';
+import { PhysicsLab } from './physics-lab';
 import type { Language } from './school-data';
 
 /**
@@ -265,6 +266,7 @@ function shade(hex: string): string {
 
 export function ChemLabPage({ language }: { language: Language }) {
   const tx = (text: Txt) => text[language];
+  const [subject, setSubject] = useState<'chem' | 'phys'>('chem');
   const [mode, setMode] = useState<'build' | 'react'>('build');
   const [counts, setCounts] = useState<Record<string, number>>({ H: 2, O: 1 });
   const [selected, setSelected] = useState<Molecule>(MOLECULES.find((m) => m.id === 'h2o')!);
@@ -297,20 +299,23 @@ export function ChemLabPage({ language }: { language: Language }) {
     <section className="chem-lab">
       <div className="page-heading">
         <div>
-          <div className="eyebrow">{tx(L('Kimyo', 'Химия', 'Chemistry'))}</div>
+          <div className="row lab-subjects">
+            <button type="button" className={`btn small ${subject === 'chem' ? 'primary' : ''}`} onClick={() => setSubject('chem')}>{tx(L('Kimyo', 'Химия', 'Chemistry'))}</button>
+            <button type="button" className={`btn small ${subject === 'phys' ? 'primary' : ''}`} onClick={() => setSubject('phys')}>{tx(L('Fizika', 'Физика', 'Physics'))}</button>
+          </div>
           <h1>{tx(L('3D laboratoriya', '3D-лаборатория', '3D lab'))}</h1>
           <p className="page-subtitle">{tx(L(
             'Atomlarni yig‘ing — molekula 3D da paydo bo‘ladi. Moddalarni aralashtiring — reaksiyani ko‘ring.',
             'Соберите атомы — молекула появится в 3D. Смешайте вещества — увидите реакцию.',
             'Combine atoms — the molecule appears in 3D. Mix substances — watch the reaction.'))}</p>
         </div>
-        <div className="row chem-tabs">
+        {subject === 'chem' && <div className="row chem-tabs">
           <button type="button" className={`btn ${mode === 'build' ? 'primary' : ''}`} onClick={() => setMode('build')}><Atom /> {tx(L('Molekula yig‘ish', 'Собрать молекулу', 'Build a molecule'))}</button>
           <button type="button" className={`btn ${mode === 'react' ? 'primary' : ''}`} onClick={() => setMode('react')}><FlaskConical /> {tx(L('Reaksiya', 'Реакция', 'Reaction'))}</button>
-        </div>
+        </div>}
       </div>
 
-      {mode === 'build' ? (
+      {subject === 'phys' ? <PhysicsLab language={language} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
             <MoleculeView molecule={selected} />

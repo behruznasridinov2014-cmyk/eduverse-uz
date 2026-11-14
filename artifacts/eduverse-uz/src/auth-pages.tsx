@@ -32,6 +32,7 @@ import type { AppLanguage } from './localization';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
+import { TelegramConnect } from './school-tools';
 
 type AuthCopy = {
   signIn: string;
@@ -1114,6 +1115,7 @@ export function ProfilePage({
           <div className="profile-row"><span>{copy.createdAt}</span><b>{new Date(user.createdAt).toLocaleDateString(locale, { dateStyle: 'long' })}</b></div>
         </div>
       </div>
+      <TelegramConnect language={language} />
       <div className="panel">
         <h2>{text('Boshqa qurilmada kirish', 'Вход на другом устройстве', 'Sign in on another device')}</h2>
         <p className="muted">{text('Kompyuterdagi kirish sahifasida QR kodni oching va uni shu telefon bilan skanerlang.', 'Откройте QR-код на странице входа на компьютере и отсканируйте его этим телефоном.', 'Open the QR code on the sign-in page of a computer and scan it with this phone.')}</p>

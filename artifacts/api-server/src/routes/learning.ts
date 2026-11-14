@@ -17,6 +17,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
+import { escapeHtml, notifyFamily, notifyUsers } from "../lib/notify";
 import {
   canManageClass,
   cleanText,
@@ -940,6 +941,19 @@ router.put(
       }
     });
 
+    // Parents hear about an absence or a late arrival right away.
+    const flagged = finalEntries.filter((entry) => entry.status === "absent" || entry.status === "late");
+    if (flagged.length) {
+      const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+      const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
+      await Promise.all(flagged.map((entry) => {
+        const name = escapeHtml(names.find((row) => row.id === entry.studentId)?.name ?? "");
+        const text = entry.status === "absent"
+          ? `⚠️ <b>${name}</b> bugun darsga kelmadi (${escapeHtml(ctx?.name ?? "")}, ${date}).\n⚠️ <b>${name}</b> сегодня отсутствует на уроке.`
+          : `⏰ <b>${name}</b> darsga kechikdi (${date}).\n⏰ <b>${name}</b> опоздал на урок.`;
+        return notifyFamily(entry.studentId, text);
+      }));
+    }
     res.json({ saved: finalEntries.length, date });
   },
 );
@@ -1065,6 +1079,11 @@ router.post("/classes/:classId/announcements", requireAuthenticatedRole(...staff
     .insert(classAnnouncementsTable)
     .values({ classId, authorId: viewer.id, body })
     .returning();
+  const members = await db.select({ userId: classMembersTable.userId, role: classMembersTable.role }).from(classMembersTable).where(eq(classMembersTable.classId, classId));
+  const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
+  const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
+  const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `📢 <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
   res.status(201).json({ announcement: created });
 });
 

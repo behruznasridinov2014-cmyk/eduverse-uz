@@ -18825,8 +18825,8 @@ var require_escape_html = __commonJS({
   "../../node_modules/.pnpm/escape-html@1.0.3/node_modules/escape-html/index.js"(exports, module) {
     "use strict";
     var matchHtmlRegExp = /["'&<>]/;
-    module.exports = escapeHtml;
-    function escapeHtml(string) {
+    module.exports = escapeHtml2;
+    function escapeHtml2(string) {
       var str2 = "" + string;
       var match = matchHtmlRegExp.exec(str2);
       if (!match) {
@@ -18957,13 +18957,13 @@ var require_finalhandler = __commonJS({
     "use strict";
     var debug = require_src()("finalhandler");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var onFinished = require_on_finished();
     var parseUrl = require_parseurl();
     var statuses = require_statuses();
     var isFinished = onFinished.isFinished;
     function createHtmlDocument(message) {
-      var body = escapeHtml(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
+      var body = escapeHtml2(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
       return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>Error</title>\n</head>\n<body>\n<pre>' + body + "</pre>\n</body>\n</html>\n";
     }
     module.exports = finalhandler;
@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router7;
+    module.exports = Router8;
     module.exports.Route = Route;
-    function Router7(options) {
-      if (!(this instanceof Router7)) {
-        return new Router7(options);
+    function Router8(options) {
+      if (!(this instanceof Router8)) {
+        return new Router8(options);
       }
       const opts = options || {};
-      function router7(req, res, next) {
-        router7.handle(req, res, next);
+      function router8(req, res, next) {
+        router8.handle(req, res, next);
       }
-      Object.setPrototypeOf(router7, this);
-      router7.caseSensitive = opts.caseSensitive;
-      router7.mergeParams = opts.mergeParams;
-      router7.params = {};
-      router7.strict = opts.strict;
-      router7.stack = [];
-      return router7;
+      Object.setPrototypeOf(router8, this);
+      router8.caseSensitive = opts.caseSensitive;
+      router8.mergeParams = opts.mergeParams;
+      router8.params = {};
+      router8.strict = opts.strict;
+      router8.stack = [];
+      return router8;
     }
-    Router7.prototype = function() {
+    Router8.prototype = function() {
     };
-    Router7.prototype.param = function param(name, fn) {
+    Router8.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router7.prototype.handle = function handle(req, res, callback) {
+    Router8.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router7.prototype.use = function use(handler) {
+    Router8.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router7.prototype.route = function route(path) {
+    Router8.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router7.prototype[method] = function(path) {
+      Router8.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router7 = null;
+      var router8 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router7 === null) {
-            router7 = new Router7({
+          if (router8 === null) {
+            router8 = new Router8({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router7;
+          return router8;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router7 = this.router;
+      var router8 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router7.use(path, fn2);
+          return router8.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router7.use(path, function mounted_app(req, res, next) {
+        router8.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22713,7 +22713,7 @@ var require_send = __commonJS({
     var createError = require_http_errors();
     var debug = require_src()("send");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
     var fs = __require("fs");
@@ -22766,7 +22766,7 @@ var require_send = __commonJS({
       }
       var res = this.res;
       var msg = statuses.message[status] || String(status);
-      var doc = createHtmlDocument("Error", escapeHtml(msg));
+      var doc = createHtmlDocument("Error", escapeHtml2(msg));
       clearHeaders(res);
       if (err && err.headers) {
         setHeaders(res, err.headers);
@@ -22866,7 +22866,7 @@ var require_send = __commonJS({
         return;
       }
       var loc = encodeUrl(collapseLeadingSlashes(this.path + "/"));
-      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
       res.statusCode = 301;
       res.setHeader("Content-Type", "text/html; charset=UTF-8");
       res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23270,7 +23270,7 @@ var require_response = __commonJS({
     var createError = require_http_errors();
     var deprecate = require_depd()("express");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
@@ -23609,7 +23609,7 @@ var require_response = __commonJS({
           body = statuses.message[status] + ". Redirecting to " + address;
         },
         html: function() {
-          var u = escapeHtml(address);
+          var u = escapeHtml2(address);
           body = "<!DOCTYPE html><head><title>" + statuses.message[status] + "</title></head><body><p>" + statuses.message[status] + ". Redirecting to " + u + "</p></body>";
         },
         default: function() {
@@ -23737,7 +23737,7 @@ var require_serve_static = __commonJS({
   "../../node_modules/.pnpm/serve-static@2.2.1/node_modules/serve-static/index.js"(exports, module) {
     "use strict";
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var parseUrl = require_parseurl();
     var resolve = __require("path").resolve;
     var send = require_send();
@@ -23823,7 +23823,7 @@ var require_serve_static = __commonJS({
         originalUrl.path = null;
         originalUrl.pathname = collapseLeadingSlashes(originalUrl.pathname + "/");
         var loc = encodeUrl(url.format(originalUrl));
-        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
         res.statusCode = 301;
         res.setHeader("Content-Type", "text/html; charset=UTF-8");
         res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router7.Route;
-    exports.Router = Router7;
+    exports.Route = Router8.Route;
+    exports.Router = Router8;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -33759,7 +33759,7 @@ var require_utils5 = __commonJS({
     var nodeCrypto = __require("crypto");
     module.exports = {
       postgresMd5PasswordHash,
-      randomBytes: randomBytes6,
+      randomBytes: randomBytes7,
       deriveKey: deriveKey2,
       sha256,
       hashByName,
@@ -33769,7 +33769,7 @@ var require_utils5 = __commonJS({
     var webCrypto = nodeCrypto.webcrypto || globalThis.crypto;
     var subtleCrypto = webCrypto.subtle;
     var textEncoder = new TextEncoder();
-    function randomBytes6(length) {
+    function randomBytes7(length) {
       return webCrypto.getRandomValues(Buffer.alloc(length));
     }
     async function md5(string) {
@@ -42749,7 +42749,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43000,6 +43000,13 @@ var init_learning = __esm({
         index("parent_links_student_idx").on(table.studentId)
       ]
     );
+    telegramNotifyTable = pgTable("telegram_notify", {
+      userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+      chatId: text("chat_id"),
+      nonce: text("nonce"),
+      nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
   }
 });
 
@@ -43036,6 +43043,7 @@ __export(schema_exports, {
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
@@ -43086,6 +43094,7 @@ __export(src_exports, {
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
@@ -43134,6 +43143,7 @@ __export(ai_content_exports, {
   SUPPORTED_SUBJECTS: () => SUPPORTED_SUBJECTS,
   answerTutorQuestion: () => answerTutorQuestion,
   fetchWikipediaFact: () => fetchWikipediaFact,
+  generateLessonPlan: () => generateLessonPlan,
   generateLocalPackage: () => generateLocalPackage,
   generateStudentQuestion: () => generateStudentQuestion,
   generateTopicPackage: () => generateTopicPackage,
@@ -43554,6 +43564,46 @@ async function answerTutorQuestion(question, context) {
   ]);
   return raw ? raw.trim().slice(0, 2e3) : null;
 }
+async function generateLessonPlan(input) {
+  const m = input.minutes;
+  const fallback = {
+    title: input.topic,
+    goals: [`${input.topic}: asosiy tushunchalar / \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u043F\u043E\u043D\u044F\u0442\u0438\u044F`, "Mustaqil misol yechish / \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043C\u0435\u0440\u0430"],
+    steps: [
+      { minutes: Math.round(m * 0.1), title: "Kirish / \u0412\u0441\u0442\u0443\u043F\u043B\u0435\u043D\u0438\u0435", activity: "Savol bilan qiziqtirish, oldingi mavzuni eslash." },
+      { minutes: Math.round(m * 0.3), title: "Yangi mavzu / \u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u0430", activity: "Darslik paragrafi, 3D model yoki doskada tushuntirish." },
+      { minutes: Math.round(m * 0.3), title: "Amaliyot / \u041F\u0440\u0430\u043A\u0442\u0438\u043A\u0430", activity: "Juftlikda misollar, o\u2018qituvchi yordami." },
+      { minutes: Math.round(m * 0.2), title: "Test / \u0422\u0435\u0441\u0442", activity: "Onlayn darsda individual test." },
+      { minutes: Math.round(m * 0.1), title: "Yakun / \u0418\u0442\u043E\u0433", activity: "Xulosa va uy vazifasi." }
+    ],
+    questions: [`${input.topic} nima?`, "Hayotdan misol keltiring.", "Asosiy qoida qanday?"],
+    homework: "Paragrafni o\u2018qing va 3 ta savolga daftarda javob yozing.",
+    experiment: "",
+    source: "local"
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u2014 \u043C\u0435\u0442\u043E\u0434\u0438\u0441\u0442 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u0439 \u0448\u043A\u043E\u043B\u044B. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u043F\u043B\u0430\u043D \u0443\u0440\u043E\u043A\u0430 \u0441\u0442\u0440\u043E\u0433\u043E \u0432 JSON: {"title":"","goals":["",""],"steps":[{"minutes":5,"title":"","activity":""}],"questions":["","",""],"homework":"","experiment":""}. \u0421\u0443\u043C\u043C\u0430 minutes = ${m}. 4\u20136 \u0448\u0430\u0433\u043E\u0432. experiment \u2014 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u043E\u043F\u044B\u0442 \u0438\u043B\u0438 3D-\u0434\u0435\u043C\u043E\u043D\u0441\u0442\u0440\u0430\u0446\u0438\u044F, \u0435\u0441\u043B\u0438 \u0443\u043C\u0435\u0441\u0442\u043D\u043E, \u0438\u043D\u0430\u0447\u0435 \u043F\u0443\u0441\u0442\u0430\u044F \u0441\u0442\u0440\u043E\u043A\u0430. \u042F\u0437\u044B\u043A \u043E\u0442\u0432\u0435\u0442\u0430: ${input.language === "Uzbek" ? "\u0443\u0437\u0431\u0435\u043A\u0441\u043A\u0438\u0439 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : input.language === "English" ? "\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439" : "\u0440\u0443\u0441\u0441\u043A\u0438\u0439"}.`
+    },
+    { role: "user", content: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject}. \u041A\u043B\u0430\u0441\u0441: ${input.grade}. \u0422\u0435\u043C\u0430/\u043F\u0430\u0440\u0430\u0433\u0440\u0430\u0444 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430: ${input.topic}. \u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: ${m} \u043C\u0438\u043D\u0443\u0442.` }
+  ]);
+  if (!raw) return fallback;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return fallback;
+  const list = (value) => Array.isArray(value) ? value.map((item) => str(item)).filter(Boolean).slice(0, 8) : [];
+  const steps = Array.isArray(parsed.steps) ? parsed.steps.map((step) => typeof step === "object" && step !== null ? step : null).filter((step) => step !== null).map((step) => ({ minutes: Math.max(1, Math.min(90, Math.round(Number(step.minutes) || 5))), title: str(step.title), activity: str(step.activity) })).filter((step) => step.title).slice(0, 8) : [];
+  if (!steps.length) return fallback;
+  return {
+    title: str(parsed.title) || input.topic,
+    goals: list(parsed.goals),
+    steps,
+    questions: list(parsed.questions),
+    homework: str(parsed.homework),
+    experiment: str(parsed.experiment),
+    source: "ai"
+  };
+}
 async function generateTopicTest(subject, grade, title, count = 5) {
   const questionCount = Math.max(1, Math.min(10, count));
   if (!isAiConfigured()) return localTestQuestions(subject, grade, title, questionCount);
@@ -43747,12 +43797,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express7 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -43833,6 +43883,7 @@ var DUMMY_PASSWORD_HASH = hashPassword(
 );
 
 // src/lib/telegram.ts
+var API_BASE = "https://api.telegram.org";
 var botToken = () => (process.env.TELEGRAM_BOT_TOKEN ?? "").trim();
 var telegramBotConfigured = () => botToken().length > 0;
 var telegramBotUsername = () => {
@@ -43844,6 +43895,58 @@ var telegramWebhookSecret = () => {
   return /^[A-Za-z0-9_-]{1,256}$/.test(secret) ? secret : "";
 };
 var devEchoCodes = () => process.env.NODE_ENV !== "production" && process.env.EDUVERSE_DEV_2FA_ECHO === "1";
+async function sendTelegramMessage(chatId, text2, options = {}) {
+  const token = options.token ?? botToken();
+  if (!token) {
+    return { ok: false, errorCode: "not_configured", retryable: false };
+  }
+  const fetcher = options.fetcher ?? fetch;
+  let response;
+  try {
+    response = await fetcher(`${API_BASE}/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text2,
+        parse_mode: "HTML",
+        disable_web_page_preview: true
+      }),
+      signal: AbortSignal.timeout(5e3)
+    });
+  } catch {
+    return {
+      ok: false,
+      errorCode: "network_error",
+      retryable: true
+    };
+  }
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    return {
+      ok: false,
+      errorCode: "telegram_error",
+      retryable: response.status >= 500 || response.status === 408
+    };
+  }
+  if (response.ok && result.ok) return { ok: true };
+  if (response.status === 429 || result.error_code === 429) {
+    const retryAfterSeconds = result.parameters?.retry_after;
+    return {
+      ok: false,
+      errorCode: "rate_limited",
+      retryable: true,
+      ...typeof retryAfterSeconds === "number" && retryAfterSeconds > 0 ? { retryAfterSeconds } : {}
+    };
+  }
+  return {
+    ok: false,
+    errorCode: "telegram_error",
+    retryable: response.status >= 500 || response.status === 408
+  };
+}
 function buildBindLink(nonce) {
   const username = telegramBotUsername();
   if (!username) return null;
@@ -50168,6 +50271,38 @@ var import_express3 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes4, scrypt as scryptCallback2 } from "node:crypto";
 
+// src/lib/notify.ts
+init_drizzle_orm();
+init_src();
+async function notifyUsers(userIds, text2) {
+  if (!telegramBotConfigured() || userIds.length === 0) return 0;
+  try {
+    const rows = await db.select({ chatId: telegramNotifyTable.chatId }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, [...new Set(userIds)]), isNotNull(telegramNotifyTable.chatId)));
+    let sent = 0;
+    await Promise.all(
+      rows.map(async (row) => {
+        if (!row.chatId) return;
+        const result = await sendTelegramMessage(row.chatId, text2);
+        if (result.ok) sent += 1;
+        else logger.warn({ errorCode: result.errorCode }, "telegram notification not delivered");
+      })
+    );
+    return sent;
+  } catch (error) {
+    logger.error({ err: error }, "telegram notification failed");
+    return 0;
+  }
+}
+async function parentsOf(studentIds) {
+  if (studentIds.length === 0) return [];
+  return db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds));
+}
+async function notifyFamily(studentId, text2, includeStudent = false) {
+  const parents = await parentsOf([studentId]);
+  await notifyUsers([...parents.map((row) => row.parentId), ...includeStudent ? [studentId] : []], text2);
+}
+var escapeHtml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 // src/lib/school-access.ts
 var GLOBAL_ADMIN_ROLES = [
   "education_admin",
@@ -50958,6 +51093,18 @@ router3.put(
         });
       }
     });
+    const flagged = finalEntries.filter((entry) => entry.status === "absent" || entry.status === "late");
+    if (flagged.length) {
+      const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+      const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
+      await Promise.all(flagged.map((entry) => {
+        const name = escapeHtml(names.find((row) => row.id === entry.studentId)?.name ?? "");
+        const text2 = entry.status === "absent" ? `\u26A0\uFE0F <b>${name}</b> bugun darsga kelmadi (${escapeHtml(ctx?.name ?? "")}, ${date2}).
+\u26A0\uFE0F <b>${name}</b> \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0430 \u0443\u0440\u043E\u043A\u0435.` : `\u23F0 <b>${name}</b> darsga kechikdi (${date2}).
+\u23F0 <b>${name}</b> \u043E\u043F\u043E\u0437\u0434\u0430\u043B \u043D\u0430 \u0443\u0440\u043E\u043A.`;
+        return notifyFamily(entry.studentId, text2);
+      }));
+    }
     res.json({ saved: finalEntries.length, date: date2 });
   }
 );
@@ -51059,6 +51206,11 @@ router3.post("/classes/:classId/announcements", requireAuthenticatedRole(...staf
     return;
   }
   const [created] = await db.insert(classAnnouncementsTable).values({ classId, authorId: viewer.id, body }).returning();
+  const members = await db.select({ userId: classMembersTable.userId, role: classMembersTable.role }).from(classMembersTable).where(eq(classMembersTable.classId, classId));
+  const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
+  const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
+  const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `\u{1F4E2} <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
   res.status(201).json({ announcement: created });
 });
 router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...staffRoles), async (req, res) => {
@@ -53126,6 +53278,16 @@ router5.patch(
       res.status(404).json({ error: "Submission not found." });
       return;
     }
+    if (typeof changes.score === "number") {
+      const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+      const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
+      await notifyFamily(
+        studentId,
+        `\u{1F4DD} Yangi baho / \u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: <b>${grade}</b>
+${escapeHtml(info?.subject ?? "")} \u2014 ${escapeHtml(info?.title ?? "")}`,
+        true
+      );
+    }
     res.json({ submission: updated });
   }
 );
@@ -53182,6 +53344,264 @@ router5.get(
   }
 );
 var schools_default = router5;
+
+// src/routes/school-tools.ts
+init_drizzle_orm();
+var import_express6 = __toESM(require_express2(), 1);
+init_src();
+import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
+init_ai_content();
+var router6 = (0, import_express6.Router)();
+var viewerOf = (res) => res.locals.authenticatedUser;
+var isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var SCRYPT_CONFIG2 = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+function hashPassword2(password) {
+  return new Promise((resolve, reject) => {
+    const salt = randomBytes6(16);
+    scryptCallback3(password, salt, 64, SCRYPT_CONFIG2, (error, key) => {
+      if (error) return reject(error);
+      resolve(["scrypt", SCRYPT_CONFIG2.N, SCRYPT_CONFIG2.r, SCRYPT_CONFIG2.p, salt.toString("base64url"), key.toString("base64url")].join("$"));
+    });
+  });
+}
+function readablePassword2() {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = randomBytes6(10);
+  let out = "";
+  for (let i = 0; i < 10; i += 1) out += alphabet[bytes[i] % alphabet.length];
+  return `${out.slice(0, 5)}-${out.slice(5)}`;
+}
+var TRANSLIT = {
+  \u0430: "a",
+  \u0431: "b",
+  \u0432: "v",
+  \u0433: "g",
+  \u0434: "d",
+  \u0435: "e",
+  \u0451: "yo",
+  \u0436: "j",
+  \u0437: "z",
+  \u0438: "i",
+  \u0439: "y",
+  \u043A: "k",
+  \u043B: "l",
+  \u043C: "m",
+  \u043D: "n",
+  \u043E: "o",
+  \u043F: "p",
+  \u0440: "r",
+  \u0441: "s",
+  \u0442: "t",
+  \u0443: "u",
+  \u0444: "f",
+  \u0445: "x",
+  \u0446: "ts",
+  \u0447: "ch",
+  \u0448: "sh",
+  \u0449: "sh",
+  \u044A: "",
+  \u044B: "i",
+  \u044C: "",
+  \u044D: "e",
+  \u044E: "yu",
+  \u044F: "ya",
+  \u045E: "o",
+  \u049B: "q",
+  \u0493: "g",
+  \u04B3: "h"
+};
+function loginCandidate2(name) {
+  const latin = name.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("");
+  const base = latin.normalize("NFKD").replace(/[^a-z0-9]/g, "").slice(0, 14);
+  return `${base || "user"}_${randomBytes6(2).toString("hex")}`;
+}
+async function canManageSchool2(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  return row?.role === "school_director" || row?.role === "school_admin";
+}
+function readRows(body) {
+  const raw = isRecord5(body) && Array.isArray(body.rows) ? body.rows : [];
+  const rows = [];
+  for (const item of raw.slice(0, 120)) {
+    if (!isRecord5(item)) continue;
+    const role = item.role === "teacher" || item.role === "parent" ? item.role : item.role === "student" ? "student" : null;
+    const name = cleanText(item.name, 80);
+    if (!role || !name) continue;
+    rows.push({
+      role,
+      name,
+      className: cleanText(item.className, 40) ?? void 0,
+      childName: cleanText(item.childName, 80) ?? void 0
+    });
+  }
+  return rows;
+}
+router6.post(
+  "/schools/:schoolId/import",
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const schoolId = String(req.params.schoolId);
+    const viewer = viewerOf(res);
+    if (!isValidUuid(schoolId)) {
+      res.status(400).json({ error: "Invalid school identifier." });
+      return;
+    }
+    if (!await canManageSchool2(viewer, schoolId)) {
+      res.status(403).json({ error: "You cannot manage this school." });
+      return;
+    }
+    const rows = readRows(req.body);
+    if (rows.length === 0) {
+      res.status(400).json({ error: "No valid rows to import." });
+      return;
+    }
+    const year = String((/* @__PURE__ */ new Date()).getMonth() >= 7 ? (/* @__PURE__ */ new Date()).getFullYear() : (/* @__PURE__ */ new Date()).getFullYear() - 1);
+    const classCache = /* @__PURE__ */ new Map();
+    const classIdFor = async (className) => {
+      const key = className.toLowerCase();
+      const cached = classCache.get(key);
+      if (cached) return cached;
+      const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+      let id = existing?.id;
+      if (!id) {
+        const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+        const [created2] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
+        id = created2?.id;
+        if (!id) {
+          const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+          id = again.id;
+        }
+      }
+      classCache.set(key, id);
+      return id;
+    };
+    const created = [];
+    const skipped = [];
+    const studentIdsByName = /* @__PURE__ */ new Map();
+    const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
+    for (const row of ordered) {
+      const password = readablePassword2();
+      const passwordHash = await hashPassword2(password);
+      let account = null;
+      for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
+        const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
+        const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
+        const login = loginCandidate2(row.name);
+        try {
+          const [inserted] = await db.insert(usersTable).values({
+            username: shownName,
+            usernameNormalized: normalizeUsername(shownName),
+            login,
+            loginNormalized: login.toLowerCase(),
+            passwordHash,
+            role: row.role
+          }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
+          account = inserted ?? null;
+        } catch (error) {
+          const code = error?.code ?? error?.cause?.code;
+          if (String(code) !== "23505") throw error;
+        }
+      }
+      if (!account) {
+        skipped.push({ name: row.name, reason: "duplicate" });
+        continue;
+      }
+      await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
+      if (row.className && row.role !== "parent") {
+        const classId = await classIdFor(row.className);
+        await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
+      }
+      if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
+      if (row.role === "parent" && row.childName) {
+        let childId = studentIdsByName.get(row.childName.toLowerCase());
+        if (!childId) {
+          const [existing] = await db.select({ id: usersTable.id }).from(usersTable).innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student"))).limit(1);
+          childId = existing?.id;
+        }
+        if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: viewer.id }).onConflictDoNothing();
+        else skipped.push({ name: row.name, reason: "child-not-found" });
+      }
+      created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password });
+    }
+    res.status(201).json({ created, skipped });
+  }
+);
+var everyRole2 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router6.get("/me/telegram", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const [row] = await db.select().from(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id)).limit(1);
+  res.json({ available: telegramBotConfigured() && Boolean(telegramBotUsername()), connected: Boolean(row?.chatId) });
+});
+router6.post("/me/telegram/link", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const username = telegramBotUsername();
+  if (!telegramBotConfigured() || !username) {
+    res.status(503).json({ error: "Telegram notifications are not configured." });
+    return;
+  }
+  const nonce = randomBytes6(24).toString("base64url");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1e3);
+  await db.insert(telegramNotifyTable).values({ userId: viewer.id, nonce, nonceExpiresAt: expiresAt }).onConflictDoUpdate({ target: telegramNotifyTable.userId, set: { nonce, nonceExpiresAt: expiresAt } });
+  res.json({ link: `https://t.me/${username}?start=notify_${nonce}` });
+});
+router6.delete("/me/telegram", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  await db.delete(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id));
+  res.status(204).end();
+});
+router6.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
+  const message = isRecord5(req.body) && isRecord5(req.body.message) ? req.body.message : null;
+  const text2 = typeof message?.text === "string" ? message.text.trim() : "";
+  const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text2);
+  if (!match) {
+    next();
+    return;
+  }
+  const expected = telegramWebhookSecret();
+  if (!expected || req.get("x-telegram-bot-api-secret-token") !== expected) {
+    res.status(403).json({ error: "Invalid Telegram webhook secret." });
+    return;
+  }
+  const chat = isRecord5(message?.chat) ? message.chat : null;
+  if (chat?.type !== "private" || typeof chat.id !== "number" && typeof chat.id !== "string") {
+    res.json({ ok: true });
+    return;
+  }
+  const chatId = String(chat.id);
+  const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
+  if (row) {
+    const result = await sendTelegramMessage(chatId, "\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B.");
+    if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
+  }
+  res.json({ ok: true });
+});
+var planLimiter = createRateLimiter(20, 10 * 60 * 1e3, "Too many lesson plans. Wait a few minutes.", "ai-plan");
+router6.post(
+  "/ai/lesson-plan",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  planLimiter,
+  async (req, res) => {
+    const subject = cleanText(isRecord5(req.body) ? req.body.subject : void 0, 60);
+    const topic = cleanText(isRecord5(req.body) ? req.body.topic : void 0, 200);
+    const gradeRaw = Number(isRecord5(req.body) ? req.body.grade : 7);
+    const minutesRaw = Number(isRecord5(req.body) ? req.body.minutes : 45);
+    const language = isRecord5(req.body) && typeof req.body.language === "string" ? req.body.language.slice(0, 20) : "\u0420\u0443\u0441\u0441\u043A\u0438\u0439";
+    if (!subject || !topic) {
+      res.status(400).json({ error: "Subject and topic are required." });
+      return;
+    }
+    const plan = await generateLessonPlan({
+      subject,
+      topic,
+      grade: Number.isInteger(gradeRaw) && gradeRaw >= 1 && gradeRaw <= 11 ? gradeRaw : 7,
+      minutes: Number.isInteger(minutesRaw) && minutesRaw >= 20 && minutesRaw <= 90 ? minutesRaw : 45,
+      language
+    });
+    res.json({ plan, ai: isAiConfigured() });
+  }
+);
+var school_tools_default = router6;
 
 // src/lib/schema-sync.ts
 init_drizzle_orm();
@@ -53353,9 +53773,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router6 = (0, import_express6.Router)();
-router6.use(health_default);
-router6.use(async (_req, _res, next) => {
+var router7 = (0, import_express7.Router)();
+router7.use(health_default);
+router7.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -53363,14 +53783,15 @@ router6.use(async (_req, _res, next) => {
   }
   next();
 });
-router6.use(auth_default);
-router6.use(learning_default);
-router6.use(lesson_rooms_default);
-router6.use(schools_default);
-var routes_default = router6;
+router7.use(school_tools_default);
+router7.use(auth_default);
+router7.use(learning_default);
+router7.use(lesson_rooms_default);
+router7.use(schools_default);
+var routes_default = router7;
 
 // src/app.ts
-var app = (0, import_express7.default)();
+var app = (0, import_express8.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -53421,8 +53842,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express7.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express7.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express8.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express8.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {
