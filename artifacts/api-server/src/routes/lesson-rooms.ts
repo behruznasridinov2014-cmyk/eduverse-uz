@@ -651,8 +651,122 @@ router.post(
 );
 
 /* -------------------------------------------------------------------------- */
+/* Topic shown in the lesson (3D object, facts)                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Everybody in the lesson sees the topic of the room, even when the topic is
+ * bound to a class the viewer does not belong to: being in the room is enough.
+ */
+router.get(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!(await canAccessRoom(viewer, room)) && !(await isParticipant(viewer.id, room.id))) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
+      return;
+    }
+    if (!room.topicId) {
+      res.json({ topic: null });
+      return;
+    }
+    const [topic] = await db
+      .select()
+      .from(lessonTopicsTable)
+      .where(eq(lessonTopicsTable.id, room.topicId))
+      .limit(1);
+    res.json({ topic: topic ?? null });
+  },
+);
+
+/** The host switches the topic during the lesson; every participant follows. */
+router.put(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (room.hostId !== viewer.id && !(await canManage(viewer.id, viewer.role, room.classId))) {
+      res.status(403).json({ error: "Only the host can change the lesson topic." });
+      return;
+    }
+    const topicId = readString(req.body, "topicId", 64) ?? null;
+    if (topicId && !isValidUuid(topicId)) {
+      res.status(400).json({ error: "Invalid topic identifier." });
+      return;
+    }
+    let topic: typeof lessonTopicsTable.$inferSelect | null = null;
+    if (topicId) {
+      const [row] = await db
+        .select()
+        .from(lessonTopicsTable)
+        .where(eq(lessonTopicsTable.id, topicId))
+        .limit(1);
+      if (!row) {
+        res.status(404).json({ error: "Topic not found." });
+        return;
+      }
+      topic = row;
+    }
+    await db
+      .update(lessonRoomsTable)
+      .set({
+        topicId,
+        ...(topic ? { subject: topic.subject, title: topic.title } : {}),
+      })
+      .where(eq(lessonRoomsTable.id, room.id));
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "topic", topicId } });
+    res.json({ topic });
+  },
+);
+
+/* -------------------------------------------------------------------------- */
 /* Per-student individual tests (AI-generated)                                 */
 /* -------------------------------------------------------------------------- */
+
+type TestItem = { prompt: string; choices: string[]; correct: string; explanation: string; answer: string | null };
+
+function readItems(value: unknown): TestItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is TestItem =>
+    isRecord(item) && typeof item.prompt === "string" && Array.isArray(item.choices) && typeof item.correct === "string");
+}
+
+function shuffled<T>(list: T[]): T[] {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = randomBytes(1)[0]! % (i + 1);
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+  }
+  return copy;
+}
+
+/** The student never receives the right answer before answering. */
+function studentView(items: TestItem[]) {
+  return items.map((item) => ({
+    prompt: item.prompt,
+    choices: item.choices,
+    answer: item.answer ?? null,
+    correct: item.answer ? item.correct : null,
+    explanation: item.answer ? item.explanation : null,
+  }));
+}
+
+function scoreOf(items: TestItem[]): number {
+  if (!items.length) return 0;
+  const right = items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length;
+  return Math.round((right / items.length) * 100);
+}
 
 router.get(
   "/rooms/:roomId/my-test",
@@ -674,17 +788,13 @@ router.get(
         ),
       )
       .limit(1);
+    const items = readItems(me?.testItems);
+    const done = items.length > 0 && items.every((item) => item.answer !== null);
     res.json({
-      question: me && me.testPrompt
-        ? {
-            prompt: me.testPrompt,
-            choices: me.testChoices,
-            correct: me.testCorrect,
-            explanation: me.testExplanation,
-          }
-        : null,
-      answer: me?.testAnswer ?? null,
-      score: me?.testScore ?? null,
+      items: studentView(items),
+      question: null,
+      answer: done ? "done" : null,
+      score: done ? scoreOf(items) : null,
     });
   },
 );
@@ -713,18 +823,28 @@ router.put(
       res.status(409).json({ error: "Join the lesson before answering the test." });
       return;
     }
+    const items = readItems(me.testItems);
     const answer = readString(req.body, "answer", 300);
-    if (!answer) {
+    const indexRaw = isRecord(req.body) ? Number(req.body.index ?? 0) : 0;
+    const index = Number.isInteger(indexRaw) ? indexRaw : 0;
+    const item = items[index];
+    if (!answer || !item) {
       res.status(400).json({ error: "An answer is required." });
       return;
     }
-    const correct = me.testCorrect && answer.trim() === me.testCorrect.trim();
-    const score = correct ? 100 : 0;
+    if (item.answer !== null) {
+      res.status(409).json({ error: "This question is already answered." });
+      return;
+    }
+    item.answer = answer;
+    const correct = answer.trim() === item.correct.trim();
+    const done = items.every((entry) => entry.answer !== null);
     await db
       .update(lessonRoomParticipantsTable)
-      .set({ testAnswer: answer, testScore: score })
+      .set({ testItems: items, testAnswer: done ? "done" : null, testScore: scoreOf(items) })
       .where(eq(lessonRoomParticipantsTable.id, me.id));
-    res.json({ correct, score, explanation: me.testExplanation });
+    await appendSignal(room.id, { from: viewer.id, to: room.hostId, kind: "control", payload: { event: "test-progress" } });
+    res.json({ correct, score: scoreOf(items), explanation: item.explanation, items: studentView(items), done });
   },
 );
 
@@ -812,22 +932,23 @@ router.post(
       return;
     }
 
-    const { generateStudentQuestion } = await import("../lib/ai-content");
+    // One pool of questions for the lesson topic; every student gets a
+    // different selection in a different order.
+    const { generateTopicTest } = await import("../lib/ai-content");
+    const pool = await generateTopicTest(room.subject || "География", 7, room.title, 8);
+    const perStudent = Math.min(5, pool.length);
     let assigned = 0;
     for (const student of students) {
-      const question = await generateStudentQuestion(room.subject || "География", room.title, student.username, {
-        difficulty: "core",
-      });
+      const items: TestItem[] = shuffled(pool).slice(0, perStudent).map((question) => ({
+        prompt: question.prompt,
+        choices: shuffled(question.choices),
+        correct: question.correct,
+        explanation: question.explanation,
+        answer: null,
+      }));
       await db
         .update(lessonRoomParticipantsTable)
-        .set({
-          testPrompt: question.prompt,
-          testChoices: question.choices,
-          testCorrect: question.correct,
-          testExplanation: question.explanation,
-          testAnswer: null,
-          testScore: null,
-        })
+        .set({ testItems: items, testAnswer: null, testScore: null })
         .where(eq(lessonRoomParticipantsTable.id, student.participantId));
       assigned += 1;
     }
@@ -861,13 +982,35 @@ router.get(
         score: lessonRoomParticipantsTable.testScore,
         answer: lessonRoomParticipantsTable.testAnswer,
         role: lessonRoomParticipantsTable.role,
+        items: lessonRoomParticipantsTable.testItems,
       })
       .from(lessonRoomParticipantsTable)
       .innerJoin(usersTable, eq(lessonRoomParticipantsTable.userId, usersTable.id))
       .where(eq(lessonRoomParticipantsTable.roomId, room.id));
+    // Only the teacher sees what every student answered.
+    const detailed = room.hostId === viewer.id || (await canManage(viewer.id, viewer.role, room.classId));
     const students = rows
       .filter((r) => r.role === "student")
-      .map((r) => ({ studentId: r.userId, studentName: r.username, score: r.score ?? 0, answered: r.answer !== null }))
+      .map((r) => {
+        const items = readItems(r.items);
+        return {
+          studentId: r.userId,
+          studentName: r.username,
+          score: r.score ?? 0,
+          answered: r.answer !== null,
+          total: items.length,
+          answeredCount: items.filter((item) => item.answer !== null).length,
+          correctCount: items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length,
+          items: detailed
+            ? items.map((item) => ({
+                prompt: item.prompt,
+                answer: item.answer,
+                correct: item.correct,
+                isCorrect: item.answer !== null && item.answer.trim() === item.correct.trim(),
+              }))
+            : [],
+        };
+      })
       .sort((a, b) => b.score - a.score);
     const attempts = await db
       .select()

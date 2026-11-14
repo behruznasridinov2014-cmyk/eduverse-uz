@@ -4,6 +4,7 @@ import healthRouter from "./health";
 import learningRouter from "./learning";
 import lessonRoomsRouter from "./lesson-rooms";
 import schoolsRouter from "./schools";
+import schoolToolsRouter from "./school-tools";
 import { ensureSchema } from "../lib/schema-sync";
 import { logger } from "../lib/logger";
 
@@ -19,6 +20,7 @@ router.use(async (_req, _res, next) => {
   }
   next();
 });
+router.use(schoolToolsRouter);
 router.use(authRouter);
 router.use(learningRouter);
 router.use(lessonRoomsRouter);

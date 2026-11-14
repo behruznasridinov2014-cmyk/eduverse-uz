@@ -18825,8 +18825,8 @@ var require_escape_html = __commonJS({
   "../../node_modules/.pnpm/escape-html@1.0.3/node_modules/escape-html/index.js"(exports, module) {
     "use strict";
     var matchHtmlRegExp = /["'&<>]/;
-    module.exports = escapeHtml;
-    function escapeHtml(string) {
+    module.exports = escapeHtml2;
+    function escapeHtml2(string) {
       var str2 = "" + string;
       var match = matchHtmlRegExp.exec(str2);
       if (!match) {
@@ -18957,13 +18957,13 @@ var require_finalhandler = __commonJS({
     "use strict";
     var debug = require_src()("finalhandler");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var onFinished = require_on_finished();
     var parseUrl = require_parseurl();
     var statuses = require_statuses();
     var isFinished = onFinished.isFinished;
     function createHtmlDocument(message) {
-      var body = escapeHtml(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
+      var body = escapeHtml2(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
       return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>Error</title>\n</head>\n<body>\n<pre>' + body + "</pre>\n</body>\n</html>\n";
     }
     module.exports = finalhandler;
@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router7;
+    module.exports = Router8;
     module.exports.Route = Route;
-    function Router7(options) {
-      if (!(this instanceof Router7)) {
-        return new Router7(options);
+    function Router8(options) {
+      if (!(this instanceof Router8)) {
+        return new Router8(options);
       }
       const opts = options || {};
-      function router7(req, res, next) {
-        router7.handle(req, res, next);
+      function router8(req, res, next) {
+        router8.handle(req, res, next);
       }
-      Object.setPrototypeOf(router7, this);
-      router7.caseSensitive = opts.caseSensitive;
-      router7.mergeParams = opts.mergeParams;
-      router7.params = {};
-      router7.strict = opts.strict;
-      router7.stack = [];
-      return router7;
+      Object.setPrototypeOf(router8, this);
+      router8.caseSensitive = opts.caseSensitive;
+      router8.mergeParams = opts.mergeParams;
+      router8.params = {};
+      router8.strict = opts.strict;
+      router8.stack = [];
+      return router8;
     }
-    Router7.prototype = function() {
+    Router8.prototype = function() {
     };
-    Router7.prototype.param = function param(name, fn) {
+    Router8.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router7.prototype.handle = function handle(req, res, callback) {
+    Router8.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router7.prototype.use = function use(handler) {
+    Router8.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router7.prototype.route = function route(path) {
+    Router8.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router7.prototype[method] = function(path) {
+      Router8.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router7 = null;
+      var router8 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router7 === null) {
-            router7 = new Router7({
+          if (router8 === null) {
+            router8 = new Router8({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router7;
+          return router8;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router7 = this.router;
+      var router8 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router7.use(path, fn2);
+          return router8.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router7.use(path, function mounted_app(req, res, next) {
+        router8.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22713,7 +22713,7 @@ var require_send = __commonJS({
     var createError = require_http_errors();
     var debug = require_src()("send");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
     var fs = __require("fs");
@@ -22766,7 +22766,7 @@ var require_send = __commonJS({
       }
       var res = this.res;
       var msg = statuses.message[status] || String(status);
-      var doc = createHtmlDocument("Error", escapeHtml(msg));
+      var doc = createHtmlDocument("Error", escapeHtml2(msg));
       clearHeaders(res);
       if (err && err.headers) {
         setHeaders(res, err.headers);
@@ -22866,7 +22866,7 @@ var require_send = __commonJS({
         return;
       }
       var loc = encodeUrl(collapseLeadingSlashes(this.path + "/"));
-      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
       res.statusCode = 301;
       res.setHeader("Content-Type", "text/html; charset=UTF-8");
       res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23270,7 +23270,7 @@ var require_response = __commonJS({
     var createError = require_http_errors();
     var deprecate = require_depd()("express");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
@@ -23609,7 +23609,7 @@ var require_response = __commonJS({
           body = statuses.message[status] + ". Redirecting to " + address;
         },
         html: function() {
-          var u = escapeHtml(address);
+          var u = escapeHtml2(address);
           body = "<!DOCTYPE html><head><title>" + statuses.message[status] + "</title></head><body><p>" + statuses.message[status] + ". Redirecting to " + u + "</p></body>";
         },
         default: function() {
@@ -23737,7 +23737,7 @@ var require_serve_static = __commonJS({
   "../../node_modules/.pnpm/serve-static@2.2.1/node_modules/serve-static/index.js"(exports, module) {
     "use strict";
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var parseUrl = require_parseurl();
     var resolve = __require("path").resolve;
     var send = require_send();
@@ -23823,7 +23823,7 @@ var require_serve_static = __commonJS({
         originalUrl.path = null;
         originalUrl.pathname = collapseLeadingSlashes(originalUrl.pathname + "/");
         var loc = encodeUrl(url.format(originalUrl));
-        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
         res.statusCode = 301;
         res.setHeader("Content-Type", "text/html; charset=UTF-8");
         res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router7.Route;
-    exports.Router = Router7;
+    exports.Route = Router8.Route;
+    exports.Router = Router8;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -33759,7 +33759,7 @@ var require_utils5 = __commonJS({
     var nodeCrypto = __require("crypto");
     module.exports = {
       postgresMd5PasswordHash,
-      randomBytes: randomBytes6,
+      randomBytes: randomBytes7,
       deriveKey: deriveKey2,
       sha256,
       hashByName,
@@ -33769,7 +33769,7 @@ var require_utils5 = __commonJS({
     var webCrypto = nodeCrypto.webcrypto || globalThis.crypto;
     var subtleCrypto = webCrypto.subtle;
     var textEncoder = new TextEncoder();
-    function randomBytes6(length) {
+    function randomBytes7(length) {
       return webCrypto.getRandomValues(Buffer.alloc(length));
     }
     async function md5(string) {
@@ -42749,7 +42749,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -42882,6 +42882,8 @@ var init_learning = __esm({
         testExplanation: text("test_explanation").notNull().default(""),
         testAnswer: text("test_answer"),
         testScore: integer("test_score"),
+        // Several questions per student: [{prompt, choices, correct, explanation, answer}]
+        testItems: jsonb("test_items").notNull().default([]),
         joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
         leftAt: timestamp("left_at", { withTimezone: true })
       },
@@ -42973,6 +42975,48 @@ var init_learning = __esm({
         index("qr_login_sessions_expires_idx").on(table.expiresAt)
       ]
     );
+    classAnnouncementsTable = pgTable(
+      "class_announcements",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+        authorId: uuid("author_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        body: text("body").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => [index("class_announcements_class_idx").on(table.classId)]
+    );
+    parentLinksTable = pgTable(
+      "parent_links",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        createdBy: uuid("created_by").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => [
+        uniqueIndex("parent_links_parent_student_unique").on(table.parentId, table.studentId),
+        index("parent_links_student_idx").on(table.studentId)
+      ]
+    );
+    telegramNotifyTable = pgTable("telegram_notify", {
+      userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+      chatId: text("chat_id"),
+      nonce: text("nonce"),
+      nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
+    labReportsTable = pgTable("lab_reports", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      lab: text("lab").notNull(),
+      data: jsonb("data").notNull().default({}),
+      result: text("result").notNull().default(""),
+      errorPercent: integer("error_percent"),
+      grade: integer("grade"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("lab_reports_student_idx").on(table.studentId)]);
   }
 });
 
@@ -42986,9 +43030,11 @@ __export(schema_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  labReportsTable: () => labReportsTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
   lessonRoomSignalsTable: () => lessonRoomSignalsTable,
@@ -42997,6 +43043,7 @@ __export(schema_exports, {
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  parentLinksTable: () => parentLinksTable,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
@@ -43007,6 +43054,7 @@ __export(schema_exports, {
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
@@ -43031,11 +43079,13 @@ __export(src_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
   databaseIsConfigured: () => databaseIsConfigured,
   db: () => db,
+  labReportsTable: () => labReportsTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
   lessonRoomSignalsTable: () => lessonRoomSignalsTable,
@@ -43044,6 +43094,7 @@ __export(src_exports, {
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  parentLinksTable: () => parentLinksTable,
   pool: () => pool,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
@@ -43055,6 +43106,7 @@ __export(src_exports, {
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
@@ -43101,7 +43153,9 @@ var init_src = __esm({
 var ai_content_exports = {};
 __export(ai_content_exports, {
   SUPPORTED_SUBJECTS: () => SUPPORTED_SUBJECTS,
+  answerTutorQuestion: () => answerTutorQuestion,
   fetchWikipediaFact: () => fetchWikipediaFact,
+  generateLessonPlan: () => generateLessonPlan,
   generateLocalPackage: () => generateLocalPackage,
   generateStudentQuestion: () => generateStudentQuestion,
   generateTopicPackage: () => generateTopicPackage,
@@ -43509,6 +43563,59 @@ async function enrichFacts(pkg) {
   if (!wiki) return pkg;
   return { ...pkg, facts: [wiki, ...pkg.facts].slice(0, 5) };
 }
+async function answerTutorQuestion(question, context) {
+  const raw = await callModel([
+    {
+      role: "system",
+      content: "\u0422\u044B \u2014 \u0448\u043A\u043E\u043B\u044C\u043D\u044B\u0439 \u0418\u0418-\u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A EDUVERSE \u0434\u043B\u044F \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u043A\u0440\u0430\u0442\u043A\u043E (\u0434\u043E 120 \u0441\u043B\u043E\u0432), \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u044F\u0437\u044B\u043A\u043E\u043C, \u043D\u0430 \u044F\u0437\u044B\u043A\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u0430 (\u0443\u0437\u0431\u0435\u043A\u0441\u043A\u0438\u0439, \u0440\u0443\u0441\u0441\u043A\u0438\u0439 \u0438\u043B\u0438 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439). \u041E\u0431\u044A\u044F\u0441\u043D\u044F\u0439 \u043F\u043E \u0448\u0430\u0433\u0430\u043C, \u043F\u0440\u0438\u0432\u043E\u0434\u0438 \u043E\u0434\u0438\u043D \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u043F\u0440\u0438\u043C\u0435\u0440. \u041D\u0435 \u0432\u044B\u0434\u0443\u043C\u044B\u0432\u0430\u0439 \u0444\u0430\u043A\u0442\u044B, \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0439 \u043D\u0430 \u0442\u0435\u043C\u044B \u0432\u043D\u0435 \u0448\u043A\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u2014 \u0432\u0435\u0436\u043B\u0438\u0432\u043E \u0432\u0435\u0440\u043D\u0438 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043A \u0443\u0447\u0451\u0431\u0435."
+    },
+    {
+      role: "user",
+      content: `\u0422\u0435\u043C\u0430 \u0443\u0440\u043E\u043A\u0430: ${context.title ?? "\u043D\u0435 \u0432\u044B\u0431\u0440\u0430\u043D\u0430"} (${context.subject ?? "\u043F\u0440\u0435\u0434\u043C\u0435\u0442 \u043D\u0435 \u0443\u043A\u0430\u0437\u0430\u043D"}). ${context.facts?.length ? `\u0424\u0430\u043A\u0442\u044B \u0442\u0435\u043C\u044B: ${context.facts.slice(0, 5).join(" | ")}. ` : ""}\u0412\u043E\u043F\u0440\u043E\u0441: ${question}`
+    }
+  ]);
+  return raw ? raw.trim().slice(0, 2e3) : null;
+}
+async function generateLessonPlan(input) {
+  const m = input.minutes;
+  const fallback = {
+    title: input.topic,
+    goals: [`${input.topic}: asosiy tushunchalar / \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u043F\u043E\u043D\u044F\u0442\u0438\u044F`, "Mustaqil misol yechish / \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043C\u0435\u0440\u0430"],
+    steps: [
+      { minutes: Math.round(m * 0.1), title: "Kirish / \u0412\u0441\u0442\u0443\u043F\u043B\u0435\u043D\u0438\u0435", activity: "Savol bilan qiziqtirish, oldingi mavzuni eslash." },
+      { minutes: Math.round(m * 0.3), title: "Yangi mavzu / \u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u0430", activity: "Darslik paragrafi, 3D model yoki doskada tushuntirish." },
+      { minutes: Math.round(m * 0.3), title: "Amaliyot / \u041F\u0440\u0430\u043A\u0442\u0438\u043A\u0430", activity: "Juftlikda misollar, o\u2018qituvchi yordami." },
+      { minutes: Math.round(m * 0.2), title: "Test / \u0422\u0435\u0441\u0442", activity: "Onlayn darsda individual test." },
+      { minutes: Math.round(m * 0.1), title: "Yakun / \u0418\u0442\u043E\u0433", activity: "Xulosa va uy vazifasi." }
+    ],
+    questions: [`${input.topic} nima?`, "Hayotdan misol keltiring.", "Asosiy qoida qanday?"],
+    homework: "Paragrafni o\u2018qing va 3 ta savolga daftarda javob yozing.",
+    experiment: "",
+    source: "local"
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u2014 \u043C\u0435\u0442\u043E\u0434\u0438\u0441\u0442 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u0439 \u0448\u043A\u043E\u043B\u044B. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u043F\u043B\u0430\u043D \u0443\u0440\u043E\u043A\u0430 \u0441\u0442\u0440\u043E\u0433\u043E \u0432 JSON: {"title":"","goals":["",""],"steps":[{"minutes":5,"title":"","activity":""}],"questions":["","",""],"homework":"","experiment":""}. \u0421\u0443\u043C\u043C\u0430 minutes = ${m}. 4\u20136 \u0448\u0430\u0433\u043E\u0432. experiment \u2014 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u043E\u043F\u044B\u0442 \u0438\u043B\u0438 3D-\u0434\u0435\u043C\u043E\u043D\u0441\u0442\u0440\u0430\u0446\u0438\u044F, \u0435\u0441\u043B\u0438 \u0443\u043C\u0435\u0441\u0442\u043D\u043E, \u0438\u043D\u0430\u0447\u0435 \u043F\u0443\u0441\u0442\u0430\u044F \u0441\u0442\u0440\u043E\u043A\u0430. \u042F\u0437\u044B\u043A \u043E\u0442\u0432\u0435\u0442\u0430: ${input.language === "Uzbek" ? "\u0443\u0437\u0431\u0435\u043A\u0441\u043A\u0438\u0439 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : input.language === "English" ? "\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439" : "\u0440\u0443\u0441\u0441\u043A\u0438\u0439"}.`
+    },
+    { role: "user", content: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject}. \u041A\u043B\u0430\u0441\u0441: ${input.grade}. \u0422\u0435\u043C\u0430/\u043F\u0430\u0440\u0430\u0433\u0440\u0430\u0444 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430: ${input.topic}. \u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: ${m} \u043C\u0438\u043D\u0443\u0442.` }
+  ]);
+  if (!raw) return fallback;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return fallback;
+  const list = (value) => Array.isArray(value) ? value.map((item) => str(item)).filter(Boolean).slice(0, 8) : [];
+  const steps = Array.isArray(parsed.steps) ? parsed.steps.map((step) => typeof step === "object" && step !== null ? step : null).filter((step) => step !== null).map((step) => ({ minutes: Math.max(1, Math.min(90, Math.round(Number(step.minutes) || 5))), title: str(step.title), activity: str(step.activity) })).filter((step) => step.title).slice(0, 8) : [];
+  if (!steps.length) return fallback;
+  return {
+    title: str(parsed.title) || input.topic,
+    goals: list(parsed.goals),
+    steps,
+    questions: list(parsed.questions),
+    homework: str(parsed.homework),
+    experiment: str(parsed.experiment),
+    source: "ai"
+  };
+}
 async function generateTopicTest(subject, grade, title, count = 5) {
   const questionCount = Math.max(1, Math.min(10, count));
   if (!isAiConfigured()) return localTestQuestions(subject, grade, title, questionCount);
@@ -43702,12 +43809,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express7 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -43788,6 +43895,7 @@ var DUMMY_PASSWORD_HASH = hashPassword(
 );
 
 // src/lib/telegram.ts
+var API_BASE = "https://api.telegram.org";
 var botToken = () => (process.env.TELEGRAM_BOT_TOKEN ?? "").trim();
 var telegramBotConfigured = () => botToken().length > 0;
 var telegramBotUsername = () => {
@@ -43799,6 +43907,58 @@ var telegramWebhookSecret = () => {
   return /^[A-Za-z0-9_-]{1,256}$/.test(secret) ? secret : "";
 };
 var devEchoCodes = () => process.env.NODE_ENV !== "production" && process.env.EDUVERSE_DEV_2FA_ECHO === "1";
+async function sendTelegramMessage(chatId, text2, options = {}) {
+  const token = options.token ?? botToken();
+  if (!token) {
+    return { ok: false, errorCode: "not_configured", retryable: false };
+  }
+  const fetcher = options.fetcher ?? fetch;
+  let response;
+  try {
+    response = await fetcher(`${API_BASE}/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text2,
+        parse_mode: "HTML",
+        disable_web_page_preview: true
+      }),
+      signal: AbortSignal.timeout(5e3)
+    });
+  } catch {
+    return {
+      ok: false,
+      errorCode: "network_error",
+      retryable: true
+    };
+  }
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    return {
+      ok: false,
+      errorCode: "telegram_error",
+      retryable: response.status >= 500 || response.status === 408
+    };
+  }
+  if (response.ok && result.ok) return { ok: true };
+  if (response.status === 429 || result.error_code === 429) {
+    const retryAfterSeconds = result.parameters?.retry_after;
+    return {
+      ok: false,
+      errorCode: "rate_limited",
+      retryable: true,
+      ...typeof retryAfterSeconds === "number" && retryAfterSeconds > 0 ? { retryAfterSeconds } : {}
+    };
+  }
+  return {
+    ok: false,
+    errorCode: "telegram_error",
+    retryable: response.status >= 500 || response.status === 408
+  };
+}
 function buildBindLink(nonce) {
   const username = telegramBotUsername();
   if (!username) return null;
@@ -50123,6 +50283,38 @@ var import_express3 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes4, scrypt as scryptCallback2 } from "node:crypto";
 
+// src/lib/notify.ts
+init_drizzle_orm();
+init_src();
+async function notifyUsers(userIds, text2) {
+  if (!telegramBotConfigured() || userIds.length === 0) return 0;
+  try {
+    const rows = await db.select({ chatId: telegramNotifyTable.chatId }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, [...new Set(userIds)]), isNotNull(telegramNotifyTable.chatId)));
+    let sent = 0;
+    await Promise.all(
+      rows.map(async (row) => {
+        if (!row.chatId) return;
+        const result = await sendTelegramMessage(row.chatId, text2);
+        if (result.ok) sent += 1;
+        else logger.warn({ errorCode: result.errorCode }, "telegram notification not delivered");
+      })
+    );
+    return sent;
+  } catch (error) {
+    logger.error({ err: error }, "telegram notification failed");
+    return 0;
+  }
+}
+async function parentsOf(studentIds) {
+  if (studentIds.length === 0) return [];
+  return db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds));
+}
+async function notifyFamily(studentId, text2, includeStudent = false) {
+  const parents = await parentsOf([studentId]);
+  await notifyUsers([...parents.map((row) => row.parentId), ...includeStudent ? [studentId] : []], text2);
+}
+var escapeHtml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 // src/lib/school-access.ts
 var GLOBAL_ADMIN_ROLES = [
   "education_admin",
@@ -50402,7 +50594,7 @@ router3.get(
       return;
     }
     if (topic.status !== "published" || topic.classId) {
-      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? topic.status === "published" ? await canViewClass(viewer.id, viewer.role, topic.classId) : await canManage(viewer.id, viewer.role, topic.classId) : false);
       if (!allowed) {
         res.status(403).json({ error: "You cannot read this topic." });
         return;
@@ -50913,6 +51105,18 @@ router3.put(
         });
       }
     });
+    const flagged = finalEntries.filter((entry) => entry.status === "absent" || entry.status === "late");
+    if (flagged.length) {
+      const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+      const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
+      await Promise.all(flagged.map((entry) => {
+        const name = escapeHtml(names.find((row) => row.id === entry.studentId)?.name ?? "");
+        const text2 = entry.status === "absent" ? `\u26A0\uFE0F <b>${name}</b> bugun darsga kelmadi (${escapeHtml(ctx?.name ?? "")}, ${date2}).
+\u26A0\uFE0F <b>${name}</b> \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0430 \u0443\u0440\u043E\u043A\u0435.` : `\u23F0 <b>${name}</b> darsga kechikdi (${date2}).
+\u23F0 <b>${name}</b> \u043E\u043F\u043E\u0437\u0434\u0430\u043B \u043D\u0430 \u0443\u0440\u043E\u043A.`;
+        return notifyFamily(entry.studentId, text2);
+      }));
+    }
     res.json({ saved: finalEntries.length, date: date2 });
   }
 );
@@ -50968,6 +51172,300 @@ router3.get(
     });
   }
 );
+var everyRole = [
+  "student",
+  "teacher",
+  "parent",
+  "school_director",
+  "school_admin",
+  "education_admin",
+  "ministry_admin",
+  "platform_superadmin"
+];
+var staffRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router3.get("/me/announcements", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const memberClasses = (await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))).map((row) => row.classId);
+  if (!memberClasses.length) {
+    res.json({ announcements: [] });
+    return;
+  }
+  const rows = await db.select({
+    id: classAnnouncementsTable.id,
+    classId: classAnnouncementsTable.classId,
+    className: classesTable.name,
+    authorId: classAnnouncementsTable.authorId,
+    authorName: usersTable.username,
+    body: classAnnouncementsTable.body,
+    createdAt: classAnnouncementsTable.createdAt
+  }).from(classAnnouncementsTable).innerJoin(classesTable, eq(classAnnouncementsTable.classId, classesTable.id)).innerJoin(usersTable, eq(classAnnouncementsTable.authorId, usersTable.id)).where(inArray(classAnnouncementsTable.classId, memberClasses)).orderBy(desc(classAnnouncementsTable.createdAt)).limit(20);
+  res.json({ announcements: rows });
+});
+router3.post("/classes/:classId/announcements", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!await canManage(viewer.id, viewer.role, classId)) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const body = readString(req.body, "body", 600);
+  if (!body) {
+    res.status(400).json({ error: "The announcement text is required." });
+    return;
+  }
+  const [created] = await db.insert(classAnnouncementsTable).values({ classId, authorId: viewer.id, body }).returning();
+  const members = await db.select({ userId: classMembersTable.userId, role: classMembersTable.role }).from(classMembersTable).where(eq(classMembersTable.classId, classId));
+  const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
+  const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
+  const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `\u{1F4E2} <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
+  res.status(201).json({ announcement: created });
+});
+router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const id = String(req.params.announcementId);
+  if (!isValidUuid(id)) {
+    res.status(400).json({ error: "Invalid announcement identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [row] = await db.select().from(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id)).limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Announcement not found." });
+    return;
+  }
+  if (row.authorId !== viewer.id && !await canManage(viewer.id, viewer.role, row.classId)) {
+    res.status(403).json({ error: "You cannot delete this announcement." });
+    return;
+  }
+  await db.delete(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id));
+  res.status(204).end();
+});
+router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!await canManage(viewer.id, viewer.role, classId)) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const [students, assignments, attendance] = await Promise.all([
+    db.select({ id: usersTable.id, name: usersTable.username }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username)),
+    db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.classId, classId)).orderBy(asc(assignmentsTable.createdAt)).limit(30),
+    db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(eq(attendanceTable.classId, classId))
+  ]);
+  const submissions = assignments.length ? await db.select({
+    assignmentId: assignmentSubmissionsTable.assignmentId,
+    studentId: assignmentSubmissionsTable.studentId,
+    score: assignmentSubmissionsTable.score
+  }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const rows = students.map((student) => {
+    const cells = assignments.map((assignment) => {
+      const submission = submissions.find((item) => item.assignmentId === assignment.id && item.studentId === student.id);
+      if (!submission) return { state: "missing", grade: null };
+      if (submission.score === null) return { state: "review", grade: null };
+      return { state: "graded", grade: Math.max(2, Math.min(5, Math.round(submission.score / 20))) };
+    });
+    const grades = cells.map((cell) => cell.grade).filter((grade) => grade !== null);
+    const marks = attendance.filter((item) => item.studentId === student.id);
+    const attended = marks.filter((item) => item.status === "present" || item.status === "late").length;
+    return {
+      studentId: student.id,
+      studentName: student.name,
+      cells,
+      average: grades.length ? Math.round(grades.reduce((sum, grade) => sum + grade, 0) / grades.length * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null
+    };
+  });
+  res.json({ assignments, rows });
+});
+var tutorLimiter = createRateLimiter(30, 10 * 60 * 1e3, "Too many AI questions. Wait a few minutes.", "ai-tutor");
+router3.post("/ai/tutor", requireAuthenticatedRole(...everyRole), tutorLimiter, async (req, res) => {
+  const question = readString(req.body, "question", 500);
+  if (!question) {
+    res.status(400).json({ error: "A question is required." });
+    return;
+  }
+  const topicId = readString(req.body, "topicId", 64);
+  let context = {};
+  if (topicId && isValidUuid(topicId)) {
+    const [topic] = await db.select({ subject: lessonTopicsTable.subject, title: lessonTopicsTable.title, facts: lessonTopicsTable.facts }).from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+    if (topic) {
+      context = {
+        subject: topic.subject,
+        title: topic.title,
+        facts: Array.isArray(topic.facts) ? topic.facts.map((fact) => fact?.text ?? "").filter(Boolean) : []
+      };
+    }
+  }
+  const answer = await answerTutorQuestion(question, context);
+  if (!answer) {
+    res.status(503).json({ error: "The AI assistant is not available right now." });
+    return;
+  }
+  res.json({ answer });
+});
+router3.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const rows = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, viewer.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(200);
+  const count = (status) => rows.filter((row) => row.status === status).length;
+  res.json({
+    total: rows.length,
+    present: count("present"),
+    late: count("late"),
+    absent: count("absent"),
+    excused: count("excused"),
+    recent: rows.slice(0, 10)
+  });
+});
+var managerRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router3.post("/parents/links", requireAuthenticatedRole(...managerRoles), async (req, res) => {
+  const viewer = user(res);
+  const parentLogin = readString(req.body, "parentLogin", 64)?.toLowerCase();
+  const studentLogin = readString(req.body, "studentLogin", 64)?.toLowerCase();
+  if (!parentLogin || !studentLogin) {
+    res.status(400).json({ error: "Parent and student logins are required." });
+    return;
+  }
+  const [parent] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, parentLogin)).limit(1);
+  const [student] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, studentLogin)).limit(1);
+  if (!parent || parent.role !== "parent" || !student || student.role !== "student") {
+    res.status(404).json({ error: "No matching parent and student accounts were found." });
+    return;
+  }
+  const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, student.id));
+  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManage(viewer.id, viewer.role, row.classId)))).some(Boolean);
+  if (!allowed) {
+    res.status(403).json({ error: "You can only link parents of your own students." });
+    return;
+  }
+  await db.insert(parentLinksTable).values({ parentId: parent.id, studentId: student.id, createdBy: viewer.id }).onConflictDoNothing();
+  for (const row of classes) {
+    const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, row.classId)).limit(1);
+    if (ctx) await db.insert(schoolMembersTable).values({ schoolId: ctx.schoolId, userId: parent.id, role: "parent" }).onConflictDoNothing();
+  }
+  res.status(201).json({ linked: true, parent: parent.name, student: student.name });
+});
+router3.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res) => {
+  const viewer = user(res);
+  const links = await db.select({ id: usersTable.id, name: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(parentLinksTable.studentId, usersTable.id)).where(eq(parentLinksTable.parentId, viewer.id));
+  const children = [];
+  for (const child of links) {
+    const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(eq(classMembersTable.userId, child.id), eq(classMembersTable.role, "student")));
+    const classIds = classes.map((item) => item.id);
+    const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)).orderBy(desc(assignmentsTable.createdAt)).limit(20) : [];
+    const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, feedback: assignmentSubmissionsTable.feedback }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, child.id), inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))) : [];
+    const homework = assignments.map((item) => {
+      const sub = submissions.find((row) => row.assignmentId === item.id);
+      return {
+        ...item,
+        state: !sub ? "missing" : sub.score === null ? "review" : "graded",
+        grade: sub && sub.score !== null ? Math.max(2, Math.min(5, Math.round(sub.score / 20))) : null,
+        feedback: sub?.feedback ?? ""
+      };
+    });
+    const marks = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, child.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(60);
+    const attended = marks.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades = homework.map((item) => item.grade).filter((grade) => grade !== null);
+    children.push({
+      id: child.id,
+      name: child.name,
+      classes: classes.map((item) => item.name),
+      average: grades.length ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null,
+      absences: marks.filter((row) => row.status === "absent").slice(0, 5).map((row) => row.date),
+      homework
+    });
+  }
+  res.json({ children });
+});
+router3.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot export this school." });
+    return;
+  }
+  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role }).from(schoolMembersTable).innerJoin(usersTable, eq(schoolMembersTable.userId, usersTable.id)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(asc(schoolMembersTable.role), asc(usersTable.username));
+  const ids = people.map((row) => row.id);
+  const memberships = ids.length ? await db.select({ userId: classMembersTable.userId, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(inArray(classMembersTable.userId, ids), eq(classesTable.schoolId, schoolId))) : [];
+  const marks = ids.length ? await db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(inArray(attendanceTable.studentId, ids)) : [];
+  const scores = ids.length ? await db.select({ studentId: assignmentSubmissionsTable.studentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.studentId, ids)) : [];
+  const cell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = ["role;name;login;classes;average_grade;attendance_percent"];
+  for (const person of people) {
+    const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
+    const own = marks.filter((row) => row.studentId === person.id);
+    const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score / 20))));
+    const average = grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : "";
+    lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round(attended / own.length * 100) : ""].map(cell).join(";"));
+  }
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="eduverse-school.csv"');
+  res.send("\uFEFF" + lines.join("\n"));
+});
+router3.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot view this school." });
+    return;
+  }
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  const classIds = classes.map((item) => item.id);
+  const members = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(eq(schoolMembersTable.schoolId, schoolId));
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+  const marks = classIds.length ? await db.select({ classId: attendanceTable.classId, status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(inArray(attendanceTable.classId, classIds)) : [];
+  const recent = marks.filter((row) => row.date >= since);
+  const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)) : [];
+  const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const lessons = await db.select({ id: lessonRoomsTable.id, classId: lessonRoomsTable.classId, createdAt: lessonRoomsTable.createdAt }).from(lessonRoomsTable).where(eq(lessonRoomsTable.schoolId, schoolId));
+  const percent = (rows) => rows.length ? Math.round(rows.filter((row) => row.status === "present" || row.status === "late").length / rows.length * 100) : null;
+  const gradeOf = (score) => Math.max(2, Math.min(5, Math.round(score / 20)));
+  const graded = submissions.filter((row) => row.score !== null).map((row) => gradeOf(row.score));
+  const perClass = classes.map((item) => {
+    const classAssignments = assignments.filter((row) => row.classId === item.id).map((row) => row.id);
+    const classGrades = submissions.filter((row) => row.score !== null && classAssignments.includes(row.assignmentId)).map((row) => gradeOf(row.score));
+    return {
+      id: item.id,
+      name: item.name,
+      attendancePercent: percent(recent.filter((row) => row.classId === item.id)),
+      assignments: classAssignments.length,
+      average: classGrades.length ? Math.round(classGrades.reduce((a, b) => a + b, 0) / classGrades.length * 10) / 10 : null,
+      lessons: lessons.filter((row) => row.classId === item.id).length
+    };
+  });
+  res.json({
+    students: members.filter((row) => row.role === "student").length,
+    teachers: members.filter((row) => row.role === "teacher").length,
+    parents: members.filter((row) => row.role === "parent").length,
+    classes: classes.length,
+    attendancePercent: percent(recent),
+    absentToday: marks.filter((row) => row.date === (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) && row.status === "absent").length,
+    assignments: assignments.length,
+    toReview: submissions.filter((row) => row.score === null).length,
+    average: graded.length ? Math.round(graded.reduce((a, b) => a + b, 0) / graded.length * 10) / 10 : null,
+    lessons30d: lessons.filter((row) => row.createdAt.getTime() > Date.now() - 30 * 24 * 60 * 60 * 1e3).length,
+    perClass
+  });
+});
 var learning_default = router3;
 
 // src/routes/lesson-rooms.ts
@@ -51426,6 +51924,90 @@ router4.post(
   }
 );
 router4.get(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user2(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room) && !await isParticipant(viewer.id, room.id)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
+      return;
+    }
+    if (!room.topicId) {
+      res.json({ topic: null });
+      return;
+    }
+    const [topic] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, room.topicId)).limit(1);
+    res.json({ topic: topic ?? null });
+  }
+);
+router4.put(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user2(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (room.hostId !== viewer.id && !await canManage2(viewer.id, viewer.role, room.classId)) {
+      res.status(403).json({ error: "Only the host can change the lesson topic." });
+      return;
+    }
+    const topicId = readString2(req.body, "topicId", 64) ?? null;
+    if (topicId && !isValidUuid(topicId)) {
+      res.status(400).json({ error: "Invalid topic identifier." });
+      return;
+    }
+    let topic = null;
+    if (topicId) {
+      const [row] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+      if (!row) {
+        res.status(404).json({ error: "Topic not found." });
+        return;
+      }
+      topic = row;
+    }
+    await db.update(lessonRoomsTable).set({
+      topicId,
+      ...topic ? { subject: topic.subject, title: topic.title } : {}
+    }).where(eq(lessonRoomsTable.id, room.id));
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "topic", topicId } });
+    res.json({ topic });
+  }
+);
+function readItems(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => isRecord3(item) && typeof item.prompt === "string" && Array.isArray(item.choices) && typeof item.correct === "string");
+}
+function shuffled(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = randomBytes5(1)[0] % (i + 1);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+function studentView(items) {
+  return items.map((item) => ({
+    prompt: item.prompt,
+    choices: item.choices,
+    answer: item.answer ?? null,
+    correct: item.answer ? item.correct : null,
+    explanation: item.answer ? item.explanation : null
+  }));
+}
+function scoreOf(items) {
+  if (!items.length) return 0;
+  const right = items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length;
+  return Math.round(right / items.length * 100);
+}
+router4.get(
   "/rooms/:roomId/my-test",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
@@ -51441,15 +52023,13 @@ router4.get(
         eq(lessonRoomParticipantsTable.userId, viewer.id)
       )
     ).limit(1);
+    const items = readItems(me?.testItems);
+    const done = items.length > 0 && items.every((item) => item.answer !== null);
     res.json({
-      question: me && me.testPrompt ? {
-        prompt: me.testPrompt,
-        choices: me.testChoices,
-        correct: me.testCorrect,
-        explanation: me.testExplanation
-      } : null,
-      answer: me?.testAnswer ?? null,
-      score: me?.testScore ?? null
+      items: studentView(items),
+      question: null,
+      answer: done ? "done" : null,
+      score: done ? scoreOf(items) : null
     });
   }
 );
@@ -51473,15 +52053,25 @@ router4.put(
       res.status(409).json({ error: "Join the lesson before answering the test." });
       return;
     }
+    const items = readItems(me.testItems);
     const answer = readString2(req.body, "answer", 300);
-    if (!answer) {
+    const indexRaw = isRecord3(req.body) ? Number(req.body.index ?? 0) : 0;
+    const index2 = Number.isInteger(indexRaw) ? indexRaw : 0;
+    const item = items[index2];
+    if (!answer || !item) {
       res.status(400).json({ error: "An answer is required." });
       return;
     }
-    const correct = me.testCorrect && answer.trim() === me.testCorrect.trim();
-    const score = correct ? 100 : 0;
-    await db.update(lessonRoomParticipantsTable).set({ testAnswer: answer, testScore: score }).where(eq(lessonRoomParticipantsTable.id, me.id));
-    res.json({ correct, score, explanation: me.testExplanation });
+    if (item.answer !== null) {
+      res.status(409).json({ error: "This question is already answered." });
+      return;
+    }
+    item.answer = answer;
+    const correct = answer.trim() === item.correct.trim();
+    const done = items.every((entry) => entry.answer !== null);
+    await db.update(lessonRoomParticipantsTable).set({ testItems: items, testAnswer: done ? "done" : null, testScore: scoreOf(items) }).where(eq(lessonRoomParticipantsTable.id, me.id));
+    await appendSignal(room.id, { from: viewer.id, to: room.hostId, kind: "control", payload: { event: "test-progress" } });
+    res.json({ correct, score: scoreOf(items), explanation: item.explanation, items: studentView(items), done });
   }
 );
 router4.post(
@@ -51553,20 +52143,19 @@ router4.post(
       res.status(409).json({ error: "No students have joined this lesson yet." });
       return;
     }
-    const { generateStudentQuestion: generateStudentQuestion2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const { generateTopicTest: generateTopicTest2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const pool2 = await generateTopicTest2(room.subject || "\u0413\u0435\u043E\u0433\u0440\u0430\u0444\u0438\u044F", 7, room.title, 8);
+    const perStudent = Math.min(5, pool2.length);
     let assigned = 0;
     for (const student of students) {
-      const question = await generateStudentQuestion2(room.subject || "\u0413\u0435\u043E\u0433\u0440\u0430\u0444\u0438\u044F", room.title, student.username, {
-        difficulty: "core"
-      });
-      await db.update(lessonRoomParticipantsTable).set({
-        testPrompt: question.prompt,
-        testChoices: question.choices,
-        testCorrect: question.correct,
-        testExplanation: question.explanation,
-        testAnswer: null,
-        testScore: null
-      }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
+      const items = shuffled(pool2).slice(0, perStudent).map((question) => ({
+        prompt: question.prompt,
+        choices: shuffled(question.choices),
+        correct: question.correct,
+        explanation: question.explanation,
+        answer: null
+      }));
+      await db.update(lessonRoomParticipantsTable).set({ testItems: items, testAnswer: null, testScore: null }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
       assigned += 1;
     }
     await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
@@ -51592,9 +52181,28 @@ router4.get(
       username: usersTable.username,
       score: lessonRoomParticipantsTable.testScore,
       answer: lessonRoomParticipantsTable.testAnswer,
-      role: lessonRoomParticipantsTable.role
+      role: lessonRoomParticipantsTable.role,
+      items: lessonRoomParticipantsTable.testItems
     }).from(lessonRoomParticipantsTable).innerJoin(usersTable, eq(lessonRoomParticipantsTable.userId, usersTable.id)).where(eq(lessonRoomParticipantsTable.roomId, room.id));
-    const students = rows.filter((r) => r.role === "student").map((r) => ({ studentId: r.userId, studentName: r.username, score: r.score ?? 0, answered: r.answer !== null })).sort((a, b) => b.score - a.score);
+    const detailed = room.hostId === viewer.id || await canManage2(viewer.id, viewer.role, room.classId);
+    const students = rows.filter((r) => r.role === "student").map((r) => {
+      const items = readItems(r.items);
+      return {
+        studentId: r.userId,
+        studentName: r.username,
+        score: r.score ?? 0,
+        answered: r.answer !== null,
+        total: items.length,
+        answeredCount: items.filter((item) => item.answer !== null).length,
+        correctCount: items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length,
+        items: detailed ? items.map((item) => ({
+          prompt: item.prompt,
+          answer: item.answer,
+          correct: item.correct,
+          isCorrect: item.answer !== null && item.answer.trim() === item.correct.trim()
+        })) : []
+      };
+    }).sort((a, b) => b.score - a.score);
     const attempts = await db.select().from(quizAttemptsTable).where(eq(quizAttemptsTable.roomId, room.id)).orderBy(desc(quizAttemptsTable.score)).limit(3);
     res.json({ room, ranking: students, bonusWinners: attempts });
   }
@@ -52713,6 +53321,16 @@ router5.patch(
       res.status(404).json({ error: "Submission not found." });
       return;
     }
+    if (typeof changes.score === "number") {
+      const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+      const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
+      await notifyFamily(
+        studentId,
+        `\u{1F4DD} Yangi baho / \u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: <b>${grade}</b>
+${escapeHtml(info?.subject ?? "")} \u2014 ${escapeHtml(info?.title ?? "")}`,
+        true
+      );
+    }
     res.json({ submission: updated });
   }
 );
@@ -52770,6 +53388,317 @@ router5.get(
 );
 var schools_default = router5;
 
+// src/routes/school-tools.ts
+init_drizzle_orm();
+var import_express6 = __toESM(require_express2(), 1);
+init_src();
+import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
+init_ai_content();
+var router6 = (0, import_express6.Router)();
+var viewerOf = (res) => res.locals.authenticatedUser;
+var isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var SCRYPT_CONFIG2 = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+function hashPassword2(password) {
+  return new Promise((resolve, reject) => {
+    const salt = randomBytes6(16);
+    scryptCallback3(password, salt, 64, SCRYPT_CONFIG2, (error, key) => {
+      if (error) return reject(error);
+      resolve(["scrypt", SCRYPT_CONFIG2.N, SCRYPT_CONFIG2.r, SCRYPT_CONFIG2.p, salt.toString("base64url"), key.toString("base64url")].join("$"));
+    });
+  });
+}
+function readablePassword2() {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = randomBytes6(10);
+  let out = "";
+  for (let i = 0; i < 10; i += 1) out += alphabet[bytes[i] % alphabet.length];
+  return `${out.slice(0, 5)}-${out.slice(5)}`;
+}
+var TRANSLIT = {
+  \u0430: "a",
+  \u0431: "b",
+  \u0432: "v",
+  \u0433: "g",
+  \u0434: "d",
+  \u0435: "e",
+  \u0451: "yo",
+  \u0436: "j",
+  \u0437: "z",
+  \u0438: "i",
+  \u0439: "y",
+  \u043A: "k",
+  \u043B: "l",
+  \u043C: "m",
+  \u043D: "n",
+  \u043E: "o",
+  \u043F: "p",
+  \u0440: "r",
+  \u0441: "s",
+  \u0442: "t",
+  \u0443: "u",
+  \u0444: "f",
+  \u0445: "x",
+  \u0446: "ts",
+  \u0447: "ch",
+  \u0448: "sh",
+  \u0449: "sh",
+  \u044A: "",
+  \u044B: "i",
+  \u044C: "",
+  \u044D: "e",
+  \u044E: "yu",
+  \u044F: "ya",
+  \u045E: "o",
+  \u049B: "q",
+  \u0493: "g",
+  \u04B3: "h"
+};
+function loginCandidate2(name) {
+  const latin = name.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("");
+  const base = latin.normalize("NFKD").replace(/[^a-z0-9]/g, "").slice(0, 14);
+  return `${base || "user"}_${randomBytes6(2).toString("hex")}`;
+}
+async function canManageSchool2(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  return row?.role === "school_director" || row?.role === "school_admin";
+}
+function readRows(body) {
+  const raw = isRecord5(body) && Array.isArray(body.rows) ? body.rows : [];
+  const rows = [];
+  for (const item of raw.slice(0, 120)) {
+    if (!isRecord5(item)) continue;
+    const role = item.role === "teacher" || item.role === "parent" ? item.role : item.role === "student" ? "student" : null;
+    const name = cleanText(item.name, 80);
+    if (!role || !name) continue;
+    rows.push({
+      role,
+      name,
+      className: cleanText(item.className, 40) ?? void 0,
+      childName: cleanText(item.childName, 80) ?? void 0
+    });
+  }
+  return rows;
+}
+router6.post(
+  "/schools/:schoolId/import",
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const schoolId = String(req.params.schoolId);
+    const viewer = viewerOf(res);
+    if (!isValidUuid(schoolId)) {
+      res.status(400).json({ error: "Invalid school identifier." });
+      return;
+    }
+    if (!await canManageSchool2(viewer, schoolId)) {
+      res.status(403).json({ error: "You cannot manage this school." });
+      return;
+    }
+    const rows = readRows(req.body);
+    if (rows.length === 0) {
+      res.status(400).json({ error: "No valid rows to import." });
+      return;
+    }
+    const year = String((/* @__PURE__ */ new Date()).getMonth() >= 7 ? (/* @__PURE__ */ new Date()).getFullYear() : (/* @__PURE__ */ new Date()).getFullYear() - 1);
+    const classCache = /* @__PURE__ */ new Map();
+    const classIdFor = async (className) => {
+      const key = className.toLowerCase();
+      const cached = classCache.get(key);
+      if (cached) return cached;
+      const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+      let id = existing?.id;
+      if (!id) {
+        const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+        const [created2] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
+        id = created2?.id;
+        if (!id) {
+          const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+          id = again.id;
+        }
+      }
+      classCache.set(key, id);
+      return id;
+    };
+    const created = [];
+    const skipped = [];
+    const studentIdsByName = /* @__PURE__ */ new Map();
+    const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
+    for (const row of ordered) {
+      const password = readablePassword2();
+      const passwordHash = await hashPassword2(password);
+      let account = null;
+      for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
+        const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
+        const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
+        const login = loginCandidate2(row.name);
+        try {
+          const [inserted] = await db.insert(usersTable).values({
+            username: shownName,
+            usernameNormalized: normalizeUsername(shownName),
+            login,
+            loginNormalized: login.toLowerCase(),
+            passwordHash,
+            role: row.role
+          }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
+          account = inserted ?? null;
+        } catch (error) {
+          const code = error?.code ?? error?.cause?.code;
+          if (String(code) !== "23505") throw error;
+        }
+      }
+      if (!account) {
+        skipped.push({ name: row.name, reason: "duplicate" });
+        continue;
+      }
+      await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
+      if (row.className && row.role !== "parent") {
+        const classId = await classIdFor(row.className);
+        await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
+      }
+      if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
+      if (row.role === "parent" && row.childName) {
+        let childId = studentIdsByName.get(row.childName.toLowerCase());
+        if (!childId) {
+          const [existing] = await db.select({ id: usersTable.id }).from(usersTable).innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student"))).limit(1);
+          childId = existing?.id;
+        }
+        if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: viewer.id }).onConflictDoNothing();
+        else skipped.push({ name: row.name, reason: "child-not-found" });
+      }
+      created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password });
+    }
+    res.status(201).json({ created, skipped });
+  }
+);
+var everyRole2 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router6.get("/me/telegram", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const [row] = await db.select().from(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id)).limit(1);
+  res.json({ available: telegramBotConfigured() && Boolean(telegramBotUsername()), connected: Boolean(row?.chatId) });
+});
+router6.post("/me/telegram/link", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const username = telegramBotUsername();
+  if (!telegramBotConfigured() || !username) {
+    res.status(503).json({ error: "Telegram notifications are not configured." });
+    return;
+  }
+  const nonce = randomBytes6(24).toString("base64url");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1e3);
+  await db.insert(telegramNotifyTable).values({ userId: viewer.id, nonce, nonceExpiresAt: expiresAt }).onConflictDoUpdate({ target: telegramNotifyTable.userId, set: { nonce, nonceExpiresAt: expiresAt } });
+  res.json({ link: `https://t.me/${username}?start=notify_${nonce}` });
+});
+router6.delete("/me/telegram", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  await db.delete(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id));
+  res.status(204).end();
+});
+router6.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
+  const message = isRecord5(req.body) && isRecord5(req.body.message) ? req.body.message : null;
+  const text2 = typeof message?.text === "string" ? message.text.trim() : "";
+  const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text2);
+  if (!match) {
+    next();
+    return;
+  }
+  const expected = telegramWebhookSecret();
+  if (!expected || req.get("x-telegram-bot-api-secret-token") !== expected) {
+    res.status(403).json({ error: "Invalid Telegram webhook secret." });
+    return;
+  }
+  const chat = isRecord5(message?.chat) ? message.chat : null;
+  if (chat?.type !== "private" || typeof chat.id !== "number" && typeof chat.id !== "string") {
+    res.json({ ok: true });
+    return;
+  }
+  const chatId = String(chat.id);
+  const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
+  if (row) {
+    const result = await sendTelegramMessage(chatId, "\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B.");
+    if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
+  }
+  res.json({ ok: true });
+});
+var planLimiter = createRateLimiter(20, 10 * 60 * 1e3, "Too many lesson plans. Wait a few minutes.", "ai-plan");
+router6.post(
+  "/ai/lesson-plan",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  planLimiter,
+  async (req, res) => {
+    const subject = cleanText(isRecord5(req.body) ? req.body.subject : void 0, 60);
+    const topic = cleanText(isRecord5(req.body) ? req.body.topic : void 0, 200);
+    const gradeRaw = Number(isRecord5(req.body) ? req.body.grade : 7);
+    const minutesRaw = Number(isRecord5(req.body) ? req.body.minutes : 45);
+    const language = isRecord5(req.body) && typeof req.body.language === "string" ? req.body.language.slice(0, 20) : "\u0420\u0443\u0441\u0441\u043A\u0438\u0439";
+    if (!subject || !topic) {
+      res.status(400).json({ error: "Subject and topic are required." });
+      return;
+    }
+    const plan = await generateLessonPlan({
+      subject,
+      topic,
+      grade: Number.isInteger(gradeRaw) && gradeRaw >= 1 && gradeRaw <= 11 ? gradeRaw : 7,
+      minutes: Number.isInteger(minutesRaw) && minutesRaw >= 20 && minutesRaw <= 90 ? minutesRaw : 45,
+      language
+    });
+    res.json({ plan, ai: isAiConfigured() });
+  }
+);
+var LABS = /* @__PURE__ */ new Set(["pendulum"]);
+function gradePendulum(rows) {
+  const valid = rows.filter((row) => row.length > 0.05 && row.length <= 5 && row.period > 0.1 && row.period < 10);
+  if (valid.length < 3) return null;
+  const estimates = valid.map((row) => 4 * Math.PI * Math.PI * row.length / (row.period * row.period));
+  const g = estimates.reduce((a, b) => a + b, 0) / estimates.length;
+  const reference = 9.81;
+  const errorPercent = Math.round(Math.abs(g - reference) / reference * 100);
+  const distinct = new Set(valid.map((row) => row.length.toFixed(2))).size;
+  let grade = errorPercent <= 5 ? 5 : errorPercent <= 10 ? 4 : errorPercent <= 20 ? 3 : 2;
+  if (distinct < 3) grade = Math.min(grade, 3);
+  return { g: Math.round(g * 100) / 100, errorPercent, grade, rows: valid };
+}
+router6.post("/labs/reports", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const lab = isRecord5(req.body) && typeof req.body.lab === "string" ? req.body.lab : "";
+  if (!LABS.has(lab)) {
+    res.status(400).json({ error: "Unknown lab." });
+    return;
+  }
+  const rawRows = isRecord5(req.body) && Array.isArray(req.body.rows) ? req.body.rows.slice(0, 12) : [];
+  const rows = rawRows.map((row) => isRecord5(row) ? { length: Number(row.length), period: Number(row.period) } : null).filter((row) => row !== null && Number.isFinite(row.length) && Number.isFinite(row.period));
+  const graded = gradePendulum(rows);
+  if (!graded) {
+    res.status(400).json({ error: "At least three valid measurements are required." });
+    return;
+  }
+  const conclusion = cleanText(isRecord5(req.body) ? req.body.conclusion : void 0, 1e3) ?? "";
+  const [report] = await db.insert(labReportsTable).values({ studentId: viewer.id, lab, data: { rows: graded.rows, g: graded.g, conclusion }, result: `g = ${graded.g} m/s\xB2`, errorPercent: graded.errorPercent, grade: graded.grade }).returning();
+  res.status(201).json({ report, g: graded.g, errorPercent: graded.errorPercent, grade: graded.grade });
+});
+router6.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (_req, res) => {
+  const viewer = viewerOf(res);
+  let studentIds = [viewer.id];
+  if (viewer.role !== "student") {
+    const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
+    const classIds = classes.map((row) => row.classId);
+    const students = classIds.length ? await db.select({ userId: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student"))) : [];
+    studentIds = [...new Set(students.map((row) => row.userId))];
+    if (isGlobalAdminRole(viewer.role) || viewer.role === "school_director" || viewer.role === "school_admin") {
+      const schools = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, viewer.id));
+      const schoolIds = schools.map((row) => row.schoolId);
+      const all = schoolIds.length ? await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(and(inArray(schoolMembersTable.schoolId, schoolIds), eq(schoolMembersTable.role, "student"))) : [];
+      studentIds = [.../* @__PURE__ */ new Set([...studentIds, ...all.map((row) => row.userId)])];
+    }
+  }
+  if (!studentIds.length) {
+    res.json({ reports: [] });
+    return;
+  }
+  const reports = await db.select({ id: labReportsTable.id, lab: labReportsTable.lab, result: labReportsTable.result, errorPercent: labReportsTable.errorPercent, grade: labReportsTable.grade, data: labReportsTable.data, createdAt: labReportsTable.createdAt, studentName: usersTable.username }).from(labReportsTable).innerJoin(usersTable, eq(labReportsTable.studentId, usersTable.id)).where(inArray(labReportsTable.studentId, studentIds)).orderBy(desc(labReportsTable.createdAt)).limit(100);
+  res.json({ reports });
+});
+var school_tools_default = router6;
+
 // src/lib/schema-sync.ts
 init_drizzle_orm();
 init_pg_core();
@@ -52798,7 +53727,29 @@ function columnDefinition(column, forCreate) {
   if (forCreate && column.primary) parts.push("PRIMARY KEY");
   if (column.notNull && (forCreate || fallback !== null)) parts.push("NOT NULL");
   if (fallback !== null) parts.push(`DEFAULT ${fallback}`);
+  const identity = identityOf(column);
+  if (identity) parts.push(`GENERATED ${identity} AS IDENTITY`);
   return parts.join(" ");
+}
+function identityOf(column) {
+  const identity = column.generatedIdentity;
+  if (!identity) return null;
+  return identity.type === "byDefault" ? "BY DEFAULT" : "ALWAYS";
+}
+async function syncIdentities() {
+  const tables = Object.values(src_exports).filter((value) => is(value, PgTable));
+  const { rows } = await pool.query(
+    "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND is_identity = 'YES'"
+  );
+  const existing = new Set(rows.map((row) => `${row.table_name}.${row.column_name}`));
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    for (const column of config.columns) {
+      const identity = identityOf(column);
+      if (!identity || existing.has(`${config.name}.${column.name}`)) continue;
+      await run(`ALTER TABLE ${quote(config.name)} ALTER COLUMN ${quote(column.name)} ADD GENERATED ${identity} AS IDENTITY`);
+    }
+  }
 }
 async function run(statement, fatal = false) {
   try {
@@ -52906,6 +53857,7 @@ function ensureSchema() {
     pending = (async () => {
       await syncEnums();
       const { created } = await syncTables();
+      await syncIdentities();
       await syncConstraints();
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
@@ -52917,9 +53869,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router6 = (0, import_express6.Router)();
-router6.use(health_default);
-router6.use(async (_req, _res, next) => {
+var router7 = (0, import_express7.Router)();
+router7.use(health_default);
+router7.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -52927,14 +53879,15 @@ router6.use(async (_req, _res, next) => {
   }
   next();
 });
-router6.use(auth_default);
-router6.use(learning_default);
-router6.use(lesson_rooms_default);
-router6.use(schools_default);
-var routes_default = router6;
+router7.use(school_tools_default);
+router7.use(auth_default);
+router7.use(learning_default);
+router7.use(lesson_rooms_default);
+router7.use(schools_default);
+var routes_default = router7;
 
 // src/app.ts
-var app = (0, import_express7.default)();
+var app = (0, import_express8.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -52985,8 +53938,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express7.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express7.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express8.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express8.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {

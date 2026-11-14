@@ -703,6 +703,90 @@ async function enrichFacts(pkg: GeneratedTopicPackage): Promise<GeneratedTopicPa
 /* Per-student differentiated questions                                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Free-form tutoring answer for a student or teacher question, grounded in
+ * the current topic. Returns null when no AI key is configured.
+ */
+export async function answerTutorQuestion(
+  question: string,
+  context: { subject?: string; title?: string; facts?: string[] },
+): Promise<string | null> {
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        "Ты — школьный ИИ-помощник EDUVERSE для Узбекистана. Отвечай кратко (до 120 слов), простым языком, на языке вопроса (узбекский, русский или английский). Объясняй по шагам, приводи один маленький пример. Не выдумывай факты, не отвечай на темы вне школьной программы — вежливо верни разговор к учёбе.",
+    },
+    {
+      role: "user",
+      content: `Тема урока: ${context.title ?? "не выбрана"} (${context.subject ?? "предмет не указан"}). ${
+        context.facts?.length ? `Факты темы: ${context.facts.slice(0, 5).join(" | ")}. ` : ""
+      }Вопрос: ${question}`,
+    },
+  ]);
+  return raw ? raw.trim().slice(0, 2000) : null;
+}
+
+export type LessonPlan = {
+  title: string;
+  goals: string[];
+  steps: Array<{ minutes: number; title: string; activity: string }>;
+  questions: string[];
+  homework: string;
+  experiment: string;
+  source: "ai" | "local";
+};
+
+/** A ready lesson plan for one textbook paragraph. Falls back to a template. */
+export async function generateLessonPlan(input: { subject: string; topic: string; grade: number; minutes: number; language: string }): Promise<LessonPlan> {
+  const m = input.minutes;
+  const fallback: LessonPlan = {
+    title: input.topic,
+    goals: [`${input.topic}: asosiy tushunchalar / основные понятия`, "Mustaqil misol yechish / самостоятельное решение примера"],
+    steps: [
+      { minutes: Math.round(m * 0.1), title: "Kirish / Вступление", activity: "Savol bilan qiziqtirish, oldingi mavzuni eslash." },
+      { minutes: Math.round(m * 0.3), title: "Yangi mavzu / Новая тема", activity: "Darslik paragrafi, 3D model yoki doskada tushuntirish." },
+      { minutes: Math.round(m * 0.3), title: "Amaliyot / Практика", activity: "Juftlikda misollar, o‘qituvchi yordami." },
+      { minutes: Math.round(m * 0.2), title: "Test / Тест", activity: "Onlayn darsda individual test." },
+      { minutes: Math.round(m * 0.1), title: "Yakun / Итог", activity: "Xulosa va uy vazifasi." },
+    ],
+    questions: [`${input.topic} nima?`, "Hayotdan misol keltiring.", "Asosiy qoida qanday?"],
+    homework: "Paragrafni o‘qing va 3 ta savolga daftarda javob yozing.",
+    experiment: "",
+    source: "local",
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        `Ты — методист узбекской школы. Составь план урока строго в JSON: {"title":"","goals":["",""],"steps":[{"minutes":5,"title":"","activity":""}],"questions":["","",""],"homework":"","experiment":""}. Сумма minutes = ${m}. 4–6 шагов. experiment — простой опыт или 3D-демонстрация, если уместно, иначе пустая строка. Язык ответа: ${input.language === "Uzbek" ? "узбекский (латиница)" : input.language === "English" ? "английский" : "русский"}.`,
+    },
+    { role: "user", content: `Предмет: ${input.subject}. Класс: ${input.grade}. Тема/параграф учебника: ${input.topic}. Длительность: ${m} минут.` },
+  ]);
+  if (!raw) return fallback;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return fallback;
+  const list = (value: unknown) => (Array.isArray(value) ? value.map((item) => str(item)).filter(Boolean).slice(0, 8) : []);
+  const steps = Array.isArray(parsed.steps)
+    ? parsed.steps
+        .map((step) => (typeof step === "object" && step !== null ? (step as Record<string, unknown>) : null))
+        .filter((step): step is Record<string, unknown> => step !== null)
+        .map((step) => ({ minutes: Math.max(1, Math.min(90, Math.round(Number(step.minutes) || 5))), title: str(step.title), activity: str(step.activity) }))
+        .filter((step) => step.title)
+        .slice(0, 8)
+    : [];
+  if (!steps.length) return fallback;
+  return {
+    title: str(parsed.title) || input.topic,
+    goals: list(parsed.goals),
+    steps,
+    questions: list(parsed.questions),
+    homework: str(parsed.homework),
+    experiment: str(parsed.experiment),
+    source: "ai",
+  };
+}
+
 export async function generateTopicTest(
   subject: string,
   grade: number,

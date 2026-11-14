@@ -9,6 +9,11 @@ import { LessonRoomPage } from './lesson-room';
 import { TopicLibraryPage } from './topic-library';
 import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
+import { ChemLabPage } from './chem-lab';
+import { DirectorDashboard, ParentCabinet, ParentLinkForm } from './cabinets';
+import { LessonPlanner, SchoolImport, TelegramConnect } from './school-tools';
+import { LabReports } from './lab-work';
+import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
 import {
@@ -27,17 +32,16 @@ import {
   Minus, Monitor, MoreHorizontal, Pen, Plus, Presentation, RotateCcw, Save, Search, Send,
   Settings, Shapes, ShieldCheck, Sparkles, Timer, Trash2, Undo2, Upload, Users, Video,
   Wifi, X, ZoomIn, ZoomOut,
+  Atom, BookMarked, FlaskConical, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
-type Role = 'Student' | 'Teacher' | 'Parent' | 'School director' | 'Central administrator';
-type AssignmentStatus = 'Assigned' | 'In Progress' | 'Submitted' | 'Under Review' | 'Needs Revision' | 'Checked';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Mavzular va 3D','Attendance':'Davomat'},
-  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Темы и 3D','Attendance':'Давомат'},
-  English:{Schedule:'Schedule',Classes:'Classes','Topics & 3D':'Topics & 3D','Lesson room':'Online lesson','Attendance':'Attendance'}
+  Uzbek:{Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
+  Русский:{Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
+  English:{Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -48,17 +52,6 @@ const BOOKS:Book[]=[
   {id:'fizika-7-darslik',title:'Физика 7 класс — учебник',subject:'Physics',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'ink',pdf:'/books/fizika-7-darslik.pdf'},
   {id:'biologiya-7-darslik',title:'Биология 7 класс — учебник',subject:'Biology',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'sage',pdf:'/books/biologiya-7-darslik.pdf'},
   {id:'kimyo-7-darslik',title:'Химия 7 класс — учебник',subject:'Chemistry',language:'Russian',author:'Идаум',year:'2026',chapters:['Учебник'],tone:'alt',pdf:'/books/kimyo-7-darslik.pdf'},
-];
-const AI_PREVIEW_QUESTIONS:Record<string,{prompt:string;choices:string[];correct:string;explanation:string}>={
-  Mathematics:{prompt:'Which ratio is equivalent to 2:3?',choices:['4:6','3:4','2:6','6:9'],correct:'4:6',explanation:'Both parts of 2:3 are multiplied by 2, so 4:6 keeps the same relationship.'},
-  Physics:{prompt:'Which example shows a change in position?',choices:['A moving bicycle','A heavier backpack','A blue notebook','A warm cup'],correct:'A moving bicycle',explanation:'Motion is identified by a change in position compared with a reference point.'},
-  Chemistry:{prompt:'Which property describes how much light passes through a material?',choices:['Transparency','Hardness','Mass','Temperature'],correct:'Transparency',explanation:'Transparency describes whether and how much light can pass through a material.'},
-  History:{prompt:'What does a timeline show?',choices:['Events in chronological order','Only opinions','Chemical properties','A classroom seating plan'],correct:'Events in chronological order',explanation:'A timeline places events in the order in which they happened.'},
-};
-const INITIAL_ASSIGNMENTS=[
-  {id:1,title:'Ratio problems: practice set',subject:'Mathematics',dueDate:'Today · 16:00',status:'In Progress' as AssignmentStatus,feedback:'Show one step for each answer.',score:null as number|null},
-  {id:2,title:'Plant systems: short response',subject:'Biology',dueDate:'Tomorrow · 12:00',status:'Assigned' as AssignmentStatus,feedback:'',score:null as number|null},
-  {id:3,title:'Read chapter 2 and annotate',subject:'History',dueDate:'18 May · 15:00',status:'Checked' as AssignmentStatus,feedback:'Thoughtful notes on the timeline.',score:87},
 ];
 function readLocal<T>(key:string,fallback:T):T{try{const v=localStorage.getItem('eduverse:'+key);return v?JSON.parse(v) as T:fallback}catch{return fallback}}
 function useSavedState<T>(key:string,initial:T){const [value,setValue]=useState<T>(()=>readLocal(key,initial));useEffect(()=>{localStorage.setItem('eduverse:'+key,JSON.stringify(value))},[key,value]);return [value,setValue] as const}
@@ -72,284 +65,282 @@ function App(){
   const [progress,setProgress]=useSavedState<Record<string,number>>('reading-progress',{});
   const [saved,setSaved]=useSavedState<string[]>('bookmarks',[]);
   const [notes,setNotes]=useSavedState<Record<string,string>>('notes',{});
-  const [assignments,setAssignments]=useSavedState<typeof INITIAL_ASSIGNMENTS>('school-demo-7b-assignments',INITIAL_ASSIGNMENTS);
-  const [prefs]=useSavedState('preferences',{compact:false,notifications:true});
   const [mobileOpen,setMobileOpen]=useState(false);
   const school=useSchoolData(auth.user,auth.status);
   useEffect(()=>{
     const hasQrCode = typeof window!=='undefined' && new URLSearchParams(window.location.search).has('qr');
     if(hasLocalSession&&auth.user&&!hasQrCode&&(location==='/login'||location==='/register'))setLocation('/dashboard');
   },[hasLocalSession,auth.user,location,setLocation]);
+  useEffect(()=>{setMobileOpen(false);window.scrollTo?.({top:0})},[location]);
   const userRole=auth.user?.role;
-  const roleNavigation:Record<User['role'],string[]> = {
-    student:['Overview','Topics & 3D','Lesson room','Textbook library'],
-    teacher:['Overview','Topics & 3D','Lesson room','Attendance','Teacher workspace','Interactive board','Textbook library'],
-    parent:['Overview','Family view','Textbook library'],
-    school_director:['Overview','Attendance','School insights','Classes'],
-    school_admin:['Overview','Attendance','School insights','Classes'],
-    education_admin:['Overview','Administration'],
-    ministry_admin:['Overview','Administration'],
-    platform_superadmin:['Overview','Administration'],
-  };
-  const navItems=[
-    {label:'Overview',href:'/dashboard',icon:Home,roles:Object.keys(roleNavigation) as User['role'][]},
-    {label:'Schedule',href:'/schedule',icon:Clock3,roles:Object.keys(roleNavigation) as User['role'][]},
-    {label:'Classes',href:'/classes',icon:Users,roles:Object.keys(roleNavigation) as User['role'][]},
-    {label:'Topics & 3D',href:'/topics',icon:Sparkles,roles:['student','teacher'] as User['role'][]},
-    {label:'Attendance',href:'/attendance',icon:ClipboardCheck,roles:['teacher','school_director','school_admin'] as User['role'][]},
-    {label:'Textbook library',href:'/library',icon:Library,roles:['student','teacher','parent'] as User['role'][]},
-    {label:'Homework scan',href:'/homework/scan',icon:Upload,roles:['student'] as User['role'][]},
-    {label:'Lesson room',href:'/lesson',icon:Video,roles:['student','teacher'] as User['role'][]},
-    {label:'Interactive board',href:'/board',icon:Presentation,roles:['teacher'] as User['role'][]},
-    {label:'Teacher workspace',href:'/teacher',icon:GraduationCap,roles:['teacher'] as User['role'][]},
-    {label:'Family view',href:'/parent',icon:Users,roles:['parent'] as User['role'][]},
-    {label:'School insights',href:'/school',icon:Activity,roles:['school_director','school_admin'] as User['role'][]},
-    {label:'Administration',href:'/admin',icon:Settings,roles:['education_admin','ministry_admin','platform_superadmin'] as User['role'][]},
-  ];
-  const visible=userRole?navItems.filter(item=>item.roles.includes(userRole)):[];
+  const visible=userRole?ROLE_NAV[userRole].map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
+  const [langChanging,setLangChanging]=useState(false);
+  function changeLang(value:Lang){
+    if(value===lang)return;
+    setLangChanging(true);
+    // The text is swapped in the middle of the fade, so the change feels smooth.
+    window.setTimeout(()=>setLang(value),300);
+    window.setTimeout(()=>setLangChanging(false),950);
+  }
   function navigate(href:string){setLocation(href);setMobileOpen(false)}
   const routeMatch=location.match(/^\/read\/([^/]+)/);const book=routeMatch?BOOKS.find(b=>b.id===routeMatch[1]):undefined;
   const lessonRoomMatch=location.match(/^\/lesson(?:\/([^/]+))?/);const lessonTopicId=lessonRoomMatch?.[1];
   const progressValue=(bookId:string)=>progress[bookId]??1;
   if(location==='/'&&auth.status==='loading')return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
   if(location==='/'&&!hasLocalSession)return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
-  if(location==='/login'){
+  if(location==='/login'||location==='/register'){
     const hasQrCode = typeof window!=='undefined' && new URLSearchParams(window.location.search).has('qr');
-    if(hasQrCode)return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
-    if(hasLocalSession)return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
-    return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
-  }
-  if(location==='/register'){
+    if(hasLocalSession&&!hasQrCode)return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
     return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
   }
   if(auth.status==='loading')return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
   if(auth.status==='unavailable')return <AuthStatusPage language={lang} onLanguageChange={setLang} onRetry={()=>void auth.refreshSession()} detail={auth.serviceError}/>;
-  if(!hasLocalSession)return <AuthStatusPage language={lang} onLanguageChange={setLang} required privateArea onSignIn={()=>navigate('/login')} detail={auth.serviceError}/>;
-  if(location==='/profile'&&!hasLocalSession)return <AuthStatusPage language={lang} onLanguageChange={setLang} required onSignIn={()=>navigate('/login')}/>;
+  if(!hasLocalSession){
+    // Signed out (also in another tab): straight to the sign-in form.
+    return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate(location==='/'?'/dashboard':location)}/>;
+  }
   const protectedRoutes:Record<string,User['role'][]> = {
     '/dashboard':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
-    '/schedule':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
     '/classes':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
     '/library':['student','teacher','parent'],
     '/read':['student','teacher','parent'],
     '/topics':['student','teacher'],
     '/attendance':['teacher','school_director','school_admin'],
-    '/homework/scan':['student'],
     '/teacher':['teacher'],
     '/parent':['parent'],
     '/school':['school_director','school_admin'],
     '/admin':['education_admin','ministry_admin','platform_superadmin'],
     '/board':['teacher'],
-  };
-  const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
-  const roleRestrictedRoutes:Record<string,User['role'][]> = {
+    '/lab':['student','teacher'],
     '/lesson':['student','teacher'],
   };
-  const roleRestrictedRoute=Object.entries(roleRestrictedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
-  if(protectedRoute&&!hasLocalSession)return <AuthStatusPage language={lang} onLanguageChange={setLang} required privateArea onSignIn={()=>navigate('/login')}/>;
-  if((protectedRoute&&auth.user&&!protectedRoute[1].includes(auth.user.role))||(roleRestrictedRoute&&auth.user&&!roleRestrictedRoute[1].includes(auth.user.role))){
-    const roleLabel=authCopy(lang).role;
-    return <div className="workspace-access" data-locale-preserve="true">
-      <div className="workspace-access-card">
-        <div className="auth-brand-mark">E</div>
-        <div className="auth-eyebrow">EDUVERSE-UZ</div>
-        <h1>{lang==='Uzbek'?'Bu bo‘lim sizning rolingiz uchun emas':lang==='Русский'?'Раздел недоступен для вашей роли':'This section is not available for your role'}</h1>
-        <p>{`${roleLabel}: ${getRoleLabel(lang, auth.user.role)}. ${lang==='Uzbek'?'Har bir rol faqat o‘ziga tegishli bo‘limlardan foydalanadi.':lang==='Русский'?'Каждая роль использует только предназначенные ей разделы.':'Each role can access only its designated workspace.'}`}</p>
-        <div className="public-home-cta">
-          <Link href="/profile" className="auth-submit">{authCopy(lang).profile}</Link>
-          <Link href="/dashboard" className="btn">{authCopy(lang).home}</Link>
-        </div>
-      </div>
-    </div>;
-  }
-  return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`}>
-    <aside className="sidebar">
-      <button className="sidebar-close" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}><X size={19}/></button>
-      <Link href="/dashboard" className="brand" onClick={()=>setMobileOpen(false)}><span className="brand-mark">E</span><span><span className="brand-title">EDUVERSE</span><span className="brand-sub">UZ · learning space</span></span></Link>
-      <div className="nav-caption">{auth.user?getRoleLabel(lang,auth.user.role):lang==='Uzbek'?'Maktab platformasi':lang==='Русский'?'Школьная платформа':'School platform'}</div>
-      <nav className="nav-list" aria-label="Main navigation">{visible.map(item=><Link key={item.href} href={item.href} className={`nav-item ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><item.icon/><span>{NAV_LABELS[lang][item.label]??item.label}</span></Link>)}</nav>
-      <div className="side-bottom">
-        {auth.user
-          ? <Link href="/profile" className="nav-item" onClick={()=>setMobileOpen(false)}><ShieldCheck/><span>{authCopy(lang).profile}</span></Link>
-          : <Link href="/login" className="nav-item" onClick={()=>setMobileOpen(false)}><ShieldCheck/><span>{authCopy(lang).signIn}</span></Link>}
-      </div>
+  const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
+  const forbidden=Boolean(protectedRoute&&auth.user&&!protectedRoute[1].includes(auth.user.role));
+  const current=visible.find(item=>active(item.href));
+  const pageTitle=location==='/profile'?authCopy(lang).profile:book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
+  const membership=school.memberships[0];
+  const notice=auth.accountNotice;
+  return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`} data-lang-changing={langChanging?'':undefined}>
+    <aside className="sidebar" aria-label="EDUVERSE">
+      <button className="sidebar-close" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}><X size={18}/></button>
+      <Link href="/dashboard" className="brand" onClick={()=>setMobileOpen(false)}>
+        <span className="brand-mark">E</span>
+        <span><span className="brand-title">EDUVERSE</span><span className="brand-sub">{membership?.schoolName??'UZ'}</span></span>
+      </Link>
+      <nav className="nav-list" aria-label="Main navigation">
+        {visible.map(item=><Link key={item.href} href={item.href} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon"><item.icon/></span><span>{navLabel(lang,item.label)}</span></Link>)}
+      </nav>
+      {auth.user&&<Link href="/profile" className={`side-user ${location==='/profile'?'active':''}`} onClick={()=>setMobileOpen(false)} data-locale-preserve="true">
+        <span className="avatar">{auth.user.username.slice(0,1).toLocaleUpperCase()}</span>
+        <span className="side-user-text"><b>{auth.user.username}</b><small>{getRoleLabel(lang,auth.user.role)}</small></span>
+        <Settings size={16}/>
+      </Link>}
     </aside>
     <div className="mobile-drawer-backdrop" aria-hidden="true" onClick={()=>setMobileOpen(false)} />
     <main className="main-column">
       <header className="topbar">
-        <div className="top-left"><button className="mobile-menu" aria-label="Open navigation" onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={20}/></button><span className="crumb">{lang==='Uzbek'?'Maktabning raqamli o‘quv maydoni':lang==='Русский'?'Цифровое учебное пространство школы':'School digital learning space'}</span></div>
+        <div className="top-left">
+          <button className="mobile-menu" aria-label="Open navigation" onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={20}/></button>
+          <span className="topbar-title">{pageTitle}</span>
+        </div>
         <div className="top-actions">
-          {auth.status==='offline'&&<button type="button" className="tag gold" onClick={()=>void auth.refreshSession()} title={lang==='Uzbek'?'Serverni qayta tekshirish':lang==='Русский'?'Проверить сервер снова':'Check the server again'}>{lang==='Uzbek'?'Oflayn rejim':lang==='Русский'?'Офлайн-режим':'Offline mode'}</button>}
-          <select aria-label="Language" className="top-select" value={lang} onChange={e=>setLang(e.target.value as Lang)}><option value="Uzbek">Uzbek</option><option value="Русский">Русский</option><option value="English">English</option></select>
-          {auth.user
-            ?<Link href="/dashboard" className="auth-nav-link auth-user-link" data-locale-preserve="true" aria-label={auth.user.username} title={auth.user.username}><div className="avatar">{auth.user.username.slice(0,1).toLocaleUpperCase()}</div><span>{auth.user.username}</span></Link>
-            :<Link href="/login" className="auth-nav-link guest" data-locale-preserve="true">{authCopy(lang).signIn}</Link>}
+          {auth.status==='offline'&&<button type="button" className="tag gold" onClick={()=>void auth.refreshSession()}>{lang==='Uzbek'?'Internet yo‘q':lang==='Русский'?'Нет связи':'Offline'}</button>}
+          <div className="lang-switch" role="group" aria-label="Language">
+            <span className="lang-thumb" aria-hidden="true" style={{transform:`translateX(${(['Uzbek','Русский','English'] as Lang[]).indexOf(lang)*40}px)`}}/>
+            {(['Uzbek','Русский','English'] as Lang[]).map(value=><button key={value} type="button" className={lang===value?'active':''} onClick={()=>changeLang(value)}>{value==='Uzbek'?'UZ':value==='Русский'?'RU':'EN'}</button>)}
+          </div>
+          {auth.user&&<Link href="/profile" className="top-avatar" aria-label={auth.user.username} title={auth.user.username}><span className="avatar">{auth.user.username.slice(0,1).toLocaleUpperCase()}</span></Link>}
         </div>
       </header>
-      <div className={`content ${prefs.compact?'compact':''}`}>
-        {location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
+      {notice?.kind==='switched'&&<div className="account-banner" role="alert">
+        <Info size={18}/>
+        <div>
+          <b>{lang==='Uzbek'?`Endi siz ${notice.username} hisobidasiz`:lang==='Русский'?`Теперь вы в аккаунте ${notice.username}`:`You are now signed in as ${notice.username}`}</b>
+          <span>{lang==='Uzbek'?'Boshqa oynada boshqa hisobga kirildi. Bitta brauzerda barcha oynalar uchun bitta hisob ishlaydi. O‘qituvchi va o‘quvchini bitta kompyuterda sinash uchun ikkinchisini inkognito oynada (Ctrl+Shift+N) yoki boshqa brauzerda oching.':lang==='Русский'?'В другой вкладке вошли в другой аккаунт. В одном браузере все вкладки работают под одним аккаунтом. Чтобы проверить учителя и ученика на одном компьютере, откройте второй аккаунт в окне инкогнито (Ctrl+Shift+N) или в другом браузере.':'Another tab signed in with a different account. All tabs of one browser share one account. To try a teacher and a student on one computer, open the second account in an incognito window (Ctrl+Shift+N) or another browser.'}</span>
+        </div>
+        <button type="button" className="btn small" onClick={auth.dismissAccountNotice} aria-label="Close"><X size={14}/></button>
+      </div>}
+      <div className="content" key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
+        {forbidden&&auth.user?<RoleBlocked language={lang} role={auth.user.role} goHome={()=>navigate('/dashboard')}/>
+        :location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
         :location==='/'||location==='/dashboard'?<RoleOverviewPage user={auth.user!} school={school} language={lang} onOpen={navigate}/>
-        :location==='/teacher'&&auth.user?<TeacherPage school={school} language={lang} goBoard={()=>navigate('/board')}/>
+        :location==='/teacher'&&auth.user?<TeacherPage school={school} user={auth.user} language={lang} goBoard={()=>navigate('/board')} onOpen={navigate}/>
         :location==='/parent'&&auth.user?<ParentPage language={lang}/>
         :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
-        :location==='/homework/scan'?<Redirect to="/classes"/>
+        :location==='/homework/scan'||location==='/schedule'?<Redirect to={location==='/schedule'?'/dashboard':'/classes'}/>
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} goBoard={()=>navigate('/board')}/>
         :location==='/board'?<BoardPage/>
+        :location==='/lab'&&auth.user?<ChemLabPage language={lang} user={auth.user}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
-        :location==='/schedule'?<SchedulePage role={userRole}/>
         :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
         :location==='/topics'&&auth.user?<TopicLibraryPage user={auth.user} language={lang} onOpenRoom={topicId=>navigate('/lesson/'+topicId)}/>
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
-        :<NotFound goHome={()=>navigate('/')}/>}
+        :<NotFound language={lang} goHome={()=>navigate('/dashboard')}/>}
       </div>
-      <nav className="mobile-nav" aria-label="Mobile navigation">{visible.slice(0,5).map(item=><Link key={item.href} href={item.href} className={active(item.href)?'active':''}><item.icon/><span>{(NAV_LABELS[lang][item.label]??item.label).split(' ')[0]}</span></Link>)}</nav>
+      <nav className="mobile-nav" aria-label="Mobile navigation">{visible.slice(0,5).map(item=><Link key={item.href} href={item.href} className={`tone-${item.tone} ${active(item.href)?'active':''}`}><item.icon/><span>{NAV_SHORT[lang][item.label]??navLabel(lang,item.label)}</span></Link>)}</nav>
     </main>
   </div>
  }
-type WorkspaceAction={
- label:Record<Lang,string>;
- description:Record<Lang,string>;
- path:string;
- status:'available'|'local'|'planned';
+type NavItem={label:string;href:string;icon:typeof Home;tone:string};
+const NAV_ITEMS:NavItem[]=[
+  {label:'Overview',href:'/dashboard',icon:LayoutDashboard,tone:'slate'},
+  {label:'Lesson room',href:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:'Topics & 3D',href:'/topics',icon:Atom,tone:'violet'},
+  {label:'Attendance',href:'/attendance',icon:CalendarCheck2,tone:'green'},
+  {label:'Teacher workspace',href:'/teacher',icon:NotebookPen,tone:'orange'},
+  {label:'Homework',href:'/classes',icon:NotebookPen,tone:'orange'},
+  {label:'Classes',href:'/classes',icon:Users,tone:'teal'},
+  {label:'Chemistry lab',href:'/lab',icon:FlaskConical,tone:'pink'},
+  {label:'Interactive board',href:'/board',icon:PenTool,tone:'pink'},
+  {label:'Textbook library',href:'/library',icon:BookMarked,tone:'teal'},
+  {label:'Family view',href:'/parent',icon:UserRound,tone:'orange'},
+  {label:'School insights',href:'/school',icon:School,tone:'blue'},
+  {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
+];
+const ROLE_NAV:Record<User['role'],string[]>={
+  student:['Overview','Lesson room','Topics & 3D','Chemistry lab','Homework','Textbook library'],
+  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Interactive board','Textbook library'],
+  parent:['Overview','Family view','Textbook library'],
+  school_director:['Overview','School insights','Classes','Attendance'],
+  school_admin:['Overview','School insights','Classes','Attendance'],
+  education_admin:['Overview','Administration'],
+  ministry_admin:['Overview','Administration'],
+  platform_superadmin:['Overview','Administration'],
 };
-const ROLE_HOME_COPY:Record<Lang,{
-  eyebrow:string;title:string;subtitle:string;welcome:string;account:string;schoolScope:string;
-  scopeNotice:string;localTest:string;available:string;local:string;planned:string;open:string;
-  noSchedule:string;noAssignments:string;
-}> = {
-  Uzbek:{
-    eyebrow:'SHAXSIY O‘QUV MAYDONI',title:'O‘qishni davom ettiring',subtitle:'Bu sahifa faqat server tasdiqlagan hisob ma’lumotlarini ko‘rsatadi.',
-    welcome:'Xush kelibsiz',account:'Hisob turi',schoolScope:'Tashkilot',scopeNotice:'Maktab a’zoligi va sinf ma’lumotlari serverdan yuklanadi. Agar hisob biror maktabga bog‘lanmagan bo‘lsa, jadval, baholar yoki o‘quvchilar ro‘yxati uydirib ko‘rsatilmaydi.',
-    localTest:'Mahalliy sinov hisobi — haqiqiy foydalanuvchi yoki maktab ma’lumoti emas.',
-    available:'Mavjud',local:'Mahalliy namuna',planned:'Tayyorlanmoqda',open:'Ochish',
-    noSchedule:'Haqiqiy jadval hozircha ulanmagan.',noAssignments:'Serverdagi vazifalar hisobingizga bog‘langan sinflar orqali ko‘rinadi.',
-  },
-  Русский:{
-    eyebrow:'ЛИЧНОЕ УЧЕБНОЕ ПРОСТРАНСТВО',title:'Продолжайте обучение',subtitle:'Здесь отображаются только данные аккаунта, подтверждённые сервером.',
-    welcome:'Добро пожаловать',account:'Роль аккаунта',schoolScope:'Организация',scopeNotice:'Членство в школе и данные классов загружаются с сервера. Если аккаунт не привязан к школе, расписание, оценки и списки учеников не подменяются выдуманными данными.',
-    localTest:'Локальный тестовый аккаунт — это не реальный пользователь или школьная запись.',
-    available:'Доступно',local:'Локальный образец',planned:'В разработке',open:'Открыть',
-    noSchedule:'Настоящее расписание пока не подключено.',noAssignments:'Задания с сервера отображаются для классов, привязанных к вашему аккаунту.',
-  },
-  English:{
-    eyebrow:'PERSONAL LEARNING SPACE',title:'Continue learning',subtitle:'This page shows only account details confirmed by the server.',
-    welcome:'Welcome',account:'Account role',schoolScope:'Organization',scopeNotice:'School membership and class records load from the server. If the account is not linked to a school, schedules, grades, and student rosters are not fabricated.',
-    localTest:'Local test account — not a real user or school record.',
-    available:'Available',local:'Local sample',planned:'In development',open:'Open',
-    noSchedule:'A real schedule is not connected yet.',noAssignments:'Server assignments appear for classes linked to your account.',
-  },
+const NAV_SHORT:Record<Lang,Record<string,string>>={
+  Uzbek:{Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Attendance':'Davomat','Teacher workspace':'Vazifalar',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
+  Русский:{Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Attendance':'Давомат','Teacher workspace':'Задания',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
+  English:{Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Attendance':'Attendance','Teacher workspace':'Tasks',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
 };
-const ROLE_HOME_ACTIONS:Record<User['role'],WorkspaceAction[]> = {
+function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
+function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
+  return <div className="empty-state">
+    <span className="empty-icon"><ShieldCheck/></span>
+    <h2>{language==='Uzbek'?'Bu bo‘lim sizning rolingiz uchun emas':language==='Русский'?'Этот раздел не для вашей роли':'This section is not for your role'}</h2>
+    <p>{`${authCopy(language).role}: ${getRoleLabel(language,role)}.`}</p>
+    <button className="btn primary" onClick={goHome}><Home size={16}/>{authCopy(language).home}</button>
+  </div>;
+}
+type HomeAction={label:Record<Lang,string>;description:Record<Lang,string>;path:string;icon:typeof Home;tone:string};
+const L=(uz:string,ru:string,en:string):Record<Lang,string>=>({Uzbek:uz,Русский:ru,English:en});
+const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
  student:[
-  {label:{Uzbek:'Mavzular va 3D',Русский:'Темы и 3D',English:'Topics & 3D'},description:{Uzbek:'AI tayyorlagan mavzular, interaktiv 3D obyekt, faktlar va testlar.',Русский:'Темы от ИИ с интерактивным 3D-объектом, фактами и тестами.',English:'AI topics with an interactive 3D object, facts, and tests.'},path:'/topics',status:'available'},
-  {label:{Uzbek:'Onlayn dars',Русский:'Онлайн-урок',English:'Online lesson'},description:{Uzbek:'Kamera, mikrofon va ekran bilan sinfga ulanib, testni bajaring.',Русский:'Подключитесь к классу с камерой, микрофоном и тестом.',English:'Join the class with camera, mic, and the lesson test.'},path:'/lesson',status:'available'},
-  {label:{Uzbek:'Sinflar va topshiriqlar',Русский:'Классы и задания',English:'Classes & assignments'},description:{Uzbek:'Hisobingizga bog‘langan sinflar, ro‘yxat va serverdagi topshiriqlarni ko‘ring.',Русский:'Смотрите классы, списки и задания с сервера для вашего аккаунта.',English:'View classes, rosters, and server assignments linked to your account.'},path:'/classes',status:'available'},
-  {label:{Uzbek:'Maktab kutubxonasi',Русский:'Школьная библиотека',English:'School library'},description:{Uzbek:'Maktab darsliklari va ruxsatli materiallar namunalarini ko‘ring.',Русский:'Просматривайте образцы школьных и разрешённых материалов.',English:'Browse school and authorized material samples.'},path:'/library',status:'available'},
+  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi bergan kodni kiriting.','Введите код от учителя.','Enter the code from your teacher.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/topics',icon:Atom,tone:'violet'},
+  {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
+  {label:L('3D studiya','3D-студия','3D studio'),description:L('Kimyo, fizika, matematika, biologiya, geografiya — hammasi 3D da.','Химия, физика, математика, биология, география — всё в 3D.','Chemistry, physics, maths, biology, geography — all in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
+  {label:L('Darsliklar','Учебники','Textbooks'),description:L('7-sinf darsliklari va daftarlar.','Учебники и тетради 7 класса.','Grade 7 textbooks and workbooks.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  teacher:[
-  {label:{Uzbek:'Mavzular va 3D',Русский:'Темы и 3D',English:'Topics & 3D'},description:{Uzbek:'Fan va mavzuni tanlab, AI orqali slaydlar, 3D, faktlar va test yarating.',Русский:'Выберите предмет и тему — ИИ создаст слайды, 3D, факты и тест.',English:'Pick a subject and topic — the AI builds slides, 3D, facts, and a test.'},path:'/topics',status:'available'},
-  {label:{Uzbek:'Onlayn dars',Русский:'Онлайн-урок',English:'Online lesson'},description:{Uzbek:'Mavzu bo‘yicha xona oching, kodni ulashing va individual testlar bering.',Русский:'Создайте комнату по теме, поделитесь кодом и запустите индивидуальные тесты.',English:'Open a topic room, share the code, and run individual AI tests.'},path:'/lesson',status:'available'},
-  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Kim darsga kelganini belgilang.',Русский:'Отметьте, кто пришёл на урок.',English:'Mark who came to the lesson.'},path:'/attendance',status:'available'},
-  {label:{Uzbek:'O‘qituvchi kabineti',Русский:'Кабинет учителя',English:'Teacher workspace'},description:{Uzbek:'Bog‘langan sinflar uchun topshiriq joylang va ishlarni tekshiring.',Русский:'Публикуйте задания и проверяйте работы для привязанных классов.',English:'Publish assignments and review work for linked classes.'},path:'/teacher',status:'available'},
-  {label:{Uzbek:'Interaktiv doska',Русский:'Интерактивная доска',English:'Interactive board'},description:{Uzbek:'Doskada chizing va tushuntiring.',Русский:'Рисуйте и объясняйте на доске.',English:'Draw and explain on the board.'},path:'/board',status:'available'},
+  {label:L('Onlayn dars boshlash','Начать онлайн-урок','Start a lesson'),description:L('Kamera, ovoz, ekran, chat va testlar.','Камера, звук, экран, чат и тесты.','Camera, sound, screen, chat and tests.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('Fan va mavzuni yozing — slaydlar, 3D va test tayyor.','Напишите тему — слайды, 3D и тест готовы.','Type a topic — slides, 3D and a quiz are ready.'),path:'/topics',icon:Atom,tone:'violet'},
+  {label:L('Davomat','Давомат','Attendance'),description:L('Kim kelganini bir bosishda belgilang.','Отметьте присутствие в один клик.','Mark attendance in one click.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
+  {label:L('Uy vazifasi berish','Выдать задание','Assign homework'),description:L('Topshiriq bering, daftar rasmlarini tekshiring.','Выдайте задание и проверьте фото тетрадей.','Assign work and check notebook photos.'),path:'/teacher',icon:NotebookPen,tone:'orange'},
+  {label:L('3D studiya','3D-студия','3D studio'),description:L('Har qanday fanni sinfga 3D da ko‘rsating.','Показывайте классу любой предмет в 3D.','Show any subject to the class in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
+  {label:L('Interaktiv doska','Интерактивная доска','Board'),description:L('Chizing va tushuntiring.','Рисуйте и объясняйте.','Draw and explain.'),path:'/board',icon:PenTool,tone:'pink'},
+  {label:L('Darsliklar','Учебники','Textbooks'),description:L('Darslikni ochib, sinfga ko‘rsating.','Откройте учебник и покажите классу.','Open a textbook and show the class.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  parent:[
-  {label:{Uzbek:'Oila kabineti',Русский:'Кабинет родителя',English:'Family workspace'},description:{Uzbek:'Farzandning o‘qish ko‘rinishi.',Русский:'Обзор обучения ребёнка.',English:'Overview of your child’s learning.'},path:'/parent',status:'available'},
-  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Farzandning darslarga qatnashishi.',Русский:'Посещение уроков ребёнком.',English:'Your child’s lesson attendance.'},path:'/attendance',status:'available'},
-  {label:{Uzbek:'Maktab kutubxonasi',Русский:'Школьная библиотека',English:'School library'},description:{Uzbek:'Birgalikda o‘qish uchun materiallar.',Русский:'Материалы для совместного чтения.',English:'Materials to read together.'},path:'/library',status:'available'},
+  {label:L('Farzandim','Мой ребёнок','My child'),description:L('Baholar va uy vazifalari.','Оценки и домашние задания.','Grades and homework.'),path:'/parent',icon:Users,tone:'orange'},
+  {label:L('Darsliklar','Учебники','Textbooks'),description:L('Birga o‘qish uchun.','Читать вместе с ребёнком.','Read together.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  school_director:[
-  {label:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},description:{Uzbek:'Serverdagi maktab, sinflar, ro‘yxat va topshiriqlarni boshqaring.',Русский:'Управляйте школой, классами, списками и заданиями на сервере.',English:'Manage school records, classes, rosters, and assignments on the server.'},path:'/school',status:'available'},
-  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Sinflar bo‘yicha davomatni kuzating.',Русский:'Отслеживайте посещаемость классов.',English:'Monitor attendance across classes.'},path:'/attendance',status:'available'},
+  {label:L('Maktab boshqaruvi','Управление школой','School'),description:L('Sinflar, o‘qituvchilar va o‘quvchilar.','Классы, учителя и ученики.','Classes, teachers and students.'),path:'/school',icon:School,tone:'blue'},
+  {label:L('Sinflar','Классы','Classes'),description:L('Sinf ro‘yxatlari va topshiriqlar.','Списки классов и задания.','Class lists and assignments.'),path:'/classes',icon:Users,tone:'teal'},
+  {label:L('Davomat','Давомат','Attendance'),description:L('Sinflar bo‘yicha davomat.','Посещаемость по классам.','Attendance by class.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
  ],
  school_admin:[
-  {label:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},description:{Uzbek:'Serverdagi maktab, sinflar, ro‘yxat va topshiriqlarni boshqaring.',Русский:'Управляйте школой, классами, списками и заданиями на сервере.',English:'Manage school records, classes, rosters, and assignments on the server.'},path:'/school',status:'available'},
-  {label:{Uzbek:'Davomat',Русский:'Давомат',English:'Attendance'},description:{Uzbek:'Sinflar bo‘yicha davomatni kuzating.',Русский:'Отслеживайте посещаемость классов.',English:'Monitor attendance across classes.'},path:'/attendance',status:'available'},
+  {label:L('Maktab boshqaruvi','Управление школой','School'),description:L('Sinflar, o‘qituvchilar va o‘quvchilar.','Классы, учителя и ученики.','Classes, teachers and students.'),path:'/school',icon:School,tone:'blue'},
+  {label:L('Sinflar','Классы','Classes'),description:L('Sinf ro‘yxatlari va topshiriqlar.','Списки классов и задания.','Class lists and assignments.'),path:'/classes',icon:Users,tone:'teal'},
+  {label:L('Davomat','Давомат','Attendance'),description:L('Sinflar bo‘yicha davomat.','Посещаемость по классам.','Attendance by class.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
  ],
- education_admin:[
-  {label:{Uzbek:'Ta’lim boshqaruvi',Русский:'Управление образованием',English:'Education administration'},description:{Uzbek:'Serverdagi maktab yozuvlarini ko‘ring va yarating.',Русский:'Просматривайте и создавайте школы на сервере.',English:'Inspect and create real school records on the server.'},path:'/admin',status:'available'},
- ],
- ministry_admin:[
-  {label:{Uzbek:'Markaziy boshqaruv',Русский:'Центральное управление',English:'Central administration'},description:{Uzbek:'Serverdagi maktab yozuvlarini ko‘ring va yarating.',Русский:'Просматривайте и создавайте школы на сервере.',English:'Inspect and create real school records on the server.'},path:'/admin',status:'available'},
- ],
- platform_superadmin:[
-  {label:{Uzbek:'Platforma boshqaruvi',Русский:'Управление платформой',English:'Platform administration'},description:{Uzbek:'Serverdagi tashkilotlarni ko‘ring va yarating.',Русский:'Просматривайте и создавайте организации на сервере.',English:'Inspect and create real organizations on the server.'},path:'/admin',status:'available'},
- ],
+ education_admin:[{label:L('Maktablar','Школы','Schools'),description:L('Maktablarni yarating va boshqaring.','Создавайте школы и управляйте ими.','Create and manage schools.'),path:'/admin',icon:Settings,tone:'slate'}],
+ ministry_admin:[{label:L('Maktablar','Школы','Schools'),description:L('Maktablarni yarating va boshqaring.','Создавайте школы и управляйте ими.','Create and manage schools.'),path:'/admin',icon:Settings,tone:'slate'}],
+ platform_superadmin:[{label:L('Maktablar','Школы','Schools'),description:L('Maktablarni yarating va boshqaring.','Создавайте школы и управляйте ими.','Create and manage schools.'),path:'/admin',icon:Settings,tone:'slate'}],
+};
+const HOME_STEPS:Partial<Record<User['role'],Record<Lang,string[]>>>={
+ teacher:{
+  Uzbek:['Mavzu yarating — 3D va test tayyor bo‘ladi','Onlayn dars oching va kodni o‘quvchilarga bering','Davomatni belgilang','Uy vazifasini bering va baholang'],
+  Русский:['Создайте тему — 3D и тест готовы','Откройте онлайн-урок и дайте код ученикам','Отметьте давомат','Выдайте задание и оцените'],
+  English:['Create a topic — 3D and a quiz are ready','Start a lesson and share the code','Mark attendance','Assign homework and grade it'],
+ },
+ student:{
+  Uzbek:['O‘qituvchidan dars kodini oling','Darsga kiring: kamera va mikrofonni yoqing','Mavzuni 3D da o‘rganing va testni bajaring','Uy vazifasini daftar rasmi bilan yuboring'],
+  Русский:['Получите код урока у учителя','Войдите на урок: включите камеру и микрофон','Изучите тему в 3D и пройдите тест','Отправьте домашнее задание фото тетради'],
+  English:['Get the lesson code from your teacher','Join: turn on camera and microphone','Study the topic in 3D and take the quiz','Send homework as notebook photos'],
+ },
 };
 function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:SchoolData;language:Lang;onOpen:(path:string)=>void}){
- const copy=ROLE_HOME_COPY[language];
- const statusLabel={available:copy.available,local:copy.local,planned:copy.planned};
- const isLocalTest=user.login.startsWith('local_test_');
- const primaryMembership=school.memberships[0];
- const platformRole=['education_admin','ministry_admin','platform_superadmin'].includes(user.role);
- const schoolRole=['school_director','school_admin'].includes(user.role);
- const teacherRole=user.role==='teacher';
- const studentRole=user.role==='student';
- const roleSubtitle=platformRole
-  ?language==='Uzbek'?'Platforma va tashkilotlar boshqaruvi.':language==='Русский'?'Управление платформой и организациями.':'Platform and organization operations.'
-  :schoolRole
-   ?language==='Uzbek'?'Maktab faoliyati va boshqaruv bo‘limlari.':language==='Русский'?'Управление и деятельность школы.':'School operations and management.'
-   :teacherRole
-    ?language==='Uzbek'?'Dars tayyorlash va o‘qituvchi vositalari.':language==='Русский'?'Подготовка уроков и инструменты учителя.':'Lesson planning and teaching tools.'
-    :studentRole
-     ?copy.subtitle
-     :language==='Uzbek'?'Oila kabineti va maktab o‘quv materiallari.':language==='Русский'?'Семейный кабинет и школьные материалы.':'Family workspace and school learning resources.';
- const sectionCards=platformRole
-  ?[{title:{Uzbek:'Platforma boshqaruvi',Русский:'Управление платформой',English:'Platform administration'},detail:{Uzbek:'Bu rol dars va test ishlash uchun emas. Haqiqiy maktab yozuvlari serverda mavjud; qolgan sozlamalar lokal namuna.',Русский:'Эта роль не предназначена для уроков и тестов. Реальные школы доступны на сервере; остальные настройки пока локальны.',English:'This role is for platform operations, not lessons or tests. Real school records are available on the server; other settings stay local.'}},
-    {title:{Uzbek:'Davomat va darslar',Русский:'Давомат и уроки',English:'Attendance and lessons'},detail:{Uzbek:'Onlayn darslar, individual testlar va davomat platforma orqali boshqariladi.',Русский:'Онлайн-уроки, индивидуальные тесты и давомат управляются платформой.',English:'Online lessons, individual tests, and attendance are managed by the platform.'}}]
-  :schoolRole
-   ?[{title:{Uzbek:'Maktab boshqaruvi',Русский:'Управление школой',English:'School management'},detail:{Uzbek:'Bu rol o‘quv materiallarini ko‘rish uchun emas. Sinflar, ro‘yxat va topshiriqlar maktab API’sidan olinadi.',Русский:'Эта роль предназначена не для учебных материалов. Классы, списки и задания загружаются из школьного API.',English:'This role is for school operations, not learning materials. Classes, rosters, and assignments are read from the school API.'}},
-     {title:{Uzbek:'Maktabga biriktirish',Русский:'Привязка к школе',English:'School assignment'},detail:{Uzbek:'Maktab doirasi hisob a’zoligidan yuklanadi. A’zolik bo‘lmasa, hech qanday yozuv uydirib ko‘rsatilmaydi.',Русский:'Доступ к школе определяется членством аккаунта. Без членства записи не подменяются выдуманными данными.',English:'School scope loads from your account membership. When no membership exists, no records are fabricated.'}}]
-   :teacherRole
-    ?[{title:{Uzbek:'Onlayn dars',Русский:'Онлайн-урок',English:'Live lesson'},detail:{Uzbek:'Xona yarating, kodni o‘quvchilarga bering: kamera, mikrofon va ekran namoyishi ishlaydi.',Русский:'Создайте комнату и дайте код ученикам: работают камера, микрофон и показ экрана.',English:'Create a room and share the code: camera, microphone and screen sharing work.'}},
-     {title:{Uzbek:'Uy vazifasi',Русский:'Домашние задания',English:'Homework'},detail:{Uzbek:'Vazifani mavzuga bog‘lang, o‘quvchi daftar rasmini yuboradi, siz baholab imzo qo‘yasiz.',Русский:'Привяжите задание к теме: ученик присылает фото тетради, вы оцениваете и ставите подпись.',English:'Tie homework to a topic: the student sends notebook photos, you grade and sign.'}}]
-    :studentRole
-     ?[{title:{Uzbek:'Mavzular va 3D',Русский:'Темы и 3D',English:'Topics and 3D'},detail:{Uzbek:'Mavzuni 3D modelda o‘rganing, savollarga javob bering.',Русский:'Изучайте тему на 3D-модели и отвечайте на вопросы.',English:'Study a topic on a 3D model and answer the questions.'}},
-      {title:{Uzbek:'Uy vazifasi',Русский:'Домашние задания',English:'Homework'},detail:{Uzbek:'Daftarga bajaring, rasmga oling va o‘z so‘zingiz bilan tushuntiring.',Русский:'Выполните в тетради, сфотографируйте и объясните своими словами.',English:'Do it in your notebook, photograph it and explain in your own words.'}}]
-     :[{title:{Uzbek:'Oila kabineti',Русский:'Кабинет семьи',English:'Family workspace'},detail:{Uzbek:'O‘quvchi bilan oilaviy bog‘lanish yo‘q. Baho va jadval o‘ylab topib ko‘rsatilmaydi.',Русский:'Связь аккаунта с учеником не настроена. Оценки и расписание не подменяются выдуманными данными.',English:'No student is linked to this family account. Grades and schedules are not fabricated.'}},
-      {title:{Uzbek:'Maktab materiallari',Русский:'Школьные материалы',English:'School materials'},detail:{Uzbek:'Farzand bilan birga maktab kutubxonasidagi materiallarni ko‘rishingiz mumkin.',Русский:'Вы можете вместе с ребёнком просматривать материалы школьной библиотеки.',English:'You can browse school library materials together.'}}];
- return <section className="role-overview" data-locale-preserve="true">
-  <PageHeading eyebrow={platformRole?language==='Uzbek'?'PLATFORMA BOSHQARUVI':language==='Русский'?'УПРАВЛЕНИЕ ПЛАТФОРМОЙ':'PLATFORM OPERATIONS':schoolRole?language==='Uzbek'?'MAKTAB BOSHQARUVI':language==='Русский'?'УПРАВЛЕНИЕ ШКОЛОЙ':'SCHOOL MANAGEMENT':teacherRole?language==='Uzbek'?'O‘QITUVCHI ISH JOYI':language==='Русский'?'РАБОЧЕЕ МЕСТО УЧИТЕЛЯ':'TEACHING WORKSPACE':copy.eyebrow} title={`${copy.welcome}, ${user.username}`} subtitle={roleSubtitle}>
-   <Link href="/profile" className="btn"><Settings size={15}/>{authCopy(language).profile}</Link>
-  </PageHeading>
-  {isLocalTest&&<div className="notice role-test-notice"><Info size={16}/><span><b>{authCopy(language).localAccess}</b> — {copy.localTest}</span></div>}
-  <div className="role-identity">
-   <span className="role-avatar">{user.username.slice(0,1).toLocaleUpperCase()}</span>
-   <span><small>{copy.account}</small><b>{getRoleLabel(language,user.role)}</b></span>
-   <span className="role-organization"><small>{copy.schoolScope}</small><b>{primaryMembership?.schoolName??'—'}</b></span>
+ const membership=school.memberships[0];
+ const hour=new Date().getHours();
+ const greeting=hour<12?L('Xayrli tong','Доброе утро','Good morning'):hour<18?L('Xayrli kun','Добрый день','Good afternoon'):L('Xayrli kech','Добрый вечер','Good evening');
+ const locale=language==='Uzbek'?'uz-UZ':language==='Русский'?'ru-RU':'en-US';
+ const now=new Date();
+ // Browsers often lack Uzbek month names, so they are spelled out here.
+ const today=language==='Uzbek'
+  ?`${['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'][now.getDay()]}, ${now.getDate()}-${['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'][now.getMonth()]}`
+  :now.toLocaleDateString(locale,{weekday:'long',day:'numeric',month:'long'});
+ const actions=HOME_ACTIONS[user.role];
+ const [primary,...rest]=actions;
+ const steps=HOME_STEPS[user.role]?.[language];
+ const stats=[
+  {label:L('Sinflar','Классы','Classes'),value:school.classes.length},
+  {label:L('Topshiriqlar','Задания','Assignments'),value:school.assignments.length},
+  ...(user.role==='student'?[{label:L('Yuborilgan','Отправлено','Submitted'),value:school.mySubmissionCount}]:[]),
+ ];
+ return <section className="home" data-locale-preserve="true">
+  <div className="home-hero">
+   <div className="home-hero-text">
+    <span className="home-date">{today}</span>
+    <h1>{greeting[language]}, {user.username}</h1>
+    <p>{getRoleLabel(language,user.role)}{membership?.schoolName?` · ${membership.schoolName}`:''}</p>
+   </div>
+   {primary&&<button type="button" className={`home-primary tone-${primary.tone}`} onClick={()=>onOpen(primary.path)}>
+    <span className="home-primary-icon"><primary.icon/></span>
+    <span><b>{primary.label[language]}</b><small>{primary.description[language]}</small></span>
+    <ArrowRight className="home-go"/>
+   </button>}
   </div>
-  <div className="notice role-scope-notice"><ShieldCheck size={17}/><span>{copy.scopeNotice}</span></div>
-  <SchoolScopeSummary school={school} language={language}/>
-  <div className="role-overview-grid">
-   {ROLE_HOME_ACTIONS[user.role].map((action)=>(
-    <article className={`role-action role-action-${action.status}`} key={action.path}>
-     <span className="role-action-state">{statusLabel[action.status]}</span>
-     <h2>{action.label[language]}</h2>
-     <p>{action.description[language]}</p>
-     <button type="button" className={action.status==='planned'?'btn':'btn primary'} disabled={action.status==='planned'} onClick={()=>onOpen(action.path)}>{copy.open}<ArrowRight size={15}/></button>
-    </article>
-   ))}
-  </div>
-  <div className="role-empty-grid">{sectionCards.map((card)=><Panel key={card.title.English}><div className="row"><Info size={17}/><h2>{card.title[language]}</h2></div><p className="muted">{card.detail[language]}</p></Panel>)}</div>
+  {school.status==='ready'&&(user.role!=='parent')&&<div className="home-stats">
+   {stats.map(stat=><div className="home-stat" key={stat.label.English}><b>{stat.value}</b><span>{stat.label[language]}</span></div>)}
+  </div>}
+  {rest.length>0&&<>
+   <h2 className="home-section-title">{language==='Uzbek'?'Bo‘limlar':language==='Русский'?'Разделы':'Sections'}</h2>
+   <div className="home-tiles">
+    {rest.map(action=><button type="button" key={action.path+action.label.English} className={`home-tile tone-${action.tone}`} onClick={()=>onOpen(action.path)}>
+     <span className="home-tile-icon"><action.icon/></span>
+     <b>{action.label[language]}</b>
+     <span>{action.description[language]}</span>
+     <ArrowRight className="home-go"/>
+    </button>)}
+   </div>
+  </>}
+  {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
+  {user.role==='student'&&<AttendanceSummary language={language}/>}
+  {user.role==='student'&&school.assignments.length>0&&<>
+   <h2 className="home-section-title">{language==='Uzbek'?'Mening baholarim':language==='Русский'?'Мои оценки':'My grades'}</h2>
+   <div className="panel"><table className="grade-table"><thead><tr><th>{language==='Uzbek'?'Topshiriq':language==='Русский'?'Задание':'Assignment'}</th><th>{language==='Uzbek'?'Holat':language==='Русский'?'Статус':'Status'}</th><th>{language==='Uzbek'?'Baho':language==='Русский'?'Оценка':'Grade'}</th></tr></thead><tbody>
+    {school.assignments.slice(0,8).map(item=>{
+     const submission=item.mySubmission;
+     const score=typeof submission?.score==='number'?submission.score:null;
+     const state=!submission?L('Bajarilmagan','Не сдано','Not submitted'):score!==null?L('Tekshirildi','Проверено','Checked'):L('Tekshirilmoqda','На проверке','In review');
+     return <tr key={item.id}><td><b>{item.title}</b><br/><span className="muted">{item.subject}</span></td><td>{state[language]}</td><td>{score!==null?<span className="grade-mark">{Math.max(2,Math.min(5,Math.round(score/20)))}</span>:'—'}</td></tr>;
+    })}
+   </tbody></table></div>
+  </>}
+  {steps&&<>
+   <h2 className="home-section-title">{language==='Uzbek'?'Qanday ishlaydi':language==='Русский'?'Как это работает':'How it works'}</h2>
+   <ol className="home-steps">{steps.map((step,index)=><li key={step}><span>{index+1}</span>{step}</li>)}</ol>
+  </>}
+  {school.status==='ready'&&!school.hasMembership&&<div className="notice"><Info size={16}/><span>{language==='Uzbek'?'Hisobingiz hali maktabga biriktirilmagan. Maktab administratoriga murojaat qiling.':language==='Русский'?'Аккаунт ещё не привязан к школе. Обратитесь к администратору школы.':'Your account is not linked to a school yet. Contact the school administrator.'}</span></div>}
  </section>
 }
 function PageHeading({eyebrow,title,subtitle,children}:{eyebrow:string;title:string;subtitle:string;children?:ReactNode}){return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p className="page-subtitle">{subtitle}</p></div>{children&&<div className="row">{children}</div>}</div>}
 function Panel({children,className='',style}:{children:ReactNode;className?:string;style?:CSSProperties}){return <section className={`panel ${className}`} style={style}>{children}</section>}
 function Metric({label,value,note,icon:Icon}:{label:string;value:string;note:string;icon:typeof Home}){return <Panel><div className="metric"><div><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></div><div className="metric-icon"><Icon/></div></div></Panel>}
-function Dashboard({role,user,assignments,onOpen,progress}:{role:Role;user:{name:string;school:string;className:string};assignments:typeof INITIAL_ASSIGNMENTS;onOpen:(path:string)=>void;progress:Record<string,number>}){
- const openAssignments=assignments.filter(a=>a.status!=='Checked');const reviewCount=assignments.filter(a=>a.status==='Submitted'||a.status==='Under Review').length;const progressPct=Math.min(100,Math.round(Object.values(progress).length?Object.values(progress).reduce((a,b)=>a+b,0)/Object.values(progress).length*8:32));
- const headlines:Record<Role,string>={Student:'Your learning, at a steady pace.',Teacher:'A clear view of today’s teaching.',Parent:'A thoughtful view of learning at home.','School director':'School activity, in one view.','Central administrator':'Workspace health and content access.'};
- const alert=<div className="notice" style={{marginBottom:17}}><ShieldCheck/><span><b>Demonstration workspace</b> — records are fictional and saved only in this browser. No student or school data is transmitted.</span></div>;
- if(role==='Student')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title={`Good morning, ${user.name.split(' ')[0]}`} subtitle={headlines[role]}><button className="btn" onClick={()=>onOpen('/library')}><Library/>Browse library</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Open assignments" value={`${openAssignments.length}`} note="Fictional class records" icon={ClipboardCheck}/><Metric label="Reading progress" value={`${progressPct}%`} note="Across sample books" icon={BookOpen}/><Metric label="Practice answered" value={`${Object.keys(readLocal('practice-checked',{})).length}`} note="Saved on this device" icon={CheckCircle2}/><Metric label="Next session" value="10:30" note="Mathematics · demo" icon={Clock3}/></div><div className="grid grid-2"><Panel><div className="section-head"><h2>My next assignments</h2><span className="tag blue">Grade 7B</span></div>{openAssignments.slice(0,3).map(a=><div className="list-row" key={a.id}><div><div className="list-title">{a.title}</div><div className="list-meta">{a.subject} · {a.dueDate}</div></div><button className="btn small" onClick={()=>onOpen('/topics')}>Continue</button></div>)}<button className="btn small" style={{marginTop:12}} onClick={()=>onOpen('/topics')}>Open practice</button></Panel><Panel><div className="section-head"><h2>Continue reading</h2><span className="tag">Saved locally</span></div><div className="row" style={{alignItems:'flex-start'}}><div className="book-cover"><span className="cover-grade">7 класс</span><span className="cover-title">Mathematics</span></div><div style={{flex:1}}><h3>Fractions and ratios</h3><p className="muted">Original sample · Uzbek source</p><div className="progress-track"><div className="progress-fill" style={{width:`${progressPct}%`}}/></div><button className="btn small primary" style={{marginTop:11}} onClick={()=>onOpen('/read/math')}>Resume reading <ArrowRight/></button></div></div></Panel></div><Panel style={{marginTop:16}}><div className="section-head"><h2>Try next</h2><span className="muted">Choose a learning tool</span></div><div className="grid grid-3"><QuickAction icon={ClipboardCheck} title="Practice a concept" detail="Short questions with explanations" onClick={()=>onOpen('/topics')}/><QuickAction icon={Presentation} title="Work on the board" detail="Saved sketches and diagrams" onClick={()=>onOpen('/board')}/><QuickAction icon={CircleHelp} title="Ask for a hint" detail="Prewritten demonstration dialogue" onClick={()=>onOpen('/assistant')}/></div></Panel></>;
- if(role==='Teacher')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title={`Good morning, ${user.name.split(' ')[0]}`} subtitle={headlines[role]}><button className="btn primary" onClick={()=>onOpen('/teacher')}><GraduationCap/>Open teacher workspace</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Classes today" value="3" note="Grade 7A, 7B, 8A · sample" icon={Users}/><Metric label="Assignments to review" value={`${reviewCount||3}`} note="Fictional submissions" icon={ClipboardCheck}/><Metric label="Class completion" value="71%" note="Grade 7B · sample" icon={Activity}/><Metric label="Next lesson" value="10:30" note="Ratios · 24 min" icon={Clock3}/></div><div className="grid grid-2"><Panel><div className="section-head"><h2>Teaching schedule</h2><span className="tag blue">Today</span></div>{[['10:30','Ratios in the classroom','Grade 7B'],['12:10','Fractions review','Grade 7A'],['14:00','Independent practice','Grade 8A']].map(r=><div className="list-row" key={r[0]}><div><div className="list-title">{r[1]}</div><div className="list-meta">{r[2]} · fictional schedule</div></div><button className="btn small" onClick={()=>onOpen('/lesson')}>{r[0]} · open</button></div>)}</Panel><Panel><h2>Review queue</h2><p className="muted">Sample learner work waits for local feedback; no real learners are connected.</p><div className="metric-value">{reviewCount||3}<span className="muted"> sample items</span></div><button className="btn primary" style={{marginTop:12}} onClick={()=>onOpen('/teacher')}>Review submissions</button><button className="btn" style={{margin:'12px 0 0 8px'}} onClick={()=>onOpen('/board')}>Present on board</button></Panel></div></>;
- if(role==='Parent')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title="Family learning at a glance" subtitle={headlines[role]}><button className="btn" onClick={()=>onOpen('/parent')}><Users/>Open family view</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Weekly progress" value="74%" note="Fictional learning summary" icon={Activity}/><Metric label="Attendance" value="94%" note="Term sample · not a school record" icon={CheckCircle2}/><Metric label="Needs attention" value={`${openAssignments.length}`} note="Open assignments" icon={ClipboardCheck}/><Metric label="Next school day" value="08:30" note="Fictional schedule" icon={Clock3}/></div><div className="grid grid-2"><Panel><h2>Family follow-up</h2>{openAssignments.slice(0,2).map(a=><div className="list-row" key={a.id}><div><div className="list-title">{a.title}</div><div className="list-meta">{a.subject} · {a.dueDate}</div></div><span className="tag gold">{a.status}</span></div>)}<button className="btn primary" style={{marginTop:12}} onClick={()=>onOpen('/parent')}>View assignments and feedback</button></Panel><Panel><h2>One idea to discuss</h2><div className="callout"><b>Fractions and ratios</b><br/>Discuss what each number represents before calculating. This is a fictional family prompt.</div><p className="muted" style={{marginTop:12}}>Recent sample teacher feedback is available in the family view.</p><button className="btn" onClick={()=>onOpen('/parent')}>See family notes</button></Panel></div></>;
- if(role==='School director')return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title="School activity at a glance" subtitle={headlines[role]}><button className="btn primary" onClick={()=>onOpen('/school')}><Activity/>Open school insights</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Assignment completion" value="78.4%" note="School-wide fictional sample" icon={CheckCircle2}/><Metric label="Active classes" value="16" note="Fictional school roster" icon={Users}/><Metric label="Lessons this week" value="42" note="Across sample subjects" icon={Presentation}/><Metric label="Follow-up needed" value="6" note="Sample class signals" icon={Clock3}/></div><div className="grid grid-2"><Panel><h2>Subject trend snapshot</h2><div className="bar-chart">{[['Mathematics',78],['Biology',84],['Languages',88],['History',72]].map(([label,value])=><div className="bar-group" key={label as string}><div className="bar" style={{height:`${value}%`}}/><span className="bar-label">{label}</span></div>)}</div><p className="muted" style={{marginTop:28}}>Invented trend values · not official school analytics.</p></Panel><Panel><h2>Director actions</h2><div className="stack"><button className="btn" onClick={()=>onOpen('/school')}><Activity/>Review class trends</button><button className="btn" onClick={()=>onOpen('/school')}><Download/>Export demonstration report</button><div className="callout">Prioritise the fictional Grade 7B follow-up list for a presentation walkthrough.</div></div></Panel></div></>;
- return <><PageHeading eyebrow={`${user.className} · ${user.school}`} title="Workspace health and access" subtitle={headlines[role]}><button className="btn primary" onClick={()=>onOpen('/admin')}><Settings/>Open administration</button></PageHeading>{alert}<div className="grid grid-4" style={{marginBottom:17}}><Metric label="Demo schools" value="3" note="Local fictional records" icon={Home}/><Metric label="Class groups" value="3" note="Local demo roster" icon={Users}/><Metric label="Sample titles" value={`${BOOKS.length}`} note="Grade 7 collection" icon={Library}/><Metric label="External services" value="0" note="No API connections" icon={ShieldCheck}/></div><div className="grid grid-2"><Panel><h2>Configuration checks</h2><div className="list-row"><span className="list-title">Local storage</span><span className="tag green">Available</span></div><div className="list-row"><span className="list-title">Live classroom service</span><span className="tag gold">Not configured</span></div><div className="list-row"><span className="list-title">AI / OCR service</span><span className="tag gold">Not connected</span></div><div className="list-row"><span className="list-title">Authorized textbook files</span><span className="tag">Required for official content</span></div></Panel><Panel><h2>Administration shortcuts</h2><p className="muted">Permission controls are configuration previews only and do not enforce access.</p><button className="btn primary" onClick={()=>onOpen('/admin')}>Manage local demo records</button><button className="btn" style={{marginLeft:8}} onClick={()=>onOpen('/library')}>Review sample catalogue</button></Panel></div></>;
-}
-function QuickAction({icon:Icon,title,detail,onClick}:{icon:typeof Home;title:string;detail:string;onClick:()=>void}){return <button onClick={onClick} className="panel" style={{textAlign:'left',display:'flex',alignItems:'center',gap:12,border:'1px solid #e1e4e3'}}><span className="metric-icon"><Icon/></span><span><b style={{fontSize:12,display:'block'}}>{title}</b><span className="muted">{detail}</span></span><ArrowRight size={15} style={{marginLeft:'auto'}}/></button>}
 function LibraryPage({ui,progress,saved,onOpen}:{ui:Lang;progress:Record<string,number>;saved:string[];onOpen:(id:string)=>void}){
  const [search,setSearch]=useState('');const [subject,setSubject]=useState('All subjects');const [language,setLanguage]=useState('All languages');const [year,setYear]=useState('Any year');const [author,setAuthor]=useState('All authors');const [importOpen,setImportOpen]=useState(false);const [selectedFile,setSelectedFile]=useState('');const [importDraft,setImportDraft]=useState({title:'',subject:'',language:'Uzbek',year:'2024–25'});const [imported,setImported]=useSavedState('authorized-file-metadata',{title:'',subject:'',language:'',year:'',file:''});
  const subjects=['All subjects',...Array.from(new Set(BOOKS.map(b=>b.subject)))];const authors=['All authors',...Array.from(new Set(BOOKS.map(b=>b.author)))];const filtered=BOOKS.filter(b=>(subject==='All subjects'||b.subject===subject)&&(language==='All languages'||b.language===language)&&(year==='Any year'||b.year===year)&&(author==='All authors'||b.author===author)&&`${b.title} ${b.subject} ${b.author}`.toLowerCase().includes(search.toLowerCase()));
@@ -415,51 +406,33 @@ function BoardPage(){
  </>;
 }
 function ClassesPage({school,user,language,onOpen}:{school:SchoolData;user:User;language:Lang;onOpen:(path:string)=>void}){
- const isTeacher=user.role==='teacher';
- const hasServerClasses=school.status==='ready'&&school.hasServerClasses;
- return <><PageHeading eyebrow="School workspace" title="Classes" subtitle="Classes, rooms, subjects, and the next lesson for your school account."><span className={`tag ${hasServerClasses?'green':'blue'}`}>{hasServerClasses?'Live':'—'}</span></PageHeading>
-  <SchoolScopeSummary school={school} language={language}/>
-  {hasServerClasses
-   ?<div style={{marginTop:16}}><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/></div>
-   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?'Loading classes linked to this account…':school.status==='unavailable'?'School records cannot be reached right now.':'This account is not linked to a server class yet. '}</span></div>}
- </>;
-}
-function SchedulePage({role}:{role:User['role']|undefined}){
- const [,setLocation]=useLocation();
- const [selectedDay,setSelectedDay]=useSavedState('schedule-day','Today');
- const days=['Today','Tomorrow','Wednesday','Thursday','Friday'];
- const lessons=selectedDay==='Today'?[
-  {time:'09:00–09:45',subject:'Physics',topic:'Motion and energy',className:'Grade 7B',room:'Room 204',teacher:'Teacher account',mode:'Offline lesson'},
-  {time:'10:00–10:45',subject:'Chemistry',topic:'Materials and properties',className:'Grade 7B',room:'Science lab',teacher:'Teacher account',mode:'Offline lesson'},
-  {time:'12:10–12:55',subject:'Mathematics',topic:'Fractions and ratios',className:'Grade 7B',room:'Room 204',teacher:'Teacher account',mode:'Online room'},
-  {time:'14:00–14:45',subject:'History',topic:'Sources and timelines',className:'Grade 7B',room:'Room 106',teacher:'Teacher account',mode:'Offline lesson'},
- ]:[];
- const isTeacher=role==='teacher';
- return <><PageHeading eyebrow="School schedule" title="Today’s lessons" subtitle="Your school timetable, rooms, and lesson access in one place."><span className="tag blue">School workspace</span></PageHeading>
-  <div className="row" style={{marginBottom:16,flexWrap:'wrap'}}>{days.map(day=><button key={day} className={`btn small ${selectedDay===day?'subtle':''}`} onClick={()=>setSelectedDay(day)}>{day}</button>)}</div>
-  {lessons.length===0?<div className="notice"><Info/>No lessons are scheduled in this local preview for {selectedDay}. A real school timetable will come from the school backend.</div>:<div className="grid grid-2">{lessons.map(lesson=><Panel key={`${lesson.time}-${lesson.subject}`}><div className="row-between"><div><span className="eyebrow">{lesson.time}</span><h2 style={{marginTop:6}}>{lesson.subject}</h2></div><span className={`tag ${lesson.mode==='Online room'?'blue':'green'}`}>{lesson.mode}</span></div><p className="muted">{lesson.topic}</p><div className="list-row"><span><b>{lesson.className}</b><br/><span className="muted">{lesson.room} · {lesson.teacher}</span></span><button className="btn primary" onClick={()=>setLocation(lesson.mode==='Online room'?'/lesson':'/topics')}>{isTeacher?'Open lesson':'Open class'}</button></div></Panel>)}</div>}
-  <Panel style={{marginTop:16}}><div className="section-head"><h2>What happens next</h2><span className="tag">Offline + online</span></div><div className="grid grid-3"><div className="callout"><b>Before class</b><br/>Open the topic, textbook, or teacher materials.</div><div className="callout"><b>During class</b><br/>Follow the board, questions, and teacher explanation.</div><div className="callout"><b>After class</b><br/>Complete the assigned test and homework.</div></div></Panel>
- </>;
-}
-function TeacherPage({school,language,goBoard}:{school:SchoolData;language:Lang;goBoard:()=>void}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Plan, assign, review','Задания и проверка','Topshiriq va tekshiruv')} subtitle={text('Assign homework tied to a topic, read notebook photos, grade and sign.','Выдавайте задания по теме, смотрите фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini ko‘ring, baholang va imzo qo‘ying.')}><button className="btn primary" onClick={()=>window.location.assign('/topics')}><Sparkles/> {text('Topics & 3D','Темы и 3D','Mavzular va 3D')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Present on board','Показать на доске','Doskada ko‘rsatish')}</button></PageHeading>
-  <SchoolScopeSummary school={school} language={language}/>
+ const student=user.role==='student';
+ const hasServerClasses=school.status==='ready'&&school.hasServerClasses;
+ return <><PageHeading eyebrow={student?text('Homework','Домашние задания','Uy vazifalari'):text('Classes','Классы','Sinflar')} title={student?text('My homework','Мои задания','Mening vazifalarim'):text('Classes of the school','Классы школы','Maktab sinflari')} subtitle={student?text('Do the task in your notebook, photograph it and explain in your own words.','Выполните в тетради, сфотографируйте и объясните своими словами.','Daftarda bajaring, rasmga oling va o‘z so‘zingiz bilan tushuntiring.'):text('Class lists, teachers and assignments.','Списки классов, учителя и задания.','Sinf ro‘yxatlari, o‘qituvchilar va topshiriqlar.')}/>
+  {hasServerClasses
+   ?<ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/>
+   :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading…','Загрузка…','Yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('You are not in a class yet. Ask your teacher to add you.','Вас ещё не добавили в класс. Попросите учителя добавить вас.','Sizni hali sinfga qo‘shishmagan. O‘qituvchidan so‘rang.')}</span></div>}
+ </>;
+}
+function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;user:User;language:Lang;goBoard:()=>void;onOpen:(path:string)=>void}){
+ const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
+ return <><PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={text('Homework and classes','Задания и классы','Vazifalar va sinflar')} subtitle={text('Assign homework tied to a topic, check notebook photos, grade and sign.','Выдавайте задания по теме, проверяйте фото тетрадей, оценивайте и подписывайте.','Mavzuga bog‘langan vazifa bering, daftar rasmlarini tekshiring, baholang va imzo qo‘ying.')}><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles/> {text('Lesson topic','Тема урока','Dars mavzusi')}</button><button className="btn" onClick={goBoard}><Presentation/> {text('Board','Доска','Doska')}</button></PageHeading>
   {school.status==='ready'&&school.hasServerClasses
-   ?<div style={{marginTop:16,display:'grid',gap:16}}><ServerTeachingPanel school={school} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
-   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('The school service is unreachable right now.','Сервис школы сейчас недоступен.','Maktab xizmati hozir mavjud emas.'):text('No class is linked to your account yet. Ask your school administrator to add you to a class.','К вашему аккаунту ещё не привязан класс. Попросите администратора школы добавить вас в класс.','Hisobingizga hali sinf biriktirilmagan. Maktab administratoridan so‘rang.')}</span></div>}</>;
+   ?<div className="page-stack"><LessonPlanner language={language}/><GradeJournal school={school} language={language}/><LabReports language={language}/><ServerTeachingPanel school={school} language={language}/><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div><ParentLinkForm language={language}/></div>
+   :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet. Ask your school administrator to add you to a class.','К вашему аккаунту ещё не привязан класс. Попросите администратора школы добавить вас в класс.','Hisobingizga hali sinf biriktirilmagan. Maktab administratoridan so‘rang.')}</span></div>}</>;
 }
 function ParentPage({language}:{language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- return <><PageHeading eyebrow={text('Family view','Кабинет семьи','Oila kabineti')} title={text('Your child’s learning','Учёба вашего ребёнка','Farzandingiz ta’limi')} subtitle={text('Grades and homework appear here once the school links your account to your child.','Оценки и домашние задания появятся здесь, когда школа привяжет ваш аккаунт к ребёнку.','Maktab hisobingizni farzandingizga biriktirgach, baholar va uy vazifalari shu yerda ko‘rinadi.')}/>
-  <div className="notice"><Info/><span>{text('Ask the school administrator to link your account to your child. Meanwhile you can read the school textbooks.','Попросите администратора школы привязать ваш аккаунт к ребёнку. Пока вы можете читать школьные учебники.','Maktab administratoridan hisobingizni farzandingizga biriktirishni so‘rang. Hozircha maktab darsliklarini o‘qishingiz mumkin.')}</span></div></>;
+ return <><PageHeading eyebrow={text('Family view','Кабинет семьи','Oila kabineti')} title={text('Your child’s learning','Учёба вашего ребёнка','Farzandingiz ta’limi')} subtitle={text('Grades, attendance and homework in one place.','Оценки, посещаемость и домашние задания в одном месте.','Baholar, davomat va uy vazifalari bir joyda.')}/>
+  <ParentCabinet language={language}/><div style={{marginTop:16}}><TelegramConnect language={language}/></div></>;
 }
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
   <SchoolScopeSummary school={school} language={language}/>
   {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16}}><ServerSchoolOverview school={school} user={user} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
+   ?<div style={{marginTop:16,display:'grid',gap:16}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolImport schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 
@@ -469,7 +442,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
   <ServerAdminSchoolsPanel language={language}/></>;
 }
-function NotFound({goHome}:{goHome:()=>void}){return <div className="panel" style={{maxWidth:550,margin:'10vh auto',textAlign:'center',padding:35}}><div className="eyebrow">Page not found</div><h1>This learning page isn’t here.</h1><p className="muted">Choose a workspace from the navigation to continue.</p><button className="btn primary" onClick={goHome}><Home/> Return to overview</button></div>}
+function NotFound({language,goHome}:{language:Lang;goHome:()=>void}){return <div className="empty-state"><span className="empty-icon"><Search/></span><h2>{language==='Uzbek'?'Sahifa topilmadi':language==='Русский'?'Страница не найдена':'Page not found'}</h2><p>{language==='Uzbek'?'Menyudan bo‘limni tanlang.':language==='Русский'?'Выберите раздел в меню.':'Choose a section from the menu.'}</p><button className="btn primary" onClick={goHome}><Home size={16}/>{language==='Uzbek'?'Bosh sahifa':language==='Русский'?'На главную':'Home'}</button></div>}
 
 export default App;
 

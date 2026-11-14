@@ -2,16 +2,22 @@ import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { Router, type IRouter, type Response } from "express";
 import {
+  assignmentSubmissionsTable,
+  assignmentsTable,
   attendanceTable,
+  classAnnouncementsTable,
   classMembersTable,
   classesTable,
   db,
+  lessonRoomsTable,
   lessonTopicsTable,
+  parentLinksTable,
   schoolMembersTable,
   usersTable,
   type AccountRole,
 } from "@workspace/db";
-import { normalizeUsername, requireAuthenticatedRole } from "./auth";
+import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
+import { escapeHtml, notifyFamily, notifyUsers } from "../lib/notify";
 import {
   canManageClass,
   cleanText,
@@ -20,6 +26,7 @@ import {
   isValidUuid,
 } from "../lib/school-access";
 import {
+  answerTutorQuestion,
   generateStudentQuestion,
   generateTopicPackage,
   generateTopicTest,
@@ -262,7 +269,13 @@ router.get(
       const allowed =
         topic.createdBy === viewer.id ||
         isGlobalAdminRole(viewer.role) ||
-        (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+        (topic.classId
+          ? topic.status === "published"
+            // Members of the class read the published topic (it is shown in
+            // their online lesson); only managers see drafts.
+            ? await canViewClass(viewer.id, viewer.role, topic.classId)
+            : await canManage(viewer.id, viewer.role, topic.classId)
+          : false);
       if (!allowed) {
         res.status(403).json({ error: "You cannot read this topic." });
         return;
@@ -928,6 +941,19 @@ router.put(
       }
     });
 
+    // Parents hear about an absence or a late arrival right away.
+    const flagged = finalEntries.filter((entry) => entry.status === "absent" || entry.status === "late");
+    if (flagged.length) {
+      const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+      const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
+      await Promise.all(flagged.map((entry) => {
+        const name = escapeHtml(names.find((row) => row.id === entry.studentId)?.name ?? "");
+        const text = entry.status === "absent"
+          ? `⚠️ <b>${name}</b> bugun darsga kelmadi (${escapeHtml(ctx?.name ?? "")}, ${date}).\n⚠️ <b>${name}</b> сегодня отсутствует на уроке.`
+          : `⏰ <b>${name}</b> darsga kechikdi (${date}).\n⏰ <b>${name}</b> опоздал на урок.`;
+        return notifyFamily(entry.studentId, text);
+      }));
+    }
     res.json({ saved: finalEntries.length, date });
   },
 );
@@ -991,5 +1017,416 @@ router.get(
     });
   },
 );
+
+/* -------------------------------------------------------------------------- */
+/* Class announcements                                                         */
+/* -------------------------------------------------------------------------- */
+
+const everyRole = [
+  "student", "teacher", "parent", "school_director", "school_admin",
+  "education_admin", "ministry_admin", "platform_superadmin",
+] as const;
+const staffRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"] as const;
+
+router.get("/me/announcements", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const memberClasses = (
+    await db
+      .select({ classId: classMembersTable.classId })
+      .from(classMembersTable)
+      .where(eq(classMembersTable.userId, viewer.id))
+  ).map((row) => row.classId);
+  if (!memberClasses.length) {
+    res.json({ announcements: [] });
+    return;
+  }
+  const rows = await db
+    .select({
+      id: classAnnouncementsTable.id,
+      classId: classAnnouncementsTable.classId,
+      className: classesTable.name,
+      authorId: classAnnouncementsTable.authorId,
+      authorName: usersTable.username,
+      body: classAnnouncementsTable.body,
+      createdAt: classAnnouncementsTable.createdAt,
+    })
+    .from(classAnnouncementsTable)
+    .innerJoin(classesTable, eq(classAnnouncementsTable.classId, classesTable.id))
+    .innerJoin(usersTable, eq(classAnnouncementsTable.authorId, usersTable.id))
+    .where(inArray(classAnnouncementsTable.classId, memberClasses))
+    .orderBy(desc(classAnnouncementsTable.createdAt))
+    .limit(20);
+  res.json({ announcements: rows });
+});
+
+router.post("/classes/:classId/announcements", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!(await canManage(viewer.id, viewer.role, classId))) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const body = readString(req.body, "body", 600);
+  if (!body) {
+    res.status(400).json({ error: "The announcement text is required." });
+    return;
+  }
+  const [created] = await db
+    .insert(classAnnouncementsTable)
+    .values({ classId, authorId: viewer.id, body })
+    .returning();
+  const members = await db.select({ userId: classMembersTable.userId, role: classMembersTable.role }).from(classMembersTable).where(eq(classMembersTable.classId, classId));
+  const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
+  const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
+  const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `📢 <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
+  res.status(201).json({ announcement: created });
+});
+
+router.delete("/announcements/:announcementId", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const id = String(req.params.announcementId);
+  if (!isValidUuid(id)) {
+    res.status(400).json({ error: "Invalid announcement identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [row] = await db.select().from(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id)).limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Announcement not found." });
+    return;
+  }
+  if (row.authorId !== viewer.id && !(await canManage(viewer.id, viewer.role, row.classId))) {
+    res.status(403).json({ error: "You cannot delete this announcement." });
+    return;
+  }
+  await db.delete(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id));
+  res.status(204).end();
+});
+
+/* -------------------------------------------------------------------------- */
+/* Grade journal of a class                                                    */
+/* -------------------------------------------------------------------------- */
+
+router.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!(await canManage(viewer.id, viewer.role, classId))) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const [students, assignments, attendance] = await Promise.all([
+    db
+      .select({ id: usersTable.id, name: usersTable.username })
+      .from(classMembersTable)
+      .innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id))
+      .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))
+      .orderBy(asc(usersTable.username)),
+    db
+      .select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject })
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.classId, classId))
+      .orderBy(asc(assignmentsTable.createdAt))
+      .limit(30),
+    db
+      .select({ studentId: attendanceTable.studentId, status: attendanceTable.status })
+      .from(attendanceTable)
+      .where(eq(attendanceTable.classId, classId)),
+  ]);
+  const submissions = assignments.length
+    ? await db
+        .select({
+          assignmentId: assignmentSubmissionsTable.assignmentId,
+          studentId: assignmentSubmissionsTable.studentId,
+          score: assignmentSubmissionsTable.score,
+        })
+        .from(assignmentSubmissionsTable)
+        .where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))
+    : [];
+  const rows = students.map((student) => {
+    const cells = assignments.map((assignment) => {
+      const submission = submissions.find((item) => item.assignmentId === assignment.id && item.studentId === student.id);
+      if (!submission) return { state: "missing" as const, grade: null };
+      if (submission.score === null) return { state: "review" as const, grade: null };
+      return { state: "graded" as const, grade: Math.max(2, Math.min(5, Math.round(submission.score / 20))) };
+    });
+    const grades = cells.map((cell) => cell.grade).filter((grade): grade is number => grade !== null);
+    const marks = attendance.filter((item) => item.studentId === student.id);
+    const attended = marks.filter((item) => item.status === "present" || item.status === "late").length;
+    return {
+      studentId: student.id,
+      studentName: student.name,
+      cells,
+      average: grades.length ? Math.round((grades.reduce((sum, grade) => sum + grade, 0) / grades.length) * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round((attended / marks.length) * 100) : null,
+    };
+  });
+  res.json({ assignments, rows });
+});
+
+/* -------------------------------------------------------------------------- */
+/* The viewer's own attendance summary                                         */
+/* -------------------------------------------------------------------------- */
+
+const tutorLimiter = createRateLimiter(30, 10 * 60 * 1000, "Too many AI questions. Wait a few minutes.", "ai-tutor");
+
+/**
+ * AI tutor: answers a free question, grounded in a topic when one is given.
+ * Available to every signed-in school role; rate limited per account/IP.
+ */
+router.post("/ai/tutor", requireAuthenticatedRole(...everyRole), tutorLimiter, async (req, res) => {
+  const question = readString(req.body, "question", 500);
+  if (!question) {
+    res.status(400).json({ error: "A question is required." });
+    return;
+  }
+  const topicId = readString(req.body, "topicId", 64);
+  let context: { subject?: string; title?: string; facts?: string[] } = {};
+  if (topicId && isValidUuid(topicId)) {
+    const [topic] = await db
+      .select({ subject: lessonTopicsTable.subject, title: lessonTopicsTable.title, facts: lessonTopicsTable.facts })
+      .from(lessonTopicsTable)
+      .where(eq(lessonTopicsTable.id, topicId))
+      .limit(1);
+    if (topic) {
+      context = {
+        subject: topic.subject,
+        title: topic.title,
+        facts: Array.isArray(topic.facts)
+          ? (topic.facts as Array<{ text?: string }>).map((fact) => fact?.text ?? "").filter(Boolean)
+          : [],
+      };
+    }
+  }
+  const answer = await answerTutorQuestion(question, context);
+  if (!answer) {
+    res.status(503).json({ error: "The AI assistant is not available right now." });
+    return;
+  }
+  res.json({ answer });
+});
+
+router.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const rows = await db
+    .select({ status: attendanceTable.status, date: attendanceTable.attendanceDate })
+    .from(attendanceTable)
+    .where(eq(attendanceTable.studentId, viewer.id))
+    .orderBy(desc(attendanceTable.attendanceDate))
+    .limit(200);
+  const count = (status: string) => rows.filter((row) => row.status === status).length;
+  res.json({
+    total: rows.length,
+    present: count("present"),
+    late: count("late"),
+    absent: count("absent"),
+    excused: count("excused"),
+    recent: rows.slice(0, 10),
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Parents: link to a child, family cabinet                                    */
+/* -------------------------------------------------------------------------- */
+
+const managerRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"] as const;
+
+/** Staff link a parent account to a student of a class they manage. */
+router.post("/parents/links", requireAuthenticatedRole(...managerRoles), async (req, res) => {
+  const viewer = user(res);
+  const parentLogin = readString(req.body, "parentLogin", 64)?.toLowerCase();
+  const studentLogin = readString(req.body, "studentLogin", 64)?.toLowerCase();
+  if (!parentLogin || !studentLogin) {
+    res.status(400).json({ error: "Parent and student logins are required." });
+    return;
+  }
+  const [parent] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, parentLogin)).limit(1);
+  const [student] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, studentLogin)).limit(1);
+  if (!parent || parent.role !== "parent" || !student || student.role !== "student") {
+    res.status(404).json({ error: "No matching parent and student accounts were found." });
+    return;
+  }
+  const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, student.id));
+  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManage(viewer.id, viewer.role, row.classId)))).some(Boolean);
+  if (!allowed) {
+    res.status(403).json({ error: "You can only link parents of your own students." });
+    return;
+  }
+  await db.insert(parentLinksTable).values({ parentId: parent.id, studentId: student.id, createdBy: viewer.id }).onConflictDoNothing();
+  // The parent joins the child's school so school-wide data is visible.
+  for (const row of classes) {
+    const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, row.classId)).limit(1);
+    if (ctx) await db.insert(schoolMembersTable).values({ schoolId: ctx.schoolId, userId: parent.id, role: "parent" }).onConflictDoNothing();
+  }
+  res.status(201).json({ linked: true, parent: parent.name, student: student.name });
+});
+
+/** Everything a parent needs about each linked child, in one request. */
+router.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res) => {
+  const viewer = user(res);
+  const links = await db
+    .select({ id: usersTable.id, name: usersTable.username })
+    .from(parentLinksTable)
+    .innerJoin(usersTable, eq(parentLinksTable.studentId, usersTable.id))
+    .where(eq(parentLinksTable.parentId, viewer.id));
+  const children = [];
+  for (const child of links) {
+    const classes = await db
+      .select({ id: classesTable.id, name: classesTable.name })
+      .from(classMembersTable)
+      .innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id))
+      .where(and(eq(classMembersTable.userId, child.id), eq(classMembersTable.role, "student")));
+    const classIds = classes.map((item) => item.id);
+    const assignments = classIds.length
+      ? await db
+          .select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt })
+          .from(assignmentsTable)
+          .where(inArray(assignmentsTable.classId, classIds))
+          .orderBy(desc(assignmentsTable.createdAt))
+          .limit(20)
+      : [];
+    const submissions = assignments.length
+      ? await db
+          .select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, feedback: assignmentSubmissionsTable.feedback })
+          .from(assignmentSubmissionsTable)
+          .where(and(eq(assignmentSubmissionsTable.studentId, child.id), inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))))
+      : [];
+    const homework = assignments.map((item) => {
+      const sub = submissions.find((row) => row.assignmentId === item.id);
+      return {
+        ...item,
+        state: !sub ? "missing" : sub.score === null ? "review" : "graded",
+        grade: sub && sub.score !== null ? Math.max(2, Math.min(5, Math.round(sub.score / 20))) : null,
+        feedback: sub?.feedback ?? "",
+      };
+    });
+    const marks = await db
+      .select({ status: attendanceTable.status, date: attendanceTable.attendanceDate })
+      .from(attendanceTable)
+      .where(eq(attendanceTable.studentId, child.id))
+      .orderBy(desc(attendanceTable.attendanceDate))
+      .limit(60);
+    const attended = marks.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades = homework.map((item) => item.grade).filter((grade): grade is number => grade !== null);
+    children.push({
+      id: child.id,
+      name: child.name,
+      classes: classes.map((item) => item.name),
+      average: grades.length ? Math.round((grades.reduce((a, b) => a + b, 0) / grades.length) * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round((attended / marks.length) * 100) : null,
+      absences: marks.filter((row) => row.status === "absent").slice(0, 5).map((row) => row.date),
+      homework,
+    });
+  }
+  res.json({ children });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Director dashboard                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** Full export of a school's people with class, average grade and attendance. */
+router.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot export this school." });
+    return;
+  }
+  const people = await db
+    .select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role })
+    .from(schoolMembersTable)
+    .innerJoin(usersTable, eq(schoolMembersTable.userId, usersTable.id))
+    .where(eq(schoolMembersTable.schoolId, schoolId))
+    .orderBy(asc(schoolMembersTable.role), asc(usersTable.username));
+  const ids = people.map((row) => row.id);
+  const memberships = ids.length
+    ? await db.select({ userId: classMembersTable.userId, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(inArray(classMembersTable.userId, ids), eq(classesTable.schoolId, schoolId)))
+    : [];
+  const marks = ids.length ? await db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(inArray(attendanceTable.studentId, ids)) : [];
+  const scores = ids.length ? await db.select({ studentId: assignmentSubmissionsTable.studentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.studentId, ids)) : [];
+  const cell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = ["role;name;login;classes;average_grade;attendance_percent"];
+  for (const person of people) {
+    const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
+    const own = marks.filter((row) => row.studentId === person.id);
+    const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score! / 20))));
+    const average = grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : "";
+    lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round((attended / own.length) * 100) : ""].map(cell).join(";"));
+  }
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="eduverse-school.csv"');
+  res.send("\uFEFF" + lines.join("\n"));
+});
+
+router.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot view this school." });
+    return;
+  }
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  const classIds = classes.map((item) => item.id);
+  const members = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(eq(schoolMembersTable.schoolId, schoolId));
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const marks = classIds.length
+    ? await db.select({ classId: attendanceTable.classId, status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(inArray(attendanceTable.classId, classIds))
+    : [];
+  const recent = marks.filter((row) => row.date >= since);
+  const assignments = classIds.length
+    ? await db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds))
+    : [];
+  const submissions = assignments.length
+    ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))
+    : [];
+  const lessons = await db.select({ id: lessonRoomsTable.id, classId: lessonRoomsTable.classId, createdAt: lessonRoomsTable.createdAt }).from(lessonRoomsTable).where(eq(lessonRoomsTable.schoolId, schoolId));
+  const percent = (rows: typeof marks) => rows.length ? Math.round((rows.filter((row) => row.status === "present" || row.status === "late").length / rows.length) * 100) : null;
+  const gradeOf = (score: number) => Math.max(2, Math.min(5, Math.round(score / 20)));
+  const graded = submissions.filter((row) => row.score !== null).map((row) => gradeOf(row.score!));
+  const perClass = classes.map((item) => {
+    const classAssignments = assignments.filter((row) => row.classId === item.id).map((row) => row.id);
+    const classGrades = submissions.filter((row) => row.score !== null && classAssignments.includes(row.assignmentId)).map((row) => gradeOf(row.score!));
+    return {
+      id: item.id,
+      name: item.name,
+      attendancePercent: percent(recent.filter((row) => row.classId === item.id)),
+      assignments: classAssignments.length,
+      average: classGrades.length ? Math.round((classGrades.reduce((a, b) => a + b, 0) / classGrades.length) * 10) / 10 : null,
+      lessons: lessons.filter((row) => row.classId === item.id).length,
+    };
+  });
+  res.json({
+    students: members.filter((row) => row.role === "student").length,
+    teachers: members.filter((row) => row.role === "teacher").length,
+    parents: members.filter((row) => row.role === "parent").length,
+    classes: classes.length,
+    attendancePercent: percent(recent),
+    absentToday: marks.filter((row) => row.date === new Date().toISOString().slice(0, 10) && row.status === "absent").length,
+    assignments: assignments.length,
+    toReview: submissions.filter((row) => row.score === null).length,
+    average: graded.length ? Math.round((graded.reduce((a, b) => a + b, 0) / graded.length) * 10) / 10 : null,
+    lessons30d: lessons.filter((row) => row.createdAt.getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000).length,
+    perClass,
+  });
+});
 
 export default router;

@@ -14,6 +14,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
+import { escapeHtml, notifyFamily } from "../lib/notify";
 import {
   ASSIGNMENT_STATUSES,
   GLOBAL_ADMIN_ROLES,
@@ -1340,6 +1341,20 @@ router.patch(
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });
       return;
+    }
+
+    if (typeof changes.score === "number") {
+      const [info] = await db
+        .select({ title: assignmentsTable.title, subject: assignmentsTable.subject })
+        .from(assignmentsTable)
+        .where(eq(assignmentsTable.id, assignmentId))
+        .limit(1);
+      const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
+      await notifyFamily(
+        studentId,
+        `📝 Yangi baho / Новая оценка: <b>${grade}</b>\n${escapeHtml(info?.subject ?? "")} — ${escapeHtml(info?.title ?? "")}`,
+        true,
+      );
     }
 
     res.json({ submission: updated });

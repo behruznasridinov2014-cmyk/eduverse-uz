@@ -147,6 +147,8 @@ export const lessonRoomParticipantsTable = pgTable(
     testExplanation: text("test_explanation").notNull().default(""),
     testAnswer: text("test_answer"),
     testScore: integer("test_score"),
+    // Several questions per student: [{prompt, choices, correct, explanation, answer}]
+    testItems: jsonb("test_items").notNull().default([]),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
   },
@@ -242,3 +244,53 @@ export const qrLoginSessionsTable = pgTable(
     index("qr_login_sessions_expires_idx").on(table.expiresAt),
   ],
 );
+
+/** Short messages from a teacher to a whole class (shown on the home page). */
+export const classAnnouncementsTable = pgTable(
+  "class_announcements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("class_announcements_class_idx").on(table.classId)],
+);
+
+/** A parent account linked to a student account (set by school staff). */
+export const parentLinksTable = pgTable(
+  "parent_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("parent_links_parent_student_unique").on(table.parentId, table.studentId),
+    index("parent_links_student_idx").on(table.studentId),
+  ],
+);
+
+/** Telegram chat that receives school notifications for an account. */
+export const telegramNotifyTable = pgTable("telegram_notify", {
+  userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+  chatId: text("chat_id"),
+  nonce: text("nonce"),
+  nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
+
+/** A virtual lab report done by a student (measurements, result, grade). */
+export const labReportsTable = pgTable("lab_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  lab: text("lab").notNull(),
+  data: jsonb("data").notNull().default({}),
+  result: text("result").notNull().default(""),
+  errorPercent: integer("error_percent"),
+  grade: integer("grade"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("lab_reports_student_idx").on(table.studentId)]);

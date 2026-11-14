@@ -221,6 +221,8 @@ async function main() {
   await sleep(25000);
   const studentMedia = await student.evaluate(MEDIA);
   check('teacher microphone reaches the student', studentMedia.some((m) => m.kind === 'audio'), JSON.stringify(studentMedia));
+  const studentPlay = await student.evaluate(`(() => [...document.querySelectorAll('.video-tile audio')].map((a) => ({ paused: a.paused, tracks: a.srcObject ? a.srcObject.getAudioTracks().length : 0, time: a.currentTime, muted: a.muted, volume: a.volume })))()`);
+  check('student actually plays the teacher sound', studentPlay.some((a) => !a.paused && a.tracks > 0 && a.time > 0 && !a.muted && a.volume > 0), JSON.stringify(studentPlay));
 
   // 3. camera off -> the video stops flowing and the student sees the avatar
   await clickControl(teacher, 0);
@@ -271,6 +273,8 @@ async function main() {
   }
   const teacherMedia = await teacher.evaluate(MEDIA);
   check('student microphone reaches the teacher', teacherMedia.some((m) => m.kind === 'audio'), JSON.stringify(teacherMedia));
+  const teacherPlay = await teacher.evaluate(`(() => [...document.querySelectorAll('.video-tile audio')].map((a) => ({ paused: a.paused, tracks: a.srcObject ? a.srcObject.getAudioTracks().length : 0, time: a.currentTime, muted: a.muted, volume: a.volume })))()`);
+  check('teacher actually plays the student sound', teacherPlay.some((a) => !a.paused && a.tracks > 0 && a.time > 0 && !a.muted && a.volume > 0), JSON.stringify(teacherPlay));
   const studentNotice = await tilesOf(student);
   check('student camera shows no error', !studentNotice.notice, studentNotice.notice ?? '');
 

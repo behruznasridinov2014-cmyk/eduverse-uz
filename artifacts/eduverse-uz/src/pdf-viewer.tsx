@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import * as pdfjs from 'pdfjs-dist';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -179,7 +179,8 @@ export function PdfViewer({ url, title, language = 'English' }: { url: string; t
             {text.failed}{' '}
             <button type="button" className="btn small" onClick={() => setAttempt((value) => value + 1)}>
               {text.retry}
-            </button>
+            </button>{' '}
+            <a className="btn small" href={url} target="_blank" rel="noreferrer">PDF</a>
           </div>
         )}
         <canvas ref={canvas} className={`pdfv-canvas ${rendering ? 'is-busy' : ''}`} hidden={state !== 'ready'} />
