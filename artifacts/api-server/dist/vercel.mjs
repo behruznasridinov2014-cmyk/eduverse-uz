@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router8;
+    module.exports = Router9;
     module.exports.Route = Route;
-    function Router8(options) {
-      if (!(this instanceof Router8)) {
-        return new Router8(options);
+    function Router9(options) {
+      if (!(this instanceof Router9)) {
+        return new Router9(options);
       }
       const opts = options || {};
-      function router8(req, res, next) {
-        router8.handle(req, res, next);
+      function router9(req, res, next) {
+        router9.handle(req, res, next);
       }
-      Object.setPrototypeOf(router8, this);
-      router8.caseSensitive = opts.caseSensitive;
-      router8.mergeParams = opts.mergeParams;
-      router8.params = {};
-      router8.strict = opts.strict;
-      router8.stack = [];
-      return router8;
+      Object.setPrototypeOf(router9, this);
+      router9.caseSensitive = opts.caseSensitive;
+      router9.mergeParams = opts.mergeParams;
+      router9.params = {};
+      router9.strict = opts.strict;
+      router9.stack = [];
+      return router9;
     }
-    Router8.prototype = function() {
+    Router9.prototype = function() {
     };
-    Router8.prototype.param = function param(name, fn) {
+    Router9.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router8.prototype.handle = function handle(req, res, callback) {
+    Router9.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router8.prototype.use = function use(handler) {
+    Router9.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router8.prototype.route = function route(path) {
+    Router9.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router8.prototype[method] = function(path) {
+      Router9.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router8 = require_router();
+    var Router9 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router8 = null;
+      var router9 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router8 === null) {
-            router8 = new Router8({
+          if (router9 === null) {
+            router9 = new Router9({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router8;
+          return router9;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router8 = this.router;
+      var router9 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router8.use(path, fn2);
+          return router9.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router8.use(path, function mounted_app(req, res, next) {
+        router9.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router8 = require_router();
+    var Router9 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router8.Route;
-    exports.Router = Router8;
+    exports.Route = Router9.Route;
+    exports.Router = Router9;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -42531,6 +42531,8 @@ var init_auth = __esm({
         phone: text("phone"),
         /** True for accounts created by the school: the first sign-in asks to change the password. */
         mustChangePassword: boolean("must_change_password").notNull().default(false),
+        /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
+        avatar: text("avatar"),
         /** AES-256-GCM encrypted TOTP secret (base32 outside crypto layer). */
         twoFactorSecret: text("two_factor_secret"),
         /** Telegram chat id that is allowed to receive 2FA codes. */
@@ -42753,7 +42755,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43023,6 +43025,34 @@ var init_learning = __esm({
       grade: integer("grade"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("lab_reports_student_idx").on(table.studentId)]);
+    bookAnnotationsTable = pgTable("book_annotations", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      book: text("book").notNull(),
+      page: integer("page").notNull(),
+      /** Strokes in page-relative coordinates (0…1), so they fit any zoom. */
+      strokes: jsonb("strokes").notNull().default([]),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("book_annotations_user_book_page_unique").on(table.userId, table.book, table.page)]);
+    courseProgressTable = pgTable("course_progress", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      topicKey: text("topic_key").notNull(),
+      /** Lesson date, YYYY-MM-DD. */
+      doneOn: text("done_on").notNull(),
+      markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("course_progress_class_topic_unique").on(table.classId, table.topicKey),
+      index("course_progress_class_idx").on(table.classId)
+    ]);
+    coursePaceTable = pgTable("course_pace", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      book: text("book").notNull(),
+      lessonsPerWeek: integer("lessons_per_week").notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("course_pace_class_book_unique").on(table.classId, table.book)]);
   }
 });
 
@@ -43036,10 +43066,13 @@ __export(schema_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  bookAnnotationsTable: () => bookAnnotationsTable,
   classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  coursePaceTable: () => coursePaceTable,
+  courseProgressTable: () => courseProgressTable,
   labReportsTable: () => labReportsTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
@@ -43085,10 +43118,13 @@ __export(src_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  bookAnnotationsTable: () => bookAnnotationsTable,
   classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  coursePaceTable: () => coursePaceTable,
+  courseProgressTable: () => courseProgressTable,
   databaseIsConfigured: () => databaseIsConfigured,
   db: () => db,
   labReportsTable: () => labReportsTable,
@@ -43849,12 +43885,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express7 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -53848,7 +53884,187 @@ router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLi
   await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
   res.json({ changed: true });
 });
+var AVATAR_MAX = 80 * 1024;
+var AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
+var avatarLimiter = createRateLimiter(20, 15 * 60 * 1e3, "Too many photo changes. Try again later.", "avatar", perSession2);
+router6.get("/me/avatar", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const [row] = await db.select({ avatar: usersTable.avatar }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ avatar: row?.avatar ?? null });
+});
+router6.put("/me/avatar", requireAuthenticatedRole(...everyRole2), avatarLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const avatar = isRecord5(req.body) && typeof req.body.avatar === "string" ? req.body.avatar : "";
+  if (avatar.length > AVATAR_MAX || !AVATAR_RE.test(avatar)) {
+    res.status(400).json({ error: "The photo must be a JPEG, PNG or WebP image under 80 KB." });
+    return;
+  }
+  await db.update(usersTable).set({ avatar, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ avatar });
+});
+router6.delete("/me/avatar", requireAuthenticatedRole(...everyRole2), avatarLimiter, async (_req, res) => {
+  const viewer = viewerOf(res);
+  await db.update(usersTable).set({ avatar: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ avatar: null });
+});
 var school_tools_default = router6;
+
+// src/routes/course.ts
+init_drizzle_orm();
+var import_express7 = __toESM(require_express2(), 1);
+init_src();
+var router7 = (0, import_express7.Router)();
+var viewerOf2 = (res) => res.locals.authenticatedUser;
+var isRecord6 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var perSession3 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var everyRole3 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var BOOK_RE = /^[a-z0-9][a-z0-9-]{1,59}$/;
+var TOPIC_RE = /^[a-z0-9][a-z0-9.\-]{1,39}$/;
+var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+var MAX_STROKES = 400;
+var MAX_POINTS = 1600;
+var MAX_JSON = 300 * 1024;
+function cleanStrokes(value) {
+  if (!Array.isArray(value) || value.length > MAX_STROKES) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord6(item)) return null;
+    const c = typeof item.c === "string" && /^#[0-9a-fA-F]{6}$/.test(item.c) ? item.c : null;
+    const w = typeof item.w === "number" && Number.isFinite(item.w) ? Math.min(0.06, Math.max(5e-4, item.w)) : null;
+    const m = item.m === "marker" ? "marker" : item.m === "pen" ? "pen" : null;
+    if (!c || w === null || !m || !Array.isArray(item.p) || item.p.length < 2 || item.p.length > MAX_POINTS || item.p.length % 2) return null;
+    const p = [];
+    for (const n of item.p) {
+      if (typeof n !== "number" || !Number.isFinite(n)) return null;
+      p.push(Math.round(Math.min(1, Math.max(0, n)) * 1e4) / 1e4);
+    }
+    out.push({ c, w: Math.round(w * 1e5) / 1e5, m, p });
+  }
+  return out;
+}
+var annotationLimiter = createRateLimiter(240, 10 * 60 * 1e3, "Too many saves. Try again in a minute.", "annotations", perSession3);
+router7.get("/me/annotations/:book", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const book = String(req.params.book ?? "");
+  if (!BOOK_RE.test(book)) {
+    res.status(400).json({ error: "Invalid book." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  const rows = await db.select({ page: bookAnnotationsTable.page, count: sql`jsonb_array_length(${bookAnnotationsTable.strokes})` }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book))).orderBy(asc(bookAnnotationsTable.page));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ pages: rows.filter((row) => Number(row.count) > 0).map((row) => ({ page: row.page, strokes: Number(row.count) })) });
+});
+router7.get("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const book = String(req.params.book ?? "");
+  const page = Number(req.params.page);
+  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
+    res.status(400).json({ error: "Invalid page." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  const [row] = await db.select({ strokes: bookAnnotationsTable.strokes, updatedAt: bookAnnotationsTable.updatedAt }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book), eq(bookAnnotationsTable.page, page))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ strokes: Array.isArray(row?.strokes) ? row.strokes : [], updatedAt: row?.updatedAt ?? null });
+});
+router7.put("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole3), annotationLimiter, async (req, res) => {
+  const book = String(req.params.book ?? "");
+  const page = Number(req.params.page);
+  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
+    res.status(400).json({ error: "Invalid page." });
+    return;
+  }
+  const strokes = cleanStrokes(isRecord6(req.body) ? req.body.strokes : null);
+  if (!strokes || JSON.stringify(strokes).length > MAX_JSON) {
+    res.status(400).json({ error: "The drawing is too large or invalid." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(bookAnnotationsTable).values({ userId: viewer.id, book, page, strokes, updatedAt: now }).onConflictDoUpdate({ target: [bookAnnotationsTable.userId, bookAnnotationsTable.book, bookAnnotationsTable.page], set: { strokes, updatedAt: now } });
+  res.json({ saved: true, strokes: strokes.length, updatedAt: now });
+});
+async function classAccess(viewer, classId) {
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  if (!klass) return { read: false, edit: false };
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [schoolRow] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  const [classRow] = await db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1);
+  const edit = canManageClass(viewer.role, schoolRow?.role ?? null, classRow?.role ?? null);
+  return { read: edit || Boolean(classRow), edit };
+}
+var progressLimiter = createRateLimiter(200, 10 * 60 * 1e3, "Too many changes. Try again later.", "course-progress", perSession3);
+router7.get("/classes/:classId/course", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access = await classAccess(viewerOf2(res), classId);
+  if (!access.read) {
+    res.status(403).json({ error: "You are not in this class." });
+    return;
+  }
+  const [progress, pace] = await Promise.all([
+    db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(eq(courseProgressTable.classId, classId)).orderBy(asc(courseProgressTable.doneOn)),
+    db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId))
+  ]);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ progress, pace, canEdit: access.edit });
+});
+router7.put("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  const doneOn = isRecord6(req.body) && typeof req.body.doneOn === "string" ? req.body.doneOn : "";
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey) || !DATE_RE.test(doneOn) || Number.isNaN(Date.parse(doneOn))) {
+    res.status(400).json({ error: "Invalid topic or date." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  const access = await classAccess(viewer, classId);
+  if (!access.edit) {
+    res.status(403).json({ error: "Only the class teacher can mark topics." });
+    return;
+  }
+  await db.insert(courseProgressTable).values({ classId, topicKey, doneOn, markedBy: viewer.id }).onConflictDoUpdate({ target: [courseProgressTable.classId, courseProgressTable.topicKey], set: { doneOn, markedBy: viewer.id } });
+  res.json({ topicKey, doneOn });
+});
+router7.delete("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey)) {
+    res.status(400).json({ error: "Invalid topic." });
+    return;
+  }
+  const access = await classAccess(viewerOf2(res), classId);
+  if (!access.edit) {
+    res.status(403).json({ error: "Only the class teacher can mark topics." });
+    return;
+  }
+  await db.delete(courseProgressTable).where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.topicKey, topicKey)));
+  res.json({ removed: true });
+});
+router7.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const book = String(req.params.book ?? "");
+  const lessonsPerWeek = isRecord6(req.body) ? Number(req.body.lessonsPerWeek) : NaN;
+  if (!isValidUuid(classId) || !BOOK_RE.test(book) || !Number.isInteger(lessonsPerWeek) || lessonsPerWeek < 1 || lessonsPerWeek > 10) {
+    res.status(400).json({ error: "Lessons per week must be 1 to 10." });
+    return;
+  }
+  const access = await classAccess(viewerOf2(res), classId);
+  if (!access.edit) {
+    res.status(403).json({ error: "Only the class teacher can change this." });
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(coursePaceTable).values({ classId, book, lessonsPerWeek, updatedAt: now }).onConflictDoUpdate({ target: [coursePaceTable.classId, coursePaceTable.book], set: { lessonsPerWeek, updatedAt: now } });
+  res.json({ book, lessonsPerWeek });
+});
+var course_default = router7;
 
 // src/lib/schema-sync.ts
 init_drizzle_orm();
@@ -54020,9 +54236,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router7 = (0, import_express7.Router)();
-router7.use(health_default);
-router7.use(async (_req, _res, next) => {
+var router8 = (0, import_express8.Router)();
+router8.use(health_default);
+router8.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -54030,15 +54246,16 @@ router7.use(async (_req, _res, next) => {
   }
   next();
 });
-router7.use(school_tools_default);
-router7.use(auth_default);
-router7.use(learning_default);
-router7.use(lesson_rooms_default);
-router7.use(schools_default);
-var routes_default = router7;
+router8.use(school_tools_default);
+router8.use(course_default);
+router8.use(auth_default);
+router8.use(learning_default);
+router8.use(lesson_rooms_default);
+router8.use(schools_default);
+var routes_default = router8;
 
 // src/app.ts
-var app = (0, import_express8.default)();
+var app = (0, import_express9.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -54089,8 +54306,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express8.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express8.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express9.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express9.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {

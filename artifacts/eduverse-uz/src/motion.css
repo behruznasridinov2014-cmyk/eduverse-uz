@@ -1,0 +1,216 @@
+/*
+ * EDUVERSE motion & glass system (loaded last).
+ *
+ * Principles: one spring for everything that moves, a short press and a
+ * springy release for everything you can touch, transitions only on transform
+ * and opacity (GPU-friendly), blur only on floating chrome (top bar, bottom
+ * bar, switches, dialogs) — never on scrolling cards. Nothing loops forever
+ * except real loading indicators.
+ */
+
+:root {
+  /* real damped springs (ζ≈0.62 and ζ≈0.8), sampled for CSS linear() */
+  --ease-spring: linear(0, 0.046, 0.1589, 0.3069, 0.4655, 0.6176, 0.7521, 0.8634, 0.9496, 1.0115, 1.0519, 1.0744, 1.0831, 1.0817, 1.0737, 1.062, 1.0489, 1.0359, 1.0241, 1.0142, 1.0063, 1.0005, 0.9966, 0.9942, 0.9932, 0.9931, 0.9936, 0.9945, 0.9956, 0.9967, 0.9977, 0.9986, 0.9993, 0.9998, 1.0002, 1.0004, 1.0006, 1.0006, 1.0004, 1.0002, 1);
+  --ease-snap: linear(0, 0.0645, 0.2076, 0.3755, 0.5369, 0.6759, 0.7871, 0.8705, 0.9296, 0.969, 0.9933, 1.007, 1.0134, 1.0152, 1.0143, 1.0122, 1.0097, 1.0072, 1.0051, 1.0034, 1.0021, 1.0011, 1.0005, 1.0001, 0.9999, 0.9998, 0.9998, 0.9999, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-press: 110ms;
+  --dur-release: 560ms;
+  --dur-page: 380ms;
+  --dur-open: 520ms;
+  --dur-close: 200ms;
+  /* the old names now use the real spring too */
+  --spring: var(--ease-spring);
+}
+@supports not (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+    --ease-snap: cubic-bezier(0.25, 1.2, 0.5, 1);
+  }
+}
+
+/* ---------- 1. press feedback: shrink on press, spring back on release ---------- */
+.btn, .pdfv-btn, .ink-tool, .ink-color, .ctrl, .tool-btn, .studio-tab, .cabinet-tab, button.tag, .tag[role="button"],
+.glass-tab, .glass-seg button, .nav-item, .side-user, .avatar-xl, .answer-choice, .pen-toggle, .board-color,
+.home-tile, .home-primary, .home-stat, .course-topic, .class-card, .course-fact, .open-room-row, .lesson-person,
+.collision-phases span, .pdfv-notes button, .auth-submit, .auth-tab {
+  transition:
+    transform var(--dur-release) var(--ease-snap),
+    background-color .3s var(--ease-out), background .3s var(--ease-out), color .3s var(--ease-out),
+    border-color .3s var(--ease-out), box-shadow .3s var(--ease-out), opacity .3s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active:not(:disabled), .pdfv-btn:active:not(:disabled), .ink-tool:active:not(:disabled), .ctrl:active:not(:disabled),
+.tool-btn:active, .studio-tab:active, button.tag:active, .tag[role="button"]:active, .glass-seg button:active, .pen-toggle:active,
+.board-color:active, .ink-color:active, .auth-submit:active:not(:disabled), .auth-tab:active, .answer-choice:active, .pdfv-notes button:active {
+  transform: scale(0.94);
+  transition-duration: var(--dur-press);
+  transition-timing-function: ease-out;
+}
+.nav-item:active, .side-user:active, .open-room-row:active, .lesson-person:active { transform: scale(0.975); transition-duration: var(--dur-press); transition-timing-function: ease-out; }
+/* big surfaces press less, so they never feel rubbery */
+.home-tile:active, .home-primary:active, .course-topic:active, .class-card:active, .home-stat:active, .course-fact:active {
+  transform: scale(0.985);
+  transition-duration: var(--dur-press);
+  transition-timing-function: ease-out;
+}
+.avatar-xl:active { transform: scale(0.94); transition-duration: var(--dur-press); }
+@media (hover: hover) {
+  .home-tile:hover, .class-card:hover { transform: translateY(-2px); }
+  .home-tile:hover:active, .class-card:hover:active { transform: scale(0.985); }
+}
+
+/* ---------- 2. glass navigation: lens, tab press, icon state ---------- */
+.glass-tab { transition: transform var(--dur-release) var(--ease-snap), color .35s var(--ease-out); }
+.glass-tab:active { transform: scale(0.9); transition-duration: var(--dur-press); transition-timing-function: ease-out; }
+.glass-tab.hover { transform: scale(1.06); }
+.glass-lens { transition: transform .62s var(--ease-spring), width .5s var(--ease-spring), background .3s var(--ease-out), opacity .3s; will-change: transform; }
+.glass-tabs.is-dragging .glass-lens { transition: transform .14s var(--ease-out), width .3s var(--ease-out), background .2s; }
+.glass-tab.active .glass-tab-icon, .nav-item.active .nav-icon { animation: icon-pop .55s var(--ease-spring) both; }
+@keyframes icon-pop { 0% { transform: scale(0.82); } 100% { transform: scale(1); } }
+.glass-tab-icon svg, .nav-icon svg { transition: color .35s var(--ease-out); }
+.glass-seg-thumb, .lang-switch.glass-seg .lang-thumb { transition: transform .6s var(--ease-spring) !important; }
+.glass-tab:focus-visible, .glass-seg button:focus-visible { outline: 2px solid var(--sky-deep); outline-offset: 2px; }
+
+/* ---------- 3. page and tab transitions (never block input) ---------- */
+.content > * { animation: page-in var(--dur-page) var(--ease-out) both; }
+.content > *:nth-child(2) { animation-delay: 40ms; }
+.content > *:nth-child(3) { animation-delay: 80ms; }
+.content > *:nth-child(n + 4) { animation-delay: 110ms; }
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.home-tiles > *, .grid > *, .kpi-grid > *, .course-topics > * { animation: page-in .44s var(--ease-out) both; }
+.home-tiles > *:nth-child(2), .grid > *:nth-child(2) { animation-delay: 30ms; }
+.home-tiles > *:nth-child(3), .grid > *:nth-child(3) { animation-delay: 60ms; }
+.home-tiles > *:nth-child(n + 4), .grid > *:nth-child(n + 4) { animation-delay: 90ms; }
+.cabinet-pane { animation: page-in .4s var(--ease-out) backwards !important; transition: transform .5s var(--ease-spring); }
+.cabinet-pane.slide-from-right { animation: tab-from-right .42s var(--ease-out) backwards !important; }
+.cabinet-pane.slide-from-left { animation: tab-from-left .42s var(--ease-out) backwards !important; }
+@keyframes tab-from-right { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: none; } }
+@keyframes tab-from-left { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
+.course-topic-view { animation: page-in .4s var(--ease-out) both; }
+
+/* expanding content: forms, answers, detail cards */
+.reveal, .course-answer, .password-form, .ai-check-result, .pdfv-inkbar { animation: expand-in .42s var(--ease-out) both; }
+@keyframes expand-in { from { opacity: 0; transform: translateY(-6px); clip-path: inset(0 0 100% 0 round 14px); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 14px); } }
+@supports (interpolate-size: allow-keywords) {
+  :root { interpolate-size: allow-keywords; }
+  details::details-content { height: 0; overflow: clip; transition: height .42s var(--ease-out), content-visibility .42s allow-discrete; }
+  details[open]::details-content { height: auto; }
+}
+summary { cursor: pointer; }
+
+/* ---------- 4. dialogs: open with a spring, close quickly ---------- */
+.modal-backdrop, .install-backdrop, .qr-scanner-backdrop, .hw-lightbox { animation: fade-in .24s var(--ease-out) both; }
+.modal, .install-modal { animation: sheet-in var(--dur-open) var(--ease-spring) both; transform-origin: 50% 60%; }
+.qr-scanner { animation: sheet-in var(--dur-open) var(--ease-spring) both !important; }
+.hw-lightbox > * { animation: sheet-in var(--dur-open) var(--ease-spring) both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(14px) scale(0.95); } to { opacity: 1; transform: none; } }
+.is-closing.modal-backdrop, .is-closing .modal-backdrop, .is-closing .qr-scanner-backdrop, .is-closing.install-backdrop { animation: fade-out var(--dur-close) ease-in both !important; }
+.is-closing .modal, .is-closing.modal, .is-closing .install-modal, .is-closing.qr-scanner, .is-closing .qr-scanner { animation: sheet-out var(--dur-close) ease-in both !important; }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes sheet-out { to { opacity: 0; transform: translateY(8px) scale(0.97); } }
+.modal-backdrop, .install-backdrop, .hw-lightbox, .qr-scanner-backdrop { backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; }
+
+/* selects look like glass controls; focus rings animate in */
+.control select, select.input, .top-select {
+  appearance: none; -webkit-appearance: none; padding-right: 34px !important;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%) !important;
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52% !important;
+  background-size: 5px 5px, 5px 5px !important; background-repeat: no-repeat !important;
+}
+.control input, .control select, .control textarea, .input { transition: border-color .25s var(--ease-out), box-shadow .3s var(--ease-out), background-color .3s; }
+
+/* ---------- 5. performance: blur only on floating chrome ---------- */
+.panel, .home-tile, .home-stat, .kpi, .class-card, .topic-list, .topic-detail, .lesson-topic-panel, .school-scope-summary,
+.profile-head, .cabinet-hero, .home-primary, .notice, .account-banner, .side-user, .lesson-room-bar, .sidebar, .auth-panel,
+.course-hero, .course-fact, .chem-caption, .school-assignment-card, .school-review-card {
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.panel, .home-tile, .home-stat, .kpi, .class-card, .topic-list, .topic-detail, .lesson-topic-panel, .school-scope-summary { background: rgba(255, 253, 248, 0.84); }
+.sidebar { background: rgba(250, 247, 240, 0.94) !important; }
+.glass-tabs, .glass-seg, .topbar { will-change: auto; }
+.visual-float, .i3d-glow { animation: none !important; }
+.content > *, .glass-lens, .cabinet-pane { backface-visibility: hidden; }
+
+/* ---------- 6. premium night: matte glass, thin borders, soft shadows ---------- */
+html[data-theme="night"] {
+  --lg-bg: rgba(30, 43, 64, 0.62);
+  --lg-rim: rgba(255, 255, 255, 0.1);
+  --lg-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  --lens-bg: rgba(255, 255, 255, 0.09);
+  --tab-ink: #A9B2C0;
+  --tab-active: #E6BC84;
+  --accent-night: #D7A968;
+}
+html[data-theme="night"] body {
+  background: radial-gradient(1200px 700px at 50% -20%, rgba(70, 100, 140, 0.18), transparent 60%), #0E1624 !important;
+  background-attachment: fixed;
+}
+html[data-theme="night"] h1 { color: #F2E9DA !important; }
+html[data-theme="night"] .panel, html[data-theme="night"] .home-tile, html[data-theme="night"] .home-stat, html[data-theme="night"] .kpi,
+html[data-theme="night"] .class-card, html[data-theme="night"] .topic-list, html[data-theme="night"] .topic-detail,
+html[data-theme="night"] .lesson-topic-panel, html[data-theme="night"] .school-scope-summary, html[data-theme="night"] .modal,
+html[data-theme="night"] .school-assignment-card, html[data-theme="night"] .school-review-card, html[data-theme="night"] .lesson-side,
+html[data-theme="night"] .lesson-stage, html[data-theme="night"] .model-card, html[data-theme="night"] .topic-assign-card {
+  background: rgba(22, 33, 51, 0.9) !important; border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 32px -22px rgba(0, 0, 0, 0.8) !important;
+}
+html[data-theme="night"] .sidebar { background: rgba(13, 21, 35, 0.96) !important; }
+html[data-theme="night"] .btn.primary, html[data-theme="night"] .auth-submit, html[data-theme="night"] .studio-tab.active,
+html[data-theme="night"] .ctrl.on, html[data-theme="night"] .tool-btn.selected, html[data-theme="night"] .ai-q, html[data-theme="night"] .pen-toggle.on,
+html[data-theme="night"] .pdfv-write.on, html[data-theme="night"] .ink-tool.on, html[data-theme="night"] .pdfv-notes button.on, html[data-theme="night"] .collision-phases span.active {
+  background: var(--accent-night) !important; color: #1A1309 !important; border-color: transparent !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 16px -10px rgba(0, 0, 0, 0.7) !important;
+}
+html[data-theme="night"] .btn.primary svg { color: #1A1309 !important; }
+html[data-theme="night"] .home-primary {
+  background: rgba(215, 169, 104, 0.1) !important; border: 1px solid rgba(215, 169, 104, 0.32) !important;
+  color: var(--text) !important; box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.8) !important;
+}
+html[data-theme="night"] .home-primary small { color: var(--text-2) !important; }
+html[data-theme="night"] .home-primary b { color: var(--text) !important; }
+html[data-theme="night"] .home-primary-icon { background: var(--accent-night); color: #1A1309; }
+html[data-theme="night"] .profile-head, html[data-theme="night"] .cabinet-hero, html[data-theme="night"] .course-hero {
+  background: rgba(26, 38, 58, 0.92) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+html[data-theme="night"] .glass-tab.active, html[data-theme="night"] .glass-tab.hover { text-shadow: none; }
+html[data-theme="night"] .glass-tabs::before { opacity: 0.22; }
+html[data-theme="night"] .glass-lens::after { opacity: 0.25; }
+html[data-theme="night"] .glass-lens { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px -8px rgba(0, 0, 0, 0.6); border-color: rgba(255, 255, 255, 0.14); }
+html[data-theme="night"] .glass-seg-thumb, html[data-theme="night"] .lang-switch.glass-seg .lang-thumb {
+  background: rgba(255, 255, 255, 0.1) !important; border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 10px -6px rgba(0, 0, 0, 0.7) !important;
+}
+html[data-theme="night"] .home-stat b, html[data-theme="night"] .kpi b, html[data-theme="night"] .metric-value, html[data-theme="night"] .course-progress b,
+html[data-theme="night"] .open-room-code, html[data-theme="night"] .lesson-room-code b, html[data-theme="night"] .grade-mark { color: var(--accent-night) !important; }
+
+/* ---------- 7. accessibility ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important;
+  }
+  .auth-spinner, .school-spin { animation-duration: 1.4s !important; animation-iteration-count: infinite !important; }
+}
+@media (prefers-contrast: more) {
+  :root { --text: #111821; --text-2: #26303D; --text-3: #3E4757; --tab-ink: #1E2633; --tab-active: #7A5410; }
+  .panel, .home-tile, .home-stat, .kpi, .class-card, .glass-tabs, .glass-seg, .topbar, .sidebar, .modal, .notice {
+    background: #FFFDF8 !important; border: 1.5px solid #4F5867 !important; box-shadow: none !important;
+  }
+  .glass-tabs::before, .glass-lens::after { display: none; }
+  .glass-lens, .glass-seg-thumb, .lang-switch.glass-seg .lang-thumb { background: #F1E6D2 !important; border: 2px solid #1E2633 !important; }
+  html[data-theme="night"] { --text: #FFFFFF; --text-2: #E6E9EE; --text-3: #C2C9D4; --tab-ink: #E6E9EE; --tab-active: #FFD596; }
+  html[data-theme="night"] .panel, html[data-theme="night"] .home-tile, html[data-theme="night"] .glass-tabs, html[data-theme="night"] .glass-seg,
+  html[data-theme="night"] .topbar, html[data-theme="night"] .sidebar, html[data-theme="night"] .modal { background: #0B111C !important; border: 1.5px solid #C2C9D4 !important; }
+  html[data-theme="night"] .glass-lens, html[data-theme="night"] .glass-seg-thumb { background: #26354D !important; border-color: #FFFFFF !important; }
+}
+@media (forced-colors: active) {
+  .glass-lens, .glass-seg-thumb, .lang-thumb { border: 2px solid Highlight !important; background: transparent !important; }
+  .glass-tab.active, .glass-seg button.active { color: Highlight !important; }
+}
+/* night: the select arrow must survive the dark background shorthand */
+html[data-theme="night"] .control select, html[data-theme="night"] select.input, html[data-theme="night"] .top-select {
+  background-image: linear-gradient(45deg, transparent 50%, #A9B2C0 50%), linear-gradient(135deg, #A9B2C0 50%, transparent 50%) !important;
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52% !important;
+  background-size: 5px 5px, 5px 5px !important; background-repeat: no-repeat !important;
+}

@@ -126,6 +126,17 @@ export function GlassTabs({
           type="button"
           role="tab"
           aria-selected={item.key === activeKey}
+          tabIndex={item.key === activeKey || (activeIndex < 0 && index === 0) ? 0 : -1}
+          onKeyDown={(event) => {
+            const last = items.length - 1;
+            const next = event.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+              : event.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+                : event.key === 'Home' ? 0 : event.key === 'End' ? last : -1;
+            if (next < 0) return;
+            event.preventDefault();
+            itemRefs.current[next]?.focus();
+            onSelect(items[next].key);
+          }}
           className={`glass-tab ${item.key === activeKey ? 'active' : ''} ${drag && drag.hover === index ? 'hover' : ''}`}
           // Pointer taps are handled by the bar; the keyboard still uses click.
           onClick={(event) => { if (event.detail === 0) onSelect(item.key); }}

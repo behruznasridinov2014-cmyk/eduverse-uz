@@ -1,3 +1,4 @@
+import { useClosable } from './motion';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { Camera, ScanLine, X } from 'lucide-react';
@@ -185,21 +186,22 @@ export function QrScannerButton({
       html.style.overflow = previous;
     };
   }, [scannerOpen]);
+  const [closing, requestClose] = useClosable(() => setScannerOpen(false));
   if (scannerOpen) {
     // Rendered on <body>: a parent with a transform, filter or blur would
     // otherwise become the frame of the fixed dialog and break the layout.
     return createPortal(
-      <>
+      <div className={`qr-layer ${closing ? 'is-closing' : ''}`}>
         <QrScanner
           language={language}
-          onClose={() => setScannerOpen(false)}
+          onClose={requestClose}
           onDetected={(code) => {
             setScannerOpen(false);
             window.location.assign(`/login?qr=${encodeURIComponent(code)}`);
           }}
         />
-        <div className="qr-scanner-backdrop" onClick={() => setScannerOpen(false)} />
-      </>,
+        <div className="qr-scanner-backdrop" onClick={requestClose} />
+      </div>,
       document.body,
     );
   }

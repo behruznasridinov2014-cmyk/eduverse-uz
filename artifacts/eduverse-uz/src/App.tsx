@@ -1,6 +1,8 @@
 import './app.css';
 import './theme.css';
 import './glass.css';
+import './motion.css';
+import { useClosable } from './motion';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocaleDom } from './localization';
 import { Link, Redirect, useLocation } from 'wouter';
@@ -406,7 +408,10 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
   </>
   )}</>
 }
-function Modal({title,children,close}:{title:string;children:ReactNode;close:()=>void}){return <div className="modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="row-between" style={{marginBottom:15}}><h2>{title}</h2><button className="btn small" onClick={close} aria-label="Close"><X/></button></div>{children}</section></div>}
+function Modal({title,children,close}:{title:string;children:ReactNode;close:()=>void}){
+ const [closing,requestClose]=useClosable(close);
+ useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')requestClose()};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[requestClose]);
+ return <div className={`modal-backdrop ${closing?'is-closing':''}`} role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)requestClose()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="row-between" style={{marginBottom:15}}><h2>{title}</h2><button className="btn small" onClick={requestClose} aria-label="Close"><X/></button></div>{children}</section></div>}
 function BoardPage(){
  const canvasRef=useRef<HTMLCanvasElement|null>(null);const drawing=useRef(false);const last=useRef<{x:number;y:number}|null>(null);const shapeStart=useRef<{x:number;y:number}|null>(null);const shapeBase=useRef<ImageData|null>(null);
   const [tool,setTool]=useState('pen');const [color,setColor]=useState('#344f67');const [width,setWidth]=useState(3);const [history,setHistory]=useState<string[]>([]);const [redo,setRedo]=useState<string[]>([]);const [saved,setSaved]=useSavedState('board-image','');const [topic,setTopic]=useSavedState('board-topic','Ratios: comparing quantities');const [quiz,setQuiz]=useState(false);const [poll,setPoll]=useState(false);const [vote,setVote]=useState('');const [boardZoom,setBoardZoom]=useState(100);const [presenting,setPresenting]=useState(false);const [timerRunning,setTimerRunning]=useState(false);const [timerSeconds,setTimerSeconds]=useState(0);
