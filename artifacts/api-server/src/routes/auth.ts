@@ -19,6 +19,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
+import { checkNewDevice, sessionMeta } from "../lib/inbox";
 import {
   createSessionToken,
   DUMMY_PASSWORD_HASH,
@@ -362,6 +363,9 @@ export function requireAuthenticatedRole(
       .select({
         id: usersTable.id,
         role: usersTable.role,
+        sessionId: sessionsTable.id,
+        lastSeenAt: sessionsTable.lastSeenAt,
+        device: sessionsTable.device,
       })
       .from(sessionsTable)
       .innerJoin(usersTable, eq(sessionsTable.userId, usersTable.id))
@@ -385,7 +389,15 @@ export function requireAuthenticatedRole(
       return;
     }
 
-    res.locals.authenticatedUser = user;
+    // "Last seen" for the devices list (at most every 5 minutes); the first request
+    // of a new session also checks whether the device is new for this account.
+    const now = Date.now();
+    if (!user.lastSeenAt || now - user.lastSeenAt.getTime() > 5 * 60 * 1000) {
+      await db.update(sessionsTable).set({ lastSeenAt: new Date(now) }).where(eq(sessionsTable.id, user.sessionId)).catch(() => {});
+      if (!user.lastSeenAt) await checkNewDevice(user.id, user.sessionId, user.device);
+    }
+    res.locals.authenticatedUser = { id: user.id, role: user.role };
+    res.locals.sessionId = user.sessionId;
     next();
   };
 }
@@ -479,6 +491,7 @@ router.post(
         await transaction.insert(sessionsTable).values({
           userId: createdUser.id,
           tokenHash: hashSessionToken(sessionToken),
+          ...sessionMeta(req),
           expiresAt,
         });
 
@@ -597,6 +610,7 @@ router.post(
     await db.insert(sessionsTable).values({
       userId: user.id,
       tokenHash: hashSessionToken(sessionToken),
+      ...sessionMeta(req),
       expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
     });
 
@@ -1179,6 +1193,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
       await tx.insert(sessionsTable).values({
         userId: account.id,
         tokenHash: hashSessionToken(sessionToken),
+        ...sessionMeta(req),
         expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
       });
       return account;
@@ -1539,6 +1554,7 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
     await tx.insert(sessionsTable).values({
       userId: account.id,
       tokenHash: hashSessionToken(freshToken),
+      ...sessionMeta(req),
       expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
     });
     await tx

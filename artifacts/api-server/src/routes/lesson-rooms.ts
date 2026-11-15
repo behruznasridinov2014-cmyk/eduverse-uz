@@ -14,6 +14,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
+import { pushNotice, studentsOfClasses, teacherClassIds } from "../lib/inbox";
 import { requireAuthenticatedRole } from "./auth";
 import { logger } from "../lib/logger";
 import {
@@ -458,6 +459,10 @@ router.post(
         status: "open",
       })
       .returning();
+    if (host.role === "teacher") {
+      const students = await studentsOfClasses(classId ? [classId] : await teacherClassIds(host.id));
+      await pushNotice(students, "lessons", `Начался онлайн-урок: ${room?.title ?? ""}`, `Код: ${room?.code ?? ""}`, "/lesson");
+    }
     res.status(201).json({ room });
   },
 );

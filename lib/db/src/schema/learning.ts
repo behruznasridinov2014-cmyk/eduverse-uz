@@ -330,3 +330,36 @@ export const coursePaceTable = pgTable("course_pace", {
   lessonsPerWeek: integer("lessons_per_week").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("course_pace_class_book_unique").on(table.classId, table.book)]);
+
+/** In-app notifications (the bell): grades, homework, messages, announcements, lessons, security. */
+export const userNotificationsTable = pgTable("user_notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  link: text("link"),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("user_notifications_user_created_idx").on(table.userId, table.createdAt)]);
+
+/**
+ * In-app support chat. One thread per user and channel:
+ *  - "curator": the user ↔ EDUVERSE curators (platform staff);
+ *  - "school":  the user ↔ the administration of their school.
+ */
+export const supportMessagesTable = pgTable("support_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  threadUserId: uuid("thread_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  channel: text("channel").notNull(),
+  schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+  fromStaff: boolean("from_staff").notNull().default(false),
+  body: text("body").notNull(),
+  readByOwner: boolean("read_by_owner").notNull().default(false),
+  readByStaff: boolean("read_by_staff").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("support_messages_thread_idx").on(table.threadUserId, table.channel, table.createdAt),
+  index("support_messages_school_idx").on(table.schoolId, table.channel),
+]);

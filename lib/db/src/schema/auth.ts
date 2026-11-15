@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   index,
+  jsonb,
   integer,
   pgEnum,
   pgTable,
@@ -43,6 +44,12 @@ export const usersTable = pgTable(
     mustChangePassword: boolean("must_change_password").notNull().default(false),
     /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
     avatar: text("avatar"),
+    /** Contact email the user entered in the profile (optional). */
+    email: text("email"),
+    /** Subjects a teacher teaches, e.g. ["Физика", "Химия"]. */
+    subjects: jsonb("subjects").notNull().default([]),
+    /** Notification settings: { grades, homework, messages, announcements, lessons, telegram, push, newDevice } → boolean. */
+    notifyPrefs: jsonb("notify_prefs").notNull().default({}),
     /** AES-256-GCM encrypted TOTP secret (base32 outside crypto layer). */
     twoFactorSecret: text("two_factor_secret"),
     /** Telegram chat id that is allowed to receive 2FA codes. */
@@ -92,6 +99,11 @@ export const sessionsTable = pgTable(
       .defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /** Browser and system of the device, e.g. "Chrome · Windows". */
+    device: text("device"),
+    /** Partly hidden address, e.g. "213.230.*.*". */
+    ipMasked: text("ip_masked"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("sessions_token_hash_unique").on(table.tokenHash),

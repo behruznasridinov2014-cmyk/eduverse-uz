@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router9;
+    module.exports = Router10;
     module.exports.Route = Route;
-    function Router9(options) {
-      if (!(this instanceof Router9)) {
-        return new Router9(options);
+    function Router10(options) {
+      if (!(this instanceof Router10)) {
+        return new Router10(options);
       }
       const opts = options || {};
-      function router9(req, res, next) {
-        router9.handle(req, res, next);
+      function router10(req, res, next) {
+        router10.handle(req, res, next);
       }
-      Object.setPrototypeOf(router9, this);
-      router9.caseSensitive = opts.caseSensitive;
-      router9.mergeParams = opts.mergeParams;
-      router9.params = {};
-      router9.strict = opts.strict;
-      router9.stack = [];
-      return router9;
+      Object.setPrototypeOf(router10, this);
+      router10.caseSensitive = opts.caseSensitive;
+      router10.mergeParams = opts.mergeParams;
+      router10.params = {};
+      router10.strict = opts.strict;
+      router10.stack = [];
+      return router10;
     }
-    Router9.prototype = function() {
+    Router10.prototype = function() {
     };
-    Router9.prototype.param = function param(name, fn) {
+    Router10.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router9.prototype.handle = function handle(req, res, callback) {
+    Router10.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router9.prototype.use = function use(handler) {
+    Router10.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router9.prototype.route = function route(path) {
+    Router10.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router9.prototype[method] = function(path) {
+      Router10.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router9 = require_router();
+    var Router10 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router9 = null;
+      var router10 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router9 === null) {
-            router9 = new Router9({
+          if (router10 === null) {
+            router10 = new Router10({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router9;
+          return router10;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router9 = this.router;
+      var router10 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router9.use(path, fn2);
+          return router10.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router9.use(path, function mounted_app(req, res, next) {
+        router10.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router9 = require_router();
+    var Router10 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router9.Route;
-    exports.Router = Router9;
+    exports.Route = Router10.Route;
+    exports.Router = Router10;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -42533,6 +42533,12 @@ var init_auth = __esm({
         mustChangePassword: boolean("must_change_password").notNull().default(false),
         /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
         avatar: text("avatar"),
+        /** Contact email the user entered in the profile (optional). */
+        email: text("email"),
+        /** Subjects a teacher teaches, e.g. ["Физика", "Химия"]. */
+        subjects: jsonb("subjects").notNull().default([]),
+        /** Notification settings: { grades, homework, messages, announcements, lessons, telegram, push, newDevice } → boolean. */
+        notifyPrefs: jsonb("notify_prefs").notNull().default({}),
         /** AES-256-GCM encrypted TOTP secret (base32 outside crypto layer). */
         twoFactorSecret: text("two_factor_secret"),
         /** Telegram chat id that is allowed to receive 2FA codes. */
@@ -42568,7 +42574,12 @@ var init_auth = __esm({
         tokenHash: text("token_hash").notNull(),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
         expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-        revokedAt: timestamp("revoked_at", { withTimezone: true })
+        revokedAt: timestamp("revoked_at", { withTimezone: true }),
+        /** Browser and system of the device, e.g. "Chrome · Windows". */
+        device: text("device"),
+        /** Partly hidden address, e.g. "213.230.*.*". */
+        ipMasked: text("ip_masked"),
+        lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
       },
       (table) => [
         uniqueIndex("sessions_token_hash_unique").on(table.tokenHash),
@@ -42755,7 +42766,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43053,6 +43064,31 @@ var init_learning = __esm({
       lessonsPerWeek: integer("lessons_per_week").notNull(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [uniqueIndex("course_pace_class_book_unique").on(table.classId, table.book)]);
+    userNotificationsTable = pgTable("user_notifications", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      kind: text("kind").notNull(),
+      title: text("title").notNull(),
+      body: text("body").notNull().default(""),
+      link: text("link"),
+      readAt: timestamp("read_at", { withTimezone: true }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("user_notifications_user_created_idx").on(table.userId, table.createdAt)]);
+    supportMessagesTable = pgTable("support_messages", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      threadUserId: uuid("thread_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      channel: text("channel").notNull(),
+      schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+      authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+      fromStaff: boolean("from_staff").notNull().default(false),
+      body: text("body").notNull(),
+      readByOwner: boolean("read_by_owner").notNull().default(false),
+      readByStaff: boolean("read_by_staff").notNull().default(false),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      index("support_messages_thread_idx").on(table.threadUserId, table.channel, table.createdAt),
+      index("support_messages_school_idx").on(table.schoolId, table.channel)
+    ]);
   }
 });
 
@@ -43093,10 +43129,12 @@ __export(schema_exports, {
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
+  userNotificationsTable: () => userNotificationsTable,
   usersTable: () => usersTable
 });
 var init_schema2 = __esm({
@@ -43148,10 +43186,12 @@ __export(src_exports, {
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
+  userNotificationsTable: () => userNotificationsTable,
   usersTable: () => usersTable
 });
 var Pool3, configured, poolInstance, dbInstance, databaseIsConfigured, pool, db;
@@ -43885,18 +43925,110 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express9 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
 var import_express = __toESM(require_express2(), 1);
 init_src();
 import { createHash as createHash3, randomBytes as randomBytes3 } from "node:crypto";
+
+// src/lib/inbox.ts
+init_drizzle_orm();
+init_src();
+
+// src/lib/logger.ts
+var import_pino = __toESM(require_pino(), 1);
+var isProduction = process.env.NODE_ENV === "production";
+var logger = (0, import_pino.default)({
+  level: process.env.LOG_LEVEL ?? "info",
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "res.headers['set-cookie']"
+  ],
+  ...isProduction ? {} : {
+    transport: {
+      target: "pino-pretty",
+      options: { colorize: true }
+    }
+  }
+});
+
+// src/lib/inbox.ts
+function deviceLabel(userAgent) {
+  const ua = userAgent ?? "";
+  const browser = /Edg\//.test(ua) ? "Edge" : /YaBrowser/.test(ua) ? "Yandex" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : ua ? "\u0411\u0440\u0430\u0443\u0437\u0435\u0440" : "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E";
+  const os = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : "";
+  return os ? `${browser} \xB7 ${os}` : browser;
+}
+function maskIp(ip) {
+  if (!ip) return null;
+  const clean = ip.replace(/^::ffff:/, "");
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(clean)) return clean.split(".").slice(0, 2).join(".") + ".*.*";
+  if (clean.includes(":")) return clean.split(":").slice(0, 2).join(":") + ":\u2026";
+  return null;
+}
+function sessionMeta(req) {
+  const ua = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"].slice(0, 300) : void 0;
+  return { device: deviceLabel(ua), ipMasked: maskIp(req.ip) };
+}
+var NOTIFY_KINDS = ["grades", "homework", "messages", "announcements", "lessons", "telegram", "push", "newDevice"];
+var DEFAULT_PREFS = { grades: true, homework: true, messages: true, announcements: true, lessons: true, telegram: true, push: false, newDevice: true };
+function mergePrefs(value) {
+  const out = { ...DEFAULT_PREFS };
+  if (value && typeof value === "object") {
+    for (const key of NOTIFY_KINDS) {
+      const v = value[key];
+      if (typeof v === "boolean") out[key] = v;
+    }
+  }
+  return out;
+}
+async function usersWanting(userIds, kind) {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return [];
+  const rows = await db.select({ id: usersTable.id, prefs: usersTable.notifyPrefs }).from(usersTable).where(inArray(usersTable.id, ids));
+  return rows.filter((row) => mergePrefs(row.prefs)[kind]).map((row) => row.id);
+}
+async function pushNotice(userIds, kind, title, body = "", link) {
+  try {
+    const targets = await usersWanting(userIds, kind);
+    if (targets.length === 0) return;
+    await db.insert(userNotificationsTable).values(targets.map((userId) => ({ userId, kind, title: title.slice(0, 160), body: body.slice(0, 400), link: link ?? null })));
+  } catch (error) {
+    logger.error({ err: error }, "in-app notification failed");
+  }
+}
+async function checkNewDevice(userId, sessionId, device) {
+  try {
+    const [earlier] = await db.select({ total: sql`count(*)`, same: sql`count(*) filter (where ${sessionsTable.device} = ${device ?? ""})` }).from(sessionsTable).where(and(eq(sessionsTable.userId, userId), ne(sessionsTable.id, sessionId)));
+    if (Number(earlier?.total ?? 0) > 0 && Number(earlier?.same ?? 0) === 0) {
+      await pushNotice([userId], "newDevice", `\u041D\u043E\u0432\u044B\u0439 \u0432\u0445\u043E\u0434: ${device ?? "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E"}`, "\u0415\u0441\u043B\u0438 \u044D\u0442\u043E \u0431\u044B\u043B\u0438 \u043D\u0435 \u0432\u044B, \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u041F\u0440\u043E\u0444\u0438\u043B\u044C \u2192 \u0411\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u044C \u0438 \u0432\u044B\u0439\u0434\u0438\u0442\u0435 \u0441\u043E \u0432\u0441\u0435\u0445 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432.", "/profile");
+    }
+  } catch (error) {
+    logger.error({ err: error }, "new device check failed");
+  }
+}
+async function studentsOfClasses(classIds) {
+  if (classIds.length === 0) return [];
+  const rows = await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student")));
+  return [...new Set(rows.map((row) => row.id))];
+}
+async function teacherClassIds(teacherId) {
+  const rows = await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, teacherId), eq(classMembersTable.role, "teacher")));
+  return rows.map((row) => row.id);
+}
+async function withParents(studentIds) {
+  if (studentIds.length === 0) return [];
+  const rows = await db.select({ id: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds));
+  return [.../* @__PURE__ */ new Set([...studentIds, ...rows.map((row) => row.id)])];
+}
 
 // src/lib/auth-crypto.ts
 import {
@@ -44213,24 +44345,6 @@ async function enqueueTelegramMessage(input) {
   });
 }
 
-// src/lib/logger.ts
-var import_pino = __toESM(require_pino(), 1);
-var isProduction = process.env.NODE_ENV === "production";
-var logger = (0, import_pino.default)({
-  level: process.env.LOG_LEVEL ?? "info",
-  redact: [
-    "req.headers.authorization",
-    "req.headers.cookie",
-    "res.headers['set-cookie']"
-  ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
-    }
-  }
-});
-
 // src/lib/telegram-security.ts
 import { timingSafeEqual as timingSafeEqual3 } from "node:crypto";
 function matchesTelegramWebhookSecret(expectedSecret, receivedSecret) {
@@ -44452,7 +44566,10 @@ function requireAuthenticatedRole(...allowedRoles) {
     }
     const [user3] = await db.select({
       id: usersTable.id,
-      role: usersTable.role
+      role: usersTable.role,
+      sessionId: sessionsTable.id,
+      lastSeenAt: sessionsTable.lastSeenAt,
+      device: sessionsTable.device
     }).from(sessionsTable).innerJoin(usersTable, eq(sessionsTable.userId, usersTable.id)).where(
       and(
         eq(sessionsTable.tokenHash, hashSessionToken(token)),
@@ -44469,7 +44586,14 @@ function requireAuthenticatedRole(...allowedRoles) {
       res.status(403).json({ error: "You do not have permission to access this resource." });
       return;
     }
-    res.locals.authenticatedUser = user3;
+    const now = Date.now();
+    if (!user3.lastSeenAt || now - user3.lastSeenAt.getTime() > 5 * 60 * 1e3) {
+      await db.update(sessionsTable).set({ lastSeenAt: new Date(now) }).where(eq(sessionsTable.id, user3.sessionId)).catch(() => {
+      });
+      if (!user3.lastSeenAt) await checkNewDevice(user3.id, user3.sessionId, user3.device);
+    }
+    res.locals.authenticatedUser = { id: user3.id, role: user3.role };
+    res.locals.sessionId = user3.sessionId;
     next();
   };
 }
@@ -44540,6 +44664,7 @@ router.post(
         await transaction.insert(sessionsTable).values({
           userId: createdUser.id,
           tokenHash: hashSessionToken(sessionToken),
+          ...sessionMeta(req),
           expiresAt
         });
         return createdUser;
@@ -44628,6 +44753,7 @@ router.post(
     await db.insert(sessionsTable).values({
       userId: user3.id,
       tokenHash: hashSessionToken(sessionToken),
+      ...sessionMeta(req),
       expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
     });
     setSessionCookie(res, sessionToken);
@@ -45060,6 +45186,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
       await tx.insert(sessionsTable).values({
         userId: account.id,
         tokenHash: hashSessionToken(sessionToken),
+        ...sessionMeta(req),
         expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
       });
       return account;
@@ -45189,7 +45316,7 @@ router.post("/auth/qr/start", requireAllowedOrigin, qrStartLimiter, async (req, 
     res.status(400).json({ error: "Unexpected QR request fields." });
     return;
   }
-  const deviceLabel = getString(req.body, "deviceLabel")?.trim().slice(0, 80) ?? "";
+  const deviceLabel2 = getString(req.body, "deviceLabel")?.trim().slice(0, 80) ?? "";
   const deviceToken = createSessionToken();
   const approveToken = createSessionToken();
   const code = randomCode();
@@ -45199,7 +45326,7 @@ router.post("/auth/qr/start", requireAllowedOrigin, qrStartLimiter, async (req, 
     approveTokenHash: hashSessionToken(approveToken),
     code: hashSessionToken(code).slice(0, 12),
     status: "pending",
-    deviceLabel,
+    deviceLabel: deviceLabel2,
     expiresAt
   });
   res.status(201).json({
@@ -45323,6 +45450,7 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
     await tx.insert(sessionsTable).values({
       userId: account.id,
       tokenHash: hashSessionToken(freshToken),
+      ...sessionMeta(req),
       expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
     });
     await tx.update(qrLoginSessionsTable).set({ status: "consumed", consumedAt: /* @__PURE__ */ new Date(), issuedSessionToken: null }).where(eq(qrLoginSessionsTable.id, row.id));
@@ -50365,7 +50493,9 @@ init_src();
 async function notifyUsers(userIds, text2) {
   if (!telegramBotConfigured() || userIds.length === 0) return 0;
   try {
-    const rows = await db.select({ chatId: telegramNotifyTable.chatId }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, [...new Set(userIds)]), isNotNull(telegramNotifyTable.chatId)));
+    const wanted = await usersWanting(userIds, "telegram");
+    if (wanted.length === 0) return 0;
+    const rows = await db.select({ chatId: telegramNotifyTable.chatId }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, wanted), isNotNull(telegramNotifyTable.chatId)));
     let sent = 0;
     await Promise.all(
       rows.map(async (row) => {
@@ -51303,6 +51433,7 @@ router3.post("/classes/:classId/announcements", requireAuthenticatedRole(...staf
   const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
   const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
   await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `\u{1F4E2} <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
+  await pushNotice([...studentIds, ...parentRows.map((row) => row.parentId)], "announcements", `\u041E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435 \xB7 ${ctx?.name ?? ""}`, body, "/dashboard");
   res.status(201).json({ announcement: created });
 });
 router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...staffRoles), async (req, res) => {
@@ -51830,6 +51961,10 @@ router4.post(
       title: title || "\u0416\u0438\u0432\u043E\u0439 \u0443\u0440\u043E\u043A",
       status: "open"
     }).returning();
+    if (host.role === "teacher") {
+      const students = await studentsOfClasses(classId ? [classId] : await teacherClassIds(host.id));
+      await pushNotice(students, "lessons", `\u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A: ${room?.title ?? ""}`, `\u041A\u043E\u0434: ${room?.code ?? ""}`, "/lesson");
+    }
     res.status(201).json({ room });
   }
 );
@@ -53126,6 +53261,7 @@ router5.post(
       dueAt: dueAtResult.value,
       status: requestedStatus
     }).returning();
+    await pushNotice(await studentsOfClasses([classId]), "homework", `\u041D\u043E\u0432\u043E\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${title}`, `${subject}${dueAtResult.value ? ` \xB7 \u0434\u043E ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes");
     res.status(201).json({ assignment });
   }
 );
@@ -53471,6 +53607,7 @@ router5.patch(
     if (typeof changes.score === "number") {
       const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
       const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
+      await pushNotice(await withParents([studentId]), "grades", `\u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: ${grade}`, `${info?.subject ?? ""} \u2014 ${info?.title ?? ""}`, "/classes");
       await notifyFamily(
         studentId,
         `\u{1F4DD} Yangi baho / \u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: <b>${grade}</b>
@@ -54066,6 +54203,248 @@ router7.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("tea
 });
 var course_default = router7;
 
+// src/routes/account.ts
+init_drizzle_orm();
+var import_express8 = __toESM(require_express2(), 1);
+init_src();
+var router8 = (0, import_express8.Router)();
+var viewerOf3 = (res) => res.locals.authenticatedUser;
+var isRecord7 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var perSession4 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var everyRole4 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+var changeLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many changes. Try again later.", "account-change", perSession4);
+router8.get("/me/account", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const sessionId = res.locals.sessionId;
+  const [me] = await db.select({ email: usersTable.email, subjects: usersTable.subjects, phone: usersTable.phone, twoFactorEnabled: usersTable.twoFactorEnabled }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, role: schoolMembersTable.role }).from(schoolMembersTable).innerJoin(schoolsTable, eq(schoolMembersTable.schoolId, schoolsTable.id)).where(eq(schoolMembersTable.userId, viewer.id));
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade, role: classMembersTable.role }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(eq(classMembersTable.userId, viewer.id));
+  const [previous] = await db.select({ at: sessionsTable.createdAt }).from(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), sessionId ? ne(sessionsTable.id, sessionId) : sql`true`)).orderBy(desc(sessionsTable.createdAt)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    email: me?.email ?? null,
+    subjects: Array.isArray(me?.subjects) ? me.subjects : [],
+    phone: me?.phone ?? null,
+    twoFactorEnabled: Boolean(me?.twoFactorEnabled),
+    schools: schools.map((school) => ({ ...school, number: school.name.match(/\d+/)?.[0] ?? null })),
+    classes,
+    previousLoginAt: previous?.at ?? null
+  });
+});
+router8.put("/me/account", requireAuthenticatedRole(...everyRole4), changeLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const body = isRecord7(req.body) ? req.body : {};
+  const changes = { updatedAt: /* @__PURE__ */ new Date() };
+  if ("email" in body) {
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (email && (email.length > 254 || !EMAIL_RE.test(email))) {
+      res.status(400).json({ error: "Invalid email." });
+      return;
+    }
+    changes.email = email || null;
+  }
+  if ("subjects" in body) {
+    if (!Array.isArray(body.subjects) || body.subjects.length > 8) {
+      res.status(400).json({ error: "Up to 8 subjects." });
+      return;
+    }
+    changes.subjects = [...new Set(body.subjects.filter((s) => typeof s === "string").map((s) => s.trim().slice(0, 40)).filter(Boolean))];
+  }
+  await db.update(usersTable).set(changes).where(eq(usersTable.id, viewer.id));
+  res.json({ saved: true, email: changes.email, subjects: changes.subjects });
+});
+router8.get("/me/sessions", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const current = res.locals.sessionId;
+  const rows = await db.select({ id: sessionsTable.id, device: sessionsTable.device, ip: sessionsTable.ipMasked, createdAt: sessionsTable.createdAt, lastSeenAt: sessionsTable.lastSeenAt, expiresAt: sessionsTable.expiresAt, revokedAt: sessionsTable.revokedAt }).from(sessionsTable).where(eq(sessionsTable.userId, viewer.id)).orderBy(desc(sessionsTable.createdAt)).limit(30);
+  const now = Date.now();
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    sessions: rows.map((row) => ({
+      id: row.id,
+      device: row.device ?? "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E",
+      ip: row.ip,
+      createdAt: row.createdAt,
+      lastSeenAt: row.lastSeenAt ?? row.createdAt,
+      active: !row.revokedAt && row.expiresAt.getTime() > now,
+      current: row.id === current
+    }))
+  });
+});
+router8.delete("/me/sessions/:id", requireAuthenticatedRole(...everyRole4), changeLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const id = String(req.params.id ?? "");
+  if (!isValidUuid(id)) {
+    res.status(400).json({ error: "Invalid session." });
+    return;
+  }
+  await db.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, viewer.id), isNull(sessionsTable.revokedAt)));
+  res.json({ revoked: true, current: id === res.locals.sessionId });
+});
+router8.post("/me/sessions/revoke-others", requireAuthenticatedRole(...everyRole4), changeLimiter, async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const current = res.locals.sessionId;
+  const revoked = await db.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.id, current), isNull(sessionsTable.revokedAt), gt(sessionsTable.expiresAt, /* @__PURE__ */ new Date()))).returning({ id: sessionsTable.id });
+  res.json({ revoked: revoked.length });
+});
+router8.get("/me/notification-settings", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const [row] = await db.select({ prefs: usersTable.notifyPrefs }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ prefs: mergePrefs(row?.prefs) });
+});
+router8.put("/me/notification-settings", requireAuthenticatedRole(...everyRole4), changeLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const [row] = await db.select({ prefs: usersTable.notifyPrefs }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const prefs = mergePrefs(row?.prefs);
+  const input = isRecord7(req.body) && isRecord7(req.body.prefs) ? req.body.prefs : {};
+  for (const key of NOTIFY_KINDS) if (typeof input[key] === "boolean") prefs[key] = input[key];
+  await db.update(usersTable).set({ notifyPrefs: prefs }).where(eq(usersTable.id, viewer.id));
+  res.json({ prefs });
+});
+router8.get("/me/notifications", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const items = await db.select().from(userNotificationsTable).where(eq(userNotificationsTable.userId, viewer.id)).orderBy(desc(userNotificationsTable.createdAt)).limit(30);
+  const [count] = await db.select({ n: sql`count(*)` }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, viewer.id), isNull(userNotificationsTable.readAt)));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ items: items.map(({ userId: _owner, ...item }) => item), unread: Number(count?.n ?? 0) });
+});
+router8.post("/me/notifications/read-all", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  await db.update(userNotificationsTable).set({ readAt: /* @__PURE__ */ new Date() }).where(and(eq(userNotificationsTable.userId, viewer.id), isNull(userNotificationsTable.readAt)));
+  res.json({ read: true });
+});
+router8.get("/me/teaching-stats", requireAuthenticatedRole("teacher", "school_director", "school_admin"), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const [lessons] = await db.select({ n: sql`count(*)`, last: sql`max(${lessonRoomsTable.createdAt})` }).from(lessonRoomsTable).where(eq(lessonRoomsTable.hostId, viewer.id));
+  const myClasses = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
+  const classIds = myClasses.map((row) => row.classId);
+  const [students] = classIds.length ? await db.select({ n: sql`count(distinct ${classMembersTable.userId})` }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student"))) : [{ n: 0 }];
+  const [checked] = await db.select({ n: sql`count(*)`, avg: sql`avg(${assignmentSubmissionsTable.score})`, last: sql`max(${assignmentSubmissionsTable.updatedAt})` }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id)).where(and(eq(assignmentsTable.createdBy, viewer.id), eq(assignmentSubmissionsTable.status, "checked")));
+  const [assigned] = await db.select({ n: sql`count(*)`, last: sql`max(${assignmentsTable.createdAt})` }).from(assignmentsTable).where(eq(assignmentsTable.createdBy, viewer.id));
+  const perClass = classIds.length ? await db.select({ classId: assignmentsTable.classId, name: classesTable.name, avg: sql`avg(${assignmentSubmissionsTable.score})` }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id)).innerJoin(classesTable, eq(assignmentsTable.classId, classesTable.id)).where(and(inArray(assignmentsTable.classId, classIds), sql`${assignmentSubmissionsTable.score} is not null`)).groupBy(assignmentsTable.classId, classesTable.name) : [];
+  const dates = [lessons?.last, checked?.last, assigned?.last].filter(Boolean).map((d) => new Date(d).getTime());
+  const toGrade = (score) => score === null || score === void 0 ? null : Math.round(Number(score) / 20 * 10) / 10;
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    lessons: Number(lessons?.n ?? 0),
+    students: Number(students?.n ?? 0),
+    assignments: Number(assigned?.n ?? 0),
+    checked: Number(checked?.n ?? 0),
+    averageGrade: toGrade(checked?.avg),
+    classes: perClass.map((row) => ({ id: row.classId, name: row.name, averageGrade: toGrade(row.avg) })),
+    lastActivityAt: dates.length ? new Date(Math.max(...dates)) : null
+  });
+});
+var channelOf = (value) => value === "curator" || value === "school" ? value : null;
+var supportLimiter = createRateLimiter(40, 10 * 60 * 1e3, "Too many messages. Try again later.", "support", perSession4);
+var cleanBody = (value) => typeof value === "string" ? value.replace(/\s+$/g, "").trim().slice(0, 1500) : "";
+async function schoolOf(userId) {
+  const [row] = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, userId)).limit(1);
+  return row?.schoolId ?? null;
+}
+async function staffOf(channel, schoolId) {
+  if (channel === "curator") {
+    const rows2 = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, "platform_superadmin"));
+    return rows2.map((row) => row.id);
+  }
+  if (!schoolId) return [];
+  const rows = await db.select({ id: schoolMembersTable.userId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), inArray(schoolMembersTable.role, ["school_director", "school_admin"])));
+  return rows.map((row) => row.id);
+}
+async function canStaff(viewer, channel, threadUserId) {
+  if (channel === "curator") return viewer.role === "platform_superadmin";
+  const schoolId = await schoolOf(threadUserId);
+  return Boolean(schoolId) && (await staffOf("school", schoolId)).includes(viewer.id);
+}
+var messageView = (row) => ({ id: row.id, body: row.body, fromStaff: row.fromStaff, createdAt: row.createdAt });
+router8.get("/support/thread", requireAuthenticatedRole(...everyRole4), async (req, res) => {
+  const viewer = viewerOf3(res);
+  const channel = channelOf(req.query.channel) ?? "curator";
+  const rows = await db.select().from(supportMessagesTable).where(and(eq(supportMessagesTable.threadUserId, viewer.id), eq(supportMessagesTable.channel, channel))).orderBy(supportMessagesTable.createdAt).limit(200);
+  await db.update(supportMessagesTable).set({ readByOwner: true }).where(and(eq(supportMessagesTable.threadUserId, viewer.id), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByOwner, false)));
+  const schoolId = channel === "school" ? await schoolOf(viewer.id) : null;
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ messages: rows.map(messageView), available: channel === "curator" || Boolean(schoolId) });
+});
+router8.post("/support/thread", requireAuthenticatedRole(...everyRole4), supportLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const channel = channelOf(isRecord7(req.body) ? req.body.channel : null) ?? "curator";
+  const body = cleanBody(isRecord7(req.body) ? req.body.body : "");
+  if (!body) {
+    res.status(400).json({ error: "Write a message." });
+    return;
+  }
+  const schoolId = await schoolOf(viewer.id);
+  if (channel === "school" && !schoolId) {
+    res.status(400).json({ error: "You are not linked to a school yet." });
+    return;
+  }
+  const [created] = await db.insert(supportMessagesTable).values({ threadUserId: viewer.id, channel, schoolId, authorId: viewer.id, fromStaff: false, body, readByOwner: true }).returning();
+  const [me] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  await pushNotice(await staffOf(channel, schoolId), "messages", `\u041D\u043E\u0432\u043E\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435: ${me?.name ?? ""}`, body.slice(0, 140), channel === "curator" ? "/admin" : "/school");
+  res.status(201).json({ message: messageView(created) });
+});
+router8.get("/support/inbox", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
+  const viewer = viewerOf3(res);
+  const channel = viewer.role === "platform_superadmin" ? channelOf(req.query.channel) ?? "curator" : "school";
+  let scope = sql`true`;
+  if (channel === "school") {
+    const schoolId = await schoolOf(viewer.id);
+    if (!schoolId) {
+      res.json({ threads: [] });
+      return;
+    }
+    scope = eq(supportMessagesTable.schoolId, schoolId);
+  }
+  const threads = await db.select({
+    userId: supportMessagesTable.threadUserId,
+    name: usersTable.username,
+    role: usersTable.role,
+    last: sql`max(${supportMessagesTable.createdAt})`,
+    unread: sql`count(*) filter (where not ${supportMessagesTable.readByStaff} and not ${supportMessagesTable.fromStaff})`,
+    preview: sql`(array_agg(${supportMessagesTable.body} order by ${supportMessagesTable.createdAt} desc))[1]`
+  }).from(supportMessagesTable).innerJoin(usersTable, eq(supportMessagesTable.threadUserId, usersTable.id)).where(and(eq(supportMessagesTable.channel, channel), scope)).groupBy(supportMessagesTable.threadUserId, usersTable.username, usersTable.role).orderBy(sql`max(${supportMessagesTable.createdAt}) desc`).limit(100);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ channel, threads: threads.map((row) => ({ ...row, unread: Number(row.unread), preview: (row.preview ?? "").slice(0, 120) })) });
+});
+router8.get("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
+  const viewer = viewerOf3(res);
+  const userId = String(req.params.userId ?? "");
+  const channel = viewer.role === "platform_superadmin" ? channelOf(req.query.channel) ?? "curator" : "school";
+  if (!isValidUuid(userId) || !await canStaff(viewer, channel, userId)) {
+    res.status(403).json({ error: "Not your inbox." });
+    return;
+  }
+  const rows = await db.select().from(supportMessagesTable).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel))).orderBy(supportMessagesTable.createdAt).limit(200);
+  await db.update(supportMessagesTable).set({ readByStaff: true }).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByStaff, false)));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ messages: rows.map(messageView) });
+});
+router8.post("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), supportLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const userId = String(req.params.userId ?? "");
+  const channel = viewer.role === "platform_superadmin" ? channelOf(isRecord7(req.body) ? req.body.channel : null) ?? "curator" : "school";
+  const body = cleanBody(isRecord7(req.body) ? req.body.body : "");
+  if (!body) {
+    res.status(400).json({ error: "Write a message." });
+    return;
+  }
+  if (!isValidUuid(userId) || !await canStaff(viewer, channel, userId)) {
+    res.status(403).json({ error: "Not your inbox." });
+    return;
+  }
+  const [created] = await db.insert(supportMessagesTable).values({ threadUserId: userId, channel, schoolId: await schoolOf(userId), authorId: viewer.id, fromStaff: true, body, readByStaff: true }).returning();
+  await db.update(supportMessagesTable).set({ readByStaff: true }).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByStaff, false)));
+  await pushNotice([userId], "messages", channel === "curator" ? "\u041E\u0442\u0432\u0435\u0442 \u043A\u0443\u0440\u0430\u0442\u043E\u0440\u0430 EDUVERSE" : "\u041E\u0442\u0432\u0435\u0442 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u0448\u043A\u043E\u043B\u044B", body.slice(0, 140), "/support");
+  res.status(201).json({ message: messageView(created) });
+});
+var account_default = router8;
+
 // src/lib/schema-sync.ts
 init_drizzle_orm();
 init_pg_core();
@@ -54236,9 +54615,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router8 = (0, import_express8.Router)();
-router8.use(health_default);
-router8.use(async (_req, _res, next) => {
+var router9 = (0, import_express9.Router)();
+router9.use(health_default);
+router9.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -54246,16 +54625,17 @@ router8.use(async (_req, _res, next) => {
   }
   next();
 });
-router8.use(school_tools_default);
-router8.use(course_default);
-router8.use(auth_default);
-router8.use(learning_default);
-router8.use(lesson_rooms_default);
-router8.use(schools_default);
-var routes_default = router8;
+router9.use(school_tools_default);
+router9.use(course_default);
+router9.use(account_default);
+router9.use(auth_default);
+router9.use(learning_default);
+router9.use(lesson_rooms_default);
+router9.use(schools_default);
+var routes_default = router9;
 
 // src/app.ts
-var app = (0, import_express9.default)();
+var app = (0, import_express10.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -54306,8 +54686,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express9.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express9.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express10.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express10.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {

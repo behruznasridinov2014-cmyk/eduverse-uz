@@ -15,6 +15,7 @@ import {
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
 import { escapeHtml, notifyFamily } from "../lib/notify";
+import { pushNotice, studentsOfClasses, withParents } from "../lib/inbox";
 import {
   ASSIGNMENT_STATUSES,
   GLOBAL_ADMIN_ROLES,
@@ -950,6 +951,7 @@ router.post(
       })
       .returning();
 
+    await pushNotice(await studentsOfClasses([classId]), "homework", `Новое задание: ${title}`, `${subject}${dueAtResult.value ? ` · до ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes");
     res.status(201).json({ assignment });
   },
 );
@@ -1404,6 +1406,7 @@ router.patch(
         .where(eq(assignmentsTable.id, assignmentId))
         .limit(1);
       const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
+      await pushNotice(await withParents([studentId]), "grades", `Новая оценка: ${grade}`, `${info?.subject ?? ""} — ${info?.title ?? ""}`, "/classes");
       await notifyFamily(
         studentId,
         `📝 Yangi baho / Новая оценка: <b>${grade}</b>\n${escapeHtml(info?.subject ?? "")} — ${escapeHtml(info?.title ?? "")}`,

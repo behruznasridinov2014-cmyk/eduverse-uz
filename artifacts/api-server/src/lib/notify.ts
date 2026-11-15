@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { db, parentLinksTable, telegramNotifyTable } from "@workspace/db";
 import { sendTelegramMessage, telegramBotConfigured } from "./telegram";
 import { logger } from "./logger";
+import { usersWanting } from "./inbox";
 
 /**
  * Telegram notifications for school events (absence, grade, announcement).
@@ -13,10 +14,12 @@ import { logger } from "./logger";
 export async function notifyUsers(userIds: string[], text: string): Promise<number> {
   if (!telegramBotConfigured() || userIds.length === 0) return 0;
   try {
+    const wanted = await usersWanting(userIds, "telegram");
+    if (wanted.length === 0) return 0;
     const rows = await db
       .select({ chatId: telegramNotifyTable.chatId })
       .from(telegramNotifyTable)
-      .where(and(inArray(telegramNotifyTable.userId, [...new Set(userIds)]), isNotNull(telegramNotifyTable.chatId)));
+      .where(and(inArray(telegramNotifyTable.userId, wanted), isNotNull(telegramNotifyTable.chatId)));
     let sent = 0;
     await Promise.all(
       rows.map(async (row) => {

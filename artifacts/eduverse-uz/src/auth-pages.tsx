@@ -32,7 +32,8 @@ import type { AppLanguage } from './localization';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
-import { AvatarPicker, PasswordChange, TelegramConnect, useMustChangePassword } from './school-tools';
+import { UserAvatar, useMustChangePassword } from './school-tools';
+import { ProfileSections } from './account';
 
 type AuthCopy = {
   signIn: string;
@@ -1101,28 +1102,13 @@ export function ProfilePage({
   return (
     <section className="profile" data-locale-preserve="true">
       <div className="profile-head">
-        <AvatarPicker userId={user.id} name={user.username} language={language} />
+        <UserAvatar userId={user.id} name={user.username} className="avatar avatar-lg" />
         <div>
           <h1>{user.username}</h1>
           <p>{ROLE_LABELS[language][user.role]}</p>
         </div>
       </div>
-      <div className="panel">
-        <h2>{text('Hisob ma’lumotlari', 'Данные аккаунта', 'Account')}</h2>
-        <div className="profile-rows">
-          <div className="profile-row"><span>{copy.username}</span><b>{user.username}</b></div>
-          <div className="profile-row"><span>{copy.login}</span><b>{user.login}</b></div>
-          <div className="profile-row"><span>{copy.role}</span><b>{ROLE_LABELS[language][user.role]}</b></div>
-          <div className="profile-row"><span>{copy.createdAt}</span><b>{new Date(user.createdAt).toLocaleDateString(locale, { dateStyle: 'long' })}</b></div>
-        </div>
-      </div>
-      <PasswordChange language={language} mustChange={mustChange} />
-      {user.role === 'parent' && <TelegramConnect language={language} />}
-      <div className="panel">
-        <h2>{text('Boshqa qurilmada kirish', 'Вход на другом устройстве', 'Sign in on another device')}</h2>
-        <p className="muted">{text('Kompyuterdagi kirish sahifasida QR kodni oching va uni shu telefon bilan skanerlang.', 'Откройте QR-код на странице входа на компьютере и отсканируйте его этим телефоном.', 'Open the QR code on the sign-in page of a computer and scan it with this phone.')}</p>
-        <div className="profile-buttons"><QrScannerButton language={language} className="btn" /></div>
-      </div>
+      <ProfileSections user={user} language={language} initialTab={mustChange ? 'security' : undefined} />
       {error && <FormError>{error}</FormError>}
       <div className="profile-buttons">
         <button className="btn danger" onClick={() => void signOut()} disabled={auth.isSubmitting}>

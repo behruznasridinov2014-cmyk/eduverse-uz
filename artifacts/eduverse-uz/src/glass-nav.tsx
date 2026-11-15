@@ -250,3 +250,15 @@ export function ThemeSwitch({ theme, onChange, language }: { theme: Theme; onCha
     </div>
   );
 }
+
+/** Liquid-glass switch with a spring knob (keyboard: Space / Enter). */
+export function GlassSwitch({ checked, onChange, label, hint, disabled = false }: { checked: boolean; onChange: (value: boolean) => void; label: string; hint?: string; disabled?: boolean }) {
+  return (
+    <label className={`glass-switch-row ${disabled ? 'is-disabled' : ''}`}>
+      <span className="glass-switch-text"><b>{label}</b>{hint && <small>{hint}</small>}</span>
+      <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} className={`glass-switch ${checked ? 'on' : ''}`} onClick={() => onChange(!checked)}>
+        <span className="glass-switch-knob" />
+      </button>
+    </label>
+  );
+}

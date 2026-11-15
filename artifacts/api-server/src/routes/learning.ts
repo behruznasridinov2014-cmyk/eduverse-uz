@@ -18,6 +18,7 @@ import {
 } from "@workspace/db";
 import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
 import { escapeHtml, notifyFamily, notifyUsers } from "../lib/notify";
+import { pushNotice } from "../lib/inbox";
 import {
   canManageClass,
   cleanText,
@@ -1093,6 +1094,7 @@ router.post("/classes/:classId/announcements", requireAuthenticatedRole(...staff
   const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
   const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
   await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `📢 <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
+  await pushNotice([...studentIds, ...parentRows.map((row) => row.parentId)], "announcements", `Объявление · ${ctx?.name ?? ""}`, body, "/dashboard");
   res.status(201).json({ announcement: created });
 });
 
