@@ -52,10 +52,26 @@ export function Pendulum({ language }: { language: Language }) {
   const g = PLANETS.find((item) => item.id === planet)!.g;
   const period = 2 * Math.PI * Math.sqrt(length / g);
   const state = useRef({ theta: (30 * Math.PI) / 180, omega: 0, trail: [] as Array<[number, number]>, swings: 0, lastSign: 1, time: 0 });
+  // The animation reads the settings from a ref, so moving a slider never restarts the swing.
+  const params = useRef({ g, length, angle, running });
+  const shown = useRef({ length });
 
   useEffect(() => {
-    state.current = { theta: (angle * Math.PI) / 180, omega: 0, trail: [], swings: 0, lastSign: 1, time: 0 };
-  }, [angle, length, planet]);
+    const previous = params.current;
+    const s = state.current;
+    if (previous.angle !== angle) {
+      // keep the phase of the swing, change only its amplitude
+      const oldA = (previous.angle * Math.PI) / 180;
+      const newA = (angle * Math.PI) / 180;
+      const w = Math.sqrt(previous.g / previous.length);
+      const cos = Math.max(-1, Math.min(1, s.theta / oldA));
+      const sinMagnitude = Math.sqrt(Math.max(0, 1 - cos * cos));
+      const sin = s.omega === 0 ? 0 : -Math.sign(s.omega) * sinMagnitude;
+      s.theta = newA * cos;
+      s.omega = -newA * w * sin;
+    }
+    params.current = { g, length, angle, running };
+  }, [g, length, angle, running]);
 
   useEffect(() => {
     const element = canvas.current;
@@ -67,6 +83,10 @@ export function Pendulum({ language }: { language: Language }) {
       const dt = Math.min(0.033, (now - last) / 1000);
       last = now;
       const s = state.current;
+      const { g, length: target, angle, running } = params.current;
+      // the string grows or shrinks smoothly to the new length instead of jumping
+      shown.current.length += (target - shown.current.length) * Math.min(1, dt * 8);
+      const length = shown.current.length;
       if (running) {
         // semi-implicit Euler on the full non-linear equation
         for (let i = 0; i < 4; i += 1) {
@@ -77,14 +97,14 @@ export function Pendulum({ language }: { language: Language }) {
       }
       const ratio = window.devicePixelRatio || 1;
       const w = element.clientWidth, h = element.clientHeight;
-      if (element.width !== w * ratio) { element.width = w * ratio; element.height = h * ratio; }
+      if (element.width !== Math.round(w * ratio) || element.height !== Math.round(h * ratio)) { element.width = Math.round(w * ratio); element.height = Math.round(h * ratio); }
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, w, h);
       const pivot = { x: w / 2, y: 36 };
       const px = Math.min(h - 90, w * 0.42) / 2.2; // pixels per metre
       const bob = { x: pivot.x + Math.sin(s.theta) * length * px, y: pivot.y + Math.cos(s.theta) * length * px };
       s.trail.push([bob.x, bob.y]);
-      if (s.trail.length > 70) s.trail.shift();
+      while (s.trail.length > (Math.abs(target - length) > 0.01 ? 12 : 70)) s.trail.shift();
       // ceiling
       context.fillStyle = '#3A3A42';
       context.fillRect(pivot.x - 70, pivot.y - 8, 140, 6);
@@ -130,7 +150,7 @@ export function Pendulum({ language }: { language: Language }) {
     };
     frame = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frame);
-  }, [g, length, angle, running]);
+  }, []);
 
   return (
     <div className="chem-grid">
@@ -178,7 +198,7 @@ export function Circuit({ language }: { language: Language }) {
     const draw = () => {
       const ratio = window.devicePixelRatio || 1;
       const w = element.clientWidth, h = element.clientHeight;
-      if (element.width !== w * ratio) { element.width = w * ratio; element.height = h * ratio; }
+      if (element.width !== Math.round(w * ratio) || element.height !== Math.round(h * ratio)) { element.width = Math.round(w * ratio); element.height = Math.round(h * ratio); }
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, w, h);
       const box = { l: w * 0.15, r: w * 0.85, t: h * 0.22, b: h * 0.78 };

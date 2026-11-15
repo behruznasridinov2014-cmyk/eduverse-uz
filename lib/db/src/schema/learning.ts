@@ -296,3 +296,37 @@ export const labReportsTable = pgTable("lab_reports", {
   grade: integer("grade"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("lab_reports_student_idx").on(table.studentId)]);
+
+/** A student's (or teacher's) own drawings on top of a textbook page — like writing in a notebook. */
+export const bookAnnotationsTable = pgTable("book_annotations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  book: text("book").notNull(),
+  page: integer("page").notNull(),
+  /** Strokes in page-relative coordinates (0…1), so they fit any zoom. */
+  strokes: jsonb("strokes").notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("book_annotations_user_book_page_unique").on(table.userId, table.book, table.page)]);
+
+/** Where a class stopped in a textbook: one row per topic covered in class, with its date. */
+export const courseProgressTable = pgTable("course_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  topicKey: text("topic_key").notNull(),
+  /** Lesson date, YYYY-MM-DD. */
+  doneOn: text("done_on").notNull(),
+  markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("course_progress_class_topic_unique").on(table.classId, table.topicKey),
+  index("course_progress_class_idx").on(table.classId),
+]);
+
+/** Lessons per week a class has for one textbook (used for the finish forecast). */
+export const coursePaceTable = pgTable("course_pace", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  book: text("book").notNull(),
+  lessonsPerWeek: integer("lessons_per_week").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("course_pace_class_book_unique").on(table.classId, table.book)]);

@@ -221,7 +221,7 @@ export function MoleculeView({ molecule, height = 320 }: { molecule: Molecule; h
       const ratio = window.devicePixelRatio || 1;
       const width = canvas.clientWidth;
       const h = canvas.clientHeight;
-      if (canvas.width !== width * ratio) { canvas.width = width * ratio; canvas.height = h * ratio; }
+      if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(h * ratio)) { canvas.width = Math.round(width * ratio); canvas.height = Math.round(h * ratio); }
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, h);
       if (angle.current.auto && !drag.current) angle.current.y += 0.008;

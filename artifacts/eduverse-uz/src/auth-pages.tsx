@@ -32,7 +32,7 @@ import type { AppLanguage } from './localization';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
-import { PasswordChange, TelegramConnect, useMustChangePassword } from './school-tools';
+import { AvatarPicker, PasswordChange, TelegramConnect, useMustChangePassword } from './school-tools';
 
 type AuthCopy = {
   signIn: string;
@@ -1096,12 +1096,12 @@ export function ProfilePage({
   }
 
   const locale = language === 'Русский' ? 'ru-RU' : 'en-GB';
-  const mustChange = useMustChangePassword();
+  const mustChange = useMustChangePassword(user.id);
   const text = (uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
   return (
     <section className="profile" data-locale-preserve="true">
       <div className="profile-head">
-        <span className="avatar">{user.username.slice(0, 1).toLocaleUpperCase()}</span>
+        <AvatarPicker userId={user.id} name={user.username} language={language} />
         <div>
           <h1>{user.username}</h1>
           <p>{ROLE_LABELS[language][user.role]}</p>
@@ -1117,7 +1117,7 @@ export function ProfilePage({
         </div>
       </div>
       <PasswordChange language={language} mustChange={mustChange} />
-      <TelegramConnect language={language} />
+      {user.role === 'parent' && <TelegramConnect language={language} />}
       <div className="panel">
         <h2>{text('Boshqa qurilmada kirish', 'Вход на другом устройстве', 'Sign in on another device')}</h2>
         <p className="muted">{text('Kompyuterdagi kirish sahifasida QR kodni oching va uni shu telefon bilan skanerlang.', 'Откройте QR-код на странице входа на компьютере и отсканируйте его этим телефоном.', 'Open the QR code on the sign-in page of a computer and scan it with this phone.')}</p>

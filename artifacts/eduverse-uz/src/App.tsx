@@ -1,5 +1,6 @@
 import './app.css';
 import './theme.css';
+import './glass.css';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocaleDom } from './localization';
 import { Link, Redirect, useLocation } from 'wouter';
@@ -11,9 +12,11 @@ import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
 import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet, ParentLinkForm } from './cabinets';
-import { LessonPlanner, SchoolImport, TelegramConnect, useMustChangePassword } from './school-tools';
+import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { LabReports } from './lab-work';
 import { CoursePage } from './course';
+import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
+import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
@@ -67,6 +70,7 @@ function App(){
   const [saved,setSaved]=useSavedState<string[]>('bookmarks',[]);
   const [notes,setNotes]=useSavedState<Record<string,string>>('notes',{});
   const [mobileOpen,setMobileOpen]=useState(false);
+  const [theme,setTheme]=useTheme();
   const school=useSchoolData(auth.user,auth.status);
   // Hooks stay above every early return (sign-in pages, loading states).
   const mustChangePassword=useMustChangePassword(auth.user?.id??null);
@@ -133,10 +137,10 @@ function App(){
         <span><span className="brand-title">EDUVERSE</span><span className="brand-sub">{membership?.schoolName??'UZ'}</span></span>
       </Link>
       <nav className="nav-list" aria-label="Main navigation">
-        {visible.map(item=><Link key={item.href} href={item.href} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon"><item.icon/></span><span>{navLabel(lang,item.label)}</span></Link>)}
+        {visible.map(item=><Link key={item.href} href={item.href} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon">{(()=>{const Icon=NAV_ICON[item.label];return Icon?<Icon size={18}/>:<item.icon/>})()}</span><span>{navLabel(lang,item.label)}</span></Link>)}
       </nav>
       {auth.user&&<Link href="/profile" className={`side-user ${location==='/profile'?'active':''}`} onClick={()=>setMobileOpen(false)} data-locale-preserve="true">
-        <span className="avatar">{auth.user.username.slice(0,1).toLocaleUpperCase()}</span>
+        <UserAvatar userId={auth.user.id} name={auth.user.username}/>
         <span className="side-user-text"><b>{auth.user.username}</b><small>{getRoleLabel(lang,auth.user.role)}</small></span>
         <Settings size={16}/>
       </Link>}
@@ -150,11 +154,12 @@ function App(){
         </div>
         <div className="top-actions">
           {auth.status==='offline'&&<button type="button" className="tag gold" onClick={()=>void auth.refreshSession()}>{lang==='Uzbek'?'Internet yo‘q':lang==='Русский'?'Нет связи':'Offline'}</button>}
-          <div className="lang-switch" role="group" aria-label="Language">
-            <span className="lang-thumb" aria-hidden="true" style={{transform:`translateX(${(['Uzbek','Русский','English'] as Lang[]).indexOf(lang)*40}px)`}}/>
+          <ThemeSwitch theme={theme} onChange={setTheme} language={lang}/>
+          <div className="lang-switch glass-seg" role="group" aria-label="Language">
+            <span className="lang-thumb" aria-hidden="true" style={{transform:`translateX(calc(var(--seg-w) * ${(['Uzbek','Русский','English'] as Lang[]).indexOf(lang)}))`}}/>
             {(['Uzbek','Русский','English'] as Lang[]).map(value=><button key={value} type="button" className={lang===value?'active':''} onClick={()=>changeLang(value)}>{value==='Uzbek'?'UZ':value==='Русский'?'RU':'EN'}</button>)}
           </div>
-          {auth.user&&<Link href="/profile" className="top-avatar" aria-label={auth.user.username} title={auth.user.username}><span className="avatar">{auth.user.username.slice(0,1).toLocaleUpperCase()}</span></Link>}
+          {auth.user&&<Link href="/profile" className="top-avatar" aria-label={auth.user.username} title={auth.user.username}><UserAvatar userId={auth.user.id} name={auth.user.username}/></Link>}
         </div>
       </header>
       {notice?.kind==='switched'&&<div className="account-banner" role="alert">
@@ -176,7 +181,7 @@ function App(){
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
         :location==='/homework/scan'||location==='/schedule'?<Redirect to={location==='/schedule'?'/dashboard':'/classes'}/>
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
-        :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} goBoard={()=>navigate('/board')}/>
+        :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} />
         :location==='/board'?<BoardPage/>
         :location==='/lab'&&auth.user?<ChemLabPage language={lang} user={auth.user}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
@@ -186,7 +191,11 @@ function App(){
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
         :<NotFound language={lang} goHome={()=>navigate('/dashboard')}/>}
       </div>
-      <nav className="mobile-nav" aria-label="Mobile navigation">{visible.slice(0,5).map(item=><Link key={item.href} href={item.href} className={`tone-${item.tone} ${active(item.href)?'active':''}`}><item.icon/><span>{NAV_SHORT[lang][item.label]??navLabel(lang,item.label)}</span></Link>)}</nav>
+      {userRole&&<nav className="tabbar-dock" aria-label="Mobile navigation">
+        <GlassTabs className="tabbar" ariaLabel="Mobile navigation" activeKey={MOBILE_NAV[userRole].find(label=>{const item=NAV_ITEMS.find(entry=>entry.label===label);return item&&active(item.href)})??null}
+          onSelect={label=>{const item=NAV_ITEMS.find(entry=>entry.label===label);if(item)navigate(item.href)}}
+          items={MOBILE_NAV[userRole].map(label=>{const Icon=NAV_ICON[label];return{key:label,label:NAV_SHORT[lang][label]??navLabel(lang,label),icon:Icon?<Icon size={25}/>:null}})}/>
+      </nav>}
     </main>
   </div>
  }
@@ -216,10 +225,21 @@ const ROLE_NAV:Record<User['role'],string[]>={
   ministry_admin:['Overview','Administration'],
   platform_superadmin:['Overview','Administration'],
 };
+/** Phone bottom bar: the five most used sections of each role (the rest are in the ☰ menu). */
+const MOBILE_NAV:Record<User['role'],string[]>={
+  student:['Overview','Lesson room','Topics & 3D','Chemistry lab','Homework'],
+  teacher:['Overview','Lesson room','Topics & 3D','Attendance','Teacher workspace'],
+  parent:['Overview','Family view','Textbook library'],
+  school_director:['Overview','School insights','Classes','Attendance'],
+  school_admin:['Overview','School insights','Classes','Attendance'],
+  education_admin:['Overview','Administration'],
+  ministry_admin:['Overview','Administration'],
+  platform_superadmin:['Overview','Administration'],
+};
 const NAV_SHORT:Record<Lang,Record<string,string>>={
-  Uzbek:{Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Attendance':'Davomat','Teacher workspace':'Vazifalar',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
-  Русский:{Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Attendance':'Давомат','Teacher workspace':'Задания',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
-  English:{Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Attendance':'Attendance','Teacher workspace':'Tasks',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
+  Uzbek:{Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
+  Русский:{Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
+  English:{Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
 };
 function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
 function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
@@ -358,7 +378,7 @@ function LibraryPage({ui,progress,saved,onOpen}:{ui:Lang;progress:Record<string,
  </>
 }
 function Field({label,placeholder,value,onChange}:{label:string;placeholder?:string;value?:string;onChange?:(v:string)=>void}){return <div className="control"><label>{label}</label><input placeholder={placeholder} value={value} onChange={e=>onChange?.(e.target.value)}/></div>}
-function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote,goBoard}:{language:string;book:Book;page:number;setPage:(p:number)=>void;saved:string[];setSaved:(v:string[])=>void;note:string;setNote:(v:string)=>void;goBoard:()=>void}){
+function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{language:string;book:Book;page:number;setPage:(p:number)=>void;saved:string[];setSaved:(v:string[])=>void;note:string;setNote:(v:string)=>void}){
   const [zoom,setZoom]=useState(15);const [query,setQuery]=useState('');const [fullscreen,setFullscreen]=useState(false);const [message,setMessage]=useState('');const [highlights,setHighlights]=useSavedState<string[]>('highlights',[]);const key=`${book.id}:${page}`;const isSaved=saved.includes(key);const isHighlighted=highlights.includes(key);
  const chapter=book.chapters[Math.min(book.chapters.length-1,Math.floor((page-1)/8))];
  const sampleSearchText='demonstration lesson question investigate together known needs to be found representation clearer school garden 24 seedlings 4 equal rows relationship drawing table number sentence strategy calculating answer reasonable explain reasoning classmate mathematical idea';
@@ -369,7 +389,7 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote,goBo
     return()=>{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{})};
    },[fullscreen]);
  function toggleSave(){setSaved(isSaved?saved.filter(x=>x!==key):[...saved,key]);setMessage(isSaved?'Bookmark removed':'Bookmark saved on this device');setTimeout(()=>setMessage(''),1800)}
- return <><PageHeading eyebrow={`${book.subject} · Grade 7 · ${book.language}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?'Exit focus':'Focus mode'}</button><button className="btn primary" onClick={goBoard}><Presentation/> Open on board</button></PageHeading>
+ return <><PageHeading eyebrow={`${book.subject} · Grade 7 · ${book.language}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
  {book.pdf?(
     <div className="reader-pdf"><PdfViewer url={book.pdf} title={book.title} language={language}/></div>
   ):(
@@ -425,22 +445,21 @@ type TeacherTab='tasks'|'journal'|'plan'|'class'|'topics';
 function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;user:User;language:Lang;goBoard:()=>void;onOpen:(path:string)=>void}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  const [tab,setTab]=useSavedState<TeacherTab>('teacher-tab','tasks');
- const tabs:Array<[TeacherTab,string,typeof Home]>=[
-  ['tasks',text('Homework','Задания','Vazifalar'),NotebookPen],
-  ['journal',text('Grades','Журнал','Jurnal'),ClipboardCheck],
-  ['plan',text('Lesson plan','План урока','Dars rejasi'),Sparkles],
-  ['class',text('My class','Мой класс','Sinfim'),Users],
-  ['topics',text('My AI topics','Свои темы','O‘z mavzularim'),Atom],
+ const tabs:Array<[TeacherTab,string,ReactNode]>=[
+  ['tasks',text('Homework','Задания','Vazifalar'),<IconHomework size={20}/>],
+  ['journal',text('Grades','Журнал','Jurnal'),<IconJournal size={20}/>],
+  ['plan',text('Lesson plan','План урока','Dars rejasi'),<IconPlan size={20}/>],
+  ['class',text('My class','Мой класс','Sinfim'),<IconClasses size={20}/>],
+  ['topics',text('My topics','Свои темы','O‘z mavzularim'),<IconTopic size={20}/>],
  ];
+ const swipe=useSwipeTabs<TeacherTab>(tabs.map(([key])=>key),tab,setTab);
  const ready=school.status==='ready'&&school.hasServerClasses;
  return <>
   <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle={text('Everything for the class, step by step.','Всё для класса — по разделам.','Sinf uchun hammasi — bo‘limlarda.')}><button className="btn" onClick={goBoard}><PenTool/> {text('Board','Доска','Doska')}</button></PageHeading>
-  <div className="cabinet-tabs-bar" role="tablist">
-   {tabs.map(([key,label,Icon])=><button key={key} type="button" role="tab" aria-selected={tab===key} className={`cabinet-tab ${tab===key?'active':''}`} onClick={()=>setTab(key)}><Icon size={16}/>{label}</button>)}
-  </div>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {!ready&&tab!=='plan'&&tab!=='topics'
    ?<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>
-   :<div className="page-stack cabinet-pane" key={tab}>
+   :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
     {tab==='tasks'&&<ServerTeachingPanel school={school} language={language}/>}
     {tab==='journal'&&<><GradeJournal school={school} language={language}/><LabReports language={language}/></>}
     {tab==='plan'&&<LessonPlanner language={language}/>}
@@ -452,7 +471,7 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
 function ParentPage({language}:{language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('Family view','Кабинет семьи','Oila kabineti')} title={text('Your child’s learning','Учёба вашего ребёнка','Farzandingiz ta’limi')} subtitle={text('Grades, attendance and homework in one place.','Оценки, посещаемость и домашние задания в одном месте.','Baholar, davomat va uy vazifalari bir joyda.')}/>
-  <ParentCabinet language={language}/><div style={{marginTop:16}}><TelegramConnect language={language}/></div></>;
+  <ParentCabinet language={language}/></>;
 }
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;

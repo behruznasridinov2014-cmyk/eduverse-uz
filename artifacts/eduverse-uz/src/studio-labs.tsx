@@ -105,7 +105,7 @@ export function MathLab({ language, initial = 'cube' }: { language: Language; in
     const draw = () => {
       const ratio = window.devicePixelRatio || 1;
       const w = element.clientWidth, hh = element.clientHeight;
-      if (element.width !== w * ratio) { element.width = w * ratio; element.height = hh * ratio; }
+      if (element.width !== Math.round(w * ratio) || element.height !== Math.round(hh * ratio)) { element.width = Math.round(w * ratio); element.height = Math.round(hh * ratio); }
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, w, hh);
       if (rot.current.auto && !rot.current.drag) rot.current.y += 0.006;

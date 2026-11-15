@@ -436,4 +436,36 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
   res.json({ changed: true });
 });
 
+/* -------------------------------------------------------------------------- */
+/* 6. Optional profile photo (the name stays as the school set it)            */
+/* -------------------------------------------------------------------------- */
+
+const AVATAR_MAX = 80 * 1024;
+const AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
+const avatarLimiter = createRateLimiter(20, 15 * 60 * 1000, "Too many photo changes. Try again later.", "avatar", perSession);
+
+router.get("/me/avatar", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const [row] = await db.select({ avatar: usersTable.avatar }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ avatar: row?.avatar ?? null });
+});
+
+router.put("/me/avatar", requireAuthenticatedRole(...everyRole), avatarLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const avatar = isRecord(req.body) && typeof req.body.avatar === "string" ? req.body.avatar : "";
+  if (avatar.length > AVATAR_MAX || !AVATAR_RE.test(avatar)) {
+    res.status(400).json({ error: "The photo must be a JPEG, PNG or WebP image under 80 KB." });
+    return;
+  }
+  await db.update(usersTable).set({ avatar, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ avatar });
+});
+
+router.delete("/me/avatar", requireAuthenticatedRole(...everyRole), avatarLimiter, async (_req, res) => {
+  const viewer = viewerOf(res);
+  await db.update(usersTable).set({ avatar: null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ avatar: null });
+});
+
 export default router;

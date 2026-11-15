@@ -54,7 +54,7 @@ export function PendulumLabWork({ language, user }: { language: Language; user: 
       }
       const ratio = window.devicePixelRatio || 1;
       const w = element.clientWidth, h = element.clientHeight;
-      if (element.width !== w * ratio) { element.width = w * ratio; element.height = h * ratio; }
+      if (element.width !== Math.round(w * ratio) || element.height !== Math.round(h * ratio)) { element.width = Math.round(w * ratio); element.height = Math.round(h * ratio); }
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, w, h);
       const pivot = { x: w / 2, y: 26 };

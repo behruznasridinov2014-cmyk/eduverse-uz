@@ -266,7 +266,7 @@ export function LessonRoomPage({
             </div>
           </section>
         )}
-        <div className="grid grid-2">
+        <div className="lobby-single">
           {isTeacher && (
             <section className="panel reveal-up lobby-card">
               <h2><Video size={17} /> {copy.hostCard}</h2>
@@ -293,7 +293,7 @@ export function LessonRoomPage({
               </button>
             </section>
           )}
-          <section className="panel reveal-up lobby-card">
+          {!isTeacher && <section className="panel reveal-up lobby-card">
             <h2><Users size={17} /> {copy.joinCard}</h2>
             <p className="muted">{copy.joinHint}</p>
             <div className="control">
@@ -309,7 +309,7 @@ export function LessonRoomPage({
             <button type="button" className="btn primary" disabled={busy || joinCode.trim().length < 7} onClick={() => void joinByCode()}>
               <ArrowLeft size={15} /> {copy.joinAction}
             </button>
-          </section>
+          </section>}
         </div>
       </div>
     );
@@ -1234,7 +1234,7 @@ const COPY: Record<Language, Record<string, string>> = {
     chooseTopic: 'Тема урока',
     noTopic: 'Без темы (пустая комната)',
     hostAction: 'Создать комнату',
-    joinCard: 'Подключиться (ученик)',
+    joinCard: 'Подключиться к уроку',
     joinHint: 'Введите код, который показал учитель.',
     joinCode: 'Код урока',
     joinAction: 'Войти в урок',
@@ -1307,7 +1307,7 @@ const COPY: Record<Language, Record<string, string>> = {
     chooseTopic: 'Dars mavzusi',
     noTopic: 'Mavzusiz (bo‘sh xona)',
     hostAction: 'Xona yaratish',
-    joinCard: 'Ulanish (o‘quvchi)',
+    joinCard: 'Darsga ulanish',
     joinHint: 'O‘qituvchi ko‘rsatgan kodni kiriting.',
     joinCode: 'Dars kodi',
     joinAction: 'Darsga kirish',
@@ -1380,7 +1380,7 @@ const COPY: Record<Language, Record<string, string>> = {
     chooseTopic: 'Lesson topic',
     noTopic: 'No topic (empty room)',
     hostAction: 'Create room',
-    joinCard: 'Join (student)',
+    joinCard: 'Join a lesson',
     joinHint: 'Enter the code the teacher shared.',
     joinCode: 'Lesson code',
     joinAction: 'Join lesson',

@@ -41,6 +41,8 @@ export const usersTable = pgTable(
     phone: text("phone"),
     /** True for accounts created by the school: the first sign-in asks to change the password. */
     mustChangePassword: boolean("must_change_password").notNull().default(false),
+    /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
+    avatar: text("avatar"),
     /** AES-256-GCM encrypted TOTP secret (base32 outside crypto layer). */
     twoFactorSecret: text("two_factor_secret"),
     /** Telegram chat id that is allowed to receive 2FA codes. */

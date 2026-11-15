@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { Bell, ClipboardList, Download, FileSpreadsheet, Printer, Send, Sparkles, Upload } from 'lucide-react';
+import { Bell, Camera, ClipboardList, Download, FileSpreadsheet, KeyRound, Printer, Send, Sparkles, Trash2, Upload } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
 
@@ -323,6 +323,8 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(mustChange);
+  useEffect(() => { if (mustChange) setOpen(true); }, [mustChange]);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError('');
@@ -334,6 +336,7 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
       setMessage(t(language, 'Parol o‘zgartirildi.', 'Пароль изменён.', 'Password changed.'));
       window.dispatchEvent(new Event('eduverse:password-changed'));
       setCurrent(''); setNext(''); setRepeat('');
+      setOpen(false);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     } finally {
@@ -341,17 +344,27 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
     }
   }
   return (
-    <section className={`panel ${mustChange ? 'must-change' : ''}`}>
-      <h2>{t(language, 'Parolni o‘zgartirish', 'Сменить пароль', 'Change password')}</h2>
-      <p className="muted">{mustChange
-        ? t(language, 'Maktab bergan vaqtinchalik parolni o‘zingizning parolingizga almashtiring.', 'Замените временный пароль от школы на свой.', 'Replace the temporary password from the school with your own.')
-        : t(language, 'Ism va login maktab tomonidan belgilanadi, parolni o‘zingiz o‘zgartirasiz.', 'Имя и логин задаёт школа, пароль вы меняете сами.', 'The school sets your name and login; you change the password.')}</p>
-      <form className="password-form" onSubmit={submit}>
-        <input className="input" type="password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} placeholder={t(language, 'Hozirgi parol', 'Текущий пароль', 'Current password')} required />
-        <input className="input" type="password" autoComplete="new-password" minLength={8} value={next} onChange={(event) => setNext(event.target.value)} placeholder={t(language, 'Yangi parol (8+ belgi)', 'Новый пароль (от 8 символов)', 'New password (8+ chars)')} required />
-        <input className="input" type="password" autoComplete="new-password" minLength={8} value={repeat} onChange={(event) => setRepeat(event.target.value)} placeholder={t(language, 'Yangi parolni takrorlang', 'Повторите новый пароль', 'Repeat new password')} required />
-        <button type="submit" className="btn primary" disabled={busy}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
-      </form>
+    <section className={`panel password-panel ${mustChange ? 'must-change' : ''}`}>
+      <div className="password-head">
+        <div>
+          <h2><KeyRound size={16} /> {t(language, 'Parol', 'Пароль', 'Password')}</h2>
+          <p className="muted">{mustChange
+            ? t(language, 'Maktab bergan vaqtinchalik parolni o‘zingizning parolingizga almashtiring.', 'Замените временный пароль от школы на свой.', 'Replace the temporary password from the school with your own.')
+            : t(language, 'Ism va login maktab tomonidan belgilanadi, parolni o‘zingiz o‘zgartirasiz.', 'Имя и логин задаёт школа, пароль вы меняете сами.', 'The school sets your name and login; you change the password.')}</p>
+        </div>
+        {!open && <button type="button" className="btn" onClick={() => { setOpen(true); setMessage(''); }}>{t(language, 'Parolni o‘zgartirish', 'Сменить пароль', 'Change password')}</button>}
+      </div>
+      {open && (
+        <form className="password-form reveal" onSubmit={submit}>
+          <input className="input" type="password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} placeholder={t(language, 'Hozirgi parol', 'Текущий пароль', 'Current password')} required autoFocus />
+          <input className="input" type="password" autoComplete="new-password" minLength={8} value={next} onChange={(event) => setNext(event.target.value)} placeholder={t(language, 'Yangi parol (8+ belgi)', 'Новый пароль (от 8 символов)', 'New password (8+ chars)')} required />
+          <input className="input" type="password" autoComplete="new-password" minLength={8} value={repeat} onChange={(event) => setRepeat(event.target.value)} placeholder={t(language, 'Yangi parolni takrorlang', 'Повторите новый пароль', 'Repeat new password')} required />
+          <div className="password-actions">
+            <button type="submit" className="btn primary" disabled={busy}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
+            {!mustChange && <button type="button" className="btn ghost" onClick={() => { setOpen(false); setError(''); }}>{t(language, 'Bekor qilish', 'Отмена', 'Cancel')}</button>}
+          </div>
+        </form>
+      )}
       {message && <div className="notice success">{message}</div>}
       {error && <div className="notice" role="alert">{error}</div>}
     </section>
@@ -371,4 +384,117 @@ export function useMustChangePassword(userId: string | null = 'self'): boolean {
     return () => { active = false; window.removeEventListener('eduverse:password-changed', onChanged); };
   }, [userId]);
   return must;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Optional profile photo                                                       */
+/* -------------------------------------------------------------------------- */
+
+const avatarCache: { owner: string | null; value: string | null | undefined } = { owner: null, value: undefined };
+
+/** The signed-in user's photo (null = letter avatar). Shared by the sidebar, the header and the profile. */
+export function useAvatar(userId: string | null): string | null {
+  const [avatar, setAvatar] = useState<string | null>(avatarCache.owner === userId ? avatarCache.value ?? null : null);
+  useEffect(() => {
+    if (!userId) { setAvatar(null); return; }
+    let active = true;
+    const onChanged = () => { if (avatarCache.owner === userId) setAvatar(avatarCache.value ?? null); };
+    window.addEventListener('eduverse:avatar-changed', onChanged);
+    if (avatarCache.owner !== userId || avatarCache.value === undefined) {
+      avatarCache.owner = userId;
+      avatarCache.value = undefined;
+      void customFetch<{ avatar: string | null }>('/api/me/avatar', { method: 'GET' })
+        .then((response) => {
+          if (avatarCache.owner !== userId) return;
+          avatarCache.value = response.avatar;
+          window.dispatchEvent(new Event('eduverse:avatar-changed'));
+          if (active) setAvatar(response.avatar);
+        })
+        .catch(() => {});
+    } else {
+      setAvatar(avatarCache.value ?? null);
+    }
+    return () => { active = false; window.removeEventListener('eduverse:avatar-changed', onChanged); };
+  }, [userId]);
+  return avatar;
+}
+
+function publishAvatar(value: string | null) {
+  avatarCache.value = value;
+  window.dispatchEvent(new Event('eduverse:avatar-changed'));
+}
+
+/** Square crop + resize to 256 px JPEG so the photo stays small (about 15–40 KB). */
+async function shrinkPhoto(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('image'));
+      element.src = url;
+    });
+    const side = Math.min(image.naturalWidth, image.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, 256, 256);
+    context.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+    let quality = 0.86;
+    let data = canvas.toDataURL('image/jpeg', quality);
+    while (data.length > 78 * 1024 && quality > 0.4) { quality -= 0.12; data = canvas.toDataURL('image/jpeg', quality); }
+    return data;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export function AvatarPicker({ userId, name, language }: { userId: string; name: string; language: Language }) {
+  const avatar = useAvatar(userId);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setError('');
+    if (!file.type.startsWith('image/')) { setError(t(language, 'Rasm tanlang.', 'Выберите фото.', 'Choose a photo.')); return; }
+    setBusy(true);
+    try {
+      const data = await shrinkPhoto(file);
+      await customFetch('/api/me/avatar', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ avatar: data }) });
+      publishAvatar(data);
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function remove() {
+    setBusy(true);
+    try {
+      await customFetch('/api/me/avatar', { method: 'DELETE' });
+      publishAvatar(null);
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="avatar-picker">
+      <label className={`avatar avatar-xl ${busy ? 'busy' : ''}`} title={t(language, 'Rasm qo‘yish (ixtiyoriy)', 'Поставить фото (по желанию)', 'Set a photo (optional)')}>
+        {avatar ? <img src={avatar} alt="" /> : <span>{name.slice(0, 1).toLocaleUpperCase()}</span>}
+        <span className="avatar-cam"><Camera size={15} /></span>
+        <input type="file" accept="image/*" hidden onChange={(event) => { void pick(event.target.files?.[0]); event.target.value = ''; }} />
+      </label>
+      {avatar && <button type="button" className="avatar-remove" onClick={() => void remove()} disabled={busy} aria-label={t(language, 'Rasmni o‘chirish', 'Убрать фото', 'Remove photo')}><Trash2 size={13} /></button>}
+      {error && <span className="avatar-error">{error}</span>}
+    </div>
+  );
+}
+
+/** Small round avatar: the photo if the user set one, otherwise the first letter. */
+export function UserAvatar({ userId, name, className = 'avatar' }: { userId: string | null; name: string; className?: string }) {
+  const avatar = useAvatar(userId);
+  return <span className={`${className}${avatar ? ' has-photo' : ''}`}>{avatar ? <img src={avatar} alt="" /> : name.slice(0, 1).toLocaleUpperCase()}</span>;
 }
