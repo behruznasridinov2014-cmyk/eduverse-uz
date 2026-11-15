@@ -8,14 +8,21 @@
  * student can operate, tasks with answers and homework.
  */
 
+import type { OwnScene } from './course-scenes';
+import { own } from './course-scenes';
+import { PHYSICS_EXTRA } from './course-physics';
+import { CHEMISTRY_EXTRA } from './course-chemistry';
+import { BIOLOGY_EXTRA } from './course-biology';
+import { MATH_EXTRA } from './course-math';
+
 export type CourseScene =
+  | OwnScene
   | { kind: 'molecule'; id: string }
   | { kind: 'reaction'; a: string; b: string }
   | { kind: 'pendulum' }
   | { kind: 'circuit' }
   | { kind: 'collision' }
-  | { kind: 'solid'; solid: 'cube' | 'prism' | 'pyramid' | 'cylinder' | 'cone' | 'sphere' }
-  | { kind: 'web'; query: string };
+  | { kind: 'solid'; solid: 'cube' | 'prism' | 'pyramid' | 'cylinder' | 'cone' | 'sphere' };
 
 export type CourseTask = { q: string; a: string };
 
@@ -32,6 +39,10 @@ export type CourseTopic = {
   tasks: CourseTask[];
   homework: string;
   life: string;
+  /** Opening question for the teacher (lesson hook). */
+  hook?: string;
+  /** True when the tasks come from the textbook's own questions. */
+  fromBook?: boolean;
 };
 
 export type CourseBook = {
@@ -41,12 +52,16 @@ export type CourseBook = {
   title: string;
   bookId: string;
   pdfOffset: number;
+  /** Pages in the PDF uploaded to the library (it may be a partial copy of the book). */
+  pdfPages: number;
+  /** Lessons per week by the school curriculum (used for the finish forecast). */
+  lessonsPerWeek: number;
   topics: CourseTopic[];
 };
 
 export const COURSE: CourseBook[] = [
   {
-    id: 'physics-7', subject: 'physics', grade: 7, title: 'Физика · 7 класс', bookId: 'fizika-7-darslik', pdfOffset: 4,
+    id: 'physics-7', subject: 'physics', grade: 7, title: 'Физика · 7 класс', bookId: 'fizika-7-darslik', pdfOffset: 4, pdfPages: 43, lessonsPerWeek: 2,
     topics: [
       {
         key: 'phys7-2.5', code: '2.5', chapter: 'Глава 2. Физические величины и их измерение', title: 'Как мы измеряем объём?', page: 34,
@@ -65,7 +80,7 @@ export const COURSE: CourseBook[] = [
         key: 'phys7-2.6', code: '2.6', chapter: 'Глава 2. Физические величины и их измерение', title: 'Как мы измеряем массу?', page: 38,
         essence: 'Масса — мера количества вещества в теле. Единица массы в СИ — килограмм (kg). Массу измеряют весами: рычажными (сравнивают с гирями) или электронными. Перед измерением весы обнуляют, иначе будет ошибка. В физике «масса» и «вес» — разные понятия: вес — это сила, с которой тело давит на опору, она измеряется в ньютонах.',
         facts: ['Масса не меняется при нагревании тела.', 'На Луне ваша масса та же, а вес в 6 раз меньше.', 'Эталон килограмма много лет хранился во Франции — это был цилиндр из платины и иридия.'],
-        scene: { kind: 'web', query: 'balance scale' }, sceneHint: 'Рассмотрите рычажные весы со всех сторон: где точка опоры, куда кладут гири.',
+        scene: own('measure', 'mass'), sceneHint: 'Рассмотрите рычажные весы со всех сторон: где точка опоры, куда кладут гири.',
         tasks: [
           { q: 'Чем отличается масса от веса?', a: 'Масса — количество вещества (kg), вес — сила давления на опору (N).' },
           { q: 'Как одним взвешиванием на чашечных весах найти фальшивую (более лёгкую) монету из трёх?', a: 'Положить по одной монете на чаши: перевесила одна — лёгкая на другой; равновесие — фальшивая третья.' },
@@ -155,7 +170,7 @@ export const COURSE: CourseBook[] = [
     ],
   },
   {
-    id: 'chemistry-7', subject: 'chemistry', grade: 7, title: 'Химия · 7 класс', bookId: 'kimyo-7-darslik', pdfOffset: 4,
+    id: 'chemistry-7', subject: 'chemistry', grade: 7, title: 'Химия · 7 класс', bookId: 'kimyo-7-darslik', pdfOffset: 4, pdfPages: 49, lessonsPerWeek: 2,
     topics: [
       {
         key: 'chem7-2.1', code: '2.1', chapter: 'Глава 2. Строение вещества', title: 'Строение вещества', page: 15,
@@ -264,13 +279,13 @@ export const COURSE: CourseBook[] = [
     ],
   },
   {
-    id: 'biology-7', subject: 'biology', grade: 7, title: 'Биология · 7 класс', bookId: 'biologiya-7-darslik', pdfOffset: 4,
+    id: 'biology-7', subject: 'biology', grade: 7, title: 'Биология · 7 класс', bookId: 'biologiya-7-darslik', pdfOffset: 4, pdfPages: 60, lessonsPerWeek: 2,
     topics: [
       {
         key: 'bio7-2.2', code: '2.2', chapter: 'Глава 2. Живые организмы', title: 'Клетка — структурно-функциональная единица', page: 33,
         essence: 'Все живые организмы состоят из клеток. Клетка — это маленькая «фабрика»: мембрана пропускает нужные вещества, ядро хранит наследственную информацию (ДНК) и управляет клеткой, митохондрии дают энергию, рибосомы собирают белки. Одни организмы — из одной клетки (бактерии), человек — из десятков триллионов.',
         facts: ['В теле человека около 37 триллионов клеток.', 'Самая большая клетка — яйцо страуса.', 'Клетку впервые увидел Роберт Гук в 1665 году в кусочке пробки.'],
-        scene: { kind: 'web', query: 'animal cell biology' }, sceneHint: 'Найдите в 3D-модели ядро, митохондрии и мембрану.',
+        scene: own('cell', 'animal'), sceneHint: 'Найдите в 3D-модели ядро, митохондрии и мембрану.',
         tasks: [
           { q: 'Какая часть клетки хранит ДНК?', a: 'Ядро.' },
           { q: 'Зачем клетке митохондрии?', a: 'Они вырабатывают энергию.' },
@@ -283,7 +298,7 @@ export const COURSE: CourseBook[] = [
         key: 'bio7-2.3', code: '2.3', chapter: 'Глава 2. Живые организмы', title: 'Растительные и животные клетки', page: 36,
         essence: 'У растительной и животной клеток есть ядро, мембрана, цитоплазма и митохондрии. Но у растительной клетки есть ещё прочная клеточная стенка, хлоропласты (в них идёт фотосинтез, они зелёные) и большая вакуоль с клеточным соком. Поэтому растения держат форму и сами делают себе питание из света.',
         facts: ['Хлоропласты окрашивают листья в зелёный цвет.', 'Вакуоль может занимать до 90% растительной клетки.', 'Клеточная стенка растений состоит из целлюлозы — из неё делают бумагу.'],
-        scene: { kind: 'web', query: 'plant cell' }, sceneHint: 'Найдите хлоропласты, клеточную стенку и вакуоль — их нет у животных клеток.',
+        scene: own('cell', 'plant'), sceneHint: 'Найдите хлоропласты, клеточную стенку и вакуоль — их нет у животных клеток.',
         tasks: [
           { q: 'Назовите 3 отличия растительной клетки от животной.', a: 'Клеточная стенка, хлоропласты, большая вакуоль.' },
           { q: 'Где в клетке идёт фотосинтез?', a: 'В хлоропластах.' },
@@ -296,7 +311,7 @@ export const COURSE: CourseBook[] = [
         key: 'bio7-2.6', code: '2.6', chapter: 'Глава 2. Живые организмы', title: 'Опорно-двигательная система человека', page: 52,
         essence: 'Скелет — опора тела: он держит форму, защищает органы (череп — мозг, рёбра — сердце и лёгкие) и вместе с мышцами позволяет двигаться. У взрослого человека 206 костей. Кости соединяются суставами — подвижно (колено, локоть) или неподвижно (кости черепа).',
         facts: ['У новорождённого около 300 костей — часть потом срастается.', 'Самая маленькая кость — стремечко в ухе (3 мм).', 'Бедренная кость прочнее бетона.'],
-        scene: { kind: 'web', query: 'human skeleton' }, sceneHint: 'Найдите череп, позвоночник, рёбра и бедренную кость.',
+        scene: own('body', 'skeleton'), sceneHint: 'Найдите череп, позвоночник, рёбра и бедренную кость.',
         tasks: [
           { q: 'Сколько костей у взрослого человека?', a: '206.' },
           { q: 'Какие органы защищают рёбра?', a: 'Сердце и лёгкие.' },
@@ -321,7 +336,7 @@ export const COURSE: CourseBook[] = [
     ],
   },
   {
-    id: 'math-7', subject: 'math', grade: 7, title: 'Математика · 7 класс', bookId: 'matematika-7-darslik', pdfOffset: 6,
+    id: 'math-7', subject: 'math', grade: 7, title: 'Математика · 7 класс', bookId: 'matematika-7-darslik', pdfOffset: 6, pdfPages: 150, lessonsPerWeek: 5,
     topics: [
       {
         key: 'math7-1.1', code: '1.1', chapter: 'Глава 1. Делители и кратные', title: 'Простые числа, разложение на множители, степень', page: 2,
@@ -378,6 +393,20 @@ export const COURSE: CourseBook[] = [
     ],
   },
 ];
+
+/* All topics of each book, in textbook order (§1.1, §1.2, …). */
+const EXTRA: Record<string, CourseTopic[]> = { 'physics-7': PHYSICS_EXTRA, 'chemistry-7': CHEMISTRY_EXTRA, 'biology-7': BIOLOGY_EXTRA, 'math-7': MATH_EXTRA };
+const codeOrder = (code: string) => code.split('.').reduce((sum, part, index) => sum + Number(part) * (index ? 1 : 1000), 0);
+for (const book of COURSE) {
+  const known = new Set(book.topics.map((topic) => topic.key));
+  book.topics = [...book.topics, ...(EXTRA[book.id] ?? []).filter((topic) => !known.has(topic.key))].sort((a, b) => codeOrder(a.code) - codeOrder(b.code));
+}
+
+/** The PDF page of a topic, or null when that page is not in the uploaded file. */
+export function pdfPageOf(book: CourseBook, topic: CourseTopic): number | null {
+  const page = topic.page + book.pdfOffset;
+  return page <= book.pdfPages ? page : null;
+}
 
 export const SUBJECT_LABEL: Record<CourseBook['subject'], [string, string, string]> = {
   physics: ['Fizika', 'Физика', 'Physics'],
