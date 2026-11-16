@@ -214,3 +214,27 @@ html[data-theme="night"] .control select, html[data-theme="night"] select.input,
   background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52% !important;
   background-size: 5px 5px, 5px 5px !important; background-repeat: no-repeat !important;
 }
+
+/* phone bottom bar: matte glass — content behind it must not show through the labels */
+.tabbar.glass-tabs {
+  background: linear-gradient(180deg, rgba(252, 249, 243, 0.9), rgba(246, 241, 231, 0.94));
+  backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 18px 40px -16px rgba(40, 52, 80, 0.45);
+}
+.tabbar.glass-tabs::before { opacity: 0.45; }
+html[data-theme="night"] .tabbar.glass-tabs {
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.92), rgba(16, 26, 42, 0.95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px -16px rgba(0, 0, 0, 0.8);
+}
+
+/* AI assistant: input and a round send button on one line, also on phones */
+.ai-form { display: flex !important; flex-wrap: nowrap !important; gap: 8px; align-items: center; margin-top: 10px; }
+.ai-form .input { flex: 1; min-width: 0; }
+.ai-form .btn { flex: none; width: 44px !important; height: 44px; padding: 0 !important; justify-content: center; border-radius: 50%; }
+.ai-tutor .section-head h2 { display: flex; align-items: center; gap: 8px; }
+.ai-tutor .muted { margin: 4px 0 0; }
+
+/* every chat (lesson, curator, inbox): wide input + round send button, also on phones */
+.chat-form { display: flex !important; flex-wrap: nowrap !important; gap: 8px; align-items: flex-end; }
+.chat-form .input, .chat-form textarea { flex: 1 1 auto; min-width: 0; width: auto !important; }
+.chat-form .btn { flex: none; width: 44px !important; min-width: 44px; height: 44px; padding: 0 !important; justify-content: center; border-radius: 50%; }

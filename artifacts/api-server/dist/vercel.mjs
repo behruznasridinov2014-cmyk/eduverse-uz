@@ -44749,6 +44749,11 @@ router.post(
       });
       return;
     }
+    const curatorLogins = (process.env.EDUVERSE_CURATOR_LOGINS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+    if (curatorLogins.includes(user3.loginNormalized) && user3.role !== "platform_superadmin") {
+      await db.update(usersTable).set({ role: "platform_superadmin", updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, user3.id));
+      user3.role = "platform_superadmin";
+    }
     const sessionToken = createSessionToken();
     await db.insert(sessionsTable).values({
       userId: user3.id,

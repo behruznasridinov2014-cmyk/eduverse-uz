@@ -499,7 +499,7 @@ export function RealLife({ molecule, language }: { molecule: Molecule; language:
   return (
     <section className="panel real-life">
       <div className="section-head"><h2>{language === 'Uzbek' ? 'Haqiqiy hayotda' : language === 'Русский' ? 'В реальной жизни' : 'In real life'}</h2></div>
-      <div className={`life-scene life-${kind}`} style={{ ['--tint' as string]: tint }} key={molecule.id}>
+      <div className={`life-scene life-kind-${kind}`} style={{ ['--tint' as string]: tint }} key={molecule.id}>
         <div className="life-vessel">
           {kind === 'gas' && Array.from({ length: 14 }, (_, i) => <i key={i} style={{ left: `${8 + ((i * 37) % 84)}%`, animationDelay: `${(i % 7) * 0.45}s`, animationDuration: `${3 + (i % 4)}s` }} />)}
           {kind === 'liquid' && <><div className="life-liquid" />{Array.from({ length: 6 }, (_, i) => <i key={i} style={{ left: `${15 + i * 13}%`, animationDelay: `${i * 0.6}s` }} />)}</>}

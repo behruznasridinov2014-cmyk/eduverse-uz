@@ -606,6 +606,14 @@ router.post(
       return;
     }
 
+    // Curators (EDUVERSE staff) are appointed by the owner in the hosting settings:
+    // EDUVERSE_CURATOR_LOGINS="login1,login2". No password ever leaves the owner.
+    const curatorLogins = (process.env.EDUVERSE_CURATOR_LOGINS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+    if (curatorLogins.includes(user.loginNormalized) && user.role !== "platform_superadmin") {
+      await db.update(usersTable).set({ role: "platform_superadmin", updatedAt: new Date() }).where(eq(usersTable.id, user.id));
+      user.role = "platform_superadmin";
+    }
+
     const sessionToken = createSessionToken();
     await db.insert(sessionsTable).values({
       userId: user.id,
