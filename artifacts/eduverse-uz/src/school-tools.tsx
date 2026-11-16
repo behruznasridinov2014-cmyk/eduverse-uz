@@ -275,7 +275,7 @@ export function LessonPlanner({ language }: { language: Language }) {
   return (
     <section className="panel planner">
       <div className="section-head">
-        <h2><Sparkles size={16} /> {t(language, 'AI dars rejasi', 'ИИ-план урока', 'AI lesson plan')}</h2>
+        <h2><Sparkles size={16} /> {t(language, 'Dars rejasi', 'План урока', 'Lesson plan')}</h2>
         {plan && <button type="button" className="btn small" onClick={() => window.print()}><Printer size={14} /> {t(language, 'Chop etish', 'Печать', 'Print')}</button>}
       </div>
       <p className="muted">{t(language, 'Darslik paragrafini yozing — 30 soniyada reja, savollar va uy vazifasi tayyor.', 'Напишите параграф учебника — за 30 секунд готовы план, вопросы и домашнее задание.', 'Type the textbook paragraph — a plan, questions and homework in 30 seconds.')}</p>
@@ -305,7 +305,7 @@ export function LessonPlanner({ language }: { language: Language }) {
           {plan.experiment && <><h4>{t(language, 'Tajriba / 3D', 'Опыт / 3D', 'Experiment / 3D')}</h4><p>{plan.experiment}</p></>}
           {plan.questions.length > 0 && <><h4>{t(language, 'Savollar', 'Вопросы классу', 'Questions')}</h4><ol>{plan.questions.map((q, i) => <li key={i}>{q}</li>)}</ol></>}
           {plan.homework && <><h4>{t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h4><p>{plan.homework}</p></>}
-          {plan.source === 'local' && <p className="muted">{t(language, 'AI hozir mavjud emas — namuna reja ko‘rsatildi.', 'ИИ сейчас недоступен — показан шаблон.', 'AI unavailable — a template is shown.')}</p>}
+          
         </div>
       )}
     </section>

@@ -473,7 +473,7 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
     {tab==='journal'&&<><GradeJournal school={school} language={language}/><LabReports language={language}/></>}
     {tab==='plan'&&<LessonPlanner language={language}/>}
     {tab==='class'&&<><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ParentLinkForm language={language}/></div></>}
-    {tab==='topics'&&<><ServerTopicAssignPanel school={school} language={language}/><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles size={15}/> {text('Create a topic with AI','Создать свою тему с ИИ','AI bilan mavzu yaratish')}</button></>}
+    {tab==='topics'&&<><ServerTopicAssignPanel school={school} language={language}/><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles size={15}/> {text('Create your own topic','Создать свою тему','O‘z mavzuingizni yaratish')}</button></>}
    </div>}
  </>;
 }

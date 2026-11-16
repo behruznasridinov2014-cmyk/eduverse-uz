@@ -403,12 +403,12 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
               </div>
               <div className={`chem-result ${match ? 'ok' : ''}`}>
                 <span>{formula}</span>
-                <b>{match ? `= ${tx(match.name)}` : tx(L('Bunday modda ro‘yxatda yo‘q — AI dan so‘rang', 'Такого вещества нет в списке — спросите ИИ', 'Not in the list — ask the AI'))}</b>
+                <b>{match ? `= ${tx(match.name)}` : tx(L('Bunday modda ro‘yxatda yo‘q', 'Такого вещества нет в списке', 'Not in the list'))}</b>
               </div>
               {!match && sandbox && (
                 <div className={`notice ${report.ok ? 'success' : ''}`}>
                   {report.ok
-                    ? tx(L('Valentlik mos keladi: bunday molekula bo‘lishi mumkin. Nomini AI dan so‘rang.', 'Валентности сходятся: такая молекула может существовать. Спросите ИИ, как она называется.', 'Valences fit: such a molecule can exist. Ask the AI for its name.'))
+                    ? tx(L('Valentlik mos keladi: bunday molekula bo‘lishi mumkin.', 'Валентности сходятся: такая молекула может существовать.', 'Valences fit: such a molecule can exist.'))
                     : tx(L('Valentlik mos emas: atomlarda bo‘sh bog‘lar qoldi. Haqiqiy hayotda bunday zarracha barqaror emas — u boshqa atomlarni o‘ziga tortadi.', 'Валентности не сходятся: у атомов остались свободные связи. В реальной жизни такая частица неустойчива — она сразу притянет другие атомы.', 'Valences do not fit: free bonds remain. In real life such a particle is unstable and grabs other atoms.'))}
                 </div>
               )}
