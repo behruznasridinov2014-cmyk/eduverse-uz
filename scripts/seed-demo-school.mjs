@@ -1,7 +1,7 @@
 /**
  * Seeds a complete, clearly-marked demo school for local demonstrations.
  * Idempotent: keys are unique names; existing demo data is re-used (never deleted).
- * Safe for a demo database only. Passwords are printed once so the operator can sign in.
+ * Safe for a demo database only. One random password (or DEMO_PASSWORD) is printed once; accounts that already exist keep their old password.
  *
  * Run: node scripts/seed-demo-school.mjs
  */
@@ -75,7 +75,7 @@ async function upsertClassMember(classId, userId, role) {
   );
 }
 
-const PASSWORD = "demo-school-2026";
+const PASSWORD = process.env.DEMO_PASSWORD || randomBytes(6).toString("base64url");
 console.log("Seeding demo school…");
 
 // --- Accounts ----------------------------------------------------------------
@@ -363,12 +363,13 @@ await pool.query(
 
 console.log("\nDemo school ready:");
 console.log("  School:        EDUVERSE Demo School №24");
-console.log("  Director:      demo_director /", PASSWORD, "(создаёт классы, учеников, темы)");
-console.log("  Teacher:       demo_teacher  /", PASSWORD);
-console.log("  Administrator: demo_admin    /", PASSWORD);
+console.log("  Password (all demo accounts, shown once):", PASSWORD);
+console.log("  Director:      demo_director");
+console.log("  Teacher:       demo_teacher");
+console.log("  Administrator: demo_admin");
 console.log(`  Classes:       7-B (12), 7-A (${listA.length}), 8-A (${list8A.length})`);
 console.log("  Students:      demo_student_b_1 .. demo_student_b_12");
-console.log("  Topics:        4 ИИ-темы опубликованы в классе 7-B");
+console.log("  Topics:        4 темы опубликованы в классе 7-B");
 console.log("  Attendance:    последние 5 дней");
 
 await pool.end();
