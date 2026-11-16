@@ -9,7 +9,6 @@ import { customFetch, type User } from '@workspace/api-client-react';
 import { Bell, BookOpenCheck, Bug, CalendarClock, CheckCheck, CircleHelp, GraduationCap, LifeBuoy, Mail, MessageCircle, MonitorSmartphone, School, Send, ShieldCheck, Users, X } from 'lucide-react';
 import type { Language } from './school-data';
 import { AvatarPicker, PasswordChange } from './school-tools';
-import { TwoFactorSettings } from './two-factor-settings';
 import { QrScannerButton } from './qr-scanner';
 import { GlassSwitch, GlassTabs, useSwipeTabs } from './glass-nav';
 import { friendlyError } from './errors';
@@ -162,7 +161,7 @@ function SecuritySection({ language }: { language: Language }) {
         <span className="course-plan-icon"><ShieldCheck size={20} /></span>
         <div>
           <b>{tx(language, 'Oldingi kirish', 'Предыдущий вход', 'Previous sign-in')}: {when(account?.previousLoginAt, language)}</b>
-          <span className="muted">{tx(language, 'Hozir', 'Сейчас', 'Now')}: {current?.device ?? '—'}{current?.ip ? ` · ${current.ip}` : ''} · {tx(language, 'ikki bosqichli tekshiruv', 'двухэтапная проверка', 'two-step')} {account?.twoFactorEnabled ? tx(language, 'yoqilgan', 'включена', 'on') : tx(language, 'o‘chiq', 'выключена', 'off')}</span>
+          <span className="muted">{tx(language, 'Hozir', 'Сейчас', 'Now')}: {current?.device ?? '—'}{current?.ip ? ` · ${current.ip}` : ''}</span>
         </div>
       </section>
       <PasswordChange language={language} />
@@ -189,7 +188,6 @@ function SecuritySection({ language }: { language: Language }) {
       <section className="panel">
         {prefs && <GlassSwitch checked={prefs.newDevice} onChange={(value) => void changePrefs({ newDevice: value })} label={tx(language, 'Yangi qurilmadan kirish haqida xabar', 'Уведомлять о входе с нового устройства', 'Alert on a new device')} hint={tx(language, 'Kimdir boshqa telefon yoki kompyuterdan kirsa, qo‘ng‘iroqchada xabar paydo bo‘ladi.', 'Если кто-то войдёт с другого телефона или компьютера, в колокольчике появится уведомление.', 'A bell notice appears when someone signs in from another device.')} />}
       </section>
-      <TwoFactorSettings language={language} />
       <section className="panel">
         <h2>{tx(language, 'Boshqa qurilmada kirish', 'Вход на другом устройстве', 'Sign in on another device')}</h2>
         <p className="muted">{tx(language, 'Kompyuterdagi kirish sahifasida QR kodni oching va uni shu telefon bilan skanerlang.', 'Откройте QR-код на странице входа на компьютере и отсканируйте его этим телефоном.', 'Open the QR code on the sign-in page of a computer and scan it with this phone.')}</p>
@@ -233,10 +231,10 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
       <section className="panel switch-list">
         <h2><Send size={16} /> {tx(language, 'Qayerga yuborish', 'Куда присылать', 'Where to send')}</h2>
         <GlassSwitch checked={prefs.telegram} onChange={(value) => void change({ telegram: value })} label="Telegram" disabled={telegram ? !telegram.available : false}
-          hint={!telegram || !telegram.available ? tx(language, 'Maktab hali Telegram-botni ulamagan.', 'Школа ещё не подключила Telegram-бота.', 'The school has not connected the bot yet.') : telegram.connected ? tx(language, 'Ulangan ✓', 'Подключено ✓', 'Connected ✓') : tx(language, 'Ulanmagan — pastdagi tugmani bosing.', 'Не подключено — нажмите кнопку ниже.', 'Not connected — use the button below.')} />
+          hint={!telegram || !telegram.available ? tx(language, 'Tez orada', 'Скоро', 'Coming soon') : telegram.connected ? tx(language, 'Ulangan ✓', 'Подключено ✓', 'Connected ✓') : tx(language, 'Ulanmagan — pastdagi tugmani bosing.', 'Не подключено — нажмите кнопку ниже.', 'Not connected — use the button below.')} />
         {telegram?.available && !telegram.connected && <button type="button" className="btn small" onClick={() => void connectTelegram()}><Send size={14} /> {tx(language, 'Telegramni ulash', 'Подключить Telegram', 'Connect Telegram')}</button>}
         <GlassSwitch checked={prefs.push && permission === 'granted'} onChange={(value) => void togglePush(value)} label={tx(language, 'Push-bildirishnomalar', 'Push-уведомления', 'Push notifications')} disabled={permission === 'unsupported' || permission === 'denied'}
-          hint={permission === 'denied' ? tx(language, 'Brauzer sozlamalarida ruxsat bering.', 'Разрешите уведомления в настройках браузера.', 'Allow notifications in browser settings.') : tx(language, 'Ilova ochiq bo‘lganda ekranda chiqadi.', 'Показываются на экране, пока приложение открыто.', 'Shown while the app is open.')} />
+          hint={permission === 'denied' ? tx(language, 'Brauzer sozlamalarida ruxsat bering.', 'Разрешите уведомления в настройках браузера.', 'Allow notifications in browser settings.') : ''} />
       </section>
     </>
   );
@@ -271,31 +269,19 @@ const FAQ: Array<[string, string]> = [
   ['Как начать онлайн-урок?', 'Меню → «Онлайн-урок» → выберите тему из учебника → «Открыть комнату». Ученики входят по коду или увидят урок в уведомлениях.'],
   ['Как добавить учеников и родителей?', 'Директор или администратор: «Управление школой» → импорт из Excel (ФИО · Класс · Телефон родителя). Логины и пароли создаются сами.'],
   ['Ученик забыл пароль', 'Учитель или директор создаёт новый пароль в списке аккаунтов класса. При первом входе ученик сменит его на свой.'],
-  ['Почему учебник открывается не на всех страницах?', 'В библиотеку загружена часть учебника. Пришлите полный PDF куратору — мы добавим его.'],
+  ['Почему учебник открывается не на всех страницах?', 'В библиотеку загружена часть учебника. Полная версия появится после загрузки школой.'],
   ['Как ученик сдаёт домашку?', '«Задания» → выбрать задание → сфотографировать тетрадь и объяснить решение своими словами.'],
   ['Работает ли платформа на телефоне?', 'Да. Откройте сайт в браузере и нажмите «Установить» — появится иконка как у приложения.'],
 ];
 
 function HelpSection({ user, language }: { user: User; language: Language }) {
-  const [channel, setChannel] = useState<'curator' | 'school'>('curator');
-  const [draft, setDraft] = useState('');
-  const chatRef = useRef<HTMLDivElement | null>(null);
-  const openChat = (next: 'curator' | 'school', text = '') => { setChannel(next); setDraft(text); window.setTimeout(() => chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
-  const bugReport = () => openChat('curator', `[Ошибка] Страница: ${window.location.pathname}\nУстройство: ${navigator.userAgent.slice(0, 120)}\nЧто случилось: `);
   return (
     <>
-      <div className="help-actions">
-        <button type="button" className="home-tile" onClick={() => openChat('curator')}><span className="home-tile-icon"><MessageCircle /></span><b>{tx(language, 'Kurator bilan chat', 'Чат с куратором', 'Chat with curator')}</b><span>{tx(language, 'Savol bering — EDUVERSE jamoasi javob beradi', 'Задайте вопрос — ответит команда EDUVERSE', 'Ask the EDUVERSE team')}</span></button>
-        <button type="button" className="home-tile" onClick={bugReport}><span className="home-tile-icon"><Bug /></span><b>{tx(language, 'Xato haqida xabar', 'Сообщить об ошибке', 'Report a bug')}</b><span>{tx(language, 'Sahifa va qurilma avtomatik qo‘shiladi', 'Страница и устройство добавятся сами', 'Page and device are attached')}</span></button>
-        <button type="button" className="home-tile" onClick={() => openChat('school')}><span className="home-tile-icon"><School /></span><b>{tx(language, 'Maktab ma’muriyatiga yozish', 'Администрации школы', 'School administration')}</b><span>{tx(language, 'Direktor yoki administrator javob beradi', 'Ответит директор или администратор', 'The director replies')}</span></button>
-      </div>
-      <div ref={chatRef}><SupportChat key={channel} channel={channel} language={language} draft={draft} onDraftUsed={() => setDraft('')} /></div>
       <section className="panel">
         <h2><CircleHelp size={16} /> {tx(language, 'Yordam markazi · FAQ', 'Центр помощи · Частые вопросы', 'Help centre · FAQ')}</h2>
         <div className="faq-list">{FAQ.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div>
       </section>
-      <p className="muted platform-version">EDUVERSE-UZ {__APP_VERSION__} · {tx(language, 'yig‘ma', 'сборка', 'build')} {__APP_BUILD__} · {user.role}</p>
-    </>
+          </>
   );
 }
 

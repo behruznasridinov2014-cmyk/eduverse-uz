@@ -203,10 +203,6 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
         <div>
           <div className="eyebrow">{t(language, 'Darslik bo‘yicha', 'По учебнику', 'By the textbook')} · {t(language, `${grade}-sinf`, `${grade} класс`, `Grade ${grade}`)}</div>
           <h1>{t(language, 'Dars mavzulari', 'Темы уроков', 'Lesson topics')}</h1>
-          <p className="page-subtitle">{t(language,
-            'Kitobning barcha mavzulari §1.1 dan: mohiyati, 3D, topshiriqlar, uy vazifasi va sinf qayerda to‘xtagani.',
-            'Все темы книги с §1.1: суть, 3D, задания, домашка и где остановился класс.',
-            'Every topic from §1.1: essence, 3D, tasks, homework and where the class stopped.')}</p>
         </div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           {isTeacher && classes.length > 1 && (
@@ -242,24 +238,11 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             </div>
           </div>
           <div className="test-progress"><span style={{ width: `${(covered.length / book.topics.length) * 100}%` }} /></div>
-          <div className="course-plan-grid">
-            <div><small>{t(language, `${quarter[0]}-chorak oxirigacha`, `К концу ${quarter[0]}-й четверти (${fmt(quarter[2])})`, `By the end of term ${quarter[0]}`)}</small><b>§{book.topics[Math.max(0, byQuarterEnd - 1)]?.code}</b></div>
-            <div><small>{t(language, 'Kitob tugashi (prognoz)', 'Книга закончится (прогноз)', 'Book finishes (forecast)')}</small><b className={finish > yearEnd ? 'warn' : ''}>{remaining ? fmt(finish) : '✓'}</b></div>
-            <div><small>{t(language, 'Reja bo‘yicha', 'По плану', 'Against the plan')}</small><b className={gap < 0 ? 'warn' : ''}>{gap === 0 ? t(language, 'o‘z vaqtida', 'вовремя', 'on time') : gap > 0 ? t(language, `+${gap} oldinda`, `опережение +${gap}`, `+${gap} ahead`) : t(language, `${-gap} mavzu orqada`, `отставание ${-gap}`, `${-gap} behind`)}</b></div>
-            <div><small>{t(language, 'Haftasiga dars', 'Уроков в неделю', 'Lessons a week')}</small>
-              <b className="pace">{course.canEdit && <button type="button" className="btn small" onClick={() => void changePace(pace - 1)} aria-label="−">−</button>}{pace}{course.canEdit && <button type="button" className="btn small" onClick={() => void changePace(pace + 1)} aria-label="+">+</button>}</b></div>
-          </div>
-          {finish > yearEnd && remaining > 0 && <p className="muted course-plan-warn">{t(language, 'Bu sur’atda kitob o‘quv yili oxirigacha tugamaydi — haftalik darslarni ko‘paytiring yoki mavzularni birlashtiring.', 'В таком темпе книга не закончится до конца учебного года — добавьте уроков в неделю или объединяйте темы.', 'At this pace the book will not be finished by the end of the year.')}</p>}
         </section>
       )}
 
       <div className="course-layout">
         <aside className="panel course-nav">
-          <div className="course-progress">
-            <b>{done} / {book.topics.length}</b>
-            <span>{t(language, 'mavzu o‘rganildi (siz)', 'тем изучено (вами)', 'topics studied (you)')}</span>
-            <div className="test-progress"><span style={{ width: `${(done / book.topics.length) * 100}%` }} /></div>
-          </div>
           {chapters.map((chapter) => (
             <div key={chapter} className="course-chapter">
               <small>{chapter}</small>
@@ -285,9 +268,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
               {marks.has(topic.key) && <span className="tag green"><Users size={12} /> {t(language, `Sinfda o‘tildi: ${marks.get(topic.key)}`, `Пройдено в классе: ${marks.get(topic.key)}`, `Covered in class: ${marks.get(topic.key)}`)}</span>}
             </div>
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {pdfPage
-                ? <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>
-                : <span className="tag" title={t(language, 'Kutubxonadagi PDF faylda bu sahifa yo‘q', 'Этой страницы нет в загруженном PDF', 'This page is not in the uploaded PDF')}><BookOpen size={13} /> {t(language, `Darslik ${topic.page}-bet · faylda yo‘q`, `Учебник, стр. ${topic.page} · нет в файле`, `Textbook p. ${topic.page} · not in file`)}</span>}
+              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
               {isTeacher && <button type="button" className="btn primary" onClick={() => onOpen(`/lesson/course:${topic.key}`)}><MonitorPlay size={15} /> {t(language, 'Shu mavzuda dars', 'Урок по этой теме', 'Lesson on this topic')}</button>}
             </div>
           </header>
@@ -303,18 +284,6 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             </section>
           )}
 
-          {isTeacher && (
-            <details className="panel course-method">
-              <summary><b>{t(language, 'Dars metodikasi · 40 daqiqa', 'Методика урока · 40 минут', 'Lesson method · 40 minutes')}</b></summary>
-              <ol>
-                <li><b>5′</b> {t(language, 'Savol bilan boshlang', 'Начните с вопроса', 'Open with a question')}: «{topic.hook ?? topic.title + '?'}». {t(language, 'Javoblarni yozib oling — dars oxirida qaytamiz.', 'Запишите ответы на доске — вернёмся к ним в конце.', 'Write the answers on the board.')}</li>
-                <li><b>10′</b> {t(language, 'Mohiyati', 'Суть темы', 'The essence')}{pdfPage ? ` + ${t(language, 'darslik', 'учебник', 'textbook')}, ${t(language, `${topic.page}-bet`, `стр. ${topic.page}`, `p. ${topic.page}`)}` : ''}. {t(language, 'Hayotiy misol', 'Пример из жизни', 'Real-life example')}: {topic.life}</li>
-                <li><b>10′</b> 3D: {topic.sceneHint} {t(language, 'O‘quvchiga boshqarishni bering (doska → ✎).', 'Дайте ученику управлять (доска → ✎).', 'Let a student drive it.')}</li>
-                <li><b>10′</b> {t(language, 'Topshiriqlar', 'Задания', 'Tasks')} ({topic.tasks.length}) {t(language, 'juftlikda, keyin tekshirish', 'в парах, затем проверка', 'in pairs, then check')}.</li>
-                <li><b>5′</b> {t(language, 'Uy vazifasi va «Darsda o‘tdik» belgisi', 'Домашка и отметка «Прошли на уроке»', 'Homework and the “covered” mark')}.</li>
-              </ol>
-            </details>
-          )}
 
           <section className="panel course-essence">
             <h3><Lightbulb size={17} /> {t(language, 'Mohiyati', 'Суть темы', 'The essence')}</h3>
@@ -331,11 +300,6 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             <CourseScene3D scene={topic.scene} language={language} />
           </section>
 
-          <section className="course-facts">
-            {topic.facts.map((fact, index) => (
-              <div className="course-fact" key={index}><Sparkles size={15} /><span>{fact}</span></div>
-            ))}
-          </section>
 
           <section className="panel">
             <h3><NotebookPen size={17} /> {t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>

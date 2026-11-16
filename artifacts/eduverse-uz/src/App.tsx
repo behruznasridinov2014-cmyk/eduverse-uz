@@ -19,7 +19,7 @@ import { LabReports } from './lab-work';
 import { CoursePage } from './course';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
-import { NotificationsBell, SupportPage } from './account';
+import { NotificationsBell } from './account';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import type { User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
@@ -194,7 +194,7 @@ function App(){
         :location==='/course'&&auth.user?<CoursePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
         :location==='/topics'&&auth.user?<TopicLibraryPage user={auth.user} language={lang} onOpenRoom={topicId=>navigate('/lesson/'+topicId)}/>
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
-        :location==='/support'&&auth.user?<SupportPage user={auth.user} language={lang}/>
+        :location==='/support'?<Redirect to="/"/>
         :<NotFound language={lang} goHome={()=>navigate('/dashboard')}/>}
       </div>
       {userRole&&<nav className="tabbar-dock" aria-label="Mobile navigation">
@@ -220,28 +220,27 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Family view',href:'/parent',icon:UserRound,tone:'orange'},
   {label:'School insights',href:'/school',icon:School,tone:'blue'},
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
-  {label:'Support',href:'/support',icon:Send,tone:'blue'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Lesson room','Topics & 3D','Chemistry lab','Homework','Textbook library','Support'],
-  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Interactive board','Textbook library','Support'],
-  parent:['Overview','Family view','Textbook library','Support'],
-  school_director:['Overview','School insights','Classes','Attendance','Support'],
-  school_admin:['Overview','School insights','Classes','Attendance','Support'],
-  education_admin:['Overview','Administration','Support'],
-  ministry_admin:['Overview','Administration','Support'],
-  platform_superadmin:['Overview','Administration','Support'],
+  student:['Overview','Lesson room','Topics & 3D','Chemistry lab','Homework','Textbook library'],
+  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Interactive board','Textbook library'],
+  parent:['Overview','Family view','Textbook library'],
+  school_director:['Overview','School insights','Classes','Attendance'],
+  school_admin:['Overview','School insights','Classes','Attendance'],
+  education_admin:['Overview','Administration'],
+  ministry_admin:['Overview','Administration'],
+  platform_superadmin:['Overview','Administration'],
 };
 /** Phone bottom bar: the five most used sections of each role (the rest are in the ☰ menu). */
 const MOBILE_NAV:Record<User['role'],string[]>={
   student:['Overview','Lesson room','Topics & 3D','Chemistry lab','Homework'],
   teacher:['Overview','Lesson room','Topics & 3D','Attendance','Teacher workspace'],
-  parent:['Overview','Family view','Textbook library','Support'],
-  school_director:['Overview','School insights','Classes','Attendance','Support'],
-  school_admin:['Overview','School insights','Classes','Attendance','Support'],
-  education_admin:['Overview','Administration','Support'],
-  ministry_admin:['Overview','Administration','Support'],
-  platform_superadmin:['Overview','Administration','Support'],
+  parent:['Overview','Family view','Textbook library'],
+  school_director:['Overview','School insights','Classes','Attendance'],
+  school_admin:['Overview','School insights','Classes','Attendance'],
+  education_admin:['Overview','Administration'],
+  ministry_admin:['Overview','Administration'],
+  platform_superadmin:['Overview','Administration'],
 };
 const NAV_SHORT:Record<Lang,Record<string,string>>={
   Uzbek:{Support:'Yordam',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
