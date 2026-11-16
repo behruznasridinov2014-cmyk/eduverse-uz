@@ -70,7 +70,7 @@ export function ParentCabinet({ language }: { language: Language }) {
         <Kpi icon={NotebookPen} label={t(language, 'Bajarilmagan vazifa', 'Не сдано заданий', 'Missing homework')} value={String(missing)} warn={missing > 0} />
       </div>
       {child.absences.length > 0 && (
-        <div className="notice">{t(language, 'Kelmagan kunlar', 'Пропуски', 'Absent on')}: {child.absences.join(', ')}</div>
+        <div className="notice">{t(language, 'Kelmagan kunlar', 'Пропуски', 'Absent on')}: {child.absences.map((day) => { const d = new Date(`${day}T12:00:00`); return Number.isNaN(d.getTime()) ? day : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`; }).join(', ')}</div>
       )}
       <section className="panel">
         <div className="section-head"><h2><NotebookPen size={16} /> {t(language, 'Uy vazifalari va baholar', 'Домашние задания и оценки', 'Homework and grades')}</h2></div>

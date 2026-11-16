@@ -278,8 +278,8 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
-        memberCount: sql<number>`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-        classCount: sql<number>`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`,
+        memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+        classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })
       .from(schoolsTable)
       .orderBy(schoolsTable.name);
@@ -333,8 +333,8 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
-        memberCount: sql<number>`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-        classCount: sql<number>`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`,
+        memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+        classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })
       .from(schoolsTable)
       .where(eq(schoolsTable.id, schoolId))

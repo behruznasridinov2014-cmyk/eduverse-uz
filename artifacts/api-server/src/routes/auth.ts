@@ -56,6 +56,8 @@ import {
 } from "../lib/telegram-security";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+/** Without “remember me” the cookie dies with the browser; the server copy lives at most 12 hours. */
+const SHORT_SESSION_MS = 12 * 60 * 60 * 1000;
 const isProduction = process.env.NODE_ENV === "production";
 const allowPublicRegistration = process.env.EDUVERSE_ALLOW_PUBLIC_REGISTRATION === "1";
 const sessionCookieName = "eduverse.sid";
@@ -304,8 +306,13 @@ export function getAuthSecurityConfiguration() {
   };
 }
 
-function setSessionCookie(res: Response, token: string): void {
-  res.cookie(sessionCookieName, token, cookieOptions);
+function setSessionCookie(res: Response, token: string, remember = true): void {
+  if (remember) {
+    res.cookie(sessionCookieName, token, cookieOptions);
+    return;
+  }
+  const { maxAge: _maxAge, ...browserSession } = cookieOptions;
+  res.cookie(sessionCookieName, token, browserSession);
 }
 
 function clearSessionCookie(res: Response): void {
@@ -517,7 +524,7 @@ router.post(
   loginRateLimiter,
   loginAddressLimiter,
   async (req, res) => {
-    if (!hasOnlyFields(req.body, ["login", "password"])) {
+    if (!hasOnlyFields(req.body, ["login", "password", "remember"])) {
       res.status(400).json({ error: "Unexpected sign-in fields." });
       return;
     }
@@ -614,15 +621,16 @@ router.post(
       user.role = "platform_superadmin";
     }
 
+    const remember = (req.body as { remember?: unknown }).remember === true;
     const sessionToken = createSessionToken();
     await db.insert(sessionsTable).values({
       userId: user.id,
       tokenHash: hashSessionToken(sessionToken),
       ...sessionMeta(req),
-      expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
+      expiresAt: new Date(Date.now() + (remember ? SESSION_DURATION_MS : SHORT_SESSION_MS)),
     });
 
-    setSessionCookie(res, sessionToken);
+    setSessionCookie(res, sessionToken, remember);
     res.json({ user: publicUser(user) });
   },
 );

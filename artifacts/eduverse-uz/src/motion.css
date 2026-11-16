@@ -238,3 +238,10 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .chat-form { display: flex !important; flex-wrap: nowrap !important; gap: 8px; align-items: flex-end; }
 .chat-form .input, .chat-form textarea { flex: 1 1 auto; min-width: 0; width: auto !important; }
 .chat-form .btn { flex: none; width: 44px !important; min-width: 44px; height: 44px; padding: 0 !important; justify-content: center; border-radius: 50%; }
+
+/* "Remember me" on the sign-in form */
+.auth-remember{display:flex;align-items:flex-start;gap:10px;cursor:pointer;user-select:none}
+.auth-remember input{width:20px;height:20px;margin-top:1px;flex:none;accent-color:var(--accent,#2a7b6f);cursor:pointer}
+.auth-remember span{display:grid;gap:2px}
+.auth-remember b{font-size:14px;font-weight:600}
+.auth-remember small{font-size:12px;line-height:1.35;opacity:.7}

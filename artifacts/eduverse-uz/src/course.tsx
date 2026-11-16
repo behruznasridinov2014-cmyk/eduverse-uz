@@ -131,8 +131,10 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
     try { return JSON.parse(localStorage.getItem(studiedKey(user.id)) ?? '[]') as string[]; } catch { return []; }
   });
   const classes = school.classes.filter((item) => !item.grade || item.grade === grade);
-  const [classId, setClassId] = useState<string | null>(classes[0]?.id ?? null);
-  useEffect(() => { if (!classId || !classes.some((item) => item.id === classId)) setClassId(classes[0]?.id ?? null); }, [classes, classId]);
+  const savedClass = (() => { try { return localStorage.getItem('eduverse:course-class'); } catch { return null; } })();
+  const [classId, setClassIdState] = useState<string | null>(classes.find((item) => item.id === savedClass)?.id ?? classes[0]?.id ?? null);
+  const setClassId = (id: string | null) => { setClassIdState(id); try { if (id) localStorage.setItem('eduverse:course-class', id); } catch { /* private mode */ } };
+  useEffect(() => { if (!classId || !classes.some((item) => item.id === classId)) setClassIdState(classes.find((item) => item.id === savedClass)?.id ?? classes[0]?.id ?? null); }, [classes, classId, savedClass]);
   const [course, reload] = useClassCourse(classId);
   const [doneOn, setDoneOn] = useState(() => iso(new Date()));
   const [busy, setBusy] = useState(false);
@@ -178,6 +180,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
     English: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
   };
   const fmt = (date: Date) => `${date.getDate()} ${MONTHS[language][date.getMonth()]}`;
+  const markDate = (key: string) => { const raw = marks.get(key); return raw ? fmt(new Date(`${raw}T12:00:00`)) : ''; };
 
   async function mark(target: CourseTopic, on: boolean) {
     if (!classId) return;
@@ -234,7 +237,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
               <b>{nextTopic
                 ? t(language, `Sinf to‘xtagan joy: §${book.topics[lastIndex]?.code ?? '—'} · keyingisi §${nextTopic.code}`, `Класс остановился на §${book.topics[lastIndex]?.code ?? '—'} · дальше §${nextTopic.code}`, `Class stopped at §${book.topics[lastIndex]?.code ?? '—'} · next §${nextTopic.code}`)
                 : t(language, 'Kitob to‘liq o‘tildi', 'Книга пройдена полностью', 'The book is finished')}</b>
-              <span className="muted">{t(language, `O‘tildi ${covered.length} / ${book.topics.length} mavzu`, `Пройдено ${covered.length} из ${book.topics.length} тем`, `${covered.length} of ${book.topics.length} topics covered`)}{covered.length ? ` · ${t(language, 'oxirgisi', 'последняя', 'last')} ${marks.get(book.topics[lastIndex]?.key ?? '')}` : ''}</span>
+              <span className="muted">{t(language, `O‘tildi ${covered.length} / ${book.topics.length} mavzu`, `Пройдено ${covered.length} из ${book.topics.length} тем`, `${covered.length} of ${book.topics.length} topics covered`)}{covered.length ? ` · ${t(language, 'oxirgisi', 'последняя', 'last')} ${markDate(book.topics[lastIndex]?.key ?? '')}` : ''}</span>
             </div>
           </div>
           <div className="test-progress"><span style={{ width: `${(covered.length / book.topics.length) * 100}%` }} /></div>
@@ -249,7 +252,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
               {book.topics.filter((item) => item.chapter === chapter).map((item) => (
                 <button type="button" key={item.key} className={`course-topic ${item.key === topic.key ? 'active' : ''} ${marks.has(item.key) ? 'covered' : ''} ${item.key === nextTopic?.key ? 'is-next' : ''}`} onClick={() => setTopicKey(item.key)}>
                   <span className="course-code">§{item.code}</span>
-                  <span className="course-name">{item.title}{marks.has(item.key) && <small className="course-date">{t(language, 'Sinfda', 'В классе', 'In class')} · {marks.get(item.key)}</small>}</span>
+                  <span className="course-name">{item.title}{marks.has(item.key) && <small className="course-date">{t(language, 'Sinfda', 'В классе', 'In class')} · {markDate(item.key)}</small>}</span>
                   {studied.includes(item.key) ? <CheckCircle2 size={15} className="course-done" /> : marks.has(item.key) ? <Users size={14} className="course-done" /> : <ChevronRight size={15} />}
                 </button>
               ))}
@@ -265,7 +268,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             <div>
               <div className="eyebrow">§{topic.code} · {topic.chapter}</div>
               <h2>{topic.title}</h2>
-              {marks.has(topic.key) && <span className="tag green"><Users size={12} /> {t(language, `Sinfda o‘tildi: ${marks.get(topic.key)}`, `Пройдено в классе: ${marks.get(topic.key)}`, `Covered in class: ${marks.get(topic.key)}`)}</span>}
+              {marks.has(topic.key) && <span className="tag green"><Users size={12} /> {t(language, `Sinfda o‘tildi: ${markDate(topic.key)}`, `Пройдено в классе: ${markDate(topic.key)}`, `Covered in class: ${markDate(topic.key)}`)}</span>}
             </div>
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
               {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}

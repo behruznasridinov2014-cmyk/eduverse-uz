@@ -885,6 +885,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
   const auth = useAuth();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'code' | 'qr'>(() => {
     const qr = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('qr');
@@ -901,7 +902,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
     event.preventDefault();
     setError('');
     try {
-      await auth.signIn({ login: login.trim(), password });
+      await auth.signIn({ login: login.trim(), password, remember });
       if (!auth.twoFactorChallenge) onSuccess();
     } catch (requestError) {
       setError(getAuthErrorMessage(requestError, language));
@@ -994,6 +995,13 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
               <label className="auth-field" htmlFor="account-password">
                 <span>{copy.password}</span>
                 <input id="account-password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} maxLength={128} required/>
+              </label>
+              <label className="auth-remember">
+                <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)}/>
+                <span>
+                  <b>{language === 'Uzbek' ? 'Meni eslab qol' : language === 'English' ? 'Remember me' : 'Запомнить меня'}</b>
+                  <small>{language === 'Uzbek' ? 'Faqat o‘z qurilmangizda. Belgilanmasa, brauzer yopilganda hisobdan chiqiladi.' : language === 'English' ? 'Only on your own device. Otherwise you are signed out when the browser closes.' : 'Только на своём устройстве. Без галочки выход произойдёт, когда закроете браузер.'}</small>
+                </span>
               </label>
               {error && <FormError>{error}</FormError>}
               <button className="auth-submit" type="submit" disabled={auth.isSubmitting}>

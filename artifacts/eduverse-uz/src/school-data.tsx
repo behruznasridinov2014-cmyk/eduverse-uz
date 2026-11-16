@@ -141,11 +141,36 @@ function genUnavailable(
   }));
 }
 
+function uiLanguage(): 'ru' | 'uz' | 'en' {
+  try {
+    const value = JSON.parse(localStorage.getItem('eduverse:language') ?? '""') as string;
+    return value === 'Русский' ? 'ru' : value === 'English' ? 'en' : 'uz';
+  } catch {
+    return 'uz';
+  }
+}
+
+const STATUS_TEXT: Record<string, [string, string, string]> = {
+  assigned: ['Задано', 'Berilgan', 'Assigned'],
+  in_progress: ['В работе', 'Bajarilmoqda', 'In progress'],
+  submitted: ['На проверке', 'Tekshiruvda', 'Submitted'],
+  under_review: ['Проверяется', 'Tekshirilmoqda', 'Under review'],
+  needs_revision: ['На доработку', 'Qayta ishlash kerak', 'Needs revision'],
+  checked: ['Проверено', 'Tekshirildi', 'Checked'],
+  student: ['Ученик', 'O‘quvchi', 'Student'],
+  teacher: ['Учитель', 'O‘qituvchi', 'Teacher'],
+  parent: ['Родитель', 'Ota-ona', 'Parent'],
+  school_director: ['Директор', 'Direktor', 'Director'],
+  school_admin: ['Администратор школы', 'Maktab ma’muri', 'School admin'],
+};
+
 export function formatDue(value: string | null | undefined): string {
-  if (!value) return 'No due date';
+  const lang = uiLanguage();
+  const none = lang === 'ru' ? 'Без срока' : lang === 'en' ? 'No due date' : 'Muddatsiz';
+  if (!value) return none;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'No due date';
-  return date.toLocaleString(undefined, {
+  if (Number.isNaN(date.getTime())) return none;
+  return date.toLocaleString(lang === 'ru' ? 'ru-RU' : lang === 'en' ? 'en-GB' : 'ru-RU', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -154,6 +179,11 @@ export function formatDue(value: string | null | undefined): string {
 }
 
 export function formatStatus(value: string): string {
+  const known = STATUS_TEXT[value];
+  if (known) {
+    const lang = uiLanguage();
+    return lang === 'ru' ? known[0] : lang === 'uz' ? known[1] : known[2];
+  }
   return value
     .split('_')
     .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))

@@ -44364,6 +44364,7 @@ function isActiveTelegramBindNonce(input) {
 
 // src/routes/auth.ts
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1e3;
+var SHORT_SESSION_MS = 12 * 60 * 60 * 1e3;
 var isProduction2 = process.env.NODE_ENV === "production";
 var allowPublicRegistration = process.env.EDUVERSE_ALLOW_PUBLIC_REGISTRATION === "1";
 var sessionCookieName = "eduverse.sid";
@@ -44523,8 +44524,13 @@ async function applyUserRateLimit(userId, scope, limit, windowMs, res, message) 
   sendRateLimitResponse(res, message, retryAfterSeconds);
   return false;
 }
-function setSessionCookie(res, token) {
-  res.cookie(sessionCookieName, token, cookieOptions);
+function setSessionCookie(res, token, remember = true) {
+  if (remember) {
+    res.cookie(sessionCookieName, token, cookieOptions);
+    return;
+  }
+  const { maxAge: _maxAge, ...browserSession } = cookieOptions;
+  res.cookie(sessionCookieName, token, browserSession);
 }
 function clearSessionCookie(res) {
   res.clearCookie(sessionCookieName, {
@@ -44686,7 +44692,7 @@ router.post(
   loginRateLimiter,
   loginAddressLimiter,
   async (req, res) => {
-    if (!hasOnlyFields(req.body, ["login", "password"])) {
+    if (!hasOnlyFields(req.body, ["login", "password", "remember"])) {
       res.status(400).json({ error: "Unexpected sign-in fields." });
       return;
     }
@@ -44754,14 +44760,15 @@ router.post(
       await db.update(usersTable).set({ role: "platform_superadmin", updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, user3.id));
       user3.role = "platform_superadmin";
     }
+    const remember = req.body.remember === true;
     const sessionToken = createSessionToken();
     await db.insert(sessionsTable).values({
       userId: user3.id,
       tokenHash: hashSessionToken(sessionToken),
       ...sessionMeta(req),
-      expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
+      expiresAt: new Date(Date.now() + (remember ? SESSION_DURATION_MS : SHORT_SESSION_MS))
     });
-    setSessionCookie(res, sessionToken);
+    setSessionCookie(res, sessionToken, remember);
     res.json({ user: publicUser(user3) });
   }
 );
@@ -52766,8 +52773,8 @@ router5.get(
       district: schoolsTable.district,
       address: schoolsTable.address,
       createdAt: schoolsTable.createdAt,
-      memberCount: sql`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-      classCount: sql`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`
+      memberCount: sql`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+      classCount: sql`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`
     }).from(schoolsTable).orderBy(schoolsTable.name);
     res.json({ schools });
   }
@@ -52810,8 +52817,8 @@ router5.get(
       district: schoolsTable.district,
       address: schoolsTable.address,
       createdAt: schoolsTable.createdAt,
-      memberCount: sql`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-      classCount: sql`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`
+      memberCount: sql`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+      classCount: sql`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`
     }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
     if (!school) {
       res.status(404).json({ error: "School not found." });

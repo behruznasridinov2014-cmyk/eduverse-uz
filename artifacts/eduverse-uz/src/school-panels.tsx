@@ -119,6 +119,17 @@ function RefreshButton({ onClick, busy, language }: { onClick: () => void; busy:
 /* Account school scope                                                        */
 /* -------------------------------------------------------------------------- */
 
+const SUBJECT_TEXT: Record<string, [string, string, string]> = {
+  Mathematics: ['Mathematics', 'Математика', 'Matematika'],
+  Biology: ['Biology', 'Биология', 'Biologiya'],
+  History: ['History', 'История', 'Tarix'],
+  Physics: ['Physics', 'Физика', 'Fizika'],
+  Chemistry: ['Chemistry', 'Химия', 'Kimyo'],
+  Uzbek: ['Uzbek', 'Узбекский язык', 'O‘zbek tili'],
+  Russian: ['Russian', 'Русский язык', 'Rus tili'],
+  English: ['English', 'Английский язык', 'Ingliz tili'],
+};
+
 export function SchoolScopeSummary({ school, language }: { school: SchoolData; language: Language }) {
   const statusLabel =
     school.status === 'loading'
@@ -795,7 +806,7 @@ export function ServerTeachingPanel({
                   onChange={(event) => setForm({ ...form, subject: event.target.value })}
                 >
                   {['Mathematics', 'Biology', 'History', 'Physics', 'Chemistry', 'Uzbek', 'Russian', 'English'].map((subject) => (
-                    <option value={subject} key={subject}>{subject}</option>
+                    <option value={subject} key={subject}>{t(language, ...(SUBJECT_TEXT[subject] ?? [subject, subject, subject]))}</option>
                   ))}
                 </select>
               </div>
