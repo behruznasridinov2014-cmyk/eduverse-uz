@@ -35,7 +35,6 @@ import {
 } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
-import { AiTutor } from './extras';
 
 /* -------------------------------------------------------------------------- */
 
@@ -486,7 +485,6 @@ function TopicDetail({
 
       <SlidesPanel topic={topic} copy={copy} />
       <FactsPanel topic={topic} copy={copy} />
-      {!canCreate && <AiTutor language={language} topicId={topic.id} />}
       <Models3dPanel topic={topic} copy={copy} />
       <section className="panel reveal-up">
         <div className="section-head">

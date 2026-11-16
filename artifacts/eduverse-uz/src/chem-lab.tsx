@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlaskConical, Minus, Plus, RotateCcw, Sparkles, Atom } from 'lucide-react';
 import type { User } from '@workspace/api-client-react';
-import { AiTutor } from './extras';
 import { PhysicsLab } from './physics-lab';
 import { MathLab, WebModelsLab } from './studio-labs';
 import type { Language } from './school-data';
@@ -484,7 +483,6 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         </div>
       )}
 
-      {user.role === 'student' && <AiTutor language={language} topicId={null} />}
     </section>
   );
 }

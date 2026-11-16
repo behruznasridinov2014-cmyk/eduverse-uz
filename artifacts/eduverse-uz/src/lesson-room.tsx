@@ -47,7 +47,6 @@ import {
   X,
 } from 'lucide-react';
 import { TopicModels } from './topic-library';
-import { AiTutor } from './extras';
 import { LessonBoard, type BoardStroke } from './lesson-board';
 import { CourseScene3D } from './course';
 import { COURSE, courseTopicByKey } from './course-data';
@@ -904,7 +903,6 @@ function RoomView({
             </div>
           </section>
 
-          {user.role === 'student' && <AiTutor language={language} topicId={topic?.id ?? null} compact />}
 
           <section className="panel">
             <div className="section-head"><h2>{copy.chat}</h2></div>
