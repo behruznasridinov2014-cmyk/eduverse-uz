@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eduverse-uz-shell-v2';
+const CACHE_NAME = 'eduverse-uz-shell-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {
