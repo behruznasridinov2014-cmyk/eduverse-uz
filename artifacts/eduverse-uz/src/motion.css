@@ -316,3 +316,18 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .trainer-rating{margin:0;padding-left:22px;display:grid;gap:6px}
 .trainer-rating li span{margin-right:8px}
 .trainer-rating li.me b{color:var(--accent,#2a7b6f)}
+
+/* Owner's school setup wizard */
+.setup-steps-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.setup-class{display:grid;gap:4px;max-width:260px;margin-bottom:8px}
+.setup-rows{display:grid;gap:6px}
+.setup-row{display:grid;gap:6px;align-items:center;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) 36px}
+.setup-row.teacher{grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,.8fr) 36px}
+.setup-row.pupil{grid-template-columns:minmax(0,1.6fr) minmax(0,1.4fr) minmax(0,1.1fr) 36px}
+.setup-row.head{font-size:12px;font-weight:700;opacity:.65}
+.setup-created{margin-top:16px;display:grid;gap:8px}
+.setup-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.setup-card{display:grid;gap:3px;padding:12px;border:1px dashed rgba(127,127,127,.5);border-radius:12px;break-inside:avoid}
+.setup-card code{font-size:14px;font-weight:700}
+@media (max-width:640px){.setup-row,.setup-row.teacher,.setup-row.pupil{grid-template-columns:1fr}.setup-row.head{display:none}}
+@media print{body *{visibility:hidden}.setup-created,.setup-created *{visibility:visible}.setup-created{position:absolute;inset:0;padding:12px}.setup-created button{display:none}}
