@@ -841,15 +841,17 @@ router.get(
       .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))
       .orderBy(asc(usersTable.username));
 
+    const subject = typeof req.query.subject === "string" ? req.query.subject.trim().slice(0, 40) : "";
     const marks = await db
       .select()
       .from(attendanceTable)
-      .where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date)));
+      .where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date), eq(attendanceTable.subject, subject)));
     const byStudent = new Map(marks.map((m) => [m.studentId, m]));
 
     const mayManage = await canManage(viewer.id, viewer.role, classId);
     res.json({
       date,
+      subject,
       canManage: mayManage,
       records: members.map((member) => {
         const mark = byStudent.get(member.userId);
@@ -890,6 +892,7 @@ router.put(
       return;
     }
     const date = readString(req.body, "date", 20) ?? todayIso();
+    const subject = (cleanText(isRecord(req.body) ? req.body.subject : "", 40) ?? "").trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       res.status(400).json({ error: "Date must be YYYY-MM-DD." });
       return;
@@ -941,11 +944,12 @@ router.put(
             studentId: entry.studentId,
             markedBy: viewer.id,
             attendanceDate: date,
+            subject,
             status: entry.status,
             note: entry.note,
           })
           .onConflictDoUpdate({
-            target: [attendanceTable.classId, attendanceTable.studentId, attendanceTable.attendanceDate],
+            target: [attendanceTable.classId, attendanceTable.studentId, attendanceTable.attendanceDate, attendanceTable.subject],
             set: { status: entry.status, note: entry.note, markedBy: viewer.id, updatedAt: new Date() },
           });
       }
@@ -1008,6 +1012,7 @@ router.get(
         status: attendanceTable.status,
         note: attendanceTable.note,
         attendanceDate: attendanceTable.attendanceDate,
+        subject: attendanceTable.subject,
         updatedAt: attendanceTable.updatedAt,
       })
       .from(attendanceTable)

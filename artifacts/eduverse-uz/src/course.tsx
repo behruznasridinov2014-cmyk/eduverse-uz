@@ -1,5 +1,5 @@
 import './scenes.css';
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import type { User } from '@workspace/api-client-react';
 import { customFetch } from '@workspace/api-client-react';
 import { BookOpen, Box, CalendarCheck2, CheckCircle2, ChevronRight, GraduationCap, Lightbulb, Lock, MonitorPlay, NotebookPen, Sparkles, Target, Users } from 'lucide-react';
@@ -142,7 +142,12 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
 
   // A student only studies the books of their own grade — not the next years.
   const books = COURSE.filter((book) => book.grade === grade);
-  const [bookId, setBookId] = useState<string>(books[0]?.id ?? '');
+  const [bookId, setBookId] = useState<string>(() => {
+    // Attendance → "Open today's topic" remembers the lesson's subject.
+    let wanted: string | null = null;
+    try { wanted = localStorage.getItem('eduverse:course-subject'); localStorage.removeItem('eduverse:course-subject'); } catch { /* private mode */ }
+    return books.find((item) => item.subject === wanted)?.id ?? books[0]?.id ?? '';
+  });
   const book: CourseBook | undefined = books.find((item) => item.id === bookId) ?? books[0];
   const [topicKey, setTopicKey] = useState<string>(book?.topics[0]?.key ?? '');
   const topic: CourseTopic | undefined = book?.topics.find((item) => item.key === topicKey) ?? book?.topics[0];
@@ -156,6 +161,20 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
   const setClassId = (id: string | null) => { setClassIdState(id); try { if (id) localStorage.setItem('eduverse:course-class', id); } catch { /* private mode */ } };
   useEffect(() => { if (!classId || !classes.some((item) => item.id === classId)) setClassIdState(classes.find((item) => item.id === savedClass)?.id ?? classes[0]?.id ?? null); }, [classes, classId, savedClass]);
   const [course, reload] = useClassCourse(classId);
+  // The tab opens on today's topic: the one the class covered today, else the next one.
+  // The whole book list stays hidden until asked for.
+  const [showAll, setShowAll] = useState(false);
+  const picked = useRef(false);
+  useEffect(() => {
+    if (picked.current || !book || !course) return;
+    const todayIso = iso(new Date());
+    const doneToday = course.progress.filter((item) => item.doneOn === todayIso).map((item) => item.topicKey);
+    const coveredKeys = new Set(course.progress.map((item) => item.topicKey));
+    const lastCovered = book.topics.reduce((last, item, index) => (coveredKeys.has(item.key) ? index : last), -1);
+    const today = book.topics.find((item) => doneToday.includes(item.key)) ?? book.topics[lastCovered + 1] ?? book.topics[book.topics.length - 1];
+    if (today) setTopicKey(today.key);
+  }, [book, course]);
+  const chooseTopic = (key: string) => { picked.current = true; setTopicKey(key); };
   const [doneOn, setDoneOn] = useState(() => iso(new Date()));
   const [busy, setBusy] = useState(false);
 
@@ -243,7 +262,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
 
       <div className="course-subjects">
         {books.map((item) => (
-          <button type="button" key={item.id} className={`studio-tab ${item.id === book.id ? 'active' : ''}`} onClick={() => { setBookId(item.id); setTopicKey(item.topics[0]?.key ?? ''); }}>
+          <button type="button" key={item.id} className={`studio-tab ${item.id === book.id ? 'active' : ''}`} onClick={() => { picked.current = false; setShowAll(false); setBookId(item.id); setTopicKey(item.topics[0]?.key ?? ''); }}>
             <span>●</span>{subjectName(item.subject)}
           </button>
         ))}
@@ -276,11 +295,23 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
 
       <div className="course-layout">
         <aside className="panel course-nav">
-          {chapters.map((chapter) => (
+          {!showAll && (
+            <div className="course-chapter">
+              <small>{t(language, 'Bugungi mavzu', 'Сегодняшняя тема', 'Today’s topic')}</small>
+              <button type="button" className="course-topic active is-next">
+                <span className="course-code">§{topic.code}</span>
+                <span className="course-name">{topic.title}</span>
+                <ChevronRight size={15} />
+              </button>
+              <button type="button" className="btn small course-all-btn" onClick={() => setShowAll(true)}>{t(language, `Kitobning barcha mavzulari · ${book.topics.length}`, `Все темы книги · ${book.topics.length}`, `All topics of the book · ${book.topics.length}`)}</button>
+            </div>
+          )}
+          {showAll && <button type="button" className="btn small course-all-btn" onClick={() => setShowAll(false)}>{t(language, 'Faqat bugungi mavzu', 'Только сегодняшняя тема', 'Only today’s topic')}</button>}
+          {showAll && chapters.map((chapter) => (
             <div key={chapter} className="course-chapter">
               <small>{chapter}</small>
               {book.topics.filter((item) => item.chapter === chapter).map((item) => (
-                <button type="button" key={item.key} className={`course-topic ${item.key === topic.key ? 'active' : ''} ${marks.has(item.key) ? 'covered' : ''} ${item.key === nextTopic?.key ? 'is-next' : ''}`} onClick={() => setTopicKey(item.key)}>
+                <button type="button" key={item.key} className={`course-topic ${item.key === topic.key ? 'active' : ''} ${marks.has(item.key) ? 'covered' : ''} ${item.key === nextTopic?.key ? 'is-next' : ''}`} onClick={() => { chooseTopic(item.key); setShowAll(false); }}>
                   <span className="course-code">§{item.code}</span>
                   <span className="course-name">{item.title}{marks.has(item.key) && <small className="course-date">{t(language, 'Sinfda', 'В классе', 'In class')} · {markDate(item.key)}</small>}</span>
                   {studied.includes(item.key) ? <CheckCircle2 size={15} className="course-done" /> : marks.has(item.key) ? <Users size={14} className="course-done" /> : <ChevronRight size={15} />}
@@ -361,7 +392,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             {(() => {
               const index = book.topics.findIndex((item) => item.key === topic.key);
               const next = book.topics[index + 1];
-              return next ? <button type="button" className="btn" onClick={() => setTopicKey(next.key)}>{t(language, 'Keyingi mavzu', 'Следующая тема', 'Next topic')}: §{next.code} <ChevronRight size={15} /></button> : null;
+              return next ? <button type="button" className="btn" onClick={() => chooseTopic(next.key)}>{t(language, 'Keyingi mavzu', 'Следующая тема', 'Next topic')}: §{next.code} <ChevronRight size={15} /></button> : null;
             })()}
           </div>
         </article>

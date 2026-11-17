@@ -42787,16 +42787,19 @@ var init_learning = __esm({
         studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
         markedBy: uuid("marked_by").notNull().references(() => usersTable.id, { onDelete: "restrict" }),
         attendanceDate: text("attendance_date").notNull(),
+        /** The lesson's subject: every teacher marks their own lesson ("" = old whole-day mark). */
+        subject: text("subject").notNull().default(""),
         status: attendanceStatusEnum("status").notNull().default("present"),
         note: text("note").notNull().default(""),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
       },
       (table) => [
-        uniqueIndex("attendance_class_student_date_unique").on(
+        uniqueIndex("attendance_class_student_date_subject_unique").on(
           table.classId,
           table.studentId,
-          table.attendanceDate
+          table.attendanceDate,
+          table.subject
         ),
         index("attendance_class_date_idx").on(table.classId, table.attendanceDate),
         index("attendance_student_idx").on(table.studentId)
@@ -51242,11 +51245,13 @@ router3.get(
       username: usersTable.username,
       login: usersTable.login
     }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
-    const marks = await db.select().from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2)));
+    const subject = typeof req.query.subject === "string" ? req.query.subject.trim().slice(0, 40) : "";
+    const marks = await db.select().from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2), eq(attendanceTable.subject, subject)));
     const byStudent = new Map(marks.map((m) => [m.studentId, m]));
     const mayManage = await canManage(viewer.id, viewer.role, classId);
     res.json({
       date: date2,
+      subject,
       canManage: mayManage,
       records: members.map((member) => {
         const mark = byStudent.get(member.userId);
@@ -51286,6 +51291,7 @@ router3.put(
       return;
     }
     const date2 = readString(req.body, "date", 20) ?? todayIso();
+    const subject = (cleanText(isRecord2(req.body) ? req.body.subject : "", 40) ?? "").trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date2)) {
       res.status(400).json({ error: "Date must be YYYY-MM-DD." });
       return;
@@ -51331,10 +51337,11 @@ router3.put(
           studentId: entry.studentId,
           markedBy: viewer.id,
           attendanceDate: date2,
+          subject,
           status: entry.status,
           note: entry.note
         }).onConflictDoUpdate({
-          target: [attendanceTable.classId, attendanceTable.studentId, attendanceTable.attendanceDate],
+          target: [attendanceTable.classId, attendanceTable.studentId, attendanceTable.attendanceDate, attendanceTable.subject],
           set: { status: entry.status, note: entry.note, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }
         });
       }
@@ -51392,6 +51399,7 @@ router3.get(
       status: attendanceTable.status,
       note: attendanceTable.note,
       attendanceDate: attendanceTable.attendanceDate,
+      subject: attendanceTable.subject,
       updatedAt: attendanceTable.updatedAt
     }).from(attendanceTable).innerJoin(classesTable, eq(attendanceTable.classId, classesTable.id)).where(eq(attendanceTable.studentId, studentId)).orderBy(desc(attendanceTable.attendanceDate)).limit(60);
     const total = rows.length;
@@ -54705,6 +54713,7 @@ function ensureSchema() {
       const { created } = await syncTables();
       await syncIdentities();
       await syncConstraints();
+      await pool.query('DROP INDEX IF EXISTS "attendance_class_student_date_unique"');
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
       pending = null;

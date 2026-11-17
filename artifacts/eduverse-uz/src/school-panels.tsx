@@ -1339,7 +1339,7 @@ export function ServerSchoolOverview({
 /* Administration                                                              */
 /* -------------------------------------------------------------------------- */
 
-export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
+export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; selectedId?: string }) {
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1426,6 +1426,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
                 <th>{t(language, 'District', 'Район', 'Tuman')}</th>
                 <th>{t(language, 'Members', 'Участники', 'A’zolar')}</th>
                 <th>{t(language, 'Classes', 'Классы', 'Sinflar')}</th>
+                {onSelect && <th />}
               </tr>
             </thead>
             <tbody>
@@ -1436,6 +1437,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
                   <td>{item.district || '—'}</td>
                   <td>{item.memberCount ?? 0}</td>
                   <td>{item.classCount ?? 0}</td>
+                  {onSelect && <td><button type="button" className={`btn small ${selectedId === item.id ? 'primary' : ''}`} onClick={() => onSelect({ id: item.id, name: item.name })}>{t(language, 'Set up', 'Настроить', 'Sozlash')}</button></td>}
                 </tr>
               ))}
             </tbody>

@@ -494,10 +494,23 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
 }
 
 function AdminPage({role,language}:{role:User['role'];language:Lang}){
+ const [setup,setSetup]=useState<{id:string;name:string}|null>(null);
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  const title=role==='platform_superadmin'?text('Platform administration','Управление платформой','Platforma boshqaruvi'):role==='ministry_admin'?text('National education oversight','Национальный контроль образования','Milliy ta’lim nazorati'):text('Regional education administration','Региональное управление образованием','Hududiy ta’lim boshqaruvi');
  return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
-  <ServerAdminSchoolsPanel language={language}/></>;
+  <ServerAdminSchoolsPanel language={language} selectedId={setup?.id} onSelect={setSetup}/>
+  {setup&&<div style={{marginTop:16,display:'grid',gap:16}}>
+   <Panel><div className="section-head"><h2>{text('Set up','Настройка школы','Maktabni sozlash')}: {setup.name}</h2><button className="btn small" onClick={()=>setSetup(null)}>{text('Close','Закрыть','Yopish')}</button></div>
+    <ol className="setup-steps">
+     <li>{text('Add the director: in the box below write “director; Full name; phone”.','Добавьте директора: в поле ниже напишите «директор; ФИО; телефон».','Direktorni qo‘shing: pastdagi maydonga «direktor; F.I.Sh.; telefon» yozing.')}</li>
+     <li>{text('Add deputies, teachers, students and parents the same way (or paste the school’s Excel).','Так же добавьте завучей, учителей, учеников и родителей (или вставьте Excel школы).','Xuddi shunday zavuch, o‘qituvchi, o‘quvchi va ota-onalarni qo‘shing (yoki maktab Excelini qo‘ying).')}</li>
+     <li>{text('Print the cards with logins and one-time passwords and hand them out. Everyone sets their own password at first sign-in.','Распечатайте карточки с логинами и одноразовыми паролями и раздайте. При первом входе каждый ставит свой пароль.','Login va bir martalik parollar kartochkalarini chop eting va tarqating. Birinchi kirishda har kim o‘z parolini qo‘yadi.')}</li>
+     <li>{text('Check the school calendar: quarters and holidays.','Проверьте учебный календарь: четверти и праздники.','O‘quv taqvimini tekshiring: choraklar va bayramlar.')}</li>
+    </ol>
+   </Panel>
+   <SchoolImport schoolId={setup.id} language={language}/>
+   <SchoolCalendarPanel schoolId={setup.id} language={language}/>
+  </div>}</>;
 }
 function NotFound({language,goHome}:{language:Lang;goHome:()=>void}){return <div className="empty-state"><span className="empty-icon"><Search/></span><h2>{language==='Uzbek'?'Sahifa topilmadi':language==='Русский'?'Страница не найдена':'Page not found'}</h2><p>{language==='Uzbek'?'Menyudan bo‘limni tanlang.':language==='Русский'?'Выберите раздел в меню.':'Choose a section from the menu.'}</p><button className="btn primary" onClick={goHome}><Home size={16}/>{language==='Uzbek'?'Bosh sahifa':language==='Русский'?'На главную':'Home'}</button></div>}
 

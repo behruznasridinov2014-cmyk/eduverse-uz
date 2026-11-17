@@ -196,6 +196,9 @@ export function ensureSchema(): Promise<void> {
       const { created } = await syncTables();
       await syncIdentities();
       await syncConstraints();
+      // Indexes the code no longer uses and that would block new rows.
+      // attendance: one mark per day became one mark per lesson (subject).
+      await pool.query('DROP INDEX IF EXISTS "attendance_class_student_date_unique"');
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
       pending = null;

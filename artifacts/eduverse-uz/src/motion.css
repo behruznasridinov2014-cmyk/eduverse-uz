@@ -259,3 +259,5 @@ html[data-theme="night"] .tabbar.glass-tabs {
   .school-calendar .calendar-row > b,.school-calendar .calendar-row.holiday > input:first-child{grid-column:1 / -1}
   .school-calendar .calendar-row > span{display:none}
 }
+.setup-steps{margin:8px 0 0;padding-left:20px;display:grid;gap:6px;line-height:1.45}
+.course-all-btn{width:100%;justify-content:center;margin-top:10px}

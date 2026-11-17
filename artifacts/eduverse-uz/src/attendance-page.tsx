@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { customFetch } from '@workspace/api-client-react';
+import { useLocation } from 'wouter';
 import {
   ApiError,
   addClassMemberByLogin,
-  getClassAttendance,
   getMySchools,
   getStudentAttendance,
-  saveClassAttendance,
   type AttendanceRecord,
+  type AttendanceResponse,
   type AttendanceStatus,
   type SchoolClass,
   type StudentAttendanceRecord,
@@ -25,6 +26,26 @@ import {
   X,
 } from 'lucide-react';
 import type { Language } from './school-data';
+
+/** Lesson subjects. The value is stored with each mark; course books open by `book`. */
+const SUBJECTS: Array<{ value: string; uz: string; ru: string; en: string; book?: 'physics' | 'chemistry' | 'biology' | 'math' }> = [
+  { value: 'Математика', uz: 'Matematika', ru: 'Математика', en: 'Mathematics', book: 'math' },
+  { value: 'Физика', uz: 'Fizika', ru: 'Физика', en: 'Physics', book: 'physics' },
+  { value: 'Химия', uz: 'Kimyo', ru: 'Химия', en: 'Chemistry', book: 'chemistry' },
+  { value: 'Биология', uz: 'Biologiya', ru: 'Биология', en: 'Biology', book: 'biology' },
+  { value: 'Узбекский язык', uz: 'O‘zbek tili', ru: 'Узбекский язык', en: 'Uzbek' },
+  { value: 'Русский язык', uz: 'Rus tili', ru: 'Русский язык', en: 'Russian' },
+  { value: 'Английский язык', uz: 'Ingliz tili', ru: 'Английский язык', en: 'English' },
+  { value: 'История', uz: 'Tarix', ru: 'История', en: 'History' },
+  { value: 'География', uz: 'Geografiya', ru: 'География', en: 'Geography' },
+  { value: 'Информатика', uz: 'Informatika', ru: 'Информатика', en: 'Computer science' },
+  { value: 'Литература', uz: 'Adabiyot', ru: 'Литература', en: 'Literature' },
+  { value: 'Физкультура', uz: 'Jismoniy tarbiya', ru: 'Физкультура', en: 'PE' },
+];
+const subjectLabel = (language: Language, value: string) => {
+  const item = SUBJECTS.find((entry) => entry.value === value);
+  return !item ? value : language === 'Русский' ? item.ru : language === 'English' ? item.en : item.uz;
+};
 import { friendlyError } from './errors';
 
 type MarkStatus = Exclude<AttendanceStatus, 'unmarked'>;
@@ -121,6 +142,12 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [, navigate] = useLocation();
+  const [subject, setSubject] = useState<string>(() => {
+    try { return localStorage.getItem('eduverse:attendance-subject') ?? 'Физика'; } catch { return 'Физика'; }
+  });
+  const [savedLesson, setSavedLesson] = useState(false);
+  const pickSubject = (value: string) => { setSubject(value); try { localStorage.setItem('eduverse:attendance-subject', value); } catch { /* private mode */ } };
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -164,7 +191,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     setError('');
     setNotice('');
     try {
-      const response = await getClassAttendance(classId, { date });
+      const response = await customFetch<AttendanceResponse>(`/api/classes/${classId}/attendance?date=${encodeURIComponent(date)}&subject=${encodeURIComponent(subject)}`, { method: 'GET' });
       setRecords(response.records);
       setCanManage(response.canManage);
     } catch (requestError) {
@@ -172,7 +199,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     } finally {
       setLoading(false);
     }
-  }, [classId, date, language]);
+  }, [classId, date, subject, language]);
 
   useEffect(() => {
     if (isTeacher) void load();
@@ -199,8 +226,9 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     setSaving(true);
     setError('');
     try {
-      await saveClassAttendance(classId, { date, records: payload });
-      setNotice(copy.saved);
+      await customFetch(`/api/classes/${classId}/attendance`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, subject, records: payload }) });
+      setNotice(`${copy.saved}: ${subjectLabel(language, subject)}`);
+      setSavedLesson(true);
       await load();
     } catch (requestError) {
       setError(describe(requestError, language));
@@ -289,6 +317,12 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
           </select>
         </div>
         <div className="control">
+          <label htmlFor="attendance-subject">{language === 'Русский' ? 'Предмет урока' : language === 'English' ? 'Lesson subject' : 'Dars fani'}</label>
+          <select id="attendance-subject" value={subject} onChange={(event) => { pickSubject(event.target.value); setSavedLesson(false); }}>
+            {SUBJECTS.map((item) => <option key={item.value} value={item.value}>{subjectLabel(language, item.value)}</option>)}
+          </select>
+        </div>
+        <div className="control">
           <label htmlFor="attendance-date">{copy.date}</label>
           <input id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </div>
@@ -321,6 +355,18 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
 
       {error && <div className="notice" role="alert"><CircleAlert size={15} /> {error}</div>}
       {notice && <div className="notice school-inline-success" role="status"><Check size={15} /> {notice}</div>}
+      {savedLesson && (() => {
+        const book = SUBJECTS.find((item) => item.value === subject)?.book;
+        if (!book) return null;
+        return (
+          <button type="button" className="btn primary attendance-topic-btn" onClick={() => {
+            try { localStorage.setItem('eduverse:course-class', classId); localStorage.setItem('eduverse:course-subject', book); } catch { /* private mode */ }
+            navigate('/course');
+          }}>
+            {language === 'Русский' ? 'Открыть сегодняшнюю тему урока' : language === 'English' ? 'Open today’s lesson topic' : 'Bugungi dars mavzusini ochish'} · {subjectLabel(language, subject)}
+          </button>
+        );
+      })()}
 
       <div className="attendance-summary">
         {STATUS_ORDER.map((status) => (

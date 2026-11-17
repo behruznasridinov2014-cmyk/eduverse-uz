@@ -171,9 +171,9 @@ for (let day = 0; day < 5; day += 1) {
   for (let i = 0; i < listB.length; i += 1) {
     const status = attendancePlan[(i + day) % attendancePlan.length];
     await pool.query(
-      `insert into attendance (class_id, student_id, marked_by, attendance_date, status, note)
-       values ($1,$2,$3,$4,$5,$6)
-       on conflict (class_id, student_id, attendance_date)
+      `insert into attendance (class_id, student_id, marked_by, attendance_date, subject, status, note)
+       values ($1,$2,$3,$4,'Физика',$5,$6)
+       on conflict (class_id, student_id, attendance_date, subject)
        do update set status = excluded.status, updated_at = now()`,
       [classB, listB[i].id, teacher.id, date, status, status === "absent" ? "kasal" : ""],
     );

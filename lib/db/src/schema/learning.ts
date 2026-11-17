@@ -29,16 +29,19 @@ export const attendanceTable = pgTable(
     studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
     markedBy: uuid("marked_by").notNull().references(() => usersTable.id, { onDelete: "restrict" }),
     attendanceDate: text("attendance_date").notNull(),
+    /** The lesson's subject: every teacher marks their own lesson ("" = old whole-day mark). */
+    subject: text("subject").notNull().default(""),
     status: attendanceStatusEnum("status").notNull().default("present"),
     note: text("note").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("attendance_class_student_date_unique").on(
+    uniqueIndex("attendance_class_student_date_subject_unique").on(
       table.classId,
       table.studentId,
       table.attendanceDate,
+      table.subject,
     ),
     index("attendance_class_date_idx").on(table.classId, table.attendanceDate),
     index("attendance_student_idx").on(table.studentId),
