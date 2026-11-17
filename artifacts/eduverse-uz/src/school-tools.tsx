@@ -11,7 +11,7 @@ const t = (language: Language, uz: string, ru: string, en: string) =>
 /* 1. Import a school from Excel (copy-paste of the table)                     */
 /* -------------------------------------------------------------------------- */
 
-type Role = 'student' | 'teacher' | 'parent';
+type Role = 'student' | 'teacher' | 'parent' | 'school_admin' | 'school_director';
 type Row = { role: Role; name: string; className?: string; childName?: string; phone?: string };
 type Credential = { role: Role; name: string; className: string; login: string; password: string; phone?: string };
 
@@ -20,6 +20,8 @@ function roleOf(value: string): Role | null {
   if (/^(student|ученик|ученица|o['‘’`]?quvchi|oquvchi|talaba)/.test(v)) return 'student';
   if (/^(teacher|учитель|учительница|преподаватель|o['‘’`]?qituvchi|oqituvchi|ustoz)/.test(v)) return 'teacher';
   if (/^(parent|родитель|мама|папа|ота|она|ota-ona|ota ona)/.test(v)) return 'parent';
+  if (/^(завуч|заместитель|deputy|zavuch|o['‘’`]?rinbosar|orinbosar)/.test(v)) return 'school_admin';
+  if (/^(директор|director|direktor)/.test(v)) return 'school_director';
   return null;
 }
 
@@ -130,7 +132,7 @@ export function SchoolImport({ schoolId, language }: { schoolId: string; languag
     URL.revokeObjectURL(link.href);
   }
 
-  const roleName = (role: Role) => role === 'student' ? t(language, 'O‘quvchi', 'Ученик', 'Student') : role === 'teacher' ? t(language, 'O‘qituvchi', 'Учитель', 'Teacher') : t(language, 'Ota-ona', 'Родитель', 'Parent');
+  const roleName = (role: Role) => role === 'student' ? t(language, 'O‘quvchi', 'Ученик', 'Student') : role === 'teacher' ? t(language, 'O‘qituvchi', 'Учитель', 'Teacher') : role === 'school_admin' ? t(language, 'Zavuch', 'Завуч', 'Deputy') : role === 'school_director' ? t(language, 'Direktor', 'Директор', 'Director') : t(language, 'Ota-ona', 'Родитель', 'Parent');
 
   return (
     <section className="panel import-panel">
@@ -140,7 +142,7 @@ export function SchoolImport({ schoolId, language }: { schoolId: string; languag
       </div>
       <p className="muted">{t(language,
         'Eng oddiy: har bir qator — bitta o‘quvchi: F.I.Sh · Sinf · Ota-ona telefoni · Ota-ona F.I.Sh. Ota-ona hisobi ham avtomatik yaratiladi. O‘qituvchi uchun birinchi ustunga «учитель» yozing.',
-        'Проще всего: одна строка — один ученик: ФИО · Класс · Телефон родителя · ФИО родителя. Аккаунт родителя создастся и привяжется сам. Для учителя напишите в первом столбце «учитель».',
+        'Проще всего: одна строка — один ученик: ФИО · Класс · Телефон родителя · ФИО родителя. Аккаунт родителя создастся и привяжется сам. Для учителя напишите в первом столбце «учитель», для завуча — «завуч».',
         'Simplest: one row per student: Full name · Class · Parent phone · Parent name. The parent account is created and linked automatically. For a teacher put “teacher” in the first column.')}</p>
       <textarea className="import-area" value={text} onChange={(event) => setText(event.target.value)} rows={8} placeholder={SAMPLE} spellCheck={false} />
       {parsed.rows.length > 0 && (

@@ -42766,7 +42766,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43089,6 +43089,16 @@ var init_learning = __esm({
       index("support_messages_thread_idx").on(table.threadUserId, table.channel, table.createdAt),
       index("support_messages_school_idx").on(table.schoolId, table.channel)
     ]);
+    schoolCalendarTable = pgTable("school_calendar", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      /** [{ start: "2026-09-02", end: "2026-10-31" }, ...] — exactly four, in order. */
+      quarters: jsonb("quarters").notNull(),
+      /** [{ from: "2026-12-31", to: "2027-01-02", name: "Новый год" }, ...] */
+      holidays: jsonb("holidays").notNull().default([]),
+      updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("school_calendar_school_unique").on(table.schoolId)]);
   }
 });
 
@@ -43123,6 +43133,7 @@ __export(schema_exports, {
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
+  schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
   schoolsTable: () => schoolsTable,
@@ -43180,6 +43191,7 @@ __export(src_exports, {
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
+  schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
   schoolsTable: () => schoolsTable,
@@ -53775,7 +53787,7 @@ function readRows(body) {
   const rows = [];
   for (const item of raw.slice(0, 120)) {
     if (!isRecord5(item)) continue;
-    const role = item.role === "teacher" || item.role === "parent" ? item.role : item.role === "student" ? "student" : null;
+    const role = item.role === "teacher" || item.role === "parent" || item.role === "student" || item.role === "school_admin" || item.role === "school_director" ? item.role : null;
     const name = cleanText(item.name, 80);
     if (!role || !name) continue;
     rows.push({
@@ -53805,6 +53817,15 @@ router6.post(
     const rows = readRows(req.body);
     if (rows.length === 0) {
       res.status(400).json({ error: "No valid rows to import." });
+      return;
+    }
+    const isGlobal = viewer.role === "education_admin" || viewer.role === "ministry_admin" || viewer.role === "platform_superadmin";
+    if (rows.some((row) => row.role === "school_director") && !isGlobal) {
+      res.status(403).json({ error: "Only EDUVERSE staff can add a school director." });
+      return;
+    }
+    if (rows.some((row) => row.role === "school_admin") && !isGlobal && viewer.role !== "school_director") {
+      res.status(403).json({ error: "Only the director can add a deputy." });
       return;
     }
     const year = String((/* @__PURE__ */ new Date()).getMonth() >= 7 ? (/* @__PURE__ */ new Date()).getFullYear() : (/* @__PURE__ */ new Date()).getFullYear() - 1);
@@ -53861,7 +53882,7 @@ router6.post(
         continue;
       }
       await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
-      if (row.className && row.role !== "parent") {
+      if (row.className && (row.role === "student" || row.role === "teacher")) {
         const classId = await classIdFor(row.className);
         await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
       }
@@ -54157,12 +54178,14 @@ router7.get("/classes/:classId/course", requireAuthenticatedRole(...everyRole3),
     res.status(403).json({ error: "You are not in this class." });
     return;
   }
-  const [progress, pace] = await Promise.all([
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  const [progress, pace, calendar] = await Promise.all([
     db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(eq(courseProgressTable.classId, classId)).orderBy(asc(courseProgressTable.doneOn)),
-    db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId))
+    db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId)),
+    klass ? loadCalendar(klass.schoolId) : Promise.resolve(null)
   ]);
   res.setHeader("Cache-Control", "private, no-store");
-  res.json({ progress, pace, canEdit: access.edit });
+  res.json({ progress, pace, calendar, canEdit: access.edit });
 });
 router7.put("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
   const classId = String(req.params.classId ?? "");
@@ -54212,6 +54235,71 @@ router7.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("tea
   const now = /* @__PURE__ */ new Date();
   await db.insert(coursePaceTable).values({ classId, book, lessonsPerWeek, updatedAt: now }).onConflictDoUpdate({ target: [coursePaceTable.classId, coursePaceTable.book], set: { lessonsPerWeek, updatedAt: now } });
   res.json({ book, lessonsPerWeek });
+});
+var validDate = (value) => typeof value === "string" && DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
+async function loadCalendar(schoolId) {
+  const [row] = await db.select({ quarters: schoolCalendarTable.quarters, holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable).where(eq(schoolCalendarTable.schoolId, schoolId)).limit(1);
+  return row ? { quarters: row.quarters, holidays: row.holidays } : null;
+}
+async function schoolAccess(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [member] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!member) return { read: false, edit: false };
+  return { read: true, edit: member.role === "school_director" || member.role === "school_admin" };
+}
+function readCalendar(body) {
+  if (!isRecord6(body) || !Array.isArray(body.quarters) || body.quarters.length !== 4) return null;
+  const quarters = [];
+  for (const item of body.quarters) {
+    if (!isRecord6(item) || !validDate(item.start) || !validDate(item.end) || item.start > item.end) return null;
+    if (quarters.length && quarters[quarters.length - 1].end >= item.start) return null;
+    quarters.push({ start: item.start, end: item.end });
+  }
+  const rawHolidays = Array.isArray(body.holidays) ? body.holidays : [];
+  if (rawHolidays.length > 40) return null;
+  const holidays = [];
+  for (const item of rawHolidays) {
+    if (!isRecord6(item) || !validDate(item.from) || !validDate(item.to) || item.from > item.to) return null;
+    const name = typeof item.name === "string" ? item.name.trim().slice(0, 60) : "";
+    holidays.push({ from: item.from, to: item.to, name });
+  }
+  holidays.sort((a, b) => a.from.localeCompare(b.from));
+  return { quarters, holidays };
+}
+router7.get("/schools/:schoolId/calendar", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const access = await schoolAccess(viewerOf2(res), schoolId);
+  if (!access.read) {
+    res.status(403).json({ error: "You are not in this school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ calendar: await loadCalendar(schoolId), canEdit: access.edit });
+});
+router7.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  const access = await schoolAccess(viewer, schoolId);
+  if (!access.edit) {
+    res.status(403).json({ error: "Only the director can change the calendar." });
+    return;
+  }
+  const calendar = readCalendar(req.body);
+  if (!calendar) {
+    res.status(400).json({ error: "Four quarters in order, each with a start and end date." });
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(schoolCalendarTable).values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now }).onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
+  res.json({ calendar });
 });
 var course_default = router7;
 

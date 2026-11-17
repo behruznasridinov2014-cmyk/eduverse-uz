@@ -79,7 +79,7 @@ async function canManageSchool(viewer: RequestUser, schoolId: string): Promise<b
 /* 1. Import a whole school from a spreadsheet                                 */
 /* -------------------------------------------------------------------------- */
 
-type ImportRole = "student" | "teacher" | "parent";
+type ImportRole = "student" | "teacher" | "parent" | "school_admin" | "school_director";
 type ImportRow = { role: ImportRole; name: string; className?: string; childName?: string; phone?: string };
 
 /** "+998 90 123-45-67", "90 1234567" → "+998901234567"; anything else is dropped. */
@@ -96,7 +96,7 @@ function readRows(body: unknown): ImportRow[] {
   const rows: ImportRow[] = [];
   for (const item of raw.slice(0, 120)) {
     if (!isRecord(item)) continue;
-    const role = item.role === "teacher" || item.role === "parent" ? item.role : item.role === "student" ? "student" : null;
+    const role: ImportRole | null = item.role === "teacher" || item.role === "parent" || item.role === "student" || item.role === "school_admin" || item.role === "school_director" ? item.role : null;
     const name = cleanText(item.name, 80);
     if (!role || !name) continue;
     rows.push({
@@ -127,6 +127,16 @@ router.post(
     const rows = readRows(req.body);
     if (rows.length === 0) {
       res.status(400).json({ error: "No valid rows to import." });
+      return;
+    }
+    // A director may add deputies (school_admin); only platform staff may add another director.
+    const isGlobal = viewer.role === "education_admin" || viewer.role === "ministry_admin" || viewer.role === "platform_superadmin";
+    if (rows.some((row) => row.role === "school_director") && !isGlobal) {
+      res.status(403).json({ error: "Only EDUVERSE staff can add a school director." });
+      return;
+    }
+    if (rows.some((row) => row.role === "school_admin") && !isGlobal && viewer.role !== "school_director") {
+      res.status(403).json({ error: "Only the director can add a deputy." });
       return;
     }
     const year = String(new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1);
@@ -197,7 +207,7 @@ router.post(
         continue;
       }
       await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
-      if (row.className && row.role !== "parent") {
+      if (row.className && (row.role === "student" || row.role === "teacher")) {
         const classId = await classIdFor(row.className);
         await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
       }

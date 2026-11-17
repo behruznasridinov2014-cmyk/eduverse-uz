@@ -7,6 +7,7 @@ import {
   coursePaceTable,
   courseProgressTable,
   db,
+  schoolCalendarTable,
   schoolMembersTable,
   type AccountRole,
 } from "@workspace/db";
@@ -130,12 +131,14 @@ router.get("/classes/:classId/course", requireAuthenticatedRole(...everyRole), a
   if (!isValidUuid(classId)) { res.status(400).json({ error: "Invalid class." }); return; }
   const access = await classAccess(viewerOf(res), classId);
   if (!access.read) { res.status(403).json({ error: "You are not in this class." }); return; }
-  const [progress, pace] = await Promise.all([
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  const [progress, pace, calendar] = await Promise.all([
     db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(eq(courseProgressTable.classId, classId)).orderBy(asc(courseProgressTable.doneOn)),
     db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId)),
+    klass ? loadCalendar(klass.schoolId) : Promise.resolve(null),
   ]);
   res.setHeader("Cache-Control", "private, no-store");
-  res.json({ progress, pace, canEdit: access.edit });
+  res.json({ progress, pace, calendar, canEdit: access.edit });
 });
 
 router.put("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
@@ -182,6 +185,76 @@ router.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("teac
     .values({ classId, book, lessonsPerWeek, updatedAt: now })
     .onConflictDoUpdate({ target: [coursePaceTable.classId, coursePaceTable.book], set: { lessonsPerWeek, updatedAt: now } });
   res.json({ book, lessonsPerWeek });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 3. The school's calendar: quarters and days off                             */
+/* -------------------------------------------------------------------------- */
+
+type Quarter = { start: string; end: string };
+type Holiday = { from: string; to: string; name: string };
+
+const validDate = (value: unknown): value is string => typeof value === "string" && DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
+
+async function loadCalendar(schoolId: string): Promise<{ quarters: Quarter[]; holidays: Holiday[] } | null> {
+  const [row] = await db.select({ quarters: schoolCalendarTable.quarters, holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable).where(eq(schoolCalendarTable.schoolId, schoolId)).limit(1);
+  return row ? { quarters: row.quarters as Quarter[], holidays: row.holidays as Holiday[] } : null;
+}
+
+async function schoolAccess(viewer: RequestUser, schoolId: string): Promise<{ read: boolean; edit: boolean }> {
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [member] = await db
+    .select({ role: schoolMembersTable.role })
+    .from(schoolMembersTable)
+    .where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id)))
+    .limit(1);
+  if (!member) return { read: false, edit: false };
+  return { read: true, edit: member.role === "school_director" || member.role === "school_admin" };
+}
+
+function readCalendar(body: unknown): { quarters: Quarter[]; holidays: Holiday[] } | null {
+  if (!isRecord(body) || !Array.isArray(body.quarters) || body.quarters.length !== 4) return null;
+  const quarters: Quarter[] = [];
+  for (const item of body.quarters) {
+    if (!isRecord(item) || !validDate(item.start) || !validDate(item.end) || item.start > item.end) return null;
+    if (quarters.length && quarters[quarters.length - 1].end >= item.start) return null;
+    quarters.push({ start: item.start, end: item.end });
+  }
+  const rawHolidays = Array.isArray(body.holidays) ? body.holidays : [];
+  if (rawHolidays.length > 40) return null;
+  const holidays: Holiday[] = [];
+  for (const item of rawHolidays) {
+    if (!isRecord(item) || !validDate(item.from) || !validDate(item.to) || item.from > item.to) return null;
+    const name = typeof item.name === "string" ? item.name.trim().slice(0, 60) : "";
+    holidays.push({ from: item.from, to: item.to, name });
+  }
+  holidays.sort((a, b) => a.from.localeCompare(b.from));
+  return { quarters, holidays };
+}
+
+router.get("/schools/:schoolId/calendar", requireAuthenticatedRole(...everyRole), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const access = await schoolAccess(viewerOf(res), schoolId);
+  if (!access.read) { res.status(403).json({ error: "You are not in this school." }); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ calendar: await loadCalendar(schoolId), canEdit: access.edit });
+});
+
+router.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const viewer = viewerOf(res);
+  const access = await schoolAccess(viewer, schoolId);
+  if (!access.edit) { res.status(403).json({ error: "Only the director can change the calendar." }); return; }
+  const calendar = readCalendar(req.body);
+  if (!calendar) { res.status(400).json({ error: "Four quarters in order, each with a start and end date." }); return; }
+  const now = new Date();
+  await db
+    .insert(schoolCalendarTable)
+    .values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now })
+    .onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
+  res.json({ calendar });
 });
 
 export default router;

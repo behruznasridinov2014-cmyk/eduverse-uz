@@ -65,8 +65,15 @@ const studiedKey = (userId: string) => `eduverse:studied:${userId}`;
 
 const DAY = 24 * 3600 * 1000;
 const iso = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-/** Quarters of the school year (approximate Uzbek calendar), starting in September of `year`. */
-function quarters(year: number): Array<[number, Date, Date]> {
+export type SchoolCalendar = { quarters: Array<{ start: string; end: string }>; holidays: Array<{ from: string; to: string; name: string }> };
+type Span = [number, Date, Date];
+const dayOf = (value: string) => new Date(`${value}T00:00:00`);
+const schoolYearOf = (date: Date) => (date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1);
+/** Quarters of the school year starting in September of `year`: the school's own calendar, else the usual Uzbek one. */
+function quarters(year: number, calendar?: SchoolCalendar | null): Span[] {
+  if (calendar?.quarters.length === 4 && schoolYearOf(dayOf(calendar.quarters[0].start)) === year) {
+    return calendar.quarters.map((item, index): Span => [index + 1, dayOf(item.start), new Date(dayOf(item.end).getTime() + DAY - 1)]);
+  }
   return [
     [1, new Date(year, 8, 2), new Date(year, 9, 31)],
     [2, new Date(year, 10, 9), new Date(year, 11, 27)],
@@ -74,11 +81,24 @@ function quarters(year: number): Array<[number, Date, Date]> {
     [4, new Date(year + 1, 2, 30), new Date(year + 1, 4, 25)],
   ];
 }
-const schoolYearOf = (date: Date) => (date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1);
-/** School weeks between two dates (holidays between quarters are skipped). */
-function schoolWeeks(from: Date, to: Date): number {
+/** Study time of two school years with the holidays and other days off cut out. */
+function studySpans(from: Date, calendar?: SchoolCalendar | null): Span[] {
+  const year = schoolYearOf(from);
+  const off = (calendar?.holidays ?? []).map((item) => [dayOf(item.from).getTime(), dayOf(item.to).getTime() + DAY] as const);
+  const spans: Span[] = [];
+  for (const [n, start, end] of [...quarters(year, calendar), ...quarters(year + 1, calendar)]) {
+    let pieces: Array<[number, number]> = [[start.getTime(), end.getTime()]];
+    for (const [a, b] of off) {
+      pieces = pieces.flatMap(([x, y]): Array<[number, number]> => (b <= x || a >= y ? [[x, y]] : [...(a > x ? [[x, a] as [number, number]] : []), ...(b < y ? [[b, y] as [number, number]] : [])]));
+    }
+    for (const [x, y] of pieces) spans.push([n, new Date(x), new Date(y)]);
+  }
+  return spans;
+}
+/** School weeks between two dates (holidays are skipped). */
+function schoolWeeks(from: Date, to: Date, calendar?: SchoolCalendar | null): number {
   let days = 0;
-  for (const [, start, end] of [...quarters(schoolYearOf(from)), ...quarters(schoolYearOf(from) + 1)]) {
+  for (const [, start, end] of studySpans(from, calendar)) {
     const a = Math.max(start.getTime(), from.getTime());
     const b = Math.min(end.getTime(), to.getTime());
     if (b > a) days += (b - a) / DAY;
@@ -86,9 +106,9 @@ function schoolWeeks(from: Date, to: Date): number {
   return days / 7;
 }
 /** Date after `weeks` school weeks from `from`, skipping holidays. */
-function addSchoolWeeks(from: Date, weeks: number): Date {
+function addSchoolWeeks(from: Date, weeks: number, calendar?: SchoolCalendar | null): Date {
   let left = weeks * 7 * DAY;
-  for (const [, start, end] of [...quarters(schoolYearOf(from)), ...quarters(schoolYearOf(from) + 1)]) {
+  for (const [, start, end] of studySpans(from, calendar)) {
     const a = Math.max(start.getTime(), from.getTime());
     if (end.getTime() <= a) continue;
     const span = end.getTime() - a;
@@ -98,7 +118,7 @@ function addSchoolWeeks(from: Date, weeks: number): Date {
   return new Date(from.getTime() + weeks * 7 * DAY);
 }
 
-type ClassCourse = { progress: Array<{ topicKey: string; doneOn: string }>; pace: Array<{ book: string; lessonsPerWeek: number }>; canEdit: boolean };
+type ClassCourse = { progress: Array<{ topicKey: string; doneOn: string }>; pace: Array<{ book: string; lessonsPerWeek: number }>; calendar?: SchoolCalendar | null; canEdit: boolean };
 
 function useClassCourse(classId: string | null) {
   const [data, setData] = useState<ClassCourse | null>(null);
@@ -166,14 +186,14 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
   const pace = course?.pace.find((item) => item.book === book.bookId)?.lessonsPerWeek ?? book.lessonsPerWeek;
   const today = new Date();
   const year = schoolYearOf(today);
-  const quarter = quarters(year).find(([, start, end]) => today >= start && today <= new Date(end.getTime() + DAY)) ?? quarters(year).find(([, start]) => today < start) ?? quarters(year)[3];
+  const calendar = course?.calendar ?? null;
+  const yearQuarters = quarters(year, calendar);
+  const quarter = yearQuarters.find(([, start, end]) => today >= start && today <= new Date(end.getTime() + DAY)) ?? yearQuarters.find(([, start]) => today < start) ?? yearQuarters[3];
   const remaining = book.topics.length - covered.length;
   const weeksLeft = remaining / Math.max(1, pace);
-  const finish = addSchoolWeeks(today, weeksLeft);
-  const yearEnd = quarters(year)[3][2];
-  const planned = Math.min(book.topics.length, Math.round(schoolWeeks(quarters(year)[0][1], today) * pace));
-  const gap = covered.length - planned;
-  const byQuarterEnd = Math.min(book.topics.length, covered.length + Math.round(schoolWeeks(today, quarter[2]) * pace));
+  const finish = addSchoolWeeks(today, weeksLeft, calendar);
+  const yearEnd = yearQuarters[3][2];
+  const byQuarterEnd = Math.min(book.topics.length, covered.length + Math.round(schoolWeeks(today, quarter[2], calendar) * pace));
   const MONTHS: Record<Language, string[]> = {
     Uzbek: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
     'Русский': ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
@@ -241,6 +261,16 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             </div>
           </div>
           <div className="test-progress"><span style={{ width: `${(covered.length / book.topics.length) * 100}%` }} /></div>
+          {remaining > 0 && (
+            <p className={`muted course-forecast ${finish > yearEnd ? 'warn' : ''}`}>
+              {t(language,
+                `${quarter[0]}-chorak oxiri (${fmt(quarter[2])}): §${book.topics[Math.max(0, byQuarterEnd - 1)]?.code} · kitob tugashi: ${finish > yearEnd ? 'o‘quv yilida ulgurmaydi' : fmt(finish)}`,
+                `К концу ${quarter[0]}-й четверти (${fmt(quarter[2])}): §${book.topics[Math.max(0, byQuarterEnd - 1)]?.code} · книга закончится: ${finish > yearEnd ? 'не успеет до конца года' : fmt(finish)}`,
+                `End of term ${quarter[0]} (${fmt(quarter[2])}): §${book.topics[Math.max(0, byQuarterEnd - 1)]?.code} · book finishes: ${finish > yearEnd ? 'not this school year' : fmt(finish)}`)}
+              {' · '}{t(language, `haftasiga ${pace} dars`, `${pace} урока в неделю`, `${pace} lessons a week`)}
+              {course?.canEdit && <span className="course-pace-btns"><button type="button" className="btn small" onClick={() => void changePace(pace - 1)} aria-label="−">−</button><button type="button" className="btn small" onClick={() => void changePace(pace + 1)} aria-label="+">+</button></span>}
+            </p>
+          )}
         </section>
       )}
 

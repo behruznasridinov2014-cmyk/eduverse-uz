@@ -245,3 +245,17 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .auth-remember span{display:grid;gap:2px}
 .auth-remember b{font-size:14px;font-weight:600}
 .auth-remember small{font-size:12px;line-height:1.35;opacity:.7}
+.course-forecast{margin:8px 0 0;font-size:13px;line-height:1.4}
+.course-forecast.warn{color:#c2562b;opacity:1}
+.course-pace-btns{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}.course-pace-btns .btn{min-width:28px;padding:2px 8px}
+
+/* School calendar editor */
+.school-calendar .calendar-grid{display:grid;gap:8px;margin-top:8px}
+.school-calendar .calendar-row{display:grid;grid-template-columns:110px minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.school-calendar .calendar-row.holiday{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto minmax(0,1fr) auto}
+.school-calendar .calendar-sub{margin:16px 0 0;font-size:15px}
+@media (max-width:640px){
+  .school-calendar .calendar-row{grid-template-columns:1fr 1fr}
+  .school-calendar .calendar-row > b,.school-calendar .calendar-row.holiday > input:first-child{grid-column:1 / -1}
+  .school-calendar .calendar-row > span{display:none}
+}

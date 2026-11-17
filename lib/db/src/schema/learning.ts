@@ -363,3 +363,18 @@ export const supportMessagesTable = pgTable("support_messages", {
   index("support_messages_thread_idx").on(table.threadUserId, table.channel, table.createdAt),
   index("support_messages_school_idx").on(table.schoolId, table.channel),
 ]);
+
+/**
+ * The school's own year calendar: four quarters and any extra days off (holidays,
+ * quarantine). The textbook forecast counts only these school weeks.
+ */
+export const schoolCalendarTable = pgTable("school_calendar", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  /** [{ start: "2026-09-02", end: "2026-10-31" }, ...] — exactly four, in order. */
+  quarters: jsonb("quarters").notNull(),
+  /** [{ from: "2026-12-31", to: "2027-01-02", name: "Новый год" }, ...] */
+  holidays: jsonb("holidays").notNull().default([]),
+  updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("school_calendar_school_unique").on(table.schoolId)]);
