@@ -139,6 +139,15 @@ async function canManage(userId: string, role: AccountRole, classId: string): Pr
 async function canManagePeople(userId: string, role: AccountRole, classId: string): Promise<boolean> {
   const ctx = await classContext(classId);
   if (!ctx) return false;
+  // People change only through EDUVERSE: the school sends a request (routes/requests.ts).
+  void userId;
+  return isGlobalAdminRole(role);
+}
+
+/** Director or deputy of the class's school (or EDUVERSE staff): moderation, not people. */
+async function isClassSchoolManager(userId: string, role: AccountRole, classId: string): Promise<boolean> {
+  const ctx = await classContext(classId);
+  if (!ctx) return false;
   if (isGlobalAdminRole(role)) return true;
   const sRole = await schoolRole(userId, ctx.schoolId);
   return Boolean(sRole) && isSchoolManagementRole(sRole!);
@@ -850,7 +859,7 @@ router.get(
       })
       .from(classMembersTable)
       .innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id))
-      .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))
+      .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")))
       .orderBy(asc(usersTable.username));
 
     const subject = typeof req.query.subject === "string" ? req.query.subject.trim().slice(0, 40) : "";
@@ -1128,7 +1137,7 @@ router.delete("/announcements/:announcementId", requireAuthenticatedRole(...staf
     return;
   }
   // The author removes their own notice; otherwise only the director or deputy.
-  if (row.authorId !== viewer.id && !(await canManagePeople(viewer.id, viewer.role, row.classId))) {
+  if (row.authorId !== viewer.id && !(await isClassSchoolManager(viewer.id, viewer.role, row.classId))) {
     res.status(403).json({ error: "You cannot delete this announcement." });
     return;
   }

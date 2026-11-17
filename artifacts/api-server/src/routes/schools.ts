@@ -393,7 +393,7 @@ router.get(
 
 router.post(
   "/schools/:schoolId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
@@ -455,7 +455,7 @@ router.post(
 
 router.delete(
   "/schools/:schoolId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId", "userId")) return;
     const schoolId = String(req.params.schoolId);
@@ -709,7 +709,7 @@ router.get(
 
 router.post(
   "/classes/:classId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId")) return;
     const classId = String(req.params.classId);
@@ -795,7 +795,7 @@ router.post(
 
 router.delete(
   "/classes/:classId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId", "userId")) return;
     const classId = String(req.params.classId);

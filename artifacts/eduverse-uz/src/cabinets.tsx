@@ -184,7 +184,6 @@ export function DirectorDashboard({ schoolId, language }: { schoolId: string; la
         )}
         {weak.length > 0 && <p className="muted">{t(language, 'Belgilangan sinflarga e’tibor bering: davomat 85% dan past yoki o‘rtacha baho 3,5 dan past.', 'Обратите внимание на отмеченные классы: посещаемость ниже 85% или средняя ниже 3,5.', 'Watch the highlighted classes: attendance below 85% or average below 3.5.')}</p>}
       </section>
-      <ParentLinkForm language={language} />
     </section>
   );
 }

@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router10;
+    module.exports = Router11;
     module.exports.Route = Route;
-    function Router10(options) {
-      if (!(this instanceof Router10)) {
-        return new Router10(options);
+    function Router11(options) {
+      if (!(this instanceof Router11)) {
+        return new Router11(options);
       }
       const opts = options || {};
-      function router10(req, res, next) {
-        router10.handle(req, res, next);
+      function router11(req, res, next) {
+        router11.handle(req, res, next);
       }
-      Object.setPrototypeOf(router10, this);
-      router10.caseSensitive = opts.caseSensitive;
-      router10.mergeParams = opts.mergeParams;
-      router10.params = {};
-      router10.strict = opts.strict;
-      router10.stack = [];
-      return router10;
+      Object.setPrototypeOf(router11, this);
+      router11.caseSensitive = opts.caseSensitive;
+      router11.mergeParams = opts.mergeParams;
+      router11.params = {};
+      router11.strict = opts.strict;
+      router11.stack = [];
+      return router11;
     }
-    Router10.prototype = function() {
+    Router11.prototype = function() {
     };
-    Router10.prototype.param = function param(name, fn) {
+    Router11.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router10.prototype.handle = function handle(req, res, callback) {
+    Router11.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router10.prototype.use = function use(handler) {
+    Router11.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router10.prototype.route = function route(path) {
+    Router11.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router10.prototype[method] = function(path) {
+      Router11.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router10 = require_router();
+    var Router11 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router10 = null;
+      var router11 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router10 === null) {
-            router10 = new Router10({
+          if (router11 === null) {
+            router11 = new Router11({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router10;
+          return router11;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router10 = this.router;
+      var router11 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router10.use(path, fn2);
+          return router11.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router10.use(path, function mounted_app(req, res, next) {
+        router11.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router10 = require_router();
+    var Router11 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router10.Route;
-    exports.Router = Router10;
+    exports.Route = Router11.Route;
+    exports.Router = Router11;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -42529,6 +42529,13 @@ var init_auth = __esm({
         role: accountRoleEnum("role").notNull().default("student"),
         /** Contact phone (parents), set by the school on import. */
         phone: text("phone"),
+        /**
+         * Study status: active | transferred | expelled | graduated. Only EDUVERSE (the owner)
+         * changes it, on the school's request. Grades and attendance are never deleted.
+         */
+        status: text("status").notNull().default("active"),
+        statusReason: text("status_reason").notNull().default(""),
+        statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
         /** True for accounts created by the school: the first sign-in asks to change the password. */
         mustChangePassword: boolean("must_change_password").notNull().default(false),
         /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
@@ -42766,7 +42773,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43102,6 +43109,37 @@ var init_learning = __esm({
       updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [uniqueIndex("school_calendar_school_unique").on(table.schoolId)]);
+    schoolRequestsTable = pgTable("school_requests", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+      /** enroll | expel | transfer | graduate | restore | edit */
+      kind: text("kind").notNull(),
+      /** The person the request is about (null for enroll). */
+      targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+      payload: jsonb("payload").notNull().default({}),
+      reason: text("reason").notNull().default(""),
+      /** pending | approved | rejected */
+      status: text("status").notNull().default("pending"),
+      decidedBy: uuid("decided_by").references(() => usersTable.id, { onDelete: "set null" }),
+      decidedAt: timestamp("decided_at", { withTimezone: true }),
+      decisionNote: text("decision_note").notNull().default(""),
+      /** What approving did, e.g. created logins (without passwords). */
+      result: jsonb("result").notNull().default({}),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      index("school_requests_status_idx").on(table.status, table.createdAt),
+      index("school_requests_school_idx").on(table.schoolId, table.createdAt)
+    ]);
+    auditLogTable = pgTable("audit_log", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+      actorId: uuid("actor_id").references(() => usersTable.id, { onDelete: "set null" }),
+      action: text("action").notNull(),
+      targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+      details: jsonb("details").notNull().default({}),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("audit_log_school_idx").on(table.schoolId, table.createdAt)]);
   }
 });
 
@@ -43115,6 +43153,7 @@ __export(schema_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  auditLogTable: () => auditLogTable,
   bookAnnotationsTable: () => bookAnnotationsTable,
   classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
@@ -43139,6 +43178,7 @@ __export(schema_exports, {
   schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
+  schoolRequestsTable: () => schoolRequestsTable,
   schoolsTable: () => schoolsTable,
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
@@ -43170,6 +43210,7 @@ __export(src_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  auditLogTable: () => auditLogTable,
   bookAnnotationsTable: () => bookAnnotationsTable,
   classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
@@ -43197,6 +43238,7 @@ __export(src_exports, {
   schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
+  schoolRequestsTable: () => schoolRequestsTable,
   schoolsTable: () => schoolsTable,
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
@@ -43940,12 +43982,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express10 = __toESM(require_express2(), 1);
+var import_express11 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express9 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -44379,6 +44421,7 @@ function isActiveTelegramBindNonce(input) {
 
 // src/routes/auth.ts
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1e3;
+var ACCOUNT_BLOCKED = ["expelled", "transferred", "disabled"];
 var SHORT_SESSION_MS = 12 * 60 * 60 * 1e3;
 var isProduction2 = process.env.NODE_ENV === "production";
 var allowPublicRegistration = process.env.EDUVERSE_ALLOW_PUBLIC_REGISTRATION === "1";
@@ -44565,6 +44608,7 @@ async function authenticatedUserForRequest(req) {
       gt(sessionsTable.expiresAt, /* @__PURE__ */ new Date())
     )
   ).limit(1);
+  if (user3 && ACCOUNT_BLOCKED.includes(user3.account.status)) return null;
   return user3?.account ?? null;
 }
 function challengeTokenFrom(value) {
@@ -44722,6 +44766,10 @@ router.post(
     const passwordIsValid = await verifyPassword(password, passwordHash);
     if (!user3 || !passwordIsValid) {
       res.status(401).json({ error: "Login or password is incorrect." });
+      return;
+    }
+    if (ACCOUNT_BLOCKED.includes(user3.status)) {
+      res.status(403).json({ error: "This account is closed by the school. Contact the school administration." });
       return;
     }
     if (user3.twoFactorEnabled) {
@@ -50716,6 +50764,12 @@ async function canManage(userId, role, classId) {
 async function canManagePeople(userId, role, classId) {
   const ctx = await classContext(classId);
   if (!ctx) return false;
+  void userId;
+  return isGlobalAdminRole(role);
+}
+async function isClassSchoolManager(userId, role, classId) {
+  const ctx = await classContext(classId);
+  if (!ctx) return false;
   if (isGlobalAdminRole(role)) return true;
   const sRole = await schoolRole(userId, ctx.schoolId);
   return Boolean(sRole) && isSchoolManagementRole(sRole);
@@ -51250,7 +51304,7 @@ router3.get(
       userId: usersTable.id,
       username: usersTable.username,
       login: usersTable.login
-    }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
+    }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active"))).orderBy(asc(usersTable.username));
     const subject = typeof req.query.subject === "string" ? req.query.subject.trim().slice(0, 40) : "";
     const marks = await db.select().from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2), eq(attendanceTable.subject, subject)));
     const byStudent = new Map(marks.map((m) => [m.studentId, m]));
@@ -51486,7 +51540,7 @@ router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...sta
     res.status(404).json({ error: "Announcement not found." });
     return;
   }
-  if (row.authorId !== viewer.id && !await canManagePeople(viewer.id, viewer.role, row.classId)) {
+  if (row.authorId !== viewer.id && !await isClassSchoolManager(viewer.id, viewer.role, row.classId)) {
     res.status(403).json({ error: "You cannot delete this announcement." });
     return;
   }
@@ -52882,7 +52936,7 @@ router5.get(
 );
 router5.post(
   "/schools/:schoolId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
@@ -52925,7 +52979,7 @@ router5.post(
 );
 router5.delete(
   "/schools/:schoolId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId", "userId")) return;
     const schoolId = String(req.params.schoolId);
@@ -53123,7 +53177,7 @@ router5.get(
 );
 router5.post(
   "/classes/:classId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId")) return;
     const classId = String(req.params.classId);
@@ -53184,7 +53238,7 @@ router5.post(
 );
 router5.delete(
   "/classes/:classId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId", "userId")) return;
     const classId = String(req.params.classId);
@@ -53726,6 +53780,18 @@ var import_express6 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
 init_ai_content();
+
+// src/lib/audit.ts
+init_src();
+async function writeAudit(schoolId, actorId, action, targetUserId, details = {}) {
+  try {
+    await db.insert(auditLogTable).values({ schoolId, actorId, action, targetUserId, details });
+  } catch (error) {
+    logger.error({ err: error, action }, "audit log write failed");
+  }
+}
+
+// src/routes/school-tools.ts
 var router6 = (0, import_express6.Router)();
 var perSession2 = (req) => {
   const token = req.cookies?.["eduverse.sid"];
@@ -53862,9 +53928,82 @@ function readRows(body) {
   }
   return rows;
 }
+async function importPeople(schoolId, rows, actorId) {
+  const year = String((/* @__PURE__ */ new Date()).getMonth() >= 7 ? (/* @__PURE__ */ new Date()).getFullYear() : (/* @__PURE__ */ new Date()).getFullYear() - 1);
+  const classCache = /* @__PURE__ */ new Map();
+  const classIdFor = async (className) => {
+    const key = className.toLowerCase();
+    const cached = classCache.get(key);
+    if (cached) return cached;
+    const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+    let id = existing?.id;
+    if (!id) {
+      const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+      const [created2] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
+      id = created2?.id;
+      if (!id) {
+        const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+        id = again.id;
+      }
+    }
+    classCache.set(key, id);
+    return id;
+  };
+  const created = [];
+  const skipped = [];
+  const studentIdsByName = /* @__PURE__ */ new Map();
+  const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
+  for (const row of ordered) {
+    const password = readablePassword2();
+    const passwordHash = await hashPassword2(password);
+    let account = null;
+    for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
+      const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
+      const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
+      const login = loginCandidate2(row.name);
+      try {
+        const [inserted] = await db.insert(usersTable).values({
+          username: shownName,
+          usernameNormalized: normalizeUsername(shownName),
+          login,
+          loginNormalized: login.toLowerCase(),
+          passwordHash,
+          role: row.role,
+          phone: row.phone ?? null,
+          mustChangePassword: true
+        }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
+        account = inserted ?? null;
+      } catch (error) {
+        const code = error?.code ?? error?.cause?.code;
+        if (String(code) !== "23505") throw error;
+      }
+    }
+    if (!account) {
+      skipped.push({ name: row.name, reason: "duplicate" });
+      continue;
+    }
+    await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
+    if (row.className && (row.role === "student" || row.role === "teacher")) {
+      const classId = await classIdFor(row.className);
+      await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
+    }
+    if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
+    if (row.role === "parent" && row.childName) {
+      let childId = studentIdsByName.get(row.childName.toLowerCase());
+      if (!childId) {
+        const [existing] = await db.select({ id: usersTable.id }).from(usersTable).innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student"))).limit(1);
+        childId = existing?.id;
+      }
+      if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: actorId }).onConflictDoNothing();
+      else skipped.push({ name: row.name, reason: "child-not-found" });
+    }
+    created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password, phone: row.phone ?? "", userId: account.id });
+  }
+  return { created, skipped };
+}
 router6.post(
   "/schools/:schoolId/import",
-  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  requireAuthenticatedRole("education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
     const schoolId = String(req.params.schoolId);
     const viewer = viewerOf(res);
@@ -53872,95 +54011,14 @@ router6.post(
       res.status(400).json({ error: "Invalid school identifier." });
       return;
     }
-    if (!await canManageSchool2(viewer, schoolId)) {
-      res.status(403).json({ error: "You cannot manage this school." });
-      return;
-    }
     const rows = readRows(req.body);
     if (rows.length === 0) {
       res.status(400).json({ error: "No valid rows to import." });
       return;
     }
-    const isGlobal = viewer.role === "education_admin" || viewer.role === "ministry_admin" || viewer.role === "platform_superadmin";
-    if (rows.some((row) => row.role === "school_director") && !isGlobal) {
-      res.status(403).json({ error: "Only EDUVERSE staff can add a school director." });
-      return;
-    }
-    if (rows.some((row) => row.role === "school_admin") && !isGlobal && viewer.role !== "school_director") {
-      res.status(403).json({ error: "Only the director can add a deputy." });
-      return;
-    }
-    const year = String((/* @__PURE__ */ new Date()).getMonth() >= 7 ? (/* @__PURE__ */ new Date()).getFullYear() : (/* @__PURE__ */ new Date()).getFullYear() - 1);
-    const classCache = /* @__PURE__ */ new Map();
-    const classIdFor = async (className) => {
-      const key = className.toLowerCase();
-      const cached = classCache.get(key);
-      if (cached) return cached;
-      const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
-      let id = existing?.id;
-      if (!id) {
-        const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
-        const [created2] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
-        id = created2?.id;
-        if (!id) {
-          const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
-          id = again.id;
-        }
-      }
-      classCache.set(key, id);
-      return id;
-    };
-    const created = [];
-    const skipped = [];
-    const studentIdsByName = /* @__PURE__ */ new Map();
-    const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
-    for (const row of ordered) {
-      const password = readablePassword2();
-      const passwordHash = await hashPassword2(password);
-      let account = null;
-      for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
-        const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
-        const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
-        const login = loginCandidate2(row.name);
-        try {
-          const [inserted] = await db.insert(usersTable).values({
-            username: shownName,
-            usernameNormalized: normalizeUsername(shownName),
-            login,
-            loginNormalized: login.toLowerCase(),
-            passwordHash,
-            role: row.role,
-            phone: row.phone ?? null,
-            mustChangePassword: true
-          }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
-          account = inserted ?? null;
-        } catch (error) {
-          const code = error?.code ?? error?.cause?.code;
-          if (String(code) !== "23505") throw error;
-        }
-      }
-      if (!account) {
-        skipped.push({ name: row.name, reason: "duplicate" });
-        continue;
-      }
-      await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
-      if (row.className && (row.role === "student" || row.role === "teacher")) {
-        const classId = await classIdFor(row.className);
-        await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
-      }
-      if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
-      if (row.role === "parent" && row.childName) {
-        let childId = studentIdsByName.get(row.childName.toLowerCase());
-        if (!childId) {
-          const [existing] = await db.select({ id: usersTable.id }).from(usersTable).innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student"))).limit(1);
-          childId = existing?.id;
-        }
-        if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: viewer.id }).onConflictDoNothing();
-        else skipped.push({ name: row.name, reason: "child-not-found" });
-      }
-      created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password, phone: row.phone ?? "" });
-    }
-    res.status(201).json({ created, skipped });
+    const result = await importPeople(schoolId, rows, viewer.id);
+    await writeAudit(schoolId, viewer.id, "import", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
+    res.status(201).json({ created: result.created.map(({ userId: _userId, ...rest }) => rest), skipped: result.skipped });
   }
 );
 var everyRole2 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
@@ -54607,6 +54665,293 @@ router8.post("/support/inbox/:userId", requireAuthenticatedRole("platform_supera
 });
 var account_default = router8;
 
+// src/routes/requests.ts
+init_drizzle_orm();
+var import_express9 = __toESM(require_express2(), 1);
+init_src();
+var router9 = (0, import_express9.Router)();
+var viewerOf4 = (res) => res.locals.authenticatedUser;
+var OWNER_ROLES = ["education_admin", "ministry_admin", "platform_superadmin"];
+var SCHOOL_STAFF = ["school_director", "school_admin", ...OWNER_ROLES];
+var KINDS = ["enroll", "expel", "transfer", "graduate", "restore", "edit"];
+var STATUS_OF = { transfer: "transferred", graduate: "graduated", restore: "active" };
+var BLOCKED_STATUSES = ["expelled", "transferred", "disabled"];
+var isRecord8 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+async function schoolRoleOf(userId, schoolId) {
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+  return row?.role ?? null;
+}
+async function isSchoolStaff(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const role = await schoolRoleOf(viewer.id, schoolId);
+  return role === "school_director" || role === "school_admin";
+}
+async function ownerIds() {
+  const rows = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, "platform_superadmin"));
+  return rows.map((row) => row.id);
+}
+async function schoolName(schoolId) {
+  const [row] = await db.select({ name: schoolsTable.name }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  return row?.name ?? "";
+}
+async function classIdIn(schoolId, className) {
+  const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+  if (existing) return existing.id;
+  const now = /* @__PURE__ */ new Date();
+  const year = String(now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1);
+  const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+  const [created] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
+  if (created) return created.id;
+  const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+  return again.id;
+}
+function readChange(kind, body) {
+  if (kind === "enroll") {
+    const rows = readRows(body);
+    if (rows.length === 0) return { payload: {}, error: "No valid rows." };
+    return { payload: { rows } };
+  }
+  if (kind === "edit") {
+    const payload = {};
+    const name = cleanText(body.name, 80);
+    const phone = cleanText(body.phone, 30);
+    const className = cleanText(body.className, 40);
+    if (name) payload.name = name;
+    if (phone !== null && phone !== void 0) payload.phone = phone;
+    if (className) payload.className = className;
+    if (Object.keys(payload).length === 0) return { payload, error: "Nothing to change." };
+    return { payload };
+  }
+  if (kind === "transfer") {
+    const toSchool = cleanText(body.toSchool, 120);
+    return { payload: toSchool ? { toSchool } : {} };
+  }
+  return { payload: {} };
+}
+async function applyChange(schoolId, kind, targetUserId, payload, reason, actorId) {
+  if (kind === "enroll") {
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const result = await importPeople(schoolId, rows, actorId);
+    await writeAudit(schoolId, actorId, "enroll", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
+    return { created: result.created.map(({ userId: _id, ...rest }) => rest), skipped: result.skipped };
+  }
+  if (!targetUserId) throw new Error("No person.");
+  const [person] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.id, targetUserId)).limit(1);
+  if (!person) throw new Error("Person not found.");
+  const now = /* @__PURE__ */ new Date();
+  if (kind === "edit") {
+    const set = { updatedAt: now };
+    if (typeof payload.name === "string") {
+      set.username = payload.name;
+      set.usernameNormalized = payload.name.toLowerCase();
+    }
+    if (typeof payload.phone === "string") set.phone = payload.phone || null;
+    await db.update(usersTable).set(set).where(eq(usersTable.id, person.id));
+    if (typeof payload.className === "string" && (person.role === "student" || person.role === "teacher")) {
+      const schoolClassIds = (await db.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId))).map((row) => row.id);
+      if (person.role === "student" && schoolClassIds.length) {
+        await db.delete(classMembersTable).where(and(eq(classMembersTable.userId, person.id), inArray(classMembersTable.classId, schoolClassIds)));
+      }
+      const classId = await classIdIn(schoolId, payload.className);
+      await db.insert(classMembersTable).values({ classId, userId: person.id, role: person.role }).onConflictDoNothing();
+    }
+    await writeAudit(schoolId, actorId, "edit", person.id, { from: person.name, ...payload });
+    return { edited: person.name };
+  }
+  const staff = person.role !== "student" && person.role !== "parent";
+  const status = kind === "expel" ? staff ? "disabled" : "expelled" : STATUS_OF[kind] ?? "active";
+  await db.update(usersTable).set({ status, statusReason: reason.slice(0, 300), statusChangedAt: now, updatedAt: now }).where(eq(usersTable.id, person.id));
+  if (BLOCKED_STATUSES.includes(status)) await db.delete(sessionsTable).where(eq(sessionsTable.userId, person.id));
+  await writeAudit(schoolId, actorId, kind, person.id, { name: person.name, status, reason, ...payload });
+  return { name: person.name, status };
+}
+router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const viewer = viewerOf4(res);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isSchoolStaff(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy sends requests." });
+    return;
+  }
+  const body = isRecord8(req.body) ? req.body : {};
+  const kind = body.kind;
+  if (!KINDS.includes(kind)) {
+    res.status(400).json({ error: "Unknown request." });
+    return;
+  }
+  const reason = cleanText(body.reason, 300) ?? "";
+  if ((kind === "expel" || kind === "transfer") && reason.length < 3) {
+    res.status(400).json({ error: "Write the reason (for example: the order number)." });
+    return;
+  }
+  let targetUserId = null;
+  if (kind !== "enroll") {
+    targetUserId = typeof body.userId === "string" && isValidUuid(body.userId) ? body.userId : null;
+    if (!targetUserId || !await schoolRoleOf(targetUserId, schoolId)) {
+      res.status(400).json({ error: "This person is not in your school." });
+      return;
+    }
+    const targetRole = await schoolRoleOf(targetUserId, schoolId);
+    if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) {
+      res.status(403).json({ error: "Requests about the director go to EDUVERSE directly." });
+      return;
+    }
+  }
+  const change = readChange(kind, body);
+  if (change.error) {
+    res.status(400).json({ error: change.error });
+    return;
+  }
+  if (kind === "enroll" && change.payload.rows.some((row2) => row2.role === "school_director")) {
+    res.status(403).json({ error: "Only EDUVERSE adds a director." });
+    return;
+  }
+  const [row] = await db.insert(schoolRequestsTable).values({ schoolId, authorId: viewer.id, kind, targetUserId, payload: change.payload, reason }).returning({ id: schoolRequestsTable.id });
+  await writeAudit(schoolId, viewer.id, `request:${kind}`, targetUserId, { requestId: row.id, reason });
+  const owners = await ownerIds();
+  const name = await schoolName(schoolId);
+  const what = { enroll: "\u043F\u0440\u0438\u043D\u044F\u0442\u044C \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432", expel: "\u043E\u0442\u0447\u0438\u0441\u043B\u0438\u0442\u044C / \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C", transfer: "\u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u0432 \u0434\u0440\u0443\u0433\u0443\u044E \u0448\u043A\u043E\u043B\u0443", graduate: "\u0432\u044B\u043F\u0443\u0441\u043A", restore: "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C", edit: "\u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435" };
+  await pushNotice(owners, "messages", `\u0417\u0430\u044F\u0432\u043A\u0430: ${what[kind]}`, `${name}${reason ? ` \xB7 ${reason}` : ""}`, "/admin");
+  await notifyUsers(owners, `\u{1F4DD} <b>\u041D\u043E\u0432\u0430\u044F \u0437\u0430\u044F\u0432\u043A\u0430</b>: ${escapeHtml(what[kind])}
+${escapeHtml(name)}${reason ? `
+${escapeHtml(reason)}` : ""}`);
+  res.status(201).json({ id: row.id, status: "pending" });
+});
+async function listRequests(where, limit = 200) {
+  const rows = await db.select({
+    id: schoolRequestsTable.id,
+    schoolId: schoolRequestsTable.schoolId,
+    schoolName: schoolsTable.name,
+    kind: schoolRequestsTable.kind,
+    targetUserId: schoolRequestsTable.targetUserId,
+    payload: schoolRequestsTable.payload,
+    reason: schoolRequestsTable.reason,
+    status: schoolRequestsTable.status,
+    decisionNote: schoolRequestsTable.decisionNote,
+    result: schoolRequestsTable.result,
+    createdAt: schoolRequestsTable.createdAt,
+    decidedAt: schoolRequestsTable.decidedAt,
+    authorId: schoolRequestsTable.authorId
+  }).from(schoolRequestsTable).innerJoin(schoolsTable, eq(schoolsTable.id, schoolRequestsTable.schoolId)).where(where).orderBy(desc(schoolRequestsTable.createdAt)).limit(limit);
+  const ids = [...new Set(rows.flatMap((row) => [row.targetUserId, row.authorId]).filter((id) => Boolean(id)))];
+  const names = ids.length ? await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role }).from(usersTable).where(inArray(usersTable.id, ids)) : [];
+  const nameOf = new Map(names.map((row) => [row.id, row]));
+  return rows.map((row) => ({
+    ...row,
+    target: row.targetUserId ? nameOf.get(row.targetUserId) ?? null : null,
+    author: row.authorId ? nameOf.get(row.authorId)?.name ?? "" : ""
+  }));
+}
+router9.get("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isSchoolStaff(viewerOf4(res), schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ requests: await listRequests(eq(schoolRequestsTable.schoolId, schoolId), 100) });
+});
+router9.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isSchoolStaff(viewerOf4(res), schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(usersTable.username);
+  const classIds = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
+  const memberships = classIds.length ? await db.select({ userId: classMembersTable.userId, classId: classMembersTable.classId }).from(classMembersTable).where(inArray(classMembersTable.classId, classIds.map((row) => row.id))) : [];
+  const className = new Map(classIds.map((row) => [row.id, row.name]));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    people: people.map((person) => ({ ...person, classes: memberships.filter((m) => m.userId === person.id).map((m) => className.get(m.classId) ?? "").filter(Boolean) })),
+    classes: classIds.map((row) => row.name).sort()
+  });
+});
+router9.get("/admin/requests", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const status = typeof req.query.status === "string" && ["pending", "approved", "rejected"].includes(req.query.status) ? req.query.status : null;
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ requests: await listRequests(status ? eq(schoolRequestsTable.status, status) : void 0) });
+});
+router9.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const id = String(req.params.id);
+  const decision = String(req.params.decision);
+  if (!isValidUuid(id) || decision !== "approve" && decision !== "reject") {
+    res.status(400).json({ error: "Invalid request." });
+    return;
+  }
+  const viewer = viewerOf4(res);
+  const note = cleanText(isRecord8(req.body) ? req.body.note : "", 300) ?? "";
+  const [request] = await db.update(schoolRequestsTable).set({ status: decision === "approve" ? "approved" : "rejected", decidedBy: viewer.id, decidedAt: /* @__PURE__ */ new Date(), decisionNote: note }).where(and(eq(schoolRequestsTable.id, id), eq(schoolRequestsTable.status, "pending"))).returning();
+  if (!request) {
+    res.status(409).json({ error: "This request was already decided." });
+    return;
+  }
+  let result = {};
+  if (decision === "approve") {
+    try {
+      result = await applyChange(request.schoolId, request.kind, request.targetUserId, request.payload, request.reason, viewer.id);
+    } catch (error) {
+      await db.update(schoolRequestsTable).set({ status: "pending", decidedBy: null, decidedAt: null }).where(eq(schoolRequestsTable.id, id));
+      res.status(400).json({ error: error instanceof Error ? error.message : "Could not apply the request." });
+      return;
+    }
+    const stored = Array.isArray(result.created) ? { ...result, created: result.created.map(({ password: _pw, ...rest }) => rest) } : result;
+    await db.update(schoolRequestsTable).set({ result: stored }).where(eq(schoolRequestsTable.id, id));
+  } else {
+    await writeAudit(request.schoolId, viewer.id, `reject:${request.kind}`, request.targetUserId, { requestId: id, note });
+  }
+  if (request.authorId) {
+    const verdict = decision === "approve" ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430" : "\u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u0430";
+    await pushNotice([request.authorId], "messages", `\u0417\u0430\u044F\u0432\u043A\u0430 ${verdict}`, note, "/school");
+    await notifyUsers([request.authorId], `EDUVERSE: \u0432\u0430\u0448\u0430 \u0437\u0430\u044F\u0432\u043A\u0430 ${verdict}${note ? `
+${escapeHtml(note)}` : ""}`);
+  }
+  res.json({ status: request.status, result });
+});
+router9.patch("/admin/schools/:schoolId/people/:userId", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const userId = String(req.params.userId);
+  if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
+    res.status(400).json({ error: "Invalid identifier." });
+    return;
+  }
+  if (!await schoolRoleOf(userId, schoolId)) {
+    res.status(404).json({ error: "This person is not in the school." });
+    return;
+  }
+  const body = isRecord8(req.body) ? req.body : {};
+  const kind = body.kind;
+  if (!KINDS.includes(kind) || kind === "enroll") {
+    res.status(400).json({ error: "Unknown change." });
+    return;
+  }
+  const change = readChange(kind, body);
+  if (change.error) {
+    res.status(400).json({ error: change.error });
+    return;
+  }
+  const result = await applyChange(schoolId, kind, userId, change.payload, cleanText(body.reason, 300) ?? "", viewerOf4(res).id);
+  res.json({ result });
+});
+router9.get("/admin/audit", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = typeof req.query.schoolId === "string" && isValidUuid(req.query.schoolId) ? req.query.schoolId : null;
+  const rows = await db.select({ id: auditLogTable.id, action: auditLogTable.action, details: auditLogTable.details, createdAt: auditLogTable.createdAt, actor: usersTable.username, schoolId: auditLogTable.schoolId }).from(auditLogTable).leftJoin(usersTable, eq(usersTable.id, auditLogTable.actorId)).where(schoolId ? eq(auditLogTable.schoolId, schoolId) : void 0).orderBy(desc(auditLogTable.createdAt)).limit(200);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ entries: rows });
+});
+var requests_default = router9;
+
 // src/lib/schema-sync.ts
 init_drizzle_orm();
 init_pg_core();
@@ -54778,9 +55123,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router9 = (0, import_express9.Router)();
-router9.use(health_default);
-router9.use(async (_req, _res, next) => {
+var router10 = (0, import_express10.Router)();
+router10.use(health_default);
+router10.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -54788,17 +55133,18 @@ router9.use(async (_req, _res, next) => {
   }
   next();
 });
-router9.use(school_tools_default);
-router9.use(course_default);
-router9.use(account_default);
-router9.use(auth_default);
-router9.use(learning_default);
-router9.use(lesson_rooms_default);
-router9.use(schools_default);
-var routes_default = router9;
+router10.use(school_tools_default);
+router10.use(course_default);
+router10.use(account_default);
+router10.use(requests_default);
+router10.use(auth_default);
+router10.use(learning_default);
+router10.use(lesson_rooms_default);
+router10.use(schools_default);
+var routes_default = router10;
 
 // src/app.ts
-var app = (0, import_express10.default)();
+var app = (0, import_express11.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -54849,8 +55195,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express10.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express10.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express11.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express11.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {

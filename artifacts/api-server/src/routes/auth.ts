@@ -56,6 +56,8 @@ import {
 } from "../lib/telegram-security";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+/** Study statuses that cannot sign in (graduates keep access). */
+const ACCOUNT_BLOCKED = ["expelled", "transferred", "disabled"];
 /** Without “remember me” the cookie dies with the browser; the server copy lives at most 12 hours. */
 const SHORT_SESSION_MS = 12 * 60 * 60 * 1000;
 const isProduction = process.env.NODE_ENV === "production";
@@ -339,6 +341,8 @@ async function authenticatedUserForRequest(req: Request): Promise<User | null> {
       ),
     )
     .limit(1);
+  // Expelled, transferred or disabled accounts lose access at once.
+  if (user && ACCOUNT_BLOCKED.includes(user.account.status)) return null;
   return user?.account ?? null;
 }
 
@@ -553,6 +557,10 @@ router.post(
     const passwordIsValid = await verifyPassword(password, passwordHash);
     if (!user || !passwordIsValid) {
       res.status(401).json({ error: "Login or password is incorrect." });
+      return;
+    }
+    if (ACCOUNT_BLOCKED.includes(user.status)) {
+      res.status(403).json({ error: "This account is closed by the school. Contact the school administration." });
       return;
     }
 

@@ -381,3 +381,41 @@ export const schoolCalendarTable = pgTable("school_calendar", {
   updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("school_calendar_school_unique").on(table.schoolId)]);
+
+/**
+ * A school's request to EDUVERSE: enrol pupils, expel / transfer / graduate one,
+ * restore one, or correct a person's details. The owner approves or rejects it.
+ */
+export const schoolRequestsTable = pgTable("school_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+  /** enroll | expel | transfer | graduate | restore | edit */
+  kind: text("kind").notNull(),
+  /** The person the request is about (null for enroll). */
+  targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  payload: jsonb("payload").notNull().default({}),
+  reason: text("reason").notNull().default(""),
+  /** pending | approved | rejected */
+  status: text("status").notNull().default("pending"),
+  decidedBy: uuid("decided_by").references(() => usersTable.id, { onDelete: "set null" }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  decisionNote: text("decision_note").notNull().default(""),
+  /** What approving did, e.g. created logins (without passwords). */
+  result: jsonb("result").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("school_requests_status_idx").on(table.status, table.createdAt),
+  index("school_requests_school_idx").on(table.schoolId, table.createdAt),
+]);
+
+/** Who created, changed or removed what — kept for every school. */
+export const auditLogTable = pgTable("audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+  actorId: uuid("actor_id").references(() => usersTable.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("audit_log_school_idx").on(table.schoolId, table.createdAt)]);

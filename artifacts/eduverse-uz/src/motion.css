@@ -266,3 +266,22 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .school-member-row:nth-child(odd){background:rgba(127,127,127,.06)}
 .school-member-row small{margin-left:4px}
 .reset-card{align-items:flex-start;gap:8px}
+
+/* People of a school, requests and the owner's queue */
+.people-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:8px;margin:8px 0}
+.people-list{display:grid;gap:6px;margin-top:8px;max-height:560px;overflow:auto}
+.people-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(127,127,127,.06)}
+.people-main{display:grid;gap:2px;flex:1;min-width:200px}
+.people-actions{display:flex;flex-wrap:wrap;gap:6px}
+.people-form{flex-basis:100%;display:grid;gap:8px;padding-top:8px;border-top:1px solid rgba(127,127,127,.18)}
+.people-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tag.red{background:rgba(214,69,65,.14);color:#c0392b}
+.owner-created{display:grid;gap:6px}
+.owner-created-list{display:grid;gap:4px;max-height:260px;overflow:auto;font-size:13px}
+@media (max-width:640px){.people-filters,.people-form-grid{grid-template-columns:1fr}}
+.people-panel,.owner-queue{min-width:0;max-width:100%;box-sizing:border-box}
+.people-panel .input,.people-panel select{min-width:0;max-width:100%;box-sizing:border-box}
+.people-list{overflow-x:hidden}
+.people-row{min-width:0}
+.people-main{min-width:0;flex:1 1 180px}
+.people-main b,.people-main small{overflow-wrap:anywhere}

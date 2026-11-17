@@ -19,6 +19,7 @@ import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access"
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
 import { logger } from "../lib/logger";
+import { writeAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -121,8 +122,8 @@ router.post(
 /* 1. Import a whole school from a spreadsheet                                 */
 /* -------------------------------------------------------------------------- */
 
-type ImportRole = "student" | "teacher" | "parent" | "school_admin" | "school_director";
-type ImportRow = { role: ImportRole; name: string; className?: string; childName?: string; phone?: string };
+export type ImportRole = "student" | "teacher" | "parent" | "school_admin" | "school_director";
+export type ImportRow = { role: ImportRole; name: string; className?: string; childName?: string; phone?: string };
 
 /** "+998 90 123-45-67", "90 1234567" → "+998901234567"; anything else is dropped. */
 function normalizePhone(value: unknown): string | undefined {
@@ -133,7 +134,7 @@ function normalizePhone(value: unknown): string | undefined {
   return undefined;
 }
 
-function readRows(body: unknown): ImportRow[] {
+export function readRows(body: unknown): ImportRow[] {
   const raw = isRecord(body) && Array.isArray(body.rows) ? body.rows : [];
   const rows: ImportRow[] = [];
   for (const item of raw.slice(0, 120)) {
@@ -152,9 +153,106 @@ function readRows(body: unknown): ImportRow[] {
   return rows;
 }
 
+export type ImportedPerson = { role: ImportRole; name: string; className: string; login: string; password: string; phone: string; userId: string };
+
+/** Creates the accounts of a list (students, teachers, parents, deputies, a director) in one school. */
+export async function importPeople(schoolId: string, rows: ImportRow[], actorId: string): Promise<{ created: ImportedPerson[]; skipped: Array<{ name: string; reason: string }> }> {
+  const year = String(new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1);
+  const classCache = new Map<string, string>();
+  const classIdFor = async (className: string): Promise<string> => {
+    const key = className.toLowerCase();
+    const cached = classCache.get(key);
+    if (cached) return cached;
+    const [existing] = await db
+      .select({ id: classesTable.id })
+      .from(classesTable)
+      .where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className)))
+      .limit(1);
+    let id = existing?.id;
+    if (!id) {
+      const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+      const [created] = await db
+        .insert(classesTable)
+        .values({ schoolId, name: className, grade, academicYear: year })
+        .onConflictDoNothing()
+        .returning({ id: classesTable.id });
+      id = created?.id;
+      if (!id) {
+        const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+        id = again!.id;
+      }
+    }
+    classCache.set(key, id);
+    return id;
+  };
+
+  const created: ImportedPerson[] = [];
+  const skipped: Array<{ name: string; reason: string }> = [];
+  const studentIdsByName = new Map<string, string>();
+
+  // Students and teachers first, so parents can be linked to children of the same file.
+  const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
+  for (const row of ordered) {
+    const password = readablePassword();
+    const passwordHash = await hashPassword(password);
+    let account: { id: string; username: string; login: string } | null = null;
+    for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
+      const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
+      const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
+      const login = loginCandidate(row.name);
+      try {
+        const [inserted] = await db
+          .insert(usersTable)
+          .values({
+            username: shownName,
+            usernameNormalized: normalizeUsername(shownName),
+            login,
+            loginNormalized: login.toLowerCase(),
+            passwordHash,
+            role: row.role,
+            phone: row.phone ?? null,
+            mustChangePassword: true,
+          })
+          .returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
+        account = inserted ?? null;
+      } catch (error) {
+        const code = (error as { code?: unknown; cause?: { code?: unknown } })?.code ?? (error as { cause?: { code?: unknown } })?.cause?.code;
+        if (String(code) !== "23505") throw error;
+      }
+    }
+    if (!account) {
+      skipped.push({ name: row.name, reason: "duplicate" });
+      continue;
+    }
+    await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
+    if (row.className && (row.role === "student" || row.role === "teacher")) {
+      const classId = await classIdFor(row.className);
+      await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
+    }
+    if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
+    if (row.role === "parent" && row.childName) {
+      let childId = studentIdsByName.get(row.childName.toLowerCase());
+      if (!childId) {
+        const [existing] = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id))
+          .where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student")))
+          .limit(1);
+        childId = existing?.id;
+      }
+      if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: actorId }).onConflictDoNothing();
+      else skipped.push({ name: row.name, reason: "child-not-found" });
+    }
+    created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password, phone: row.phone ?? "", userId: account.id });
+  }
+  return { created, skipped };
+}
+
+/** Only EDUVERSE (the owner) adds people directly; a school sends a request instead. */
 router.post(
   "/schools/:schoolId/import",
-  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  requireAuthenticatedRole("education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
     const schoolId = String(req.params.schoolId);
     const viewer = viewerOf(res);
@@ -162,115 +260,14 @@ router.post(
       res.status(400).json({ error: "Invalid school identifier." });
       return;
     }
-    if (!(await canManageSchool(viewer, schoolId))) {
-      res.status(403).json({ error: "You cannot manage this school." });
-      return;
-    }
     const rows = readRows(req.body);
     if (rows.length === 0) {
       res.status(400).json({ error: "No valid rows to import." });
       return;
     }
-    // A director may add deputies (school_admin); only platform staff may add another director.
-    const isGlobal = viewer.role === "education_admin" || viewer.role === "ministry_admin" || viewer.role === "platform_superadmin";
-    if (rows.some((row) => row.role === "school_director") && !isGlobal) {
-      res.status(403).json({ error: "Only EDUVERSE staff can add a school director." });
-      return;
-    }
-    if (rows.some((row) => row.role === "school_admin") && !isGlobal && viewer.role !== "school_director") {
-      res.status(403).json({ error: "Only the director can add a deputy." });
-      return;
-    }
-    const year = String(new Date().getMonth() >= 7 ? new Date().getFullYear() : new Date().getFullYear() - 1);
-    const classCache = new Map<string, string>();
-    const classIdFor = async (className: string): Promise<string> => {
-      const key = className.toLowerCase();
-      const cached = classCache.get(key);
-      if (cached) return cached;
-      const [existing] = await db
-        .select({ id: classesTable.id })
-        .from(classesTable)
-        .where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className)))
-        .limit(1);
-      let id = existing?.id;
-      if (!id) {
-        const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
-        const [created] = await db
-          .insert(classesTable)
-          .values({ schoolId, name: className, grade, academicYear: year })
-          .onConflictDoNothing()
-          .returning({ id: classesTable.id });
-        id = created?.id;
-        if (!id) {
-          const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
-          id = again!.id;
-        }
-      }
-      classCache.set(key, id);
-      return id;
-    };
-
-    const created: Array<{ role: ImportRole; name: string; className: string; login: string; password: string; phone: string }> = [];
-    const skipped: Array<{ name: string; reason: string }> = [];
-    const studentIdsByName = new Map<string, string>();
-
-    // Students and teachers first, so parents can be linked to children of the same file.
-    const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
-    for (const row of ordered) {
-      const password = readablePassword();
-      const passwordHash = await hashPassword(password);
-      let account: { id: string; username: string; login: string } | null = null;
-      for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
-        const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
-        const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
-        const login = loginCandidate(row.name);
-        try {
-          const [inserted] = await db
-            .insert(usersTable)
-            .values({
-              username: shownName,
-              usernameNormalized: normalizeUsername(shownName),
-              login,
-              loginNormalized: login.toLowerCase(),
-              passwordHash,
-              role: row.role,
-              phone: row.phone ?? null,
-              mustChangePassword: true,
-            })
-            .returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
-          account = inserted ?? null;
-        } catch (error) {
-          const code = (error as { code?: unknown; cause?: { code?: unknown } })?.code ?? (error as { cause?: { code?: unknown } })?.cause?.code;
-          if (String(code) !== "23505") throw error;
-        }
-      }
-      if (!account) {
-        skipped.push({ name: row.name, reason: "duplicate" });
-        continue;
-      }
-      await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
-      if (row.className && (row.role === "student" || row.role === "teacher")) {
-        const classId = await classIdFor(row.className);
-        await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
-      }
-      if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
-      if (row.role === "parent" && row.childName) {
-        let childId = studentIdsByName.get(row.childName.toLowerCase());
-        if (!childId) {
-          const [existing] = await db
-            .select({ id: usersTable.id })
-            .from(usersTable)
-            .innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id))
-            .where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student")))
-            .limit(1);
-          childId = existing?.id;
-        }
-        if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: viewer.id }).onConflictDoNothing();
-        else skipped.push({ name: row.name, reason: "child-not-found" });
-      }
-      created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password, phone: row.phone ?? "" });
-    }
-    res.status(201).json({ created, skipped });
+    const result = await importPeople(schoolId, rows, viewer.id);
+    await writeAudit(schoolId, viewer.id, "import", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
+    res.status(201).json({ created: result.created.map(({ userId: _userId, ...rest }) => rest), skipped: result.skipped });
   },
 );
 

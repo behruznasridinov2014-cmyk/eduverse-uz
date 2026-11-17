@@ -40,6 +40,13 @@ export const usersTable = pgTable(
     role: accountRoleEnum("role").notNull().default("student"),
     /** Contact phone (parents), set by the school on import. */
     phone: text("phone"),
+    /**
+     * Study status: active | transferred | expelled | graduated. Only EDUVERSE (the owner)
+     * changes it, on the school's request. Grades and attendance are never deleted.
+     */
+    status: text("status").notNull().default("active"),
+    statusReason: text("status_reason").notNull().default(""),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
     /** True for accounts created by the school: the first sign-in asks to change the password. */
     mustChangePassword: boolean("must_change_password").notNull().default(false),
     /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */

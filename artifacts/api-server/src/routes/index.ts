@@ -7,6 +7,7 @@ import schoolsRouter from "./schools";
 import schoolToolsRouter from "./school-tools";
 import courseRouter from "./course";
 import accountRouter from "./account";
+import requestsRouter from "./requests";
 import { ensureSchema } from "../lib/schema-sync";
 import { logger } from "../lib/logger";
 
@@ -25,6 +26,7 @@ router.use(async (_req, _res, next) => {
 router.use(schoolToolsRouter);
 router.use(courseRouter);
 router.use(accountRouter);
+router.use(requestsRouter);
 router.use(authRouter);
 router.use(learningRouter);
 router.use(lessonRoomsRouter);

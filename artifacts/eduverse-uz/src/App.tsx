@@ -16,6 +16,7 @@ import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
 import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { SchoolCalendarPanel } from './school-calendar';
+import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
 import { LabReports } from './lab-work';
 import { CoursePage } from './course';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
@@ -489,7 +490,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
   <SchoolScopeSummary school={school} language={language}/>
   {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolImport schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div></div>
+   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/><ServerTopicAssignPanel school={school} language={language}/></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 
@@ -498,8 +499,9 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  const title=role==='platform_superadmin'?text('Platform administration','Управление платформой','Platforma boshqaruvi'):role==='ministry_admin'?text('National education oversight','Национальный контроль образования','Milliy ta’lim nazorati'):text('Regional education administration','Региональное управление образованием','Hududiy ta’lim boshqaruvi');
  return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
-  <ServerAdminSchoolsPanel language={language} selectedId={setup?.id} onSelect={setSetup}/>
-  {setup&&<div style={{marginTop:16,display:'grid',gap:16}}>
+  <OwnerRequestsPanel language={language}/>
+  <div style={{marginTop:16}}><ServerAdminSchoolsPanel language={language} selectedId={setup?.id} onSelect={setSetup}/></div>
+  {setup&&<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
    <Panel><div className="section-head"><h2>{text('Set up','Настройка школы','Maktabni sozlash')}: {setup.name}</h2><button className="btn small" onClick={()=>setSetup(null)}>{text('Close','Закрыть','Yopish')}</button></div>
     <ol className="setup-steps">
      <li>{text('Add the director: in the box below write “director; Full name; phone”.','Добавьте директора: в поле ниже напишите «директор; ФИО; телефон».','Direktorni qo‘shing: pastdagi maydonga «direktor; F.I.Sh.; telefon» yozing.')}</li>
@@ -509,7 +511,9 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
     </ol>
    </Panel>
    <SchoolImport schoolId={setup.id} language={language}/>
+   <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
    <SchoolCalendarPanel schoolId={setup.id} language={language}/>
+   <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
   </div>}</>;
 }
 function NotFound({language,goHome}:{language:Lang;goHome:()=>void}){return <div className="empty-state"><span className="empty-icon"><Search/></span><h2>{language==='Uzbek'?'Sahifa topilmadi':language==='Русский'?'Страница не найдена':'Page not found'}</h2><p>{language==='Uzbek'?'Menyudan bo‘limni tanlang.':language==='Русский'?'Выберите раздел в меню.':'Choose a section from the menu.'}</p><button className="btn primary" onClick={goHome}><Home size={16}/>{language==='Uzbek'?'Bosh sahifa':language==='Русский'?'На главную':'Home'}</button></div>}
