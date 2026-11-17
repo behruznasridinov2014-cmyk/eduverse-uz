@@ -131,6 +131,19 @@ async function canManage(userId: string, role: AccountRole, classId: string): Pr
   return canManageClass(role, sRole, cRole);
 }
 
+/**
+ * Who may change the people of a class (add students, create accounts, link
+ * parents): only the school's director or deputy, or EDUVERSE staff.
+ * A teacher teaches the class but never changes who is in it.
+ */
+async function canManagePeople(userId: string, role: AccountRole, classId: string): Promise<boolean> {
+  const ctx = await classContext(classId);
+  if (!ctx) return false;
+  if (isGlobalAdminRole(role)) return true;
+  const sRole = await schoolRole(userId, ctx.schoolId);
+  return Boolean(sRole) && isSchoolManagementRole(sRole!);
+}
+
 async function canViewClass(userId: string, role: AccountRole, classId: string): Promise<boolean> {
   if (await canManage(userId, role, classId)) return true;
   const cRole = await classRole(userId, classId);
@@ -353,7 +366,7 @@ router.post(
 
 router.post(
   "/classes/:classId/members/by-login",
-  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
     const classId = String(req.params.classId);
     if (!isValidUuid(classId)) {
@@ -361,8 +374,8 @@ router.post(
       return;
     }
     const viewer = user(res);
-    if (!(await canManage(viewer.id, viewer.role, classId))) {
-      res.status(403).json({ error: "You cannot manage this class." });
+    if (!(await canManagePeople(viewer.id, viewer.role, classId))) {
+      res.status(403).json({ error: "Only the director or deputy can add people to a class." });
       return;
     }
     const login = readString(req.body, "login", 64);
@@ -464,7 +477,6 @@ function loginCandidate(username: string): string {
 router.post(
   "/classes/:classId/accounts",
   requireAuthenticatedRole(
-    "teacher",
     "school_director",
     "school_admin",
     "education_admin",
@@ -478,8 +490,8 @@ router.post(
       return;
     }
     const viewer = user(res);
-    if (!(await canManage(viewer.id, viewer.role, classId))) {
-      res.status(403).json({ error: "You cannot manage this class." });
+    if (!(await canManagePeople(viewer.id, viewer.role, classId))) {
+      res.status(403).json({ error: "Only the director or deputy can create accounts." });
       return;
     }
     const [ctx] = await db
@@ -1115,7 +1127,8 @@ router.delete("/announcements/:announcementId", requireAuthenticatedRole(...staf
     res.status(404).json({ error: "Announcement not found." });
     return;
   }
-  if (row.authorId !== viewer.id && !(await canManage(viewer.id, viewer.role, row.classId))) {
+  // The author removes their own notice; otherwise only the director or deputy.
+  if (row.authorId !== viewer.id && !(await canManagePeople(viewer.id, viewer.role, row.classId))) {
     res.status(403).json({ error: "You cannot delete this announcement." });
     return;
   }
@@ -1252,10 +1265,9 @@ router.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), asy
 /* Parents: link to a child, family cabinet                                    */
 /* -------------------------------------------------------------------------- */
 
-const managerRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"] as const;
 
 /** Staff link a parent account to a student of a class they manage. */
-router.post("/parents/links", requireAuthenticatedRole(...managerRoles), async (req, res) => {
+router.post("/parents/links", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
   const viewer = user(res);
   const parentLogin = readString(req.body, "parentLogin", 64)?.toLowerCase();
   const studentLogin = readString(req.body, "studentLogin", 64)?.toLowerCase();
@@ -1270,9 +1282,9 @@ router.post("/parents/links", requireAuthenticatedRole(...managerRoles), async (
     return;
   }
   const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, student.id));
-  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManage(viewer.id, viewer.role, row.classId)))).some(Boolean);
+  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManagePeople(viewer.id, viewer.role, row.classId)))).some(Boolean);
   if (!allowed) {
-    res.status(403).json({ error: "You can only link parents of your own students." });
+    res.status(403).json({ error: "Only the director or deputy of the student's school can link a parent." });
     return;
   }
   await db.insert(parentLinksTable).values({ parentId: parent.id, studentId: student.id, createdBy: viewer.id }).onConflictDoNothing();

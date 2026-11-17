@@ -13,7 +13,7 @@ import { TopicLibraryPage } from './topic-library';
 import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
 import { ChemLabPage } from './chem-lab';
-import { DirectorDashboard, ParentCabinet, ParentLinkForm } from './cabinets';
+import { DirectorDashboard, ParentCabinet } from './cabinets';
 import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { SchoolCalendarPanel } from './school-calendar';
 import { LabReports } from './lab-work';
@@ -474,7 +474,7 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
     {tab==='tasks'&&<ServerTeachingPanel school={school} language={language}/>}
     {tab==='journal'&&<><GradeJournal school={school} language={language}/><LabReports language={language}/></>}
     {tab==='plan'&&<LessonPlanner language={language}/>}
-    {tab==='class'&&<><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/><div className="grid grid-2"><ServerAccountsPanel school={school} language={language}/><ParentLinkForm language={language}/></div></>}
+    {tab==='class'&&<><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/></>}
     {tab==='topics'&&<><ServerTopicAssignPanel school={school} language={language}/><button className="btn" onClick={()=>onOpen('/topics')}><Sparkles size={15}/> {text('Create your own topic','Создать свою тему','O‘z mavzuingizni yaratish')}</button></>}
    </div>}
  </>;

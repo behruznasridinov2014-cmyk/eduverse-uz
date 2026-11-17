@@ -471,6 +471,18 @@ router.delete(
       res.status(400).json({ error: "Managers cannot remove their own school membership." });
       return;
     }
+    // A deputy manages pupils, parents and teachers, never the director or other deputies.
+    const targetRole = await schoolMembershipRole(userId, schoolId);
+    if (!isGlobalAdminRole(user.role)) {
+      if (targetRole === "school_director") {
+        forbidden(res, "Only EDUVERSE staff can remove a school director.");
+        return;
+      }
+      if (targetRole === "school_admin" && schoolRole !== "school_director") {
+        forbidden(res, "Only the director can remove a deputy.");
+        return;
+      }
+    }
 
     await db.transaction(async (transaction) => {
       const schoolClassIds = await transaction

@@ -50713,6 +50713,13 @@ async function canManage(userId, role, classId) {
   ]);
   return canManageClass(role, sRole, cRole);
 }
+async function canManagePeople(userId, role, classId) {
+  const ctx = await classContext(classId);
+  if (!ctx) return false;
+  if (isGlobalAdminRole(role)) return true;
+  const sRole = await schoolRole(userId, ctx.schoolId);
+  return Boolean(sRole) && isSchoolManagementRole(sRole);
+}
 async function canViewClass(userId, role, classId) {
   if (await canManage(userId, role, classId)) return true;
   const cRole = await classRole(userId, classId);
@@ -50878,7 +50885,7 @@ router3.post(
 );
 router3.post(
   "/classes/:classId/members/by-login",
-  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
     const classId = String(req.params.classId);
     if (!isValidUuid(classId)) {
@@ -50886,8 +50893,8 @@ router3.post(
       return;
     }
     const viewer = user(res);
-    if (!await canManage(viewer.id, viewer.role, classId)) {
-      res.status(403).json({ error: "You cannot manage this class." });
+    if (!await canManagePeople(viewer.id, viewer.role, classId)) {
+      res.status(403).json({ error: "Only the director or deputy can add people to a class." });
       return;
     }
     const login = readString(req.body, "login", 64);
@@ -50955,7 +50962,6 @@ function loginCandidate(username) {
 router3.post(
   "/classes/:classId/accounts",
   requireAuthenticatedRole(
-    "teacher",
     "school_director",
     "school_admin",
     "education_admin",
@@ -50969,8 +50975,8 @@ router3.post(
       return;
     }
     const viewer = user(res);
-    if (!await canManage(viewer.id, viewer.role, classId)) {
-      res.status(403).json({ error: "You cannot manage this class." });
+    if (!await canManagePeople(viewer.id, viewer.role, classId)) {
+      res.status(403).json({ error: "Only the director or deputy can create accounts." });
       return;
     }
     const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
@@ -51480,7 +51486,7 @@ router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...sta
     res.status(404).json({ error: "Announcement not found." });
     return;
   }
-  if (row.authorId !== viewer.id && !await canManage(viewer.id, viewer.role, row.classId)) {
+  if (row.authorId !== viewer.id && !await canManagePeople(viewer.id, viewer.role, row.classId)) {
     res.status(403).json({ error: "You cannot delete this announcement." });
     return;
   }
@@ -51567,8 +51573,7 @@ router3.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), as
     recent: rows.slice(0, 10)
   });
 });
-var managerRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
-router3.post("/parents/links", requireAuthenticatedRole(...managerRoles), async (req, res) => {
+router3.post("/parents/links", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
   const viewer = user(res);
   const parentLogin = readString(req.body, "parentLogin", 64)?.toLowerCase();
   const studentLogin = readString(req.body, "studentLogin", 64)?.toLowerCase();
@@ -51583,9 +51588,9 @@ router3.post("/parents/links", requireAuthenticatedRole(...managerRoles), async 
     return;
   }
   const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, student.id));
-  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManage(viewer.id, viewer.role, row.classId)))).some(Boolean);
+  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManagePeople(viewer.id, viewer.role, row.classId)))).some(Boolean);
   if (!allowed) {
-    res.status(403).json({ error: "You can only link parents of your own students." });
+    res.status(403).json({ error: "Only the director or deputy of the student's school can link a parent." });
     return;
   }
   await db.insert(parentLinksTable).values({ parentId: parent.id, studentId: student.id, createdBy: viewer.id }).onConflictDoNothing();
@@ -52935,6 +52940,17 @@ router5.delete(
       res.status(400).json({ error: "Managers cannot remove their own school membership." });
       return;
     }
+    const targetRole = await schoolMembershipRole(userId, schoolId);
+    if (!isGlobalAdminRole(user3.role)) {
+      if (targetRole === "school_director") {
+        forbidden(res, "Only EDUVERSE staff can remove a school director.");
+        return;
+      }
+      if (targetRole === "school_admin" && schoolRole3 !== "school_director") {
+        forbidden(res, "Only the director can remove a deputy.");
+        return;
+      }
+    }
     await db.transaction(async (transaction) => {
       const schoolClassIds = await transaction.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
       if (schoolClassIds.length > 0) {
@@ -53783,6 +53799,44 @@ async function canManageSchool2(viewer, schoolId) {
   const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
   return row?.role === "school_director" || row?.role === "school_admin";
 }
+var resetLimiter = createRateLimiter(60, 15 * 60 * 1e3, "Too many password resets. Try again later.", "password-reset", (req) => `ip:${req.ip ?? "unknown"}`);
+router6.post(
+  "/schools/:schoolId/members/:userId/reset-password",
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  resetLimiter,
+  async (req, res) => {
+    const schoolId = String(req.params.schoolId);
+    const userId = String(req.params.userId);
+    const viewer = viewerOf(res);
+    if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
+      res.status(400).json({ error: "Invalid identifier." });
+      return;
+    }
+    if (!await canManageSchool2(viewer, schoolId)) {
+      res.status(403).json({ error: "Only the director or deputy can reset passwords." });
+      return;
+    }
+    const [member] = await db.select({ id: usersTable.id, login: usersTable.login, name: usersTable.username, role: usersTable.role }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+    if (!member) {
+      res.status(404).json({ error: "This person is not in your school." });
+      return;
+    }
+    if (member.id === viewer.id || isGlobalAdminRole(member.role) || (member.role === "school_director" || member.role === "school_admin") && !isGlobalAdminRole(viewer.role) && viewer.role !== "school_director") {
+      res.status(403).json({ error: "This account's password cannot be reset here." });
+      return;
+    }
+    if (member.role === "school_director" && !isGlobalAdminRole(viewer.role)) {
+      res.status(403).json({ error: "Only EDUVERSE staff can reset a director's password." });
+      return;
+    }
+    const password = readablePassword2();
+    await db.transaction(async (tx) => {
+      await tx.update(usersTable).set({ passwordHash: await hashPassword2(password), mustChangePassword: true, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, member.id));
+      await tx.delete(sessionsTable).where(eq(sessionsTable.userId, member.id));
+    });
+    res.json({ login: member.login, name: member.name, role: member.role, password });
+  }
+);
 function normalizePhone(value) {
   if (typeof value !== "string") return void 0;
   const digits = value.replace(/\D/g, "");

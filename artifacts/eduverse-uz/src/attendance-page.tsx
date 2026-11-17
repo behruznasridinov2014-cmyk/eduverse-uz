@@ -3,7 +3,6 @@ import { customFetch } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import {
   ApiError,
-  addClassMemberByLogin,
   getMySchools,
   getStudentAttendance,
   type AttendanceRecord,
@@ -22,7 +21,6 @@ import {
   RefreshCw,
   UserCheck,
   Users,
-  UserPlus,
   X,
 } from 'lucide-react';
 import type { Language } from './school-data';
@@ -156,9 +154,6 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
   const [error, setError] = useState('');
   const [history, setHistory] = useState<StudentAttendanceRecord[]>([]);
   const [rate, setRate] = useState(0);
-  const [addLogin, setAddLogin] = useState('');
-  const [addBusy, setAddBusy] = useState(false);
-  const [addNotice, setAddNotice] = useState('');
 
   useEffect(() => {
     void (async () => {
@@ -237,21 +232,6 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     }
   }
 
-  async function addStudent() {
-    if (!classId || !addLogin.trim()) return;
-    setAddBusy(true);
-    setAddNotice('');
-    try {
-      await addClassMemberByLogin(classId, { login: addLogin.trim(), role: 'student' });
-      setAddLogin('');
-      setAddNotice(copy.studentAdded);
-      await load();
-    } catch (requestError) {
-      setAddNotice(describe(requestError, language));
-    } finally {
-      setAddBusy(false);
-    }
-  }
 
   if (!isTeacher) {
     return (
@@ -334,24 +314,6 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
         </button>
       </div>
 
-      {canManage && (
-        <form className="attendance-add-row" onSubmit={(event) => { event.preventDefault(); void addStudent(); }}>
-          <label className="sr-only" htmlFor="attendance-add-login">{copy.addPrompt}</label>
-          <input
-            id="attendance-add-login"
-            className="input"
-            placeholder={copy.addPrompt}
-            value={addLogin}
-            onChange={(event) => setAddLogin(event.target.value)}
-            maxLength={32}
-          />
-          <button type="submit" className="btn" disabled={addBusy || !addLogin.trim()}>
-            {addBusy ? <RefreshCw className="school-spin" size={14} /> : <UserPlus size={14} />}
-            {copy.addStudent}
-          </button>
-          {addNotice && <span className="muted attendance-add-notice">{addNotice}</span>}
-        </form>
-      )}
 
       {error && <div className="notice" role="alert"><CircleAlert size={15} /> {error}</div>}
       {notice && <div className="notice school-inline-success" role="status"><Check size={15} /> {notice}</div>}

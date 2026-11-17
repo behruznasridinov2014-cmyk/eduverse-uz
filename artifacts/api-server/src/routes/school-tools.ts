@@ -8,6 +8,7 @@ import {
   labReportsTable,
   parentLinksTable,
   schoolMembersTable,
+  sessionsTable,
   telegramNotifyTable,
   usersTable,
   type AccountRole,
@@ -74,6 +75,47 @@ async function canManageSchool(viewer: RequestUser, schoolId: string): Promise<b
     .limit(1);
   return row?.role === "school_director" || row?.role === "school_admin";
 }
+
+/* -------------------------------------------------------------------------- */
+/* 0. A forgotten password: only the director or deputy gives a new one          */
+/* -------------------------------------------------------------------------- */
+
+const resetLimiter = createRateLimiter(60, 15 * 60 * 1000, "Too many password resets. Try again later.", "password-reset", (req) => `ip:${req.ip ?? "unknown"}`);
+
+router.post(
+  "/schools/:schoolId/members/:userId/reset-password",
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  resetLimiter,
+  async (req, res) => {
+    const schoolId = String(req.params.schoolId);
+    const userId = String(req.params.userId);
+    const viewer = viewerOf(res);
+    if (!isValidUuid(schoolId) || !isValidUuid(userId)) { res.status(400).json({ error: "Invalid identifier." }); return; }
+    if (!(await canManageSchool(viewer, schoolId))) { res.status(403).json({ error: "Only the director or deputy can reset passwords." }); return; }
+    const [member] = await db
+      .select({ id: usersTable.id, login: usersTable.login, name: usersTable.username, role: usersTable.role })
+      .from(schoolMembersTable)
+      .innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId))
+      .where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId)))
+      .limit(1);
+    if (!member) { res.status(404).json({ error: "This person is not in your school." }); return; }
+    // Staff accounts are protected: a deputy cannot take over the director, nobody takes over EDUVERSE staff.
+    if (member.id === viewer.id || isGlobalAdminRole(member.role) || ((member.role === "school_director" || member.role === "school_admin") && !isGlobalAdminRole(viewer.role) && viewer.role !== "school_director")) {
+      res.status(403).json({ error: "This account's password cannot be reset here." });
+      return;
+    }
+    if (member.role === "school_director" && !isGlobalAdminRole(viewer.role)) {
+      res.status(403).json({ error: "Only EDUVERSE staff can reset a director's password." });
+      return;
+    }
+    const password = readablePassword();
+    await db.transaction(async (tx) => {
+      await tx.update(usersTable).set({ passwordHash: await hashPassword(password), mustChangePassword: true, updatedAt: new Date() }).where(eq(usersTable.id, member.id));
+      await tx.delete(sessionsTable).where(eq(sessionsTable.userId, member.id));
+    });
+    res.json({ login: member.login, name: member.name, role: member.role, password });
+  },
+);
 
 /* -------------------------------------------------------------------------- */
 /* 1. Import a whole school from a spreadsheet                                 */

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
   createAssignment,
@@ -40,6 +41,7 @@ import {
   Copy,
   GraduationCap,
   Info,
+  KeyRound,
   Plus,
   RefreshCw,
   Send,
@@ -1075,6 +1077,21 @@ export function ServerSchoolOverview({
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [detail, setDetail] = useState<SchoolRecord | null>(null);
   const [members, setMembers] = useState<SchoolMember[]>([]);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [resetCard, setResetCard] = useState<{ name: string; login: string; password: string } | null>(null);
+  const [resetError, setResetError] = useState('');
+  async function resetPassword(member: SchoolMember) {
+    if (!activeSchoolId) return;
+    if (!window.confirm(t(language, `Give ${member.username} a new one-time password? The old one stops working.`, `Выдать новый одноразовый пароль: ${member.username}? Старый перестанет работать.`, `${member.username} uchun yangi bir martalik parol berilsinmi? Eskisi ishlamaydi.`))) return;
+    setResetError('');
+    try {
+      const result = await customFetch<{ name: string; login: string; password: string }>(`/api/schools/${activeSchoolId}/members/${member.userId}/reset-password`, { method: 'POST' });
+      setResetCard(result);
+    } catch (requestError) {
+      setResetCard(null);
+      setResetError(describeSchoolError(requestError));
+    }
+  }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -1239,17 +1256,37 @@ export function ServerSchoolOverview({
               {members.length === 0 ? (
                 <div className="callout">
                   {canManage
-                    ? t(language, 'No members yet. Add them from an Excel list or the teacher cabinet.', 'Участников пока нет. Добавьте их из списка Excel или в кабинете учителя.', 'Hali a’zo yo‘q. Excel ro‘yxati yoki o‘qituvchi kabineti orqali qo‘shing.')
+                    ? t(language, 'No members yet. The director or deputy adds them from an Excel list.', 'Участников пока нет. Директор или завуч добавляет их из списка Excel.', 'Hali a’zo yo‘q. Direktor yoki zavuch Excel ro‘yxatidan qo‘shadi.')
                     : t(language, 'The roster is only shown to school managers.', 'Список видят только руководители школы.', 'Ro‘yxat faqat maktab rahbarlariga ko‘rinadi.')}
                 </div>
               ) : (
-                <div className="school-member-chips">
-                  {members.map((member) => (
-                    <span className="tag" key={member.userId} title={member.login ?? member.accountRole}>
-                      {member.username} · {formatStatus(member.role)}
-                    </span>
-                  ))}
-                </div>
+                <>
+                  {canManage && (
+                    <input className="input" style={{ marginBottom: 8 }} value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder={t(language, 'Find a person (name or login)', 'Найти человека (ФИО или логин)', 'Odamni topish (F.I.Sh. yoki login)')} />
+                  )}
+                  {resetError && <InlineError>{resetError}</InlineError>}
+                  {resetCard && (
+                    <div className="notice school-inline-success reset-card" role="status">
+                      <KeyRound size={15} />
+                      <span>{resetCard.name} · {t(language, 'login', 'логин', 'login')}: <b>{resetCard.login}</b> · {t(language, 'new password', 'новый пароль', 'yangi parol')}: <b>{resetCard.password}</b><br /><small>{t(language, 'Shown once. They set their own password at the next sign-in.', 'Показывается один раз. При входе человек поставит свой пароль.', 'Bir marta ko‘rsatiladi. Keyingi kirishda o‘z parolini qo‘yadi.')}</small></span>
+                      <button type="button" className="btn small" onClick={() => setResetCard(null)}>{t(language, 'Done', 'Готово', 'Tayyor')}</button>
+                    </div>
+                  )}
+                  <div className="school-member-list">
+                    {members
+                      .filter((member) => !memberQuery.trim() || `${member.username} ${member.login ?? ''}`.toLowerCase().includes(memberQuery.trim().toLowerCase()))
+                      .map((member) => (
+                        <div className="school-member-row" key={member.userId}>
+                          <span><b>{member.username}</b> <small className="muted">{formatStatus(member.role)}{member.login ? ` · ${member.login}` : ''}</small></span>
+                          {canManage && member.role !== 'school_director' && (
+                            <button type="button" className="btn small" onClick={() => void resetPassword(member)}>
+                              <KeyRound size={13} /> {t(language, 'New password', 'Новый пароль', 'Yangi parol')}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </>
               )}
             </>
           )}
