@@ -42682,6 +42682,13 @@ var init_school = __esm({
       region: text("region").notNull(),
       district: text("district"),
       address: text("address"),
+      /**
+       * free  — journal, attendance, homework, grades (always free);
+       * pilot — everything, free until plan_until (trial for one quarter);
+       * pro   — everything, paid (3D topics, 3D library, online lessons, trainer).
+       */
+      plan: text("plan").notNull().default("free"),
+      planUntil: timestamp("plan_until", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("schools_region_idx").on(table.region)]);
@@ -42773,7 +42780,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43140,6 +43147,19 @@ var init_learning = __esm({
       details: jsonb("details").notNull().default({}),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("audit_log_school_idx").on(table.schoolId, table.createdAt)]);
+    trainerResultsTable = pgTable("trainer_results", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+      /** YYYY-MM-DD */
+      day: text("day").notNull(),
+      score: integer("score").notNull(),
+      total: integer("total").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
+      index("trainer_results_class_day_idx").on(table.classId, table.day)
+    ]);
   }
 });
 
@@ -43186,6 +43206,7 @@ __export(schema_exports, {
   supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  trainerResultsTable: () => trainerResultsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -43246,6 +43267,7 @@ __export(src_exports, {
   supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  trainerResultsTable: () => trainerResultsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -51775,6 +51797,25 @@ init_drizzle_orm();
 var import_express4 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes5 } from "node:crypto";
+
+// src/lib/plans.ts
+init_drizzle_orm();
+init_src();
+function planIsPro(plan, until) {
+  if (plan === "pro") return !until || until.getTime() > Date.now();
+  if (plan === "pilot") return Boolean(until) && until.getTime() > Date.now();
+  return false;
+}
+async function userPlan(userId, role) {
+  if (isGlobalAdminRole(role)) return { plan: "pro", until: null, pro: true };
+  const memberships = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, userId));
+  if (memberships.length === 0) return { plan: "free", until: null, pro: false };
+  const rows = await db.select({ plan: schoolsTable.plan, until: schoolsTable.planUntil }).from(schoolsTable).where(inArray(schoolsTable.id, memberships.map((row) => row.schoolId)));
+  const best = rows.map((row) => ({ plan: row.plan, until: row.until, pro: planIsPro(row.plan, row.until) })).sort((a, b) => Number(b.pro) - Number(a.pro))[0];
+  return best ?? { plan: "free", until: null, pro: false };
+}
+
+// src/routes/lesson-rooms.ts
 var router4 = (0, import_express4.Router)();
 function user2(res) {
   return res.locals.authenticatedUser;
@@ -52025,6 +52066,10 @@ router4.post(
     }
     if (!await canOpenRoom(host.id, host.role, classId ?? null)) {
       res.status(403).json({ error: "You cannot open a lesson for this class." });
+      return;
+    }
+    if (!(await userPlan(host.id, host.role)).pro) {
+      res.status(402).json({ error: "Online lessons are available on the EDUVERSE Pro plan or during a pilot." });
       return;
     }
     let subject = readString2(req.body, "subject", 60) ?? "";
@@ -52852,6 +52897,8 @@ router5.get(
       district: schoolsTable.district,
       address: schoolsTable.address,
       createdAt: schoolsTable.createdAt,
+      plan: schoolsTable.plan,
+      planUntil: schoolsTable.planUntil,
       memberCount: sql`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
       classCount: sql`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`
     }).from(schoolsTable).orderBy(schoolsTable.name);
@@ -54421,6 +54468,47 @@ router7.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_dire
   await db.insert(schoolCalendarTable).values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now }).onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
   res.json({ calendar });
 });
+var trainerLimiter = createRateLimiter(30, 60 * 60 * 1e3, "Too many attempts.", "trainer", perSession3);
+var isoDay = (date2) => date2.toISOString().slice(0, 10);
+async function pupilClass(userId) {
+  const [row] = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, userId), eq(classMembersTable.role, "student"))).limit(1);
+  return row?.classId ?? null;
+}
+router7.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf2(res);
+  const body = isRecord6(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const day = isoDay(/* @__PURE__ */ new Date());
+  const classId = await pupilClass(viewer.id);
+  const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
+  res.status(row ? 201 : 200).json({ counted: Boolean(row), day });
+});
+router7.get("/trainer/rating", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const viewer = viewerOf2(res);
+  let classId = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? req.query.classId : null;
+  if (viewer.role === "student") classId = await pupilClass(viewer.id);
+  if (!classId) {
+    res.json({ rating: [], doneToday: false });
+    return;
+  }
+  if (viewer.role !== "student") {
+    const access = await classAccess(viewer, classId);
+    if (!access.read) {
+      res.status(403).json({ error: "Not your class." });
+      return;
+    }
+  }
+  const since = isoDay(new Date(Date.now() - 6 * 864e5));
+  const rows = await db.select({ userId: trainerResultsTable.userId, name: usersTable.username, points: sql`sum(${trainerResultsTable.score})::int`, days: sql`count(*)::int` }).from(trainerResultsTable).innerJoin(usersTable, eq(usersTable.id, trainerResultsTable.userId)).where(and(eq(trainerResultsTable.classId, classId), gte(trainerResultsTable.day, since))).groupBy(trainerResultsTable.userId, usersTable.username).orderBy(desc(sql`sum(${trainerResultsTable.score})`)).limit(30);
+  const [today] = await db.select({ id: trainerResultsTable.id }).from(trainerResultsTable).where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, isoDay(/* @__PURE__ */ new Date())))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
+});
 var course_default = router7;
 
 // src/routes/account.ts
@@ -54949,6 +55037,38 @@ router9.get("/admin/audit", requireAuthenticatedRole(...OWNER_ROLES), async (req
   const rows = await db.select({ id: auditLogTable.id, action: auditLogTable.action, details: auditLogTable.details, createdAt: auditLogTable.createdAt, actor: usersTable.username, schoolId: auditLogTable.schoolId }).from(auditLogTable).leftJoin(usersTable, eq(usersTable.id, auditLogTable.actorId)).where(schoolId ? eq(auditLogTable.schoolId, schoolId) : void 0).orderBy(desc(auditLogTable.createdAt)).limit(200);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ entries: rows });
+});
+router9.get("/me/plan", requireAuthenticatedRole("student", "teacher", "parent", ...SCHOOL_STAFF), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const plan = await userPlan(viewer.id, viewer.role);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(plan);
+});
+router9.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const body = isRecord8(req.body) ? req.body : {};
+  const plan = body.plan === "pro" || body.plan === "pilot" || body.plan === "free" ? body.plan : null;
+  const untilText = typeof body.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.until) ? body.until : null;
+  if (!plan) {
+    res.status(400).json({ error: "Plan must be free, pilot or pro." });
+    return;
+  }
+  if (plan === "pilot" && !untilText) {
+    res.status(400).json({ error: "A pilot needs an end date." });
+    return;
+  }
+  const until = untilText ? /* @__PURE__ */ new Date(`${untilText}T23:59:59`) : null;
+  const [row] = await db.update(schoolsTable).set({ plan, planUntil: until, updatedAt: /* @__PURE__ */ new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  if (!row) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  await writeAudit(schoolId, viewerOf4(res).id, "plan", null, { plan, until: untilText });
+  res.json({ plan, until });
 });
 var requests_default = router9;
 

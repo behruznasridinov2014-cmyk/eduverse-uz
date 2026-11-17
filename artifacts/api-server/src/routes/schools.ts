@@ -278,6 +278,8 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
+        plan: schoolsTable.plan,
+        planUntil: schoolsTable.planUntil,
         memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
         classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })

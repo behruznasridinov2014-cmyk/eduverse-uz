@@ -18,6 +18,7 @@ import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access"
 import { writeAudit } from "../lib/audit";
 import { pushNotice } from "../lib/inbox";
 import { escapeHtml, notifyUsers } from "../lib/notify";
+import { userPlan } from "../lib/plans";
 
 /**
  * Everything about people goes through EDUVERSE (the owner):
@@ -309,6 +310,33 @@ router.get("/admin/audit", requireAuthenticatedRole(...OWNER_ROLES), async (req,
     .limit(200);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ entries: rows });
+});
+
+/* ------------------------------------------------------------------ */
+/* Plans: the journal is free; 3D, online lessons and the trainer are paid */
+/* ------------------------------------------------------------------ */
+
+router.get("/me/plan", requireAuthenticatedRole("student", "teacher", "parent", ...SCHOOL_STAFF), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const plan = await userPlan(viewer.id, viewer.role);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(plan);
+});
+
+/** The owner sets a school's plan: free, a pilot until a date, or pro. */
+router.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const body = isRecord(req.body) ? req.body : {};
+  const plan = body.plan === "pro" || body.plan === "pilot" || body.plan === "free" ? body.plan : null;
+  const untilText = typeof body.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.until) ? body.until : null;
+  if (!plan) { res.status(400).json({ error: "Plan must be free, pilot or pro." }); return; }
+  if (plan === "pilot" && !untilText) { res.status(400).json({ error: "A pilot needs an end date." }); return; }
+  const until = untilText ? new Date(`${untilText}T23:59:59`) : null;
+  const [row] = await db.update(schoolsTable).set({ plan, planUntil: until, updatedAt: new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  if (!row) { res.status(404).json({ error: "School not found." }); return; }
+  await writeAudit(schoolId, viewerOf(res).id, "plan", null, { plan, until: untilText });
+  res.json({ plan, until });
 });
 
 export default router;

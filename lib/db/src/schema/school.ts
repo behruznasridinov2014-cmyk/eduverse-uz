@@ -21,6 +21,13 @@ export const schoolsTable = pgTable("schools", {
   region: text("region").notNull(),
   district: text("district"),
   address: text("address"),
+  /**
+   * free  — journal, attendance, homework, grades (always free);
+   * pilot — everything, free until plan_until (trial for one quarter);
+   * pro   — everything, paid (3D topics, 3D library, online lessons, trainer).
+   */
+  plan: text("plan").notNull().default("free"),
+  planUntil: timestamp("plan_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("schools_region_idx").on(table.region)]);

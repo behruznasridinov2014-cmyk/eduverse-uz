@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { Router, type IRouter, type Response } from "express";
 import {
   bookAnnotationsTable,
@@ -8,6 +8,8 @@ import {
   courseProgressTable,
   db,
   schoolCalendarTable,
+  trainerResultsTable,
+  usersTable,
   schoolMembersTable,
   type AccountRole,
 } from "@workspace/db";
@@ -255,6 +257,59 @@ router.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_direc
     .values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now })
     .onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
   res.json({ calendar });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 4. Daily trainer and the class rating                                        */
+/* -------------------------------------------------------------------------- */
+
+const trainerLimiter = createRateLimiter(30, 60 * 60 * 1000, "Too many attempts.", "trainer", perSession);
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+
+async function pupilClass(userId: string): Promise<string | null> {
+  const [row] = await db.select({ classId: classMembersTable.classId }).from(classMembersTable)
+    .where(and(eq(classMembersTable.userId, userId), eq(classMembersTable.role, "student"))).limit(1);
+  return row?.classId ?? null;
+}
+
+router.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const body = isRecord(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const day = isoDay(new Date());
+  const classId = await pupilClass(viewer.id);
+  // One counted attempt a day: the first result stays.
+  const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
+  res.status(row ? 201 : 200).json({ counted: Boolean(row), day });
+});
+
+router.get("/trainer/rating", requireAuthenticatedRole(...everyRole), async (req, res) => {
+  const viewer = viewerOf(res);
+  let classId = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? req.query.classId : null;
+  if (viewer.role === "student") classId = await pupilClass(viewer.id);
+  if (!classId) { res.json({ rating: [], doneToday: false }); return; }
+  if (viewer.role !== "student") {
+    const access = await classAccess(viewer, classId);
+    if (!access.read) { res.status(403).json({ error: "Not your class." }); return; }
+  }
+  const since = isoDay(new Date(Date.now() - 6 * 86400000));
+  const rows = await db
+    .select({ userId: trainerResultsTable.userId, name: usersTable.username, points: sql<number>`sum(${trainerResultsTable.score})::int`, days: sql<number>`count(*)::int` })
+    .from(trainerResultsTable)
+    .innerJoin(usersTable, eq(usersTable.id, trainerResultsTable.userId))
+    .where(and(eq(trainerResultsTable.classId, classId), gte(trainerResultsTable.day, since)))
+    .groupBy(trainerResultsTable.userId, usersTable.username)
+    .orderBy(desc(sql`sum(${trainerResultsTable.score})`))
+    .limit(30);
+  const [today] = await db.select({ id: trainerResultsTable.id }).from(trainerResultsTable)
+    .where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, isoDay(new Date())))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
 });
 
 export default router;

@@ -86,7 +86,7 @@ type Molecule = {
 
 const t = 1.0;
 // Geometry: simple, readable coordinates (Å-like units).
-const MOLECULES: Molecule[] = [
+export const MOLECULES: Molecule[] = [
   {
     id: 'h2', life: L('Shar va raketalar yoqilg‘isi — rangsiz, hidsiz gaz.', 'Воздушные шары и ракетное топливо — бесцветный газ без запаха.', 'Balloons and rocket fuel — colourless, odourless gas.'), formula: 'H₂', name: L('Vodorod', 'Водород', 'Hydrogen'),
     atoms: [{ el: 'H', p: [-0.37, 0, 0] }, { el: 'H', p: [0.37, 0, 0] }], bonds: [[0, 1]],
@@ -189,7 +189,7 @@ const sameCounts = (a: Record<string, number>, b: Record<string, number>) =>
   Object.keys({ ...a, ...b }).every((key) => (a[key] ?? 0) === (b[key] ?? 0));
 
 type Reaction = { a: string; b: string; equation: string; products: string[]; note: Txt; effect: 'flame' | 'bubbles' | 'heat' };
-const REACTIONS: Reaction[] = [
+export const REACTIONS: Reaction[] = [
   { a: 'h2', b: 'o2', equation: '2H₂ + O₂ → 2H₂O', products: ['h2o'], effect: 'flame', note: L('Yonish: ko‘p issiqlik ajraladi, suv hosil bo‘ladi.', 'Горение: выделяется много тепла, образуется вода.', 'Combustion: lots of heat, water forms.') },
   { a: 'ch4', b: 'o2', equation: 'CH₄ + 2O₂ → CO₂ + 2H₂O', products: ['co2', 'h2o'], effect: 'flame', note: L('Gaz plitasidagi olov — metanning yonishi.', 'Пламя газовой плиты — это горение метана.', 'A gas stove flame is methane burning.') },
   { a: 'hcl', b: 'naoh', equation: 'HCl + NaOH → NaCl + H₂O', products: ['nacl', 'h2o'], effect: 'heat', note: L('Neytrallanish: kislota + ishqor = tuz + suv.', 'Нейтрализация: кислота + щёлочь = соль + вода.', 'Neutralisation: acid + base = salt + water.') },

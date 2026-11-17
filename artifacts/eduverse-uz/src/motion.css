@@ -285,3 +285,34 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .people-row{min-width:0}
 .people-main{min-width:0;flex:1 1 180px}
 .people-main b,.people-main small{overflow-wrap:anywhere}
+
+/* 3D library */
+.scene-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
+.scene-card{display:grid;gap:6px;text-align:left;padding:14px;border-radius:16px;border:1px solid rgba(127,127,127,.18);background:var(--panel,rgba(255,255,255,.6));color:inherit;cursor:pointer;font:inherit}
+.scene-card.active{outline:2px solid var(--accent,#2a7b6f)}
+.scene-card small{opacity:.7;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.scene-card-tag{font-size:11px;font-weight:700;letter-spacing:.3px;opacity:.75}
+.scene-library-open{margin-top:12px}
+.pro-lock{text-align:center;display:grid;gap:10px;justify-items:center;padding:36px 20px;max-width:620px;margin:24px auto}
+.pro-lock-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:rgba(127,127,127,.12)}
+.worksheet-tasks{display:grid;gap:6px;max-height:380px;overflow:auto;margin-top:8px}
+.worksheet-task{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:rgba(127,127,127,.06);cursor:pointer}
+.worksheet-task.on{background:rgba(42,123,111,.14)}
+.worksheet-task input{margin-top:3px;width:18px;height:18px;flex:none}
+.worksheet-task > span{display:grid;gap:2px}
+.worksheet-picked{margin-top:12px;display:grid;gap:8px}
+.worksheet-picked ol{margin:0;padding-left:20px;display:grid;gap:4px}
+
+/* Daily trainer */
+.trainer-card{display:grid;gap:12px}
+.trainer-card h2{font-size:19px;line-height:1.35}
+.trainer-progress{height:6px;border-radius:6px;background:rgba(127,127,127,.15);overflow:hidden}
+.trainer-progress span{display:block;height:100%;background:var(--accent,#2a7b6f);transition:width .3s}
+.trainer-options{display:grid;gap:8px}
+.trainer-option{display:flex;gap:8px;align-items:center;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid rgba(127,127,127,.22);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.trainer-option.right{background:rgba(42,160,90,.16);border-color:rgba(42,160,90,.5)}
+.trainer-option.wrong{background:rgba(214,69,65,.14);border-color:rgba(214,69,65,.5)}
+.trainer-result{display:grid;justify-items:center;gap:6px;text-align:center;padding:28px}
+.trainer-rating{margin:0;padding-left:22px;display:grid;gap:6px}
+.trainer-rating li span{margin-right:8px}
+.trainer-rating li.me b{color:var(--accent,#2a7b6f)}

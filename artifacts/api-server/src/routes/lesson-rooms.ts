@@ -17,6 +17,7 @@ import {
 import { pushNotice, studentsOfClasses, teacherClassIds } from "../lib/inbox";
 import { requireAuthenticatedRole } from "./auth";
 import { logger } from "../lib/logger";
+import { userPlan } from "../lib/plans";
 import {
   canManageClass,
   cleanText,
@@ -419,6 +420,11 @@ router.post(
     }
     if (!(await canOpenRoom(host.id, host.role, classId ?? null))) {
       res.status(403).json({ error: "You cannot open a lesson for this class." });
+      return;
+    }
+    // Online lessons are part of EDUVERSE Pro (or a running pilot).
+    if (!(await userPlan(host.id, host.role)).pro) {
+      res.status(402).json({ error: "Online lessons are available on the EDUVERSE Pro plan or during a pilot." });
       return;
     }
 

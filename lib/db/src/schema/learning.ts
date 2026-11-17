@@ -419,3 +419,18 @@ export const auditLogTable = pgTable("audit_log", {
   details: jsonb("details").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("audit_log_school_idx").on(table.schoolId, table.createdAt)]);
+
+/** Daily trainer: one result per pupil per day; the class rating sums the last 7 days. */
+export const trainerResultsTable = pgTable("trainer_results", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+  /** YYYY-MM-DD */
+  day: text("day").notNull(),
+  score: integer("score").notNull(),
+  total: integer("total").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
+  index("trainer_results_class_day_idx").on(table.classId, table.day),
+]);
