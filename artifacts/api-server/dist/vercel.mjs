@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router11;
+    module.exports = Router12;
     module.exports.Route = Route;
-    function Router11(options) {
-      if (!(this instanceof Router11)) {
-        return new Router11(options);
+    function Router12(options) {
+      if (!(this instanceof Router12)) {
+        return new Router12(options);
       }
       const opts = options || {};
-      function router11(req, res, next) {
-        router11.handle(req, res, next);
+      function router12(req, res, next) {
+        router12.handle(req, res, next);
       }
-      Object.setPrototypeOf(router11, this);
-      router11.caseSensitive = opts.caseSensitive;
-      router11.mergeParams = opts.mergeParams;
-      router11.params = {};
-      router11.strict = opts.strict;
-      router11.stack = [];
-      return router11;
+      Object.setPrototypeOf(router12, this);
+      router12.caseSensitive = opts.caseSensitive;
+      router12.mergeParams = opts.mergeParams;
+      router12.params = {};
+      router12.strict = opts.strict;
+      router12.stack = [];
+      return router12;
     }
-    Router11.prototype = function() {
+    Router12.prototype = function() {
     };
-    Router11.prototype.param = function param(name, fn) {
+    Router12.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router11.prototype.handle = function handle(req, res, callback) {
+    Router12.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router11.prototype.use = function use(handler) {
+    Router12.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router11.prototype.route = function route(path) {
+    Router12.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router11.prototype[method] = function(path) {
+      Router12.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router11 = require_router();
+    var Router12 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router11 = null;
+      var router12 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router11 === null) {
-            router11 = new Router11({
+          if (router12 === null) {
+            router12 = new Router12({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router11;
+          return router12;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router11 = this.router;
+      var router12 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router11.use(path, fn2);
+          return router12.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router11.use(path, function mounted_app(req, res, next) {
+        router12.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router11 = require_router();
+    var Router12 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router11.Route;
-    exports.Router = Router11;
+    exports.Route = Router12.Route;
+    exports.Router = Router12;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -42694,6 +42694,8 @@ var init_school = __esm({
        * pro   — everything, paid (3D topics, 3D library, online lessons, trainer).
        */
       plan: text("plan").notNull().default("free"),
+      /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
+      isDemo: boolean("is_demo").notNull().default(false),
       planUntil: timestamp("plan_until", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -44010,12 +44012,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express11 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express10 = __toESM(require_express2(), 1);
+var import_express11 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -55243,6 +55245,110 @@ router9.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_R
 });
 var requests_default = router9;
 
+// src/routes/demo.ts
+init_drizzle_orm();
+var import_express10 = __toESM(require_express2(), 1);
+init_src();
+var router10 = (0, import_express10.Router)();
+var OWNER_ROLES2 = ["education_admin", "ministry_admin", "platform_superadmin"];
+var viewerOf5 = (res) => res.locals.authenticatedUser;
+var PUPILS_A = ["\u041A\u0430\u0440\u0438\u043C\u043E\u0432\u0430 \u0410\u0437\u0438\u0437\u0430 \u0420\u0443\u0441\u0442\u0430\u043C\u043E\u0432\u043D\u0430", "\u042E\u0441\u0443\u043F\u043E\u0432 \u0411\u0435\u043A\u0437\u043E\u0434 \u0410\u043B\u0438\u0435\u0432\u0438\u0447", "\u0418\u0441\u043C\u043E\u0438\u043B\u043E\u0432\u0430 \u0414\u0438\u043B\u043D\u043E\u0437\u0430 \u0428\u0430\u0432\u043A\u0430\u0442\u043E\u0432\u043D\u0430", "\u0422\u0443\u0440\u0441\u0443\u043D\u043E\u0432 \u0416\u0430\u0441\u0443\u0440 \u0411\u0430\u0445\u0442\u0438\u0451\u0440\u043E\u0432\u0438\u0447", "\u0421\u043E\u0431\u0438\u0440\u043E\u0432\u0430 \u041C\u0430\u043B\u0438\u043A\u0430 \u0410\u043D\u0432\u0430\u0440\u043E\u0432\u043D\u0430", "\u0420\u0430\u0445\u0438\u043C\u043E\u0432 \u0421\u0430\u0440\u0434\u043E\u0440 \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u043E\u0432\u0438\u0447", "\u0410\u043B\u0438\u043C\u043E\u0432\u0430 \u041D\u0438\u0433\u043E\u0440\u0430 \u0424\u0430\u0440\u0445\u043E\u0434\u043E\u0432\u043D\u0430", "\u0421\u0430\u0434\u0443\u043B\u043B\u0430\u0435\u0432 \u0414\u0438\u0451\u0440\u0431\u0435\u043A \u0410\u043A\u043C\u0430\u043B\u043E\u0432\u0438\u0447", "\u041C\u0438\u0440\u0437\u0430\u0435\u0432\u0430 \u0421\u0435\u0432\u0438\u043D\u0447 \u041E\u0439\u0431\u0435\u043A\u043E\u0432\u043D\u0430", "\u0425\u043E\u043B\u043C\u0430\u0442\u043E\u0432 \u041E\u0442\u0430\u0431\u0435\u043A \u0420\u0430\u0441\u0443\u043B\u043E\u0432\u0438\u0447"];
+var PUPILS_B = ["\u0410\u0441\u0430\u0434\u043E\u0432\u0430 \u041B\u0430\u0439\u043B\u043E \u0418\u043A\u0440\u043E\u043C\u043E\u0432\u043D\u0430", "\u0418\u0441\u043C\u0430\u0438\u043B\u043E\u0432 \u0410\u0437\u0438\u0437\u0431\u0435\u043A \u0422\u0438\u043C\u0443\u0440\u043E\u0432\u0438\u0447", "\u041E\u043B\u0438\u043C\u043E\u0432\u0430 \u0414\u0438\u043B\u0434\u043E\u0440\u0430 \u041A\u0430\u043C\u043E\u043B\u043E\u0432\u043D\u0430", "\u0422\u043E\u0448\u043C\u0430\u0442\u043E\u0432 \u042D\u043B\u0431\u0435\u043A \u041D\u043E\u0434\u0438\u0440\u043E\u0432\u0438\u0447", "\u0410\u0431\u0434\u0443\u043B\u043B\u0430\u0435\u0432\u0430 \u0424\u0430\u0440\u0437\u043E\u043D\u0430 \u0411\u0430\u0445\u043E\u0434\u0438\u0440\u043E\u0432\u043D\u0430", "\u0416\u0443\u0440\u0430\u0435\u0432 \u0413\u0438\u0451\u0441\u0431\u0435\u043A \u0428\u0443\u0445\u0440\u0430\u0442\u043E\u0432\u0438\u0447", "\u0421\u0430\u0434\u0438\u043A\u043E\u0432\u0430 \u0413\u0443\u043B\u043D\u043E\u0437\u0430 \u042D\u0440\u043A\u0438\u043D\u043E\u0432\u043D\u0430", "\u0420\u0430\u0445\u0438\u043C\u043E\u0432 \u0425\u0443\u043C\u043E\u044E\u043D \u0410\u0437\u0430\u043C\u0430\u0442\u043E\u0432\u0438\u0447", "\u0419\u0443\u043B\u0434\u043E\u0448\u0435\u0432\u0430 \u0418\u0440\u043E\u0434\u0430\u0445\u043E\u043D \u041C\u0443\u0445\u0430\u043C\u043C\u0430\u0434\u043E\u0432\u043D\u0430", "\u0418\u0441\u0440\u043E\u0438\u043B\u043E\u0432 \u041A\u0430\u043C\u0440\u043E\u043D\u0431\u0435\u043A \u0416\u0430\u043C\u0448\u0438\u0434\u043E\u0432\u0438\u0447"];
+var fatherOf = (pupil) => {
+  const [surname, , patronymic] = pupil.split(" ");
+  const first = patronymic.replace(/(ович|евич|овна|евна)$/, "");
+  const male = surname.endsWith("\u0430") ? surname.slice(0, -1) : surname;
+  return `${male} ${first}`;
+};
+var phoneOf = (index2) => `+99890${String(1e6 + index2 * 7919).slice(-7)}`;
+var isoDay2 = (offset) => new Date(Date.now() - offset * 864e5).toISOString().slice(0, 10);
+router10.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
+  const viewer = viewerOf5(res);
+  const until = new Date(Date.now() + 90 * 864e5);
+  const [school] = await db.insert(schoolsTable).values({ name: `\u0414\u0435\u043C\u043E-\u0448\u043A\u043E\u043B\u0430 EDUVERSE \xB7 ${(/* @__PURE__ */ new Date()).toLocaleDateString("ru-RU")}`, region: "\u0422\u0430\u0448\u043A\u0435\u043D\u0442", district: "\u042E\u043D\u0443\u0441\u0430\u0431\u0430\u0434", address: "\u0414\u0435\u043C\u043E", plan: "pilot", planUntil: until, isDemo: true }).returning({ id: schoolsTable.id, name: schoolsTable.name });
+  const schoolId = school.id;
+  const rows = [
+    { role: "school_director", name: "\u0420\u0430\u0445\u0438\u043C\u043E\u0432\u0430 \u041D\u0438\u0433\u043E\u0440\u0430 \u0410\u043B\u0438\u0448\u0435\u0440\u043E\u0432\u043D\u0430", phone: "+998901112233" },
+    { role: "school_admin", name: "\u041A\u0430\u0440\u0438\u043C\u043E\u0432 \u0410\u043A\u043C\u0430\u043B \u0422\u043E\u0445\u0438\u0440\u043E\u0432\u0438\u0447", phone: "+998901112244" },
+    { role: "teacher", name: "\u0418\u0431\u0440\u0430\u0433\u0438\u043C\u043E\u0432\u0430 \u0428\u0430\u0445\u043D\u043E\u0437\u0430 \u0420\u0430\u0432\u0448\u0430\u043D\u043E\u0432\u043D\u0430", className: "7-\u0410", phone: "+998901112255" },
+    { role: "teacher", name: "\u0410\u0445\u043C\u0435\u0434\u043E\u0432 \u0424\u0430\u0440\u0440\u0443\u0445 \u0411\u0430\u0445\u0440\u043E\u043C\u043E\u0432\u0438\u0447", className: "7-\u0411", phone: "+998901112266" },
+    ...PUPILS_A.map((name) => ({ role: "student", name, className: "7-\u0410" })),
+    ...PUPILS_B.map((name) => ({ role: "student", name, className: "7-\u0411" })),
+    ...[...PUPILS_A, ...PUPILS_B].map((name, index2) => ({ role: "parent", name: fatherOf(name), childName: name, phone: phoneOf(index2) }))
+  ];
+  const { created } = await importPeople(schoolId, rows, viewer.id);
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
+  const classA = classes.find((item) => item.name === "7-\u0410").id;
+  const classB = classes.find((item) => item.name === "7-\u0411").id;
+  const teachers = created.filter((person) => person.role === "teacher");
+  for (const teacher of teachers) for (const classId of [classA, classB]) await db.insert(classMembersTable).values({ classId, userId: teacher.userId, role: "teacher" }).onConflictDoNothing();
+  const physicsTeacher = teachers[0].userId;
+  for (const [classId, done] of [[classA, 6], [classB, 4]]) {
+    for (let index2 = 0; index2 < done; index2 += 1) {
+      await db.insert(courseProgressTable).values({ classId, topicKey: `phys7-1.${index2 + 1}`, doneOn: isoDay2((done - index2) * 4), markedBy: physicsTeacher }).onConflictDoNothing();
+    }
+    await db.insert(coursePaceTable).values({ classId, book: "physics-7", lessonsPerWeek: 2 }).onConflictDoNothing();
+  }
+  const pupils = created.filter((person) => person.role === "student");
+  const statuses = ["present", "present", "present", "present", "late", "present", "absent", "present", "present", "excused"];
+  for (let day = 1; day <= 5; day += 1) {
+    for (let index2 = 0; index2 < pupils.length; index2 += 1) {
+      const pupil = pupils[index2];
+      await db.insert(attendanceTable).values({ classId: pupil.className === "7-\u0410" ? classA : classB, studentId: pupil.userId, markedBy: physicsTeacher, attendanceDate: isoDay2(day), subject: "\u0424\u0438\u0437\u0438\u043A\u0430", status: statuses[(index2 + day) % statuses.length] }).onConflictDoNothing();
+    }
+  }
+  const marks = [5, 4, 5, 3, 4, 5, 4, 5, 4, 5];
+  for (const classId of [classA, classB]) {
+    const classPupils = pupils.filter((pupil) => (pupil.className === "7-\u0410" ? classA : classB) === classId);
+    for (const [title, description] of [["\u0424\u0438\u0437\u0438\u043A\u0430 \xB7 \xA71.4 \u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0440\u0438 \u043F\u0440\u0438\u0431\u043E\u0440\u0430 \u0438 \u0447\u0442\u043E \u043A\u0430\u0436\u0434\u044B\u0439 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442."], ["\u0424\u0438\u0437\u0438\u043A\u0430 \xB7 \xA71.5 \u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438", "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 5 \u043F\u0440\u0430\u0432\u0438\u043B \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438."]]) {
+      const [task] = await db.insert(assignmentsTable).values({ classId, createdBy: physicsTeacher, title, subject: "\u0424\u0438\u0437\u0438\u043A\u0430", description, status: "assigned", dueAt: new Date(Date.now() + 3 * 864e5) }).returning({ id: assignmentsTable.id });
+      for (let index2 = 0; index2 < classPupils.length - 1; index2 += 1) {
+        const checked = index2 < 8;
+        await db.insert(assignmentSubmissionsTable).values({ assignmentId: task.id, studentId: classPupils[index2].userId, status: checked ? "checked" : "submitted", content: "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438, \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u0441\u0432\u043E\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.", score: checked ? marks[index2] * 20 : null, feedback: checked ? "\u0425\u043E\u0440\u043E\u0448\u043E, \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0439\u0442\u0435." : "" }).onConflictDoNothing();
+      }
+    }
+  }
+  for (let day = 0; day < 4; day += 1) {
+    for (let index2 = 0; index2 < pupils.length; index2 += 2) {
+      const pupil = pupils[index2];
+      await db.insert(trainerResultsTable).values({ userId: pupil.userId, classId: pupil.className === "7-\u0410" ? classA : classB, day: isoDay2(day), score: (index2 + day) % 6, total: 5 }).onConflictDoNothing();
+    }
+  }
+  await writeAudit(schoolId, viewer.id, "demo-create", null, { people: created.length });
+  res.status(201).json({ school, created: created.map(({ userId: _id, ...rest }) => rest) });
+});
+router10.get("/admin/demo-schools", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
+  const rows = await db.select({ id: schoolsTable.id, name: schoolsTable.name, createdAt: schoolsTable.createdAt }).from(schoolsTable).where(eq(schoolsTable.isDemo, true));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ schools: rows });
+});
+router10.delete("/admin/demo-school/:schoolId", requireAuthenticatedRole(...OWNER_ROLES2), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const [school] = await db.select({ isDemo: schoolsTable.isDemo }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  if (!school.isDemo) {
+    res.status(403).json({ error: "Only a demo school can be deleted this way." });
+    return;
+  }
+  const members = (await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(eq(schoolMembersTable.schoolId, schoolId))).map((row) => row.userId);
+  const elsewhere = members.length ? (await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(and(inArray(schoolMembersTable.userId, members), notInArray(schoolMembersTable.schoolId, [schoolId])))).map((row) => row.userId) : [];
+  const onlyHere = members.filter((id) => !elsewhere.includes(id));
+  await db.transaction(async (tx) => {
+    await tx.delete(schoolsTable).where(eq(schoolsTable.id, schoolId));
+    if (onlyHere.length) await tx.delete(usersTable).where(and(inArray(usersTable.id, onlyHere), notInArray(usersTable.role, ["platform_superadmin", "education_admin", "ministry_admin"])));
+  });
+  await writeAudit(null, viewerOf5(res).id, "demo-delete", null, { schoolId, people: onlyHere.length });
+  res.json({ deleted: true, people: onlyHere.length });
+});
+var demo_default = router10;
+
 // src/lib/schema-sync.ts
 init_drizzle_orm();
 init_pg_core();
@@ -55414,9 +55520,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router10 = (0, import_express10.Router)();
-router10.use(health_default);
-router10.use(async (_req, _res, next) => {
+var router11 = (0, import_express11.Router)();
+router11.use(health_default);
+router11.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -55424,18 +55530,19 @@ router10.use(async (_req, _res, next) => {
   }
   next();
 });
-router10.use(school_tools_default);
-router10.use(course_default);
-router10.use(account_default);
-router10.use(requests_default);
-router10.use(auth_default);
-router10.use(learning_default);
-router10.use(lesson_rooms_default);
-router10.use(schools_default);
-var routes_default = router10;
+router11.use(school_tools_default);
+router11.use(course_default);
+router11.use(account_default);
+router11.use(requests_default);
+router11.use(demo_default);
+router11.use(auth_default);
+router11.use(learning_default);
+router11.use(lesson_rooms_default);
+router11.use(schools_default);
+var routes_default = router11;
 
 // src/app.ts
-var app = (0, import_express11.default)();
+var app = (0, import_express12.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -55486,8 +55593,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express11.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express11.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express12.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express12.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {

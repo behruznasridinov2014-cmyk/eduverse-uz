@@ -19,6 +19,7 @@ import { SchoolCalendarPanel } from './school-calendar';
 import { SceneLibraryPage } from './scene-library';
 import { WorksheetBuilder } from './worksheet';
 import { SchoolSetupWizard } from './setup-wizard';
+import { DemoSchoolPanel } from './demo-panel';
 import { TrainerPage } from './trainer';
 import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
@@ -506,11 +507,13 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
 
 function AdminPage({role,language}:{role:User['role'];language:Lang}){
  const [setup,setSetup]=useState<{id:string;name:string}|null>(null);
+ const [schoolsRevision,setSchoolsRevision]=useState(0);
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  const title=role==='platform_superadmin'?text('Platform administration','Управление платформой','Platforma boshqaruvi'):role==='ministry_admin'?text('National education oversight','Национальный контроль образования','Milliy ta’lim nazorati'):text('Regional education administration','Региональное управление образованием','Hududiy ta’lim boshqaruvi');
  return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
   <OwnerRequestsPanel language={language}/>
-  <div style={{marginTop:16}}><ServerAdminSchoolsPanel language={language} selectedId={setup?.id} onSelect={setSetup}/></div>
+  <div style={{marginTop:16}}><DemoSchoolPanel language={language} onChanged={()=>setSchoolsRevision(v=>v+1)}/></div>
+  <div style={{marginTop:16}}><ServerAdminSchoolsPanel key={schoolsRevision} language={language} selectedId={setup?.id} onSelect={setSetup}/></div>
   {setup&&<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
    <div className="row-between"><b>{setup.name}</b><button className="btn small" onClick={()=>setSetup(null)}>{text('Close','Закрыть','Yopish')}</button></div>
    <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>

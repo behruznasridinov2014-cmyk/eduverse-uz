@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   pgEnum,
@@ -27,6 +28,8 @@ export const schoolsTable = pgTable("schools", {
    * pro   — everything, paid (3D topics, 3D library, online lessons, trainer).
    */
   plan: text("plan").notNull().default("free"),
+  /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
+  isDemo: boolean("is_demo").notNull().default(false),
   planUntil: timestamp("plan_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
