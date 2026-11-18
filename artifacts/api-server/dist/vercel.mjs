@@ -42550,6 +42550,9 @@ var init_auth = __esm({
         twoFactorSecret: text("two_factor_secret"),
         /** Telegram chat id that is allowed to receive 2FA codes. */
         twoFactorTelegramId: text("two_factor_telegram_id"),
+        /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
+        googleSub: text("google_sub"),
+        googleEmail: text("google_email"),
         twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
         /** One-time nonce used to bind the Telegram bot to this account. */
         twoFactorPendingNonce: text("two_factor_pending_nonce"),
@@ -42568,6 +42571,7 @@ var init_auth = __esm({
         uniqueIndex("users_login_normalized_unique").on(table.loginNormalized),
         uniqueIndex("users_two_factor_pending_nonce_unique").on(table.twoFactorPendingNonce).where(sql`${table.twoFactorPendingNonce} is not null`),
         uniqueIndex("users_two_factor_telegram_id_unique").on(table.twoFactorTelegramId).where(sql`${table.twoFactorTelegramId} is not null`),
+        uniqueIndex("users_google_sub_unique").on(table.googleSub).where(sql`${table.googleSub} is not null`),
         index("users_two_factor_pending_expires_at_idx").on(
           table.twoFactorPendingExpiresAt
         )
@@ -45554,6 +45558,143 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
   });
   setSessionCookie(res, freshToken);
   res.json({ user: publicUser(account) });
+});
+var GOOGLE_COOKIE = "eduverse.goauth";
+var googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+var base64url = (buffer) => buffer.toString("base64url");
+function googleRedirectUri(req) {
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+  const host = req.get("x-forwarded-host") || req.get("host") || "";
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+router.get("/auth/google/status", async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ enabled: googleConfigured(), linkedEmail: viewer?.googleEmail ?? null });
+});
+router.get("/auth/google/start", loginAddressLimiter, async (req, res) => {
+  if (!googleConfigured()) {
+    res.redirect(302, "/login?google=off");
+    return;
+  }
+  const mode = req.query.mode === "link" ? "link" : "login";
+  if (mode === "link" && !await authenticatedUserForRequest(req)) {
+    res.redirect(302, "/login");
+    return;
+  }
+  const state = base64url(randomBytes3(24));
+  const verifier = base64url(randomBytes3(48));
+  const challenge = base64url(createHash3("sha256").update(verifier).digest());
+  res.cookie(GOOGLE_COOKIE, JSON.stringify({ state, verifier, mode }), { httpOnly: true, secure: isProduction2, sameSite: "lax", path: "/api/auth/google", maxAge: 10 * 60 * 1e3 });
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: googleRedirectUri(req),
+    response_type: "code",
+    scope: "openid email",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    prompt: "select_account"
+  });
+  res.redirect(302, `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
+  const fail = (reason) => {
+    res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" });
+    res.redirect(302, `/login?google=${reason}`);
+  };
+  if (!googleConfigured()) {
+    fail("off");
+    return;
+  }
+  let saved = {};
+  try {
+    saved = JSON.parse(String(req.cookies?.[GOOGLE_COOKIE] ?? "{}"));
+  } catch {
+    saved = {};
+  }
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  const state = typeof req.query.state === "string" ? req.query.state : "";
+  if (!code || !state || !saved.state || !saved.verifier || state !== saved.state) {
+    fail("error");
+    return;
+  }
+  let claims = {};
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: googleRedirectUri(req),
+        grant_type: "authorization_code",
+        code_verifier: saved.verifier
+      }).toString()
+    });
+    if (!response.ok) {
+      logger.warn({ status: response.status }, "google token exchange failed");
+      fail("error");
+      return;
+    }
+    const body = await response.json();
+    const payload = body.id_token?.split(".")[1];
+    claims = payload ? JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) : {};
+  } catch (error) {
+    logger.warn({ err: error }, "google sign-in failed");
+    fail("error");
+    return;
+  }
+  const validIssuer = claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com";
+  if (!claims.sub || claims.aud !== process.env.GOOGLE_CLIENT_ID || !validIssuer || !claims.exp || claims.exp * 1e3 < Date.now() || claims.email_verified !== true) {
+    fail("error");
+    return;
+  }
+  res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" });
+  if (saved.mode === "link") {
+    const viewer = await authenticatedUserForRequest(req);
+    if (!viewer) {
+      res.redirect(302, "/login");
+      return;
+    }
+    const [taken] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+    if (taken && taken.id !== viewer.id) {
+      res.redirect(302, "/profile?google=taken");
+      return;
+    }
+    await db.update(usersTable).set({ googleSub: claims.sub, googleEmail: claims.email ?? null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+    res.redirect(302, "/profile?google=linked");
+    return;
+  }
+  const [user3] = await db.select().from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+  if (!user3) {
+    res.redirect(302, "/login?google=notlinked");
+    return;
+  }
+  if (ACCOUNT_BLOCKED.includes(user3.status)) {
+    res.redirect(302, "/login?google=blocked");
+    return;
+  }
+  const sessionToken = createSessionToken();
+  await db.insert(sessionsTable).values({
+    userId: user3.id,
+    tokenHash: hashSessionToken(sessionToken),
+    ...sessionMeta(req),
+    expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
+  });
+  setSessionCookie(res, sessionToken, true);
+  res.redirect(302, "/dashboard");
+});
+router.post("/auth/google/unlink", requireAllowedOrigin, async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  if (!viewer) {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  await db.update(usersTable).set({ googleSub: null, googleEmail: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ unlinked: true });
 });
 var auth_default = router;
 
@@ -54195,6 +54336,7 @@ router6.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "sch
   const reports = await db.select({ id: labReportsTable.id, lab: labReportsTable.lab, result: labReportsTable.result, errorPercent: labReportsTable.errorPercent, grade: labReportsTable.grade, data: labReportsTable.data, createdAt: labReportsTable.createdAt, studentName: usersTable.username }).from(labReportsTable).innerJoin(usersTable, eq(labReportsTable.studentId, usersTable.id)).where(inArray(labReportsTable.studentId, studentIds)).orderBy(desc(labReportsTable.createdAt)).limit(100);
   res.json({ reports });
 });
+var WEAK_PASSWORDS = /* @__PURE__ */ new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
 var passwordLimiter = createRateLimiter(10, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-change", perSession2);
 router6.get("/me/security", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
   const viewer = viewerOf(res);
@@ -54205,8 +54347,12 @@ router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLi
   const viewer = viewerOf(res);
   const current = isRecord5(req.body) && typeof req.body.current === "string" ? req.body.current : "";
   const next = isRecord5(req.body) && typeof req.body.next === "string" ? req.body.next : "";
-  if (next.length < 8 || next.length > 128) {
-    res.status(400).json({ error: "The new password must be 8 to 128 characters." });
+  if (next.length < 10 || next.length > 128) {
+    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
+    return;
+  }
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)+$/.test(next)) {
+    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
     return;
   }
   const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
@@ -54219,7 +54365,11 @@ router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLi
     return;
   }
   await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
-  res.json({ changed: true });
+  const token = req.cookies?.["eduverse.sid"];
+  const currentHash = typeof token === "string" && token ? hashSessionToken(token) : "";
+  const closed = await db.delete(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.tokenHash, currentHash))).returning({ id: sessionsTable.id });
+  await writeAudit(null, viewer.id, "password-change", viewer.id, { otherSessionsClosed: closed.length });
+  res.json({ changed: true, otherSessionsClosed: closed.length });
 });
 var AVATAR_MAX = 80 * 1024;
 var AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;

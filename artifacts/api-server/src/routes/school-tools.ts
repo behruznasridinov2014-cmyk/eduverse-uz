@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, ne } from "drizzle-orm";
 import { randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { Router, type IRouter, type Response } from "express";
 import {
@@ -14,7 +14,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
-import { hashPassword as hashAccountPassword, verifyPassword } from "../lib/auth-crypto";
+import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
@@ -456,6 +456,7 @@ router.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "scho
 /* 5. Password change (the name is set by the school and cannot be changed)    */
 /* -------------------------------------------------------------------------- */
 
+const WEAK_PASSWORDS = new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
 const passwordLimiter = createRateLimiter(10, 15 * 60 * 1000, "Too many attempts. Try again later.", "password-change", perSession);
 
 router.get("/me/security", requireAuthenticatedRole(...everyRole), async (_req, res) => {
@@ -468,8 +469,12 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
   const viewer = viewerOf(res);
   const current = isRecord(req.body) && typeof req.body.current === "string" ? req.body.current : "";
   const next = isRecord(req.body) && typeof req.body.next === "string" ? req.body.next : "";
-  if (next.length < 8 || next.length > 128) {
-    res.status(400).json({ error: "The new password must be 8 to 128 characters." });
+  if (next.length < 10 || next.length > 128) {
+    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
+    return;
+  }
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)+$/.test(next)) {
+    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
     return;
   }
   const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
@@ -482,7 +487,12 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
     return;
   }
   await db.update(usersTable).set({ passwordHash: await hashAccountPassword(next), mustChangePassword: false, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
-  res.json({ changed: true });
+  // A new password closes every other sign-in: a stolen session stops working at once.
+  const token = req.cookies?.["eduverse.sid"];
+  const currentHash = typeof token === "string" && token ? hashSessionToken(token) : "";
+  const closed = await db.delete(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.tokenHash, currentHash))).returning({ id: sessionsTable.id });
+  await writeAudit(null, viewer.id, "password-change", viewer.id, { otherSessionsClosed: closed.length });
+  res.json({ changed: true, otherSessionsClosed: closed.length });
 });
 
 /* -------------------------------------------------------------------------- */

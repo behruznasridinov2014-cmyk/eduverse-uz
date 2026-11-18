@@ -61,6 +61,9 @@ export const usersTable = pgTable(
     twoFactorSecret: text("two_factor_secret"),
     /** Telegram chat id that is allowed to receive 2FA codes. */
     twoFactorTelegramId: text("two_factor_telegram_id"),
+    /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
+    googleSub: text("google_sub"),
+    googleEmail: text("google_email"),
     twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     /** One-time nonce used to bind the Telegram bot to this account. */
     twoFactorPendingNonce: text("two_factor_pending_nonce"),
@@ -87,6 +90,9 @@ export const usersTable = pgTable(
     uniqueIndex("users_two_factor_telegram_id_unique")
       .on(table.twoFactorTelegramId)
       .where(sql`${table.twoFactorTelegramId} is not null`),
+    uniqueIndex("users_google_sub_unique")
+      .on(table.googleSub)
+      .where(sql`${table.googleSub} is not null`),
     index("users_two_factor_pending_expires_at_idx").on(
       table.twoFactorPendingExpiresAt,
     ),

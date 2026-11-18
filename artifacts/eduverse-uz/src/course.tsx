@@ -1,8 +1,9 @@
 import './scenes.css';
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { createPortal } from 'react-dom';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import type { User } from '@workspace/api-client-react';
 import { customFetch } from '@workspace/api-client-react';
-import { BookOpen, Box, CalendarCheck2, CheckCircle2, ChevronRight, GraduationCap, Lightbulb, Lock, MonitorPlay, NotebookPen, Sparkles, Target, Users } from 'lucide-react';
+import { BookOpen, Box, CalendarCheck2, CheckCircle2, ChevronRight, GraduationCap, Lightbulb, Lock, Maximize2, Minimize2, MonitorPlay, NotebookPen, Sparkles, Target, Users } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { COURSE, SUBJECT_LABEL, pdfPageOf, type CourseBook, type CourseScene, type CourseTopic } from './course-data';
 import type { OwnSceneId } from './course-scenes';
@@ -41,8 +42,88 @@ const OWN: Record<OwnSceneId, ComponentType<SceneProps>> = {
   geometry: lazy(() => math().then((m) => ({ default: m.GeometryScene }))),
 };
 
+/**
+ * Frame around every 3D scene: "full screen" for showing it to the whole class
+ * on a projector or an interactive board. The scene is scaled to the screen.
+ */
+function SceneShell({ language, children }: { language: Language; children: ReactNode }) {
+  const shell = useRef<HTMLDivElement | null>(null);
+  const body = useRef<HTMLDivElement | null>(null);
+  // "native": the browser's real full screen; "overlay": the scene covers the window
+  // (iPhone Safari and embedded views cannot put one block full screen).
+  const [mode, setMode] = useState<'off' | 'native' | 'overlay'>('off');
+  const [zoom, setZoom] = useState(1);
+  const fit = useCallback(() => {
+    if (!body.current) return;
+    const box = body.current.getBoundingClientRect();
+    const width = box.width / (zoom || 1);
+    const height = box.height / (zoom || 1);
+    setZoom(Math.max(1, Math.min(2.6, Math.min((window.innerWidth - 40) / Math.max(1, width), (window.innerHeight - 90) / Math.max(1, height)))));
+  }, [zoom]);
+  useEffect(() => {
+    const onChange = () => {
+      if (document.fullscreenElement === shell.current) { setMode('native'); window.setTimeout(fit, 60); }
+      else setMode((current) => (current === 'native' ? 'off' : current));
+    };
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, [fit]);
+  useEffect(() => {
+    if (mode === 'off') { setZoom(1); return; }
+    if (mode !== 'overlay') return;
+    window.setTimeout(fit, 60);
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMode('off'); };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [mode, fit]);
+  const toggle = () => {
+    if (mode === 'native') { void document.exitFullscreen().catch(() => setMode('off')); return; }
+    if (mode === 'overlay') { setMode('off'); return; }
+    const element = shell.current;
+    if (element?.requestFullscreen && document.fullscreenEnabled) {
+      element.requestFullscreen().catch(() => setMode('overlay'));
+      // Some views accept the call but never switch: fall back after a moment.
+      window.setTimeout(() => { if (document.fullscreenElement !== element) setMode((current) => (current === 'off' ? 'overlay' : current)); }, 400);
+    } else {
+      setMode('overlay');
+    }
+  };
+  const full = mode !== 'off';
+  const button = (
+    <button type="button" className="btn small scene-full-btn" onClick={toggle}>
+      {full ? <Minimize2 size={14} /> : <Maximize2 size={14} />} {full ? t(language, 'Chiqish', 'Выйти', 'Exit') : t(language, 'Sinfga ko‘rsatish', 'На весь экран', 'Full screen')}
+    </button>
+  );
+  if (mode === 'overlay' && typeof document !== 'undefined') {
+    // Rendered at the root of the page: animated parents cannot clip a fixed layer there.
+    return (
+      <>
+        <div ref={shell} className="scene-shell scene-placeholder" />
+        {createPortal(
+          <div className="scene-shell scene-full scene-overlay" role="dialog" aria-modal="true">
+            {button}
+            <div ref={body} className="scene-shell-body" style={{ zoom }}>{children}</div>
+          </div>,
+          document.body,
+        )}
+      </>
+    );
+  }
+  return (
+    <div ref={shell} className={`scene-shell ${full ? 'scene-full' : ''}`}>
+      {button}
+      <div ref={body} className="scene-shell-body" style={full ? { zoom } : undefined}>{children}</div>
+    </div>
+  );
+}
+
 /** The 3D part of a textbook topic. Every scene is ours and can be operated by the student. */
 export function CourseScene3D({ scene, language }: { scene: CourseScene; language: Language }) {
+  return <SceneShell language={language}><SceneView scene={scene} language={language} /></SceneShell>;
+}
+
+function SceneView({ scene, language }: { scene: CourseScene; language: Language }) {
   switch (scene.kind) {
     case 'own': {
       const Scene = OWN[scene.scene];

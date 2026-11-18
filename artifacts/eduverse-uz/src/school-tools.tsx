@@ -359,8 +359,8 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
       {open && (
         <form className="password-form reveal" onSubmit={submit}>
           <input className="input" type="password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} placeholder={t(language, 'Hozirgi parol', 'Текущий пароль', 'Current password')} required autoFocus />
-          <input className="input" type="password" autoComplete="new-password" minLength={8} value={next} onChange={(event) => setNext(event.target.value)} placeholder={t(language, 'Yangi parol (8+ belgi)', 'Новый пароль (от 8 символов)', 'New password (8+ chars)')} required />
-          <input className="input" type="password" autoComplete="new-password" minLength={8} value={repeat} onChange={(event) => setRepeat(event.target.value)} placeholder={t(language, 'Yangi parolni takrorlang', 'Повторите новый пароль', 'Repeat new password')} required />
+          <input className="input" type="password" autoComplete="new-password" minLength={10} value={next} onChange={(event) => setNext(event.target.value)} placeholder={t(language, 'Yangi parol (10+ belgi, harf va raqam)', 'Новый пароль (от 10 символов, буквы и цифры)', 'New password (10+ chars, letters and digits)')} required />
+          <input className="input" type="password" autoComplete="new-password" minLength={10} value={repeat} onChange={(event) => setRepeat(event.target.value)} placeholder={t(language, 'Yangi parolni takrorlang', 'Повторите новый пароль', 'Repeat new password')} required />
           <div className="password-actions">
             <button type="submit" className="btn primary" disabled={busy}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
             {!mustChange && <button type="button" className="btn ghost" onClick={() => { setOpen(false); setError(''); }}>{t(language, 'Bekor qilish', 'Отмена', 'Cancel')}</button>}

@@ -9,6 +9,7 @@ import { customFetch, type User } from '@workspace/api-client-react';
 import { Bell, BookOpenCheck, Bug, CalendarClock, CheckCheck, CircleHelp, GraduationCap, LifeBuoy, Mail, MessageCircle, MonitorSmartphone, School, Send, ShieldCheck, Users, X } from 'lucide-react';
 import type { Language } from './school-data';
 import { AvatarPicker, PasswordChange } from './school-tools';
+import { GoogleLinkPanel } from './google-auth';
 import { QrScannerButton } from './qr-scanner';
 import { GlassSwitch, GlassTabs, useSwipeTabs } from './glass-nav';
 import { friendlyError } from './errors';
@@ -165,6 +166,7 @@ function SecuritySection({ language }: { language: Language }) {
         </div>
       </section>
       <PasswordChange language={language} />
+      <GoogleLinkPanel language={language} />
       <section className="panel">
         <div className="section-head"><h2><MonitorSmartphone size={16} /> {tx(language, 'Faol qurilmalar', 'Активные устройства', 'Active devices')} · {active.length}</h2>
           {active.length > 1 && <button type="button" className="btn small danger" onClick={() => void revokeOthers()}>{tx(language, 'Hamma qurilmalardan chiqish', 'Выйти со всех устройств', 'Sign out everywhere')}</button>}</div>

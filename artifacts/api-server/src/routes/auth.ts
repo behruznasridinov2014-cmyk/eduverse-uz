@@ -1591,4 +1591,124 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
   res.json({ user: publicUser(account) });
 });
 
+/* -------------------------------------------------------------------------- */
+/* Sign-in with Google                                                         */
+/* -------------------------------------------------------------------------- */
+/*
+ * Accounts are still created only by the school (or EDUVERSE). A user who is
+ * signed in links their Google account in the profile; after that the
+ * "Sign in with Google" button works for them. Nobody can register through Google.
+ *
+ * Needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the hosting settings, and the
+ * redirect URI https://<site>/api/auth/google/callback added in Google Cloud.
+ */
+const GOOGLE_COOKIE = "eduverse.goauth";
+const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+const base64url = (buffer: Buffer) => buffer.toString("base64url");
+
+function googleRedirectUri(req: Request): string {
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+  const host = req.get("x-forwarded-host") || req.get("host") || "";
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+
+router.get("/auth/google/status", async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ enabled: googleConfigured(), linkedEmail: viewer?.googleEmail ?? null });
+});
+
+router.get("/auth/google/start", loginAddressLimiter, async (req, res) => {
+  if (!googleConfigured()) { res.redirect(302, "/login?google=off"); return; }
+  const mode = req.query.mode === "link" ? "link" : "login";
+  if (mode === "link" && !(await authenticatedUserForRequest(req))) { res.redirect(302, "/login"); return; }
+  const state = base64url(randomBytes(24));
+  const verifier = base64url(randomBytes(48));
+  const challenge = base64url(createHash("sha256").update(verifier).digest());
+  res.cookie(GOOGLE_COOKIE, JSON.stringify({ state, verifier, mode }), { httpOnly: true, secure: isProduction, sameSite: "lax", path: "/api/auth/google", maxAge: 10 * 60 * 1000 });
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    redirect_uri: googleRedirectUri(req),
+    response_type: "code",
+    scope: "openid email",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    prompt: "select_account",
+  });
+  res.redirect(302, `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
+  const fail = (reason: string) => { res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" }); res.redirect(302, `/login?google=${reason}`); };
+  if (!googleConfigured()) { fail("off"); return; }
+  let saved: { state?: string; verifier?: string; mode?: string } = {};
+  try { saved = JSON.parse(String(req.cookies?.[GOOGLE_COOKIE] ?? "{}")); } catch { saved = {}; }
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  const state = typeof req.query.state === "string" ? req.query.state : "";
+  if (!code || !state || !saved.state || !saved.verifier || state !== saved.state) { fail("error"); return; }
+
+  // Exchange the code over TLS directly with Google; the ID token comes from Google itself.
+  let claims: { sub?: string; email?: string; email_verified?: boolean; aud?: string; iss?: string; exp?: number } = {};
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: googleRedirectUri(req),
+        grant_type: "authorization_code",
+        code_verifier: saved.verifier,
+      }).toString(),
+    });
+    if (!response.ok) { logger.warn({ status: response.status }, "google token exchange failed"); fail("error"); return; }
+    const body = (await response.json()) as { id_token?: string };
+    const payload = body.id_token?.split(".")[1];
+    claims = payload ? JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) : {};
+  } catch (error) {
+    logger.warn({ err: error }, "google sign-in failed");
+    fail("error");
+    return;
+  }
+  const validIssuer = claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com";
+  if (!claims.sub || claims.aud !== process.env.GOOGLE_CLIENT_ID || !validIssuer || !claims.exp || claims.exp * 1000 < Date.now() || claims.email_verified !== true) {
+    fail("error");
+    return;
+  }
+  res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" });
+
+  if (saved.mode === "link") {
+    const viewer = await authenticatedUserForRequest(req);
+    if (!viewer) { res.redirect(302, "/login"); return; }
+    const [taken] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+    if (taken && taken.id !== viewer.id) { res.redirect(302, "/profile?google=taken"); return; }
+    await db.update(usersTable).set({ googleSub: claims.sub, googleEmail: claims.email ?? null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+    res.redirect(302, "/profile?google=linked");
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+  if (!user) { res.redirect(302, "/login?google=notlinked"); return; }
+  if (ACCOUNT_BLOCKED.includes(user.status)) { res.redirect(302, "/login?google=blocked"); return; }
+  const sessionToken = createSessionToken();
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    tokenHash: hashSessionToken(sessionToken),
+    ...sessionMeta(req),
+    expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
+  });
+  setSessionCookie(res, sessionToken, true);
+  res.redirect(302, "/dashboard");
+});
+
+router.post("/auth/google/unlink", requireAllowedOrigin, async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  if (!viewer) { res.status(401).json({ error: "Authentication required." }); return; }
+  await db.update(usersTable).set({ googleSub: null, googleEmail: null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ unlinked: true });
+});
+
 export default router;
