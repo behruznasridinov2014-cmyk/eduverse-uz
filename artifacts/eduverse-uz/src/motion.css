@@ -347,3 +347,14 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .scene-shell.scene-overlay{position:fixed;inset:0;z-index:2000;border-radius:0}
 .scene-placeholder{min-height:120px}
 .google-recover{font-size:13px;text-align:center;color:inherit;opacity:.75}
+
+/* Public demo without an account */
+.public-demo{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:14px}
+.public-demo-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.public-demo-logo{font-size:18px;letter-spacing:.5px}
+.public-demo-actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px}
+.public-demo-roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.public-demo-roles h2{display:flex;align-items:center;gap:8px}
+.public-demo-list{display:grid;gap:4px;max-height:360px;overflow:auto;margin-top:8px}
+.public-demo-topics{display:grid;gap:12px}
+.auth-demo-link{display:block;text-align:center;margin-top:10px;font-weight:600}

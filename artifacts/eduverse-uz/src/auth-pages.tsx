@@ -1017,6 +1017,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           )}
           {(tab === 'code' || (isPhone && !qrCode)) && <GoogleSignInButton language={language} />}
           <div className="auth-switch">{copy.noAccount}</div>
+          <a className="auth-demo-link" href="/demo">{language === 'Uzbek' ? 'Kirishsiz demo: 3D mavzular' : language === 'English' ? 'Demo without signing in: 3D topics' : 'Демо без входа: темы с 3D'}</a>
         </>
       )}
       <p className="auth-note">{copy.emailNotice}</p>

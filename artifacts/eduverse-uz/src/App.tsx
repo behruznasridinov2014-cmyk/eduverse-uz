@@ -20,6 +20,7 @@ import { SceneLibraryPage } from './scene-library';
 import { WorksheetBuilder } from './worksheet';
 import { SchoolSetupWizard } from './setup-wizard';
 import { DemoSchoolPanel } from './demo-panel';
+import { PublicDemoPage } from './public-demo';
 import { TrainerPage } from './trainer';
 import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
@@ -107,6 +108,7 @@ function App(){
   const routeMatch=location.match(/^\/read\/([^/]+)/);const book=routeMatch?BOOKS.find(b=>b.id===routeMatch[1]):undefined;
   const lessonRoomMatch=location.match(/^\/lesson(?:\/([^/]+))?/);const lessonTopicId=lessonRoomMatch?.[1];
   const progressValue=(bookId:string)=>progress[bookId]??1;
+  if(location==='/demo')return <PublicDemoPage language={lang} onLanguageChange={setLang} onSignIn={()=>navigate(auth.user?'/dashboard':'/login')}/>;
   if(location==='/'&&auth.status==='loading')return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
   if(location==='/'&&!hasLocalSession)return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
   if(location==='/login'||location==='/register'){
