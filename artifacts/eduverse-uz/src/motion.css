@@ -346,3 +346,4 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .scene-shell.scene-full .scene-full-btn{position:fixed;top:14px;right:14px}
 .scene-shell.scene-overlay{position:fixed;inset:0;z-index:2000;border-radius:0}
 .scene-placeholder{min-height:120px}
+.google-recover{font-size:13px;text-align:center;color:inherit;opacity:.75}

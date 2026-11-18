@@ -42,6 +42,7 @@ export function GoogleSignInButton({ language }: { language: AppLanguage }) {
     <div className="google-signin">
       <div className="google-or"><span>{t(language, 'yoki', 'или', 'or')}</span></div>
       <a className="btn google-btn" href="/api/auth/google/start?mode=login"><GoogleMark /> {t(language, 'Google orqali kirish', 'Войти через Google', 'Sign in with Google')}</a>
+      <a className="google-recover" href="/api/auth/google/start?mode=recover">{t(language, 'Hisobni o‘g‘irlashdimi yoki parolni unutdingizmi? Google orqali tiklash', 'Аккаунт украли или забыли пароль? Восстановить через Google', 'Account stolen or password forgotten? Recover with Google')}</a>
       {notice && <p className="auth-note">{notice}</p>}
     </div>
   );
@@ -54,17 +55,26 @@ export function GoogleLinkPanel({ language }: { language: AppLanguage }) {
   const reason = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('google');
   if (!status?.enabled) return null;
   async function unlink() {
-    if (!window.confirm(t(language, 'Google hisobini uzasizmi?', 'Отвязать Google-аккаунт?', 'Unlink the Google account?'))) return;
+    const password = window.prompt(t(language, 'Uzish uchun joriy parolni kiriting:', 'Чтобы отвязать Google, введите текущий пароль:', 'Enter your current password to unlink Google:'));
+    if (!password) return;
     setBusy(true);
-    try { await customFetch('/api/auth/google/unlink', { method: 'POST' }); reload(); } finally { setBusy(false); }
+    try {
+      await customFetch('/api/auth/google/unlink', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+      reload();
+    } catch {
+      window.alert(t(language, 'Parol noto‘g‘ri.', 'Неверный пароль.', 'Wrong password.'));
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <section className="panel google-link">
       <h2><GoogleMark /> {t(language, 'Google orqali kirish', 'Вход через Google', 'Sign in with Google')}</h2>
       <p className="muted">{t(language,
-        'Bog‘lasangiz, parolsiz Google tugmasi bilan kirasiz. Google parolingizni EDUVERSE ko‘rmaydi.',
-        'Привяжите свой Google-аккаунт — и входите кнопкой «Войти через Google» без пароля. Пароль от Google EDUVERSE не видит.',
+        'Bog‘lasangiz, parolsiz Google tugmasi bilan kirasiz. Hisobni o‘g‘irlashsa, Google orqali qaytarasiz va barcha qurilmalar uziladi.',
+        'Привяжите свой Google-аккаунт: вход одной кнопкой, а если аккаунт украдут — вернёте его через Google, и все чужие устройства отключатся. Пароль от Google EDUVERSE не видит.',
         'Link your Google account and sign in with one button. EDUVERSE never sees your Google password.')}</p>
+      {reason === 'recovered' && <div className="notice success">{t(language, 'Hisob qaytarildi: barcha qurilmalardan chiqildi. Endi yangi parol qo‘ying.', 'Аккаунт возвращён: все устройства отключены. Теперь поставьте новый пароль.', 'Account recovered: all devices signed out. Now set a new password.')}</div>}
       {reason === 'linked' && <div className="notice success">{t(language, 'Google bog‘landi.', 'Google-аккаунт привязан.', 'Google linked.')}</div>}
       {reason === 'taken' && <div className="notice">{t(language, 'Bu Google boshqa hisobga bog‘langan.', 'Этот Google-аккаунт уже привязан к другому пользователю.', 'This Google account is linked to someone else.')}</div>}
       {status.linkedEmail ? (

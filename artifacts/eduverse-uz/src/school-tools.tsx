@@ -326,7 +326,14 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(mustChange);
+  const [recovery, setRecovery] = useState(false);
   useEffect(() => { if (mustChange) setOpen(true); }, [mustChange]);
+  // After recovery through Google the old password is not asked.
+  useEffect(() => {
+    void customFetch<{ recovery?: boolean }>('/api/me/security', { method: 'GET' })
+      .then((response) => { if (response.recovery) { setRecovery(true); setOpen(true); } })
+      .catch(() => {});
+  }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError('');
@@ -337,7 +344,7 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
       await customFetch('/api/me/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ current, next }) });
       setMessage(t(language, 'Parol o‘zgartirildi.', 'Пароль изменён.', 'Password changed.'));
       window.dispatchEvent(new Event('eduverse:password-changed'));
-      setCurrent(''); setNext(''); setRepeat('');
+      setCurrent(''); setNext(''); setRepeat(''); setRecovery(false);
       setOpen(false);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -350,7 +357,9 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
       <div className="password-head">
         <div>
           <h2><KeyRound size={16} /> {t(language, 'Parol', 'Пароль', 'Password')}</h2>
-          <p className="muted">{mustChange
+          <p className="muted">{recovery
+            ? t(language, 'Hisob tiklandi: barcha qurilmalardan chiqildi. Yangi parol qo‘ying.', 'Доступ восстановлен: выполнен выход на всех устройствах. Поставьте новый пароль.', 'Access recovered: every device was signed out. Set a new password.')
+            : mustChange
             ? t(language, 'Maktab bergan vaqtinchalik parolni o‘zingizning parolingizga almashtiring.', 'Замените временный пароль от школы на свой.', 'Replace the temporary password from the school with your own.')
             : t(language, 'Ism va login maktab tomonidan belgilanadi, parolni o‘zingiz o‘zgartirasiz.', 'Имя и логин задаёт школа, пароль вы меняете сами.', 'The school sets your name and login; you change the password.')}</p>
         </div>
@@ -358,7 +367,7 @@ export function PasswordChange({ language, mustChange = false }: { language: Lan
       </div>
       {open && (
         <form className="password-form reveal" onSubmit={submit}>
-          <input className="input" type="password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} placeholder={t(language, 'Hozirgi parol', 'Текущий пароль', 'Current password')} required autoFocus />
+          {!recovery && <input className="input" type="password" autoComplete="current-password" value={current} onChange={(event) => setCurrent(event.target.value)} placeholder={t(language, 'Hozirgi parol', 'Текущий пароль', 'Current password')} required autoFocus />}
           <input className="input" type="password" autoComplete="new-password" minLength={10} value={next} onChange={(event) => setNext(event.target.value)} placeholder={t(language, 'Yangi parol (10+ belgi, harf va raqam)', 'Новый пароль (от 10 символов, буквы и цифры)', 'New password (10+ chars, letters and digits)')} required />
           <input className="input" type="password" autoComplete="new-password" minLength={10} value={repeat} onChange={(event) => setRepeat(event.target.value)} placeholder={t(language, 'Yangi parolni takrorlang', 'Повторите новый пароль', 'Repeat new password')} required />
           <div className="password-actions">

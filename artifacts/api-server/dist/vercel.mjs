@@ -42553,6 +42553,8 @@ var init_auth = __esm({
         /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
         googleSub: text("google_sub"),
         googleEmail: text("google_email"),
+        /** After recovery through Google: until this moment a new password can be set without the old one. */
+        recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
         twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
         /** One-time nonce used to bind the Telegram bot to this account. */
         twoFactorPendingNonce: text("two_factor_pending_nonce"),
@@ -44428,6 +44430,16 @@ async function enqueueTelegramMessage(input) {
   });
 }
 
+// src/lib/audit.ts
+init_src();
+async function writeAudit(schoolId, actorId, action, targetUserId, details = {}) {
+  try {
+    await db.insert(auditLogTable).values({ schoolId, actorId, action, targetUserId, details });
+  } catch (error) {
+    logger.error({ err: error, action }, "audit log write failed");
+  }
+}
+
 // src/lib/telegram-security.ts
 import { timingSafeEqual as timingSafeEqual3 } from "node:crypto";
 function matchesTelegramWebhookSecret(expectedSecret, receivedSecret) {
@@ -45578,7 +45590,7 @@ router.get("/auth/google/start", loginAddressLimiter, async (req, res) => {
     res.redirect(302, "/login?google=off");
     return;
   }
-  const mode = req.query.mode === "link" ? "link" : "login";
+  const mode = req.query.mode === "link" ? "link" : req.query.mode === "recover" ? "recover" : "login";
   if (mode === "link" && !await authenticatedUserForRequest(req)) {
     res.redirect(302, "/login");
     return;
@@ -45677,6 +45689,21 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
     res.redirect(302, "/login?google=blocked");
     return;
   }
+  if (saved.mode === "recover") {
+    const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, user3.id)).returning({ id: sessionsTable.id });
+    await db.update(usersTable).set({ mustChangePassword: true, recoveryUntil: new Date(Date.now() + 15 * 60 * 1e3), updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, user3.id));
+    await writeAudit(null, user3.id, "recover-google", user3.id, { sessionsClosed: closed.length });
+    const recoveryToken = createSessionToken();
+    await db.insert(sessionsTable).values({
+      userId: user3.id,
+      tokenHash: hashSessionToken(recoveryToken),
+      ...sessionMeta(req),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1e3)
+    });
+    setSessionCookie(res, recoveryToken, false);
+    res.redirect(302, `/profile?google=recovered&closed=${closed.length}`);
+    return;
+  }
   const sessionToken = createSessionToken();
   await db.insert(sessionsTable).values({
     userId: user3.id,
@@ -45687,10 +45714,15 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
   setSessionCookie(res, sessionToken, true);
   res.redirect(302, "/dashboard");
 });
-router.post("/auth/google/unlink", requireAllowedOrigin, async (req, res) => {
+router.post("/auth/google/unlink", requireAllowedOrigin, loginAddressLimiter, async (req, res) => {
   const viewer = await authenticatedUserForRequest(req);
   if (!viewer) {
     res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const password = getString(req.body, "password") ?? "";
+  if (!await verifyPassword(password, viewer.passwordHash)) {
+    res.status(400).json({ error: "The current password is wrong." });
     return;
   }
   await db.update(usersTable).set({ googleSub: null, googleEmail: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
@@ -53968,18 +54000,6 @@ var import_express6 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
 init_ai_content();
-
-// src/lib/audit.ts
-init_src();
-async function writeAudit(schoolId, actorId, action, targetUserId, details = {}) {
-  try {
-    await db.insert(auditLogTable).values({ schoolId, actorId, action, targetUserId, details });
-  } catch (error) {
-    logger.error({ err: error, action }, "audit log write failed");
-  }
-}
-
-// src/routes/school-tools.ts
 var router6 = (0, import_express6.Router)();
 var perSession2 = (req) => {
   const token = req.cookies?.["eduverse.sid"];
@@ -54340,8 +54360,8 @@ var WEAK_PASSWORDS = /* @__PURE__ */ new Set(["1234567890", "0123456789", "qwert
 var passwordLimiter = createRateLimiter(10, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-change", perSession2);
 router6.get("/me/security", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
   const viewer = viewerOf(res);
-  const [row] = await db.select({ must: usersTable.mustChangePassword }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
-  res.json({ mustChangePassword: Boolean(row?.must) });
+  const [row] = await db.select({ must: usersTable.mustChangePassword, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.json({ mustChangePassword: Boolean(row?.must), recovery: Boolean(row?.recoveryUntil && row.recoveryUntil.getTime() > Date.now()) });
 });
 router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLimiter, async (req, res) => {
   const viewer = viewerOf(res);
@@ -54355,8 +54375,9 @@ router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLi
     res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
     return;
   }
-  const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
-  if (!account || !await verifyPassword(current, account.hash)) {
+  const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const recovering = Boolean(account?.recoveryUntil && account.recoveryUntil.getTime() > Date.now());
+  if (!account || !recovering && !await verifyPassword(current, account.hash)) {
     res.status(400).json({ error: "The current password is wrong." });
     return;
   }
@@ -54364,7 +54385,7 @@ router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLi
     res.status(400).json({ error: "The password must not equal the login." });
     return;
   }
-  await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
   const token = req.cookies?.["eduverse.sid"];
   const currentHash = typeof token === "string" && token ? hashSessionToken(token) : "";
   const closed = await db.delete(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.tokenHash, currentHash))).returning({ id: sessionsTable.id });

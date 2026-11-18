@@ -49,6 +49,7 @@ import {
   verifyTotpStep,
 } from "../lib/two-factor";
 import { logger } from "../lib/logger";
+import { writeAudit } from "../lib/audit";
 import {
   isActiveTelegramBindNonce,
   matchesTelegramWebhookSecret,
@@ -1621,7 +1622,7 @@ router.get("/auth/google/status", async (req, res) => {
 
 router.get("/auth/google/start", loginAddressLimiter, async (req, res) => {
   if (!googleConfigured()) { res.redirect(302, "/login?google=off"); return; }
-  const mode = req.query.mode === "link" ? "link" : "login";
+  const mode = req.query.mode === "link" ? "link" : req.query.mode === "recover" ? "recover" : "login";
   if (mode === "link" && !(await authenticatedUserForRequest(req))) { res.redirect(302, "/login"); return; }
   const state = base64url(randomBytes(24));
   const verifier = base64url(randomBytes(48));
@@ -1693,6 +1694,24 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
   if (!user) { res.redirect(302, "/login?google=notlinked"); return; }
   if (ACCOUNT_BLOCKED.includes(user.status)) { res.redirect(302, "/login?google=blocked"); return; }
+
+  if (saved.mode === "recover") {
+    // The account was stolen or the password forgotten: Google proved the owner.
+    // Close every sign-in on every device, then let the owner set a new password.
+    const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, user.id)).returning({ id: sessionsTable.id });
+    await db.update(usersTable).set({ mustChangePassword: true, recoveryUntil: new Date(Date.now() + 15 * 60 * 1000), updatedAt: new Date() }).where(eq(usersTable.id, user.id));
+    await writeAudit(null, user.id, "recover-google", user.id, { sessionsClosed: closed.length });
+    const recoveryToken = createSessionToken();
+    await db.insert(sessionsTable).values({
+      userId: user.id,
+      tokenHash: hashSessionToken(recoveryToken),
+      ...sessionMeta(req),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+    setSessionCookie(res, recoveryToken, false);
+    res.redirect(302, `/profile?google=recovered&closed=${closed.length}`);
+    return;
+  }
   const sessionToken = createSessionToken();
   await db.insert(sessionsTable).values({
     userId: user.id,
@@ -1704,9 +1723,12 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
   res.redirect(302, "/dashboard");
 });
 
-router.post("/auth/google/unlink", requireAllowedOrigin, async (req, res) => {
+router.post("/auth/google/unlink", requireAllowedOrigin, loginAddressLimiter, async (req, res) => {
   const viewer = await authenticatedUserForRequest(req);
   if (!viewer) { res.status(401).json({ error: "Authentication required." }); return; }
+  // A thief with a stolen session must not remove the owner's way back.
+  const password = getString(req.body, "password") ?? "";
+  if (!(await verifyPassword(password, viewer.passwordHash))) { res.status(400).json({ error: "The current password is wrong." }); return; }
   await db.update(usersTable).set({ googleSub: null, googleEmail: null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
   res.json({ unlinked: true });
 });

@@ -461,8 +461,8 @@ const passwordLimiter = createRateLimiter(10, 15 * 60 * 1000, "Too many attempts
 
 router.get("/me/security", requireAuthenticatedRole(...everyRole), async (_req, res) => {
   const viewer = viewerOf(res);
-  const [row] = await db.select({ must: usersTable.mustChangePassword }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
-  res.json({ mustChangePassword: Boolean(row?.must) });
+  const [row] = await db.select({ must: usersTable.mustChangePassword, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.json({ mustChangePassword: Boolean(row?.must), recovery: Boolean(row?.recoveryUntil && row.recoveryUntil.getTime() > Date.now()) });
 });
 
 router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimiter, async (req, res) => {
@@ -477,8 +477,10 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
     res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
     return;
   }
-  const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
-  if (!account || !(await verifyPassword(current, account.hash))) {
+  const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  // Right after recovery through Google the old password is not needed.
+  const recovering = Boolean(account?.recoveryUntil && account.recoveryUntil.getTime() > Date.now());
+  if (!account || (!recovering && !(await verifyPassword(current, account.hash)))) {
     res.status(400).json({ error: "The current password is wrong." });
     return;
   }
@@ -486,7 +488,7 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
     res.status(400).json({ error: "The password must not equal the login." });
     return;
   }
-  await db.update(usersTable).set({ passwordHash: await hashAccountPassword(next), mustChangePassword: false, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+  await db.update(usersTable).set({ passwordHash: await hashAccountPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
   // A new password closes every other sign-in: a stolen session stops working at once.
   const token = req.cookies?.["eduverse.sid"];
   const currentHash = typeof token === "string" && token ? hashSessionToken(token) : "";

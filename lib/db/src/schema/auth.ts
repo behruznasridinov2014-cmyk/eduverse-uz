@@ -64,6 +64,8 @@ export const usersTable = pgTable(
     /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
     googleSub: text("google_sub"),
     googleEmail: text("google_email"),
+    /** After recovery through Google: until this moment a new password can be set without the old one. */
+    recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
     twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     /** One-time nonce used to bind the Telegram bot to this account. */
     twoFactorPendingNonce: text("two_factor_pending_nonce"),
