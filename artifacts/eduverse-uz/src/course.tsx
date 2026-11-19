@@ -1,5 +1,6 @@
 import './scenes.css';
 import { Select } from './ui/select';
+import { SceneText } from './scene-text';
 import { createPortal } from 'react-dom';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import type { User } from '@workspace/api-client-react';
@@ -129,7 +130,7 @@ function SceneView({ scene, language }: { scene: CourseScene; language: Language
   switch (scene.kind) {
     case 'own': {
       const Scene = OWN[scene.scene];
-      return <Suspense fallback={<div className="panel chem-stage scene-loading" />}><Scene key={`${scene.scene}:${scene.mode ?? ''}`} mode={scene.mode} /></Suspense>;
+      return <SceneText language={language}><Suspense fallback={<div className="panel chem-stage scene-loading" />}><Scene key={`${scene.scene}:${scene.mode ?? ''}`} mode={scene.mode} /></Suspense></SceneText>;
     }
     case 'molecule': return <MoleculeById id={scene.id} language={language} />;
     case 'reaction': return <ReactionView a={scene.a} b={scene.b} language={language} />;
