@@ -36,6 +36,11 @@ const MONTHS: Record<Language, string[]> = {
   English: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
 };
 
+/** The subject name attendance is saved under (the same one the attendance page uses). */
+export function attendanceSubject(subject: string): string {
+  return ({ physics: 'Физика', chemistry: 'Химия', biology: 'Биология', math: 'Математика' } as Record<string, string>)[subject] ?? subject;
+}
+
 /** Subjects without a textbook in EDUVERSE are shown by their own name. */
 export function lessonSubjectName(subject: string, language: Language): string {
   const label = SUBJECT_LABEL[subject as CourseBook['subject']];
@@ -116,31 +121,26 @@ export function dayLabel(day: NextDay, todayDate: string, language: Language): s
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-/** Lessons of the next two school days with their planned topics (only a plan: not open yet). */
-export function UpcomingDays({ data, courses, language, showTeacher = false }: { data: TodayResponse; courses: Record<string, ClassCourse>; language: Language; showTeacher?: boolean }) {
-  const days = (data.next ?? []).filter((day) => day.lessons.length);
-  if (!days.length) return null;
-  const topics = upcomingTopics(data, courses);
+/** The next school day: only the timetable (time, subject, class), no topics — they open on the day. */
+export function UpcomingDays({ data, language, showTeacher = false, showClass = true }: { data: TodayResponse; courses?: Record<string, ClassCourse>; language: Language; showTeacher?: boolean; showClass?: boolean }) {
+  const day = (data.next ?? []).find((item) => item.lessons.length);
+  if (!day) return null;
+  const last = day.lessons[day.lessons.length - 1];
   return (
     <section className="upcoming-days">
-      {days.map((day) => (
-        <div key={day.date} className="upcoming-day">
-          <h3>{dayLabel(day, data.date, language)}</h3>
-          <ul>
-            {day.lessons.map((lesson) => {
-              const topic = topics.get(lesson.id);
-              return (
-                <li key={lesson.id}>
-                  <span className="upcoming-time">{lesson.start}</span>
-                  <span className="upcoming-what"><b>{lesson.className} · {lessonSubjectName(lesson.subject, language)}</b>{topic ? <small>§{topic.code} {topic.title}</small> : null}</span>
-                  {showTeacher && lesson.teacherName && <small className="muted upcoming-teacher">{lesson.teacherName}</small>}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
-      <p className="muted upcoming-note">{t(language, 'Bu reja: mavzu dars kuni ochiladi.', 'Это план: тема откроется в день урока.', 'This is a plan: the topic opens on the lesson day.')}</p>
+      <div className="upcoming-day">
+        <h3>{t(language, 'Keyingi darslar', 'Следующие уроки', 'Next lessons')}: {dayLabel(day, data.date, language)}</h3>
+        <ul>
+          {day.lessons.map((lesson) => (
+            <li key={lesson.id}>
+              <span className="upcoming-time">{lesson.start}–{lesson.end}</span>
+              <span className="upcoming-what"><b>{lessonSubjectName(lesson.subject, language)}</b>{showClass ? <small>{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)}</small> : null}</span>
+              {showTeacher && lesson.teacherName && <small className="muted upcoming-teacher">{lesson.teacherName}</small>}
+            </li>
+          ))}
+        </ul>
+        {last && <p className="muted upcoming-note">{t(language, `Darslar ${last.end} da tugaydi.`, `Уроки закончатся в ${last.end}.`, `Lessons end at ${last.end}.`)}</p>}
+      </div>
     </section>
   );
 }
@@ -204,64 +204,177 @@ export function currentOrNext(lessons: TodayLesson[], now: number): TodayLesson 
 
 export function TodayLessons({ language, onOpen, role }: { language: Language; onOpen: (path: string) => void; role: string }) {
   const { data, failed, now } = useToday();
-  const courses = useLessonCourses(data?.lessons, data?.next);
+  const courses = useLessonCourses(data?.lessons);
   const isManager = role === 'school_director' || role === 'school_admin';
   const isFamily = role === 'parent';
+  const isStudent = role === 'student';
   if (failed && !data) return null;
   if (!data) return <section className="today-block"><div className="today-skeleton" /></section>;
+  if (isManager) return <SchoolToday data={data} now={now} language={language} />;
   const lessons = data.lessons;
   const left = lessons.filter((lesson) => statusOf(lesson, now) !== 'done').length;
+  const finished = lessons.length > 0 && left === 0;
+  const lastEnd = lessons[lessons.length - 1]?.end;
   return (
     <section className="today-block" aria-label={t(language, 'Bugungi darslar', 'Уроки сегодня', 'Today’s lessons')}>
       <div className="today-head">
-        <div>
-          <h2>{isManager ? t(language, 'Maktabda bugun', 'Сегодня в школе', 'Today at school') : t(language, 'Bugungi darslar', 'Уроки сегодня', 'Today’s lessons')}</h2>
-        </div>
-        {lessons.length > 0 && <span className="today-count">{left > 0 ? t(language, `Qoldi: ${left} / ${lessons.length}`, `Осталось ${left} из ${lessons.length}`, `${left} of ${lessons.length} left`) : t(language, 'Hammasi tugadi', 'Все уроки прошли', 'All done')}</span>}
+        <div><h2>{t(language, 'Bugungi darslar', 'Уроки сегодня', 'Today’s lessons')}</h2></div>
+        {lessons.length > 0 && !finished && <span className="today-count">{t(language, `Qoldi: ${left} / ${lessons.length} · ${lastEnd} da tugaydi`, `Осталось ${left} из ${lessons.length} · до ${lastEnd}`, `${left} of ${lessons.length} left · until ${lastEnd}`)}</span>}
       </div>
-      {lessons.length === 0 ? (
+      {lessons.length === 0 || finished ? (
         <div className="today-empty">
           <CalendarCheck2 size={22} />
           <div>
-            <b>{data.weekday === 7 ? t(language, 'Bugun dam olish kuni', 'Сегодня выходной', 'Today is a day off') : t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today')}</b>
-            <span className="muted">{isManager
-              ? t(language, 'Dars jadvali «Maktab boshqaruvi» bo‘limida to‘ldiriladi.', 'Расписание заполняется в разделе «Управление школой».', 'The timetable is filled in “School management”.')
-              : t(language, 'Jadvalni maktab to‘ldiradi. Savol bo‘lsa, direktorga yozing.', 'Расписание заполняет школа. Если что-то не так, напишите завучу.', 'The school fills the timetable.')}</span>
+            <b>{finished
+              ? t(language, 'Bugungi darslar tugadi', 'Уроки на сегодня закончились', 'Today’s lessons are over')
+              : data.weekday === 7 ? t(language, 'Bugun dam olish kuni', 'Сегодня выходной', 'Today is a day off') : t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today')}</b>
+            <span className="muted">{finished
+              ? t(language, `${lessons.length} ta dars o‘tdi, oxirgisi ${lastEnd} da tugadi.`, `Прошло ${lessons.length} уроков, последний закончился в ${lastEnd}.`, `${lessons.length} lessons, the last ended at ${lastEnd}.`)
+              : t(language, 'Jadvalni maktab to‘ldiradi.', 'Расписание заполняет школа.', 'The school fills the timetable.')}</span>
           </div>
         </div>
       ) : (
-        <div className={`today-grid ${isManager ? 'is-compact' : ''}`}>
+        <div className="today-grid">
           {lessons.map((lesson, index) => {
             const status = statusOf(lesson, now);
             const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
+            const open = status !== 'done';
             return (
               <button
                 type="button"
                 key={lesson.id}
                 className={`today-card is-${status}`}
                 style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
-                onClick={() => onOpen(`/today/${lesson.id}`)}
+                disabled={!open}
+                onClick={() => open && onOpen(`/today/${lesson.id}`)}
               >
                 <span className="today-card-top">
-                  <span className="today-class">{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)}</span>
+                  <span className="today-class">{isStudent || isFamily ? lessonSubjectName(lesson.subject, language) : t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)}</span>
                   <span className={`today-status is-${status}`}>{status === 'current' && <i className="today-pulse" aria-hidden="true" />}{statusLabel(status, language)}</span>
                 </span>
                 <span className="today-time"><Clock3 size={15} /> {lesson.start}–{lesson.end} <small>· {t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)}</small></span>
-                <span className="today-subject">{lessonSubjectName(lesson.subject, language)}</span>
-                <span className="today-topic">{topic ? <><b>§{topic.code}</b> {topic.title}</> : <span className="muted">{t(language, 'Darslik mavzusi yo‘q', 'Тема по учебнику не задана', 'No textbook topic')}</span>}</span>
+                {!(isStudent || isFamily) && <span className="today-subject">{lessonSubjectName(lesson.subject, language)}</span>}
+                {open && topic && <span className="today-topic"><b>§{topic.code}</b> {topic.title}</span>}
                 <span className="today-card-foot">
-                  <span className={`today-left is-${status}`}>{timeText(lesson, now, language)}</span>
-                  {(isManager || isFamily) && lesson.teacherName && <span className="muted today-teacher"><UserRound size={13} /> {lesson.teacherName}</span>}
-                  {lesson.room && !isManager && <span className="muted today-room"><DoorOpen size={13} /> {lesson.room}</span>}
-                  <ArrowRight size={16} className="today-arrow" />
+                  <span className={`today-left is-${status}`}>{status === 'done' ? t(language, 'Dars tugadi', 'Урок закончился', 'Lesson over') : timeText(lesson, now, language)}</span>
+                  {isFamily && lesson.teacherName && <span className="muted today-teacher"><UserRound size={13} /> {lesson.teacherName}</span>}
+                  {lesson.room && <span className="muted today-room"><DoorOpen size={13} /> {lesson.room}</span>}
+                  {open && <ArrowRight size={16} className="today-arrow" />}
                 </span>
               </button>
             );
           })}
         </div>
       )}
-      {(!isManager || lessons.length === 0) && <UpcomingDays data={data} courses={courses} language={language} showTeacher={isManager || isFamily} />}
+      {(lessons.length === 0 || finished) && <UpcomingDays data={data} language={language} showClass={!(isStudent || isFamily)} />}
     </section>
+  );
+}
+
+type AttendanceRow = { studentId: string; studentName: string; status: string };
+
+/** Director and deputy: today's classes. A class opens its lessons, teachers and who came. */
+function SchoolToday({ data, now, language }: { data: TodayResponse; now: number; language: Language }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const byClass = useMemo(() => {
+    const map = new Map<string, { classId: string; className: string; lessons: TodayLesson[] }>();
+    for (const lesson of data.lessons) {
+      const row = map.get(lesson.classId) ?? { classId: lesson.classId, className: lesson.className, lessons: [] };
+      row.lessons.push(lesson);
+      map.set(lesson.classId, row);
+    }
+    return [...map.values()].sort((a, b) => a.className.localeCompare(b.className, 'ru', { numeric: true }));
+  }, [data.lessons]);
+  const opened = byClass.find((row) => row.classId === openId) ?? null;
+  return (
+    <section className="today-block" aria-label={t(language, 'Maktabda bugun', 'Сегодня в школе', 'Today at school')}>
+      <div className="today-head"><div><h2>{t(language, 'Bugun sinflar', 'Классы сегодня', 'Classes today')}</h2></div></div>
+      {byClass.length === 0 ? (
+        <div className="today-empty">
+          <CalendarCheck2 size={22} />
+          <div>
+            <b>{data.weekday === 7 ? t(language, 'Bugun dam olish kuni', 'Сегодня выходной', 'Today is a day off') : t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today')}</b>
+            <span className="muted">{t(language, 'Dars jadvali «Maktab boshqaruvi» bo‘limida.', 'Расписание — в разделе «Управление школой».', 'The timetable is in “School”.')}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="school-today-grid">
+          {byClass.map((row) => {
+            const current = row.lessons.find((lesson) => statusOf(lesson, now) === 'current');
+            const upcoming = row.lessons.find((lesson) => statusOf(lesson, now) === 'upcoming');
+            const last = row.lessons[row.lessons.length - 1]!;
+            return (
+              <button type="button" key={row.classId} className={`school-today-card ${row.classId === openId ? 'active' : ''} ${current ? 'is-current' : ''}`} onClick={() => setOpenId(row.classId === openId ? null : row.classId)}>
+                <b>{t(language, `${row.className} sinf`, `${row.className} класс`, `Class ${row.className}`)}</b>
+                <small className="muted">{t(language, `${row.lessons.length} ta dars · ${row.lessons[0]!.start}–${last.end}`, `${row.lessons.length} уроков · ${row.lessons[0]!.start}–${last.end}`, `${row.lessons.length} lessons · ${row.lessons[0]!.start}–${last.end}`)}</small>
+                <span className="school-today-now">{current
+                  ? <>{t(language, 'Hozir', 'Сейчас', 'Now')}: {lessonSubjectName(current.subject, language)}{current.teacherName ? ` · ${current.teacherName}` : ''}</>
+                  : upcoming ? <>{t(language, 'Keyingi', 'Дальше', 'Next')}: {upcoming.start} · {lessonSubjectName(upcoming.subject, language)}</>
+                  : t(language, 'Darslar tugadi', 'Уроки закончились', 'Lessons are over')}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {opened && <ClassTodayDetail key={opened.classId} row={opened} date={data.date} now={now} language={language} />}
+    </section>
+  );
+}
+
+function ClassTodayDetail({ row, date, now, language }: { row: { classId: string; className: string; lessons: TodayLesson[] }; date: string; now: number; language: Language }) {
+  // Who came: the marks of the lesson going on, else of the last lesson that started.
+  const started = row.lessons.filter((lesson) => statusOf(lesson, now) !== 'upcoming');
+  const lesson = started[started.length - 1] ?? row.lessons[0]!;
+  const [records, setRecords] = useState<AttendanceRow[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void customFetch<{ records: AttendanceRow[] }>(`/api/classes/${row.classId}/attendance?date=${date}&subject=${encodeURIComponent(attendanceSubject(lesson.subject))}`, { method: 'GET' })
+      .then((response) => { if (alive) setRecords(response.records); })
+      .catch(() => { if (alive) setRecords([]); });
+    return () => { alive = false; };
+  }, [row.classId, date, lesson.subject]);
+  const teachers = [...new Set(row.lessons.map((item) => item.teacherName).filter(Boolean))];
+  const came = records?.filter((item) => item.status === 'present' || item.status === 'late').length ?? 0;
+  const marked = records?.some((item) => item.status !== 'unmarked') ?? false;
+  const STATUS: Record<string, [string, string, string, string]> = {
+    present: ['Keldi', 'Пришёл', 'Present', 'green'], late: ['Kechikdi', 'Опоздал', 'Late', 'gold'],
+    absent: ['Kelmadi', 'Нет', 'Absent', 'red'], excused: ['Sababli', 'По причине', 'Excused', 'blue'], unmarked: ['—', '—', '—', ''],
+  };
+  return (
+    <div className="panel school-today-detail">
+      <h3>{t(language, `${row.className} sinf`, `${row.className} класс`, `Class ${row.className}`)}</h3>
+      <div className="school-today-cols">
+        <div>
+          <small className="muted">{t(language, 'Bugungi darslar', 'Уроки сегодня', 'Lessons today')}</small>
+          <ul className="school-today-lessons">
+            {row.lessons.map((item) => (
+              <li key={item.id} className={`is-${statusOf(item, now)}`}>
+                <span>{item.start}–{item.end}</span>
+                <b>{lessonSubjectName(item.subject, language)}</b>
+                <small className="muted">{item.teacherName}</small>
+              </li>
+            ))}
+          </ul>
+          <small className="muted">{t(language, 'O‘qituvchilar', 'Учителя', 'Teachers')}: {teachers.join(', ') || '—'}</small>
+        </div>
+        <div>
+          <small className="muted">{t(language, `O‘quvchilar · ${lessonSubjectName(lesson.subject, language)} darsi`, `Ученики · урок «${lessonSubjectName(lesson.subject, language)}»`, `Students · ${lessonSubjectName(lesson.subject, language)} lesson`)}</small>
+          {records === null ? <p className="muted">…</p> : (
+            <>
+              <p className="school-today-came">{marked
+                ? t(language, `Keldi: ${came} / ${records.length}`, `Пришли ${came} из ${records.length}`, `Present ${came} of ${records.length}`)
+                : t(language, `${records.length} o‘quvchi · davomat hali belgilanmagan`, `${records.length} учеников · давомат ещё не отмечен`, `${records.length} students · not marked yet`)}</p>
+              <ul className="school-today-students">
+                {records.map((item) => {
+                  const st = STATUS[item.status] ?? STATUS.unmarked!;
+                  return <li key={item.studentId}><span>{item.studentName}</span>{item.status !== 'unmarked' && <span className={`tag ${st[3]}`}>{t(language, st[0], st[1], st[2])}</span>}</li>;
+                })}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

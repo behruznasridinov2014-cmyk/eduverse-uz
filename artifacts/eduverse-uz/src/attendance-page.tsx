@@ -25,6 +25,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Language } from './school-data';
+import { attendanceSubject, lessonSubjectName, statusOf, useToday } from './today';
 
 /** Lesson subjects. The value is stored with each mark; course books open by `book`. */
 const SUBJECTS: Array<{ value: string; uz: string; ru: string; en: string; book?: 'physics' | 'chemistry' | 'biology' | 'math' }> = [
@@ -139,6 +140,13 @@ const COPY: Record<Language, Record<string, string>> = {
 export function AttendancePage({ user, language, lesson }: { user: User; language: Language; lesson?: { classId: string; subject: string } }) {
   const copy = COPY[language];
   const isTeacher = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
+  const isManager = user.role === 'school_director' || user.role === 'school_admin';
+  // A teacher marks attendance only during the lesson. The director and deputy only look.
+  const today = useToday();
+  const hasTimetable = Boolean(today.data && (today.data.lessons.length || (today.data.next ?? []).some((day) => day.lessons.length)));
+  const currentLesson = today.data?.lessons.find((item) => statusOf(item, today.now) === 'current');
+  const lessonIsNow = Boolean(currentLesson && (!lesson || (currentLesson.classId === lesson.classId && attendanceSubject(currentLesson.subject) === attendanceSubject(lesson.subject))));
+  const editable = user.role === 'teacher' && (lessonIsNow || (!hasTimetable && Boolean(today.data)));
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState(lesson?.classId ?? '');
   const [date, setDate] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
@@ -203,6 +211,11 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
   useEffect(() => {
     if (isTeacher) void load();
   }, [isTeacher, load]);
+  useEffect(() => {
+    if (user.role !== 'teacher' || lesson || !currentLesson) return;
+    setClassId(currentLesson.classId);
+    setSubject(attendanceSubject(currentLesson.subject));
+  }, [user.role, lesson, currentLesson?.id]);
 
   const summary = useMemo(() => {
     const counted: Record<MarkStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };
@@ -282,14 +295,26 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
           <h1>{copy.titleTeacher}</h1>
           <p className="page-subtitle">{copy.subtitleTeacher}</p>
         </div>
-        <button type="button" className="btn primary" disabled={saving || records.length === 0} onClick={() => void save()}>
+        {editable && <button type="button" className="btn primary" disabled={saving || records.length === 0} onClick={() => void save()}>
           {saving ? <RefreshCw className="school-spin" size={15} /> : <Check size={15} />}
           {copy.save}
-        </button>
+        </button>}
       </div>
+      {user.role === 'teacher' && today.data && hasTimetable && !lessonIsNow && (() => {
+        const next = today.data.lessons.find((item) => statusOf(item, today.now) === 'upcoming');
+        return (
+          <div className="empty-state attendance-closed">
+            <span className="empty-icon"><Clock3 /></span>
+            <h2>{language === 'Русский' ? 'Давомат отмечается во время урока' : language === 'English' ? 'Attendance is marked during the lesson' : 'Davomat dars vaqtida belgilanadi'}</h2>
+            <p>{next
+              ? (language === 'Русский' ? `Следующий урок в ${next.start}: ${next.className} · ${lessonSubjectName(next.subject, language)}` : language === 'English' ? `Next lesson at ${next.start}: ${next.className} · ${lessonSubjectName(next.subject, language)}` : `Keyingi dars ${next.start} da: ${next.className} · ${lessonSubjectName(next.subject, language)}`)
+              : (language === 'Русский' ? 'На сегодня уроки закончились.' : language === 'English' ? 'Today’s lessons are over.' : 'Bugungi darslar tugadi.')}</p>
+          </div>
+        );
+      })()}
 
-      <div className="attendance-toolbar">
-        {!lesson && <><div className="control">
+      {(editable || isManager) && <div className="attendance-toolbar">
+        {!lesson && (isManager || !hasTimetable) && <><div className="control">
           <label htmlFor="attendance-class">{copy.pickClass}</label>
           <Select id="attendance-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
             {classes.length === 0 && <option value="">{copy.noClasses}</option>}
@@ -306,17 +331,18 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
             {SUBJECTS.map((item) => <option key={item.value} value={item.value}>{subjectLabel(language, item.value)}</option>)}
           </Select>
         </div></>}
-        <div className="control">
+        {isManager && <div className="control">
           <label htmlFor="attendance-date">{copy.date}</label>
           <input id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-        </div>
-        <button type="button" className="btn" onClick={() => setRecords((current) => current.map((record) => ({ ...record, status: 'present' })))}>
+        </div>}
+        {editable && currentLesson && !lesson && <b className="attendance-now">{currentLesson.start}–{currentLesson.end} · {currentLesson.className} · {lessonSubjectName(currentLesson.subject, language)}</b>}
+        {editable && <button type="button" className="btn" onClick={() => setRecords((current) => current.map((record) => ({ ...record, status: 'present' })))}>
           <UserCheck size={14} /> {copy.markAllPresent}
-        </button>
+        </button>}
         <button type="button" className="btn small" onClick={() => void load()} disabled={loading}>
           <RefreshCw size={13} className={loading ? 'school-spin' : ''} />
         </button>
-      </div>
+      </div>}
 
 
       {error && <div className="notice" role="alert"><CircleAlert size={15} /> {error}</div>}
@@ -334,7 +360,7 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
         );
       })()}
 
-      <div className="attendance-summary">
+      {(editable || isManager) && <><div className="attendance-summary">
         {STATUS_ORDER.map((status) => (
           <div className={`attendance-pill status-${status}`} key={status}>
             <span>{copy[status]}</span>
@@ -359,7 +385,7 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
                     <small className="muted">@{record.login}</small>
                   </span>
                 </div>
-                <div className="attendance-actions">
+                {!editable ? (record.status !== 'unmarked' ? <StatusTag status={record.status as MarkStatus} copy={copy} /> : <span className="muted">—</span>) : <div className="attendance-actions">
                   {STATUS_ORDER.map((status) => (
                     <button
                       key={status}
@@ -372,13 +398,12 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
                       {copy[status]}
                     </button>
                   ))}
-                </div>
-                {!canManage && <span className="tag gold">read-only</span>}
+                </div>}
               </div>
             ))}
           </div>
         )}
-      </section>
+      </section></>}
     </div>
   );
 }

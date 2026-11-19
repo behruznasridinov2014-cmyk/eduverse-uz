@@ -53943,12 +53943,18 @@ router5.patch(
       }
       changes.feedback = feedback;
     }
-    const [updated] = await db.update(assignmentSubmissionsTable).set(changes).where(
+    let [updated] = await db.update(assignmentSubmissionsTable).set(changes).where(
       and(
         eq(assignmentSubmissionsTable.assignmentId, assignmentId),
         eq(assignmentSubmissionsTable.studentId, studentId)
       )
     ).returning();
+    if (!updated && typeof changes.score === "number") {
+      const [member] = await db.select({ id: classMembersTable.id }).from(classMembersTable).where(and(eq(classMembersTable.classId, context.assignment.classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
+      if (member) {
+        [updated] = await db.insert(assignmentSubmissionsTable).values({ assignmentId, studentId, status: "checked", content: "", score: changes.score, feedback: changes.feedback ?? "" }).onConflictDoNothing().returning();
+      }
+    }
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });
       return;
@@ -54138,6 +54144,10 @@ router6.post(
     res.json({ login: member.login, name: member.name, role: member.role, password });
   }
 );
+function readSubjects(value) {
+  if (!Array.isArray(value)) return void 0;
+  return [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+}
 function normalizePhone(value) {
   if (typeof value !== "string") return void 0;
   const digits = value.replace(/\D/g, "");
@@ -54158,7 +54168,8 @@ function readRows(body) {
       name,
       className: cleanText(item.className, 40) ?? void 0,
       childName: cleanText(item.childName, 80) ?? void 0,
-      phone: normalizePhone(item.phone)
+      phone: normalizePhone(item.phone),
+      subjects: role === "teacher" ? readSubjects(item.subjects) : void 0
     });
   }
   return rows;
@@ -54205,6 +54216,7 @@ async function importPeople(schoolId, rows, actorId) {
           passwordHash,
           role: row.role,
           phone: row.phone ?? null,
+          ...row.subjects?.length ? { subjects: row.subjects } : {},
           mustChangePassword: true
         }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
         account = inserted ?? null;
@@ -55005,6 +55017,8 @@ function readChange(kind, body) {
     if (name) payload.name = name;
     if (phone !== null && phone !== void 0) payload.phone = phone;
     if (className) payload.className = className;
+    const subjects = readSubjects(body.subjects);
+    if (subjects) payload.subjects = subjects;
     if (Object.keys(payload).length === 0) return { payload, error: "Nothing to change." };
     return { payload };
   }
@@ -55032,6 +55046,7 @@ async function applyChange(schoolId, kind, targetUserId, payload, reason, actorI
       set.usernameNormalized = payload.name.toLowerCase();
     }
     if (typeof payload.phone === "string") set.phone = payload.phone || null;
+    if (Array.isArray(payload.subjects) && person.role === "teacher") set.subjects = payload.subjects;
     await db.update(usersTable).set(set).where(eq(usersTable.id, person.id));
     if (typeof payload.className === "string" && (person.role === "student" || person.role === "teacher")) {
       const schoolClassIds = (await db.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId))).map((row) => row.id);
@@ -55177,7 +55192,7 @@ router9.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAF
     res.status(403).json({ error: "Not your school." });
     return;
   }
-  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(usersTable.username);
+  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, subjects: usersTable.subjects, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(usersTable.username);
   const classIds = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
   const memberships = classIds.length ? await db.select({ userId: classMembersTable.userId, classId: classMembersTable.classId }).from(classMembersTable).where(inArray(classMembersTable.classId, classIds.map((row) => row.id))) : [];
   const className = new Map(classIds.map((row) => [row.id, row.name]));

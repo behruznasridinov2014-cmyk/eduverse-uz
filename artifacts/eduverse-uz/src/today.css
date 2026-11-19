@@ -146,3 +146,57 @@ html[data-theme="night"] .tt-grid td.has-lesson { background: rgba(255, 255, 255
 .worksheet-slots .studio-tab small { color: var(--text-3); font-size: 12px; font-weight: 500; }
 .worksheet-slots .studio-tab.is-locked { opacity: .6; border-style: dashed; }
 .scene-library-today { display: grid; gap: 12px; margin-bottom: 16px; }
+
+/* Teacher subjects picker */
+.subject-picker { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.subject-picker .chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line, #e3e1da); background: var(--panel, #fff); color: inherit; border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.subject-picker .chip.on { background: #e8f2ec; border-color: #7cbf98; color: #1f6b43; font-weight: 600; }
+.new-teacher { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line, #e7e5de); display: grid; gap: 6px; }
+.new-teacher h3 { margin: 0; font-size: 15px; }
+.new-teacher .btn { justify-self: start; }
+
+/* Director: classes today */
+.school-today-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.school-today-card { display: grid; gap: 4px; text-align: left; padding: 14px 16px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line-2); font: inherit; color: inherit; cursor: pointer; }
+.school-today-card b { font-size: 17px; }
+.school-today-card.is-current { border-color: #7cbf98; }
+.school-today-card.active { outline: 2px solid var(--ev-primary, #b8873b); }
+.school-today-now { font-size: 13px; }
+.school-today-detail { margin-top: 12px; }
+.school-today-detail h3 { margin: 0 0 10px; }
+.school-today-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.school-today-lessons, .school-today-students { list-style: none; margin: 6px 0 10px; padding: 0; display: grid; gap: 6px; }
+.school-today-lessons li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 8px; font-size: 13px; }
+.school-today-lessons li.is-done { opacity: .55; }
+.school-today-lessons li.is-current b { color: #1f6b43; }
+.school-today-students li { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; border-bottom: 1px dashed var(--line-2); }
+.school-today-came { margin: 6px 0; font-weight: 600; }
+.today-card:disabled { cursor: default; }
+.upcoming-day li { grid-template-columns: 96px minmax(0, 1fr) auto !important; }
+
+/* My grades */
+.grades-subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.grades-subject-head { display: flex; justify-content: space-between; align-items: center; }
+.grades-subject h2 { margin: 0; font-size: 17px; }
+.grades-subject ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.grades-subject li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.grade-mark.big { font-size: 18px; min-width: 44px; }
+
+/* Classes: pick a class, see its info */
+.class-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.class-pick-card { display: grid; gap: 2px; text-align: left; padding: 10px 16px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface); color: inherit; font: inherit; cursor: pointer; min-width: 120px; }
+.class-pick-card.selected { outline: 2px solid var(--ev-primary, #b8873b); }
+.class-info h2 { margin: 0 0 12px; }
+.class-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.class-info-grid div, .class-info-block { display: grid; gap: 2px; }
+.class-info-block p { margin: 2px 0 12px; }
+.class-students { margin: 10px 0 0; padding-left: 22px; columns: 2; font-size: 14px; }
+@media (max-width: 560px) { .class-students { columns: 1; } }
+
+/* Grade journal: tap a cell to grade */
+.journal-cell-btn { border: 0; background: transparent; padding: 4px 6px; border-radius: 8px; cursor: pointer; font: inherit; color: inherit; min-width: 34px; }
+.journal-cell-btn:hover { background: var(--surface-2, #f3efe6); }
+.journal-marks { display: inline-flex; gap: 3px; }
+.grade-pick { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--surface); font: inherit; font-weight: 700; cursor: pointer; color: inherit; }
+.grade-pick.on { background: #e8f2ec; border-color: #7cbf98; }
+.grade-pick.cancel { font-weight: 400; }

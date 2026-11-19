@@ -123,7 +123,13 @@ router.post(
 /* -------------------------------------------------------------------------- */
 
 export type ImportRole = "student" | "teacher" | "parent" | "school_admin" | "school_director";
-export type ImportRow = { role: ImportRole; name: string; className?: string; childName?: string; phone?: string };
+export type ImportRow = { role: ImportRole; name: string; className?: string; childName?: string; phone?: string; subjects?: string[] };
+
+/** A teacher's subjects: up to 8 short names. */
+export function readSubjects(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return [...new Set(value.filter((item): item is string => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+}
 
 /** "+998 90 123-45-67", "90 1234567" → "+998901234567"; anything else is dropped. */
 function normalizePhone(value: unknown): string | undefined {
@@ -148,6 +154,7 @@ export function readRows(body: unknown): ImportRow[] {
       className: cleanText(item.className, 40) ?? undefined,
       childName: cleanText(item.childName, 80) ?? undefined,
       phone: normalizePhone(item.phone),
+      subjects: role === "teacher" ? readSubjects(item.subjects) : undefined,
     });
   }
   return rows;
@@ -211,6 +218,7 @@ export async function importPeople(schoolId: string, rows: ImportRow[], actorId:
             passwordHash,
             role: row.role,
             phone: row.phone ?? null,
+            ...(row.subjects?.length ? { subjects: row.subjects } : {}),
             mustChangePassword: true,
           })
           .returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });

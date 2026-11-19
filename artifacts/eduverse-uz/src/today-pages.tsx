@@ -93,6 +93,16 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
   }
   const status = statusOf(lesson, now);
   const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
+  if (status === 'done') {
+    return (
+      <div className="empty-state">
+        <span className="empty-icon"><PartyPopper /></span>
+        <h2>{t(language, 'Bu dars tugadi', 'Этот урок закончился', 'This lesson is over')}</h2>
+        <p>{lesson.start}–{lesson.end} · {lesson.className} · {lessonSubjectName(lesson.subject, language)}</p>
+        <button type="button" className="btn primary" onClick={() => onOpen('/dashboard')}><ArrowLeft size={15} /> {t(language, 'Bugungi darslar', 'К урокам на сегодня', 'Back to today')}</button>
+      </div>
+    );
+  }
   return (
     <section className="lesson-day">
       <button type="button" className="btn small lesson-day-back" onClick={() => onOpen('/dashboard')}><ArrowLeft size={14} /> {t(language, 'Bugungi darslar', 'Уроки на сегодня', 'Today’s lessons')}</button>

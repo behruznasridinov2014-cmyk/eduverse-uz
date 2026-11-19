@@ -19,10 +19,9 @@ import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
 import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { SchoolCalendarPanel } from './school-calendar';
-import { SceneLibraryPage } from './scene-library';
+import { GradesPage } from './grades';
 import { WorksheetBuilder } from './worksheet';
 import { SchoolSetupWizard } from './setup-wizard';
-import { DemoSchoolPanel } from './demo-panel';
 import { TrainerPage } from './trainer';
 import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
@@ -59,9 +58,9 @@ type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam va chat','3D library':'3D kutubxona',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
-  Русский:{Support:'Поддержка и чат','3D library':'3D-библиотека',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
-  English:{Support:'Support & chat','3D library':'3D library',Trainer:'Trainer',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
+  Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
+  Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
+  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -80,7 +79,7 @@ function App(){
   const [lang,setLang]=useSavedState<Lang>('language','Uzbek');
   const auth=useAuth();
   const plan=usePlan(auth.user?.id);
-  const proLocked=(path:string)=>Boolean(plan&&!plan.pro&&['/course','/lab','/scenes','/lesson','/topics','/trainer'].some(p=>path===p||path.startsWith(p+'/')));
+  const proLocked=(path:string)=>Boolean(plan&&!plan.pro&&['/course','/lab','/lesson','/topics','/trainer'].some(p=>path===p||path.startsWith(p+'/')));
   const hasLocalSession=auth.status==='authenticated'||auth.status==='offline';
   useLocaleDom(lang,location);
   useEffect(()=>{localStorage.removeItem('eduverse:role')},[]);
@@ -142,7 +141,7 @@ function App(){
     '/admin':['education_admin','ministry_admin','platform_superadmin'],
     '/board':['teacher'],
     '/lab':['student','teacher'],
-    '/scenes':['student','teacher'],
+    '/grades':['student'],
     '/trainer':['student','teacher'],
     '/lesson':['student','teacher'],
     '/support':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
@@ -211,7 +210,8 @@ function App(){
         :location==='/board'?<Redirect to="/lesson"/>
         :location==='/lab'&&auth.user?<><LabTodayScene language={lang}/><ChemLabPage language={lang} user={auth.user}/></>
         :location==='/trainer'&&auth.user?<TrainerPage user={auth.user} school={school} language={lang}/>
-        :location==='/scenes'&&auth.user?<SceneLibraryPage language={lang} grade={school.classes[0]?.grade ?? null}/>
+        :location==='/scenes'?<Redirect to="/lab"/>
+        :location==='/grades'&&auth.user?<GradesPage school={school} language={lang}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
         :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
         :location==='/course'&&auth.user?<TodayCoursePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
@@ -239,7 +239,7 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Homework',href:'/classes',icon:NotebookPen,tone:'orange'},
   {label:'Classes',href:'/classes',icon:Users,tone:'teal'},
   {label:'Chemistry lab',href:'/lab',icon:FlaskConical,tone:'pink'},
-  {label:'3D library',href:'/scenes',icon:FlaskConical,tone:'blue'},
+  {label:'My grades',href:'/grades',icon:BookMarked,tone:'gold'},
   {label:'Trainer',href:'/trainer',icon:FlaskConical,tone:'gold'},
   {label:'Interactive board',href:'/board',icon:PenTool,tone:'pink'},
   {label:'Textbook library',href:'/library',icon:BookMarked,tone:'teal'},
@@ -248,8 +248,8 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Lesson room','Topics & 3D','Trainer','Chemistry lab','3D library','Homework','Textbook library'],
-  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','3D library','Attendance','Teacher workspace','Textbook library'],
+  student:['Overview','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
+  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Textbook library'],
   parent:['Overview','Family view','Textbook library'],
   school_director:['Overview','School insights','Classes','Attendance'],
   school_admin:['Overview','School insights','Classes','Attendance'],
@@ -269,9 +269,9 @@ const MOBILE_NAV:Record<User['role'],string[]>={
   platform_superadmin:['Overview','Administration'],
 };
 const NAV_SHORT:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam','3D library':'3D kutubxona',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
-  Русский:{Support:'Чат','3D library':'3D-сцены',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
-  English:{Support:'Support','3D library':'3D library',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
+  Uzbek:{Support:'Yordam','My grades':'Baholar',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
+  Русский:{Support:'Чат','My grades':'Оценки',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
+  English:{Support:'Support','My grades':'Grades',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
 };
 function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
 function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
@@ -356,13 +356,9 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   ?`${['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'][now.getDay()]}, ${now.getDate()}-${['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'][now.getMonth()]}`
   :now.toLocaleDateString(locale,{weekday:'long',day:'numeric',month:'long'});
  const actions=HOME_ACTIONS[user.role];
- const [primary,...rest]=actions;
+ // Online lesson and school management have their own tabs: the overview only shows today.
+ const rest=user.role==='parent'?actions:[];
  const steps=HOME_STEPS[user.role]?.[language];
- const stats=[
-  {label:L('Sinflar','Классы','Classes'),value:school.classes.length},
-  {label:L('Topshiriqlar','Задания','Assignments'),value:school.assignments.length},
-  ...(user.role==='student'?[{label:L('Yuborilgan','Отправлено','Submitted'),value:school.mySubmissionCount}]:[]),
- ];
  return <section className="home" data-locale-preserve="true">
   <div className="home-hero">
    <div className="home-hero-text">
@@ -370,16 +366,8 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     <h1>{greeting[language]}, {user.username}</h1>
     <p>{getRoleLabel(language,user.role)}{membership?.schoolName?` · ${membership.schoolName}`:''}</p>
    </div>
-   {primary&&<button type="button" className={`home-primary tone-${primary.tone}`} onClick={()=>onOpen(primary.path)}>
-    <span className="home-primary-icon"><primary.icon/></span>
-    <span><b>{primary.label[language]}</b><small>{primary.description[language]}</small></span>
-    <ArrowRight className="home-go"/>
-   </button>}
   </div>
   {['teacher','student','parent','school_director','school_admin'].includes(user.role)&&<TodayLessons language={language} onOpen={onOpen} role={user.role}/>}
-  {school.status==='ready'&&!['parent','teacher','student'].includes(user.role)&&<div className="home-stats">
-   {stats.map(stat=><div className="home-stat" key={stat.label.English}><b>{stat.value}</b><span>{stat.label[language]}</span></div>)}
-  </div>}
   {rest.length>0&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Bo‘limlar':language==='Русский'?'Разделы':'Sections'}</h2>
    <div className="home-tiles">
@@ -393,17 +381,6 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   </>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
   {user.role==='student'&&<AttendanceSummary language={language}/>}
-  {user.role==='student'&&school.assignments.length>0&&<>
-   <h2 className="home-section-title">{language==='Uzbek'?'Mening baholarim':language==='Русский'?'Мои оценки':'My grades'}</h2>
-   <div className="panel"><table className="grade-table"><thead><tr><th>{language==='Uzbek'?'Topshiriq':language==='Русский'?'Задание':'Assignment'}</th><th>{language==='Uzbek'?'Holat':language==='Русский'?'Статус':'Status'}</th><th>{language==='Uzbek'?'Baho':language==='Русский'?'Оценка':'Grade'}</th></tr></thead><tbody>
-    {school.assignments.slice(0,8).map(item=>{
-     const submission=item.mySubmission;
-     const score=typeof submission?.score==='number'?submission.score:null;
-     const state=!submission?L('Bajarilmagan','Не сдано','Not submitted'):score!==null?L('Tekshirildi','Проверено','Checked'):L('Tekshirilmoqda','На проверке','In review');
-     return <tr key={item.id}><td><b>{item.title}</b><br/><span className="muted">{item.subject}</span></td><td>{state[language]}</td><td>{score!==null?<span className="grade-mark">{Math.max(2,Math.min(5,Math.round(score/20)))}</span>:'—'}</td></tr>;
-    })}
-   </tbody></table></div>
-  </>}
   {steps&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Qanday ishlaydi':language==='Русский'?'Как это работает':'How it works'}</h2>
    <ol className="home-steps">{steps.map((step,index)=><li key={step}><span>{index+1}</span>{step}</li>)}</ol>
@@ -527,7 +504,6 @@ function ParentPage({language}:{language:Lang}){
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
-  <SchoolScopeSummary school={school} language={language}/>
   {school.status==='ready'&&school.hasMembership
    ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<TimetableEditor schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
@@ -540,7 +516,6 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  const title=role==='platform_superadmin'?text('Platform administration','Управление платформой','Platforma boshqaruvi'):role==='ministry_admin'?text('National education oversight','Национальный контроль образования','Milliy ta’lim nazorati'):text('Regional education administration','Региональное управление образованием','Hududiy ta’lim boshqaruvi');
  return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
   <OwnerRequestsPanel language={language}/>
-  <div style={{marginTop:16}}><DemoSchoolPanel language={language} onChanged={()=>setSchoolsRevision(v=>v+1)}/></div>
   <div style={{marginTop:16}}><ServerAdminSchoolsPanel key={schoolsRevision} language={language} selectedId={setup?.id} onSelect={setSetup}/></div>
   {setup&&<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
    <div className="row-between"><b>{setup.name}</b><button className="btn small" onClick={()=>setSetup(null)}>{text('Close','Закрыть','Yopish')}</button></div>
@@ -548,8 +523,6 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
    <SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/>
    <details className="panel"><summary><b>{text('Or paste the school’s Excel','Или вставьте Excel школы целиком','Yoki maktab Excelini qo‘ying')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
    <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
-   <TimetableEditor key={`tt-${setup.id}`} schoolId={setup.id} language={language}/>
-   <SchoolCalendarPanel schoolId={setup.id} language={language}/>
    <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
   </div>}</>;
 }

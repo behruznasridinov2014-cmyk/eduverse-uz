@@ -318,113 +318,17 @@ export function ServerClassesPanel({
     }
   }
 
-  return (
-    <>
-      <div className="grid grid-3">
-        {school.classes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`panel class-card ${item.id === activeClassId ? 'selected' : ''}`}
-            onClick={() => {
-              setSelectedId(item.id);
-              setDraftAssignmentId(null);
-              setNotice('');
-              setMutationError('');
-            }}
-            style={{ textAlign: 'left' }}
-          >
-            <div className="row-between">
-              <span className="tag blue">{item.name}</span>
-              <span className="muted">
-                {item.studentCount ?? 0} {t(language, 'students', 'учеников', 'o‘quvchi')}
-              </span>
-            </div>
-            <h2 style={{ marginTop: 12 }}>
-              {item.grade}
-              {t(language, ' grade', ' класс', '-sinf')} · {item.academicYear}
-            </h2>
-            <p className="muted">{item.schoolName ?? activeClass?.schoolName ?? ''}</p>
-            <div className="progress-track" style={{ marginTop: 14 }}>
-              <div
-                className="progress-fill"
-                style={{ width: `${Math.min(100, (item.studentCount ?? 0) * 3)}%` }}
-              />
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-2" style={{ marginTop: 16 }}>
-        <Panel>
-          <SectionHead
-            title={activeClass?.name ?? t(language, 'Class', 'Класс', 'Sinf')}
-            detail={activeClass?.schoolName}
-            tag={<span className="tag green">{t(language, 'Class list', 'Список класса', 'Sinf ro‘yxati')}</span>}
-          />
-          {workspace.loading ? (
-            <p className="muted" role="status">{t(language, 'Loading roster…', 'Загружаем список…', 'Ro‘yxat yuklanmoqda…')}</p>
-          ) : workspace.error ? (
-            <InlineError>{workspace.error}</InlineError>
-          ) : (
-            <>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Students', 'Ученики', 'O‘quvchilar')}</span>
-                <b>{studentMembers.length}</b>
-              </div>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Teachers', 'Учителя', 'O‘qituvchilar')}</span>
-                <b>{teacherMembers.length}</b>
-              </div>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Academic year', 'Учебный год', 'O‘quv yili')}</span>
-                <span>{activeClass?.academicYear}</span>
-              </div>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Your class role', 'Ваша роль в классе', 'Sinfdagi rolingiz')}</span>
-                <span className="tag">{workspace.role ? formatStatus(workspace.role) : t(language, 'Manager access', 'Доступ руководителя', 'Rahbar ruxsati')}</span>
-              </div>
-              <div className="school-member-chips">
-                {workspace.members.map((member) => (
-                  <span className="tag" key={member.userId} title={member.accountRole ?? member.role}>
-                    {member.username} · {formatStatus(member.role)}
-                  </span>
-                ))}
-                {workspace.members.length === 0 && (
-                  <span className="muted">{t(language, 'No roster members have been added yet.', 'В списке пока нет участников.', 'Ro‘yxatga hali a’zo qo‘shilmagan.')}</span>
-                )}
-              </div>
-              {canManageClass && (
-                <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/attendance')}>
-                  {t(language, 'Mark attendance', 'Отметить давомат', 'Davomatni belgilash')}
-                  <ArrowRight size={15} />
-                </button>
-              )}
-            </>
-          )}
-        </Panel>
-
-        <Panel>
-          <SectionHead
-            title={t(language, 'Class assignments', 'Задания класса', 'Sinf topshiriqlari')}
-            detail={t(language, 'Posted work visible to this class.', 'Работы, доступные этому классу.', 'Bu sinfga ko‘rinadigan topshiriqlar.')}
-            tag={
-              <button type="button" className="btn small" onClick={() => setRevision((value) => value + 1)}>
-                <RefreshCw size={13} />
-                {t(language, 'Reload', 'Обновить', 'Yangilash')}
-              </button>
-            }
-          />
+  const isStudent = user.role === 'student';
+  const [showStudents, setShowStudents] = useState(false);
+  if (isStudent) {
+    // A pupil sees only the homework: what to do, what is sent, what is checked.
+    return (
+      <Panel>
           {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
           {mutationError && <InlineError>{mutationError}</InlineError>}
           {classAssignments.length === 0 ? (
             <div className="callout">
-              {t(
-                language,
-                'No assignments have been posted to this class yet.',
-                'В этот класс пока не добавлено ни одного задания.',
-                'Bu sinfga hali topshiriq joylanmagan.',
-              )}
+              {t(language, 'No homework yet.', 'Заданий пока нет.', 'Hali vazifa yo‘q.')}
             </div>
           ) : (
             <div className="stack school-assignment-list">
@@ -440,8 +344,12 @@ export function ServerClassesPanel({
                           {assignment.subject} · {formatDue(assignment.dueAt)}
                         </div>
                       </div>
-                      <span className={`tag ${submission ? 'green' : 'gold'}`}>
-                        {submission ? formatStatus(submission.status) : formatStatus(assignment.status)}
+                      <span className={`tag ${submission ? (submission.score !== null && submission.score !== undefined ? 'green' : 'blue') : 'gold'}`}>
+                        {!submission
+                          ? t(language, 'To do', 'Нужно сделать', 'Bajarish kerak')
+                          : submission.score !== null && submission.score !== undefined
+                            ? `${t(language, 'Checked', 'Проверено', 'Tekshirildi')} · ${Math.max(2, Math.min(5, Math.round(submission.score / 20)))}`
+                            : t(language, 'In review', 'На проверке', 'Tekshirilmoqda')}
                       </span>
                     </div>
                     <p className="muted school-assignment-copy">{assignment.description}</p>
@@ -475,7 +383,7 @@ export function ServerClassesPanel({
                         {submission.score !== null && submission.score !== undefined && (
                           <>
                             {' '}
-                            · {t(language, 'Score', 'Оценка', 'Ball')}: {submission.score}
+                            · {t(language, 'Grade', 'Оценка', 'Baho')}: {Math.max(2, Math.min(5, Math.round(submission.score / 20)))}
                           </>
                         )}
                         {submission.signature && (
@@ -488,7 +396,7 @@ export function ServerClassesPanel({
                         )}
                       </div>
                     )}
-                    {canSubmit && !(submission?.signedAt && submission.status === 'checked') && (
+                    {canSubmit && !(submission && submission.score !== null && submission.score !== undefined) && !(submission?.signedAt && submission.status === 'checked') && (
                       <div className="stack" style={{ gap: 8 }}>
                         {isEditing ? (
                           <>
@@ -562,8 +470,60 @@ export function ServerClassesPanel({
               })}
             </div>
           )}
-        </Panel>
+      </Panel>
+    );
+  }
+  return (
+    <>
+      <div className="class-pick">
+        {school.classes.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`class-pick-card ${item.id === activeClassId ? 'selected' : ''}`}
+            onClick={() => { setSelectedId(item.id); setShowStudents(false); }}
+          >
+            <b>{t(language, `Class ${item.name}`, `${item.name} класс`, `${item.name} sinf`)}</b>
+            <small className="muted">{item.studentCount ?? 0} {t(language, 'students', 'учеников', 'o‘quvchi')}</small>
+          </button>
+        ))}
       </div>
+
+      <Panel className="class-info">
+        <h2>{activeClass ? t(language, `Class ${activeClass.name}`, `${activeClass.name} класс`, `${activeClass.name} sinf`) : ''}</h2>
+        {workspace.loading ? (
+          <p className="muted" role="status">{t(language, 'Loading…', 'Загружаем…', 'Yuklanmoqda…')}</p>
+        ) : workspace.error ? (
+          <InlineError>{workspace.error}</InlineError>
+        ) : (
+          <>
+            <div className="class-info-grid">
+              <div><small className="muted">{t(language, 'Grade', 'Параллель', 'Sinf')}</small><b>{activeClass?.grade}{t(language, ' grade', ' класс', '-sinf')}</b></div>
+              <div><small className="muted">{t(language, 'School year', 'Учебный год', 'O‘quv yili')}</small><b>{activeClass ? `${activeClass.academicYear}–${Number(activeClass.academicYear) + 1}` : ''}</b></div>
+              <div><small className="muted">{t(language, 'Students', 'Учеников', 'O‘quvchilar')}</small><b>{studentMembers.length}</b></div>
+            </div>
+            <div className="class-info-block">
+              <small className="muted">{t(language, 'Teachers', 'Учителя класса', 'Sinf o‘qituvchilari')}</small>
+              <p>{teacherMembers.map((member) => member.username).join(', ') || t(language, 'Not added yet', 'Пока не добавлены', 'Hali qo‘shilmagan')}</p>
+            </div>
+            <button type="button" className="btn" onClick={() => setShowStudents((value) => !value)}>
+              <Users size={15} /> {showStudents ? t(language, 'Hide students', 'Скрыть учеников', 'O‘quvchilarni yashirish') : t(language, `Students · ${studentMembers.length}`, `Ученики · ${studentMembers.length}`, `O‘quvchilar · ${studentMembers.length}`)}
+            </button>
+            {showStudents && (
+              <ol className="class-students">
+                {studentMembers.map((member) => <li key={member.userId}>{member.username}</li>)}
+                {studentMembers.length === 0 && <li className="muted">{t(language, 'No students yet.', 'Учеников пока нет.', 'Hali o‘quvchi yo‘q.')}</li>}
+              </ol>
+            )}
+            {user.role === 'teacher' && canManageClass && (
+              <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/attendance')}>
+                {t(language, 'Mark attendance', 'Отметить давомат', 'Davomatni belgilash')}
+                <ArrowRight size={15} />
+              </button>
+            )}
+          </>
+        )}
+      </Panel>
     </>
   );
 }
@@ -1195,51 +1155,6 @@ export function ServerSchoolOverview({
 
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-
-      <div className="grid grid-4" style={{ marginTop: 12 }}>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Members', 'Участники', 'A’zolar')}</div>
-              <div className="metric-value">{detail?.memberCount ?? members.length}</div>
-              <div className="metric-note">{t(language, 'From the class list', 'Из списка класса', 'Sinf ro‘yxatidan')}</div>
-            </div>
-            <div className="metric-icon"><Users /></div>
-          </div>
-        </Panel>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Classes', 'Классы', 'Sinflar')}</div>
-              <div className="metric-value">{detail?.classCount ?? schoolClasses.length}</div>
-              <div className="metric-note">{t(language, 'Linked to this school', 'Привязаны к школе', 'Bu maktabga bog‘langan')}</div>
-            </div>
-            <div className="metric-icon"><BookOpen /></div>
-          </div>
-        </Panel>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Assignments', 'Задания', 'Topshiriqlar')}</div>
-              <div className="metric-value">{schoolAssignments.length}</div>
-              <div className="metric-note">{t(language, 'Visible to this account', 'Видимы этому аккаунту', 'Bu hisobga ko‘rinadi')}</div>
-            </div>
-            <div className="metric-icon"><ClipboardCheck /></div>
-          </div>
-        </Panel>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Your school role', 'Ваша роль в школе', 'Maktabdagi rolingiz')}</div>
-              <div className="metric-value" style={{ fontSize: 17 }}>
-                {activeMembership ? formatStatus(activeMembership.role) : '—'}
-              </div>
-              <div className="metric-note">{activeMembership?.region}</div>
-            </div>
-            <div className="metric-icon"><ShieldCheck /></div>
-          </div>
-        </Panel>
-      </div>
 
       <div className="grid grid-2" style={{ marginTop: 16 }}>
         <Panel>

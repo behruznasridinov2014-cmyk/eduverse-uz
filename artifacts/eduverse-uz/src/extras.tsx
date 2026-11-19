@@ -143,6 +143,20 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
   const [classId, setClassId] = useState(school.classes[0]?.id ?? '');
   const [journal, setJournal] = useState<Journal | null>(null);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  async function grade(assignmentId: string, studentId: string, mark: number) {
+    setSaving(true); setError('');
+    try {
+      await customFetch(`/api/assignments/${assignmentId}/submissions/${studentId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'checked', score: mark * 20 }) });
+      setEditing(null);
+      await load();
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (!classId) return;
@@ -173,9 +187,9 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
         </div>
       </div>
       <p className="muted journal-legend">{t(language,
-        'Har bir ustun — bitta topshiriq. Raqam — baho (5 ballik), «tekshirish» — ish yuborilgan, lekin hali baholanmagan, «—» — ish yuborilmagan. Davomat — darslarga kelgan foizi.',
-        'Каждый столбец — одно задание. Цифра — оценка (из 5), «проверить» — работа сдана, но ещё не оценена, «—» — работу не сдали. Давомат — процент посещённых уроков.',
-        'Each column is one assignment. A number is the grade (out of 5), “review” means handed in but not graded, “—” means not handed in. Attendance is the share of lessons attended.')}</p>
+        'Baho qo‘yish uchun katakni bosing va 2, 3, 4 yoki 5 ni tanlang. Ustun — bitta vazifa. «tekshirish» — ish yuborilgan, «—» — yuborilmagan.',
+        'Чтобы поставить оценку, нажмите на клетку и выберите 2, 3, 4 или 5. Столбец — одно задание. «проверить» — работа сдана, «—» — не сдана.',
+        'To grade, tap a cell and pick 2, 3, 4 or 5. A column is one assignment. “review” — handed in, “—” — not handed in.')}</p>
       {error && <div className="notice" role="alert">{error}</div>}
       {journal && journal.rows.length === 0 && <p className="muted">{t(language, 'Sinfda hali o‘quvchi yo‘q.', 'В классе пока нет учеников.', 'No students in this class yet.')}</p>}
       {journal && journal.rows.length > 0 && (
@@ -193,11 +207,24 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
               {journal.rows.map((row) => (
                 <tr key={row.studentId}>
                   <td><b>{row.studentName}</b></td>
-                  {row.cells.map((cell, index) => (
-                    <td key={index}>
-                      {cell.state === 'graded' ? <span className="grade-mark">{cell.grade}</span> : cell.state === 'review' ? <span className="tag gold">{t(language, 'tekshirish', 'проверить', 'review')}</span> : <span className="muted">—</span>}
-                    </td>
-                  ))}
+                  {row.cells.map((cell, index) => {
+                    const assignmentId = journal.assignments[index]?.id ?? '';
+                    const key = `${row.studentId}:${assignmentId}`;
+                    return (
+                      <td key={index} className="journal-cell">
+                        {editing === key ? (
+                          <span className="journal-marks">
+                            {[2, 3, 4, 5].map((mark) => <button type="button" key={mark} className={`grade-pick ${cell.grade === mark ? 'on' : ''}`} disabled={saving} onClick={() => void grade(assignmentId, row.studentId, mark)}>{mark}</button>)}
+                            <button type="button" className="grade-pick cancel" onClick={() => setEditing(null)} aria-label={t(language, 'Bekor', 'Отмена', 'Cancel')}>×</button>
+                          </span>
+                        ) : (
+                          <button type="button" className="journal-cell-btn" onClick={() => setEditing(key)} title={t(language, 'Baho qo‘yish', 'Поставить оценку', 'Grade')}>
+                            {cell.state === 'graded' ? <span className="grade-mark">{cell.grade}</span> : cell.state === 'review' ? <span className="tag gold">{t(language, 'tekshirish', 'проверить', 'review')}</span> : <span className="muted">—</span>}
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })}
                   <td>{row.average !== null ? <b className="journal-average">{row.average.toFixed(1)}</b> : '—'}</td>
                   <td>{row.attendancePercent !== null ? `${row.attendancePercent}%` : '—'}</td>
                 </tr>

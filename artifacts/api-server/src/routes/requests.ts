@@ -13,7 +13,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
-import { importPeople, readRows, type ImportRow } from "./school-tools";
+import { importPeople, readRows, readSubjects, type ImportRow } from "./school-tools";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { writeAudit } from "../lib/audit";
 import { pushNotice } from "../lib/inbox";
@@ -92,6 +92,8 @@ function readChange(kind: Kind, body: Record<string, unknown>): { payload: Recor
     if (name) payload.name = name;
     if (phone !== null && phone !== undefined) payload.phone = phone;
     if (className) payload.className = className;
+    const subjects = readSubjects(body.subjects);
+    if (subjects) payload.subjects = subjects;
     if (Object.keys(payload).length === 0) return { payload, error: "Nothing to change." };
     return { payload };
   }
@@ -118,6 +120,7 @@ async function applyChange(schoolId: string, kind: Kind, targetUserId: string | 
     const set: Record<string, unknown> = { updatedAt: now };
     if (typeof payload.name === "string") { set.username = payload.name; set.usernameNormalized = payload.name.toLowerCase(); }
     if (typeof payload.phone === "string") set.phone = payload.phone || null;
+    if (Array.isArray(payload.subjects) && person.role === "teacher") set.subjects = payload.subjects;
     await db.update(usersTable).set(set).where(eq(usersTable.id, person.id));
     if (typeof payload.className === "string" && (person.role === "student" || person.role === "teacher")) {
       const schoolClassIds = (await db.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId))).map((row) => row.id);
@@ -244,7 +247,7 @@ router.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAFF
   if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
   if (!(await isSchoolStaff(viewerOf(res), schoolId))) { res.status(403).json({ error: "Not your school." }); return; }
   const people = await db
-    .select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt })
+    .select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, subjects: usersTable.subjects, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt })
     .from(schoolMembersTable)
     .innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId))
     .where(eq(schoolMembersTable.schoolId, schoolId))

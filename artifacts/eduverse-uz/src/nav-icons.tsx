@@ -217,6 +217,7 @@ export const NAV_ICON: Record<string, (props: IconProps) => ReactElement> = {
   'Family view': IconFamily,
   'School insights': IconSchool,
   Classes: IconClasses,
+  'My grades': IconJournal,
   Administration: IconAdmin,
   Support: IconChat,
 };

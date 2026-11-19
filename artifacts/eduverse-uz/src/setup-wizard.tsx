@@ -32,8 +32,7 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
   const steps: Array<[Step, string]> = [
     ['director', t(language, '1. Direktor', '1. Директор', '1. Director')],
     ['deputy', t(language, '2. Zavuchlar', '2. Завучи', '2. Deputies')],
-    ['teacher', t(language, '3. O‘qituvchilar', '3. Учителя', '3. Teachers')],
-    ['pupil', t(language, '4. O‘quvchilar va ota-onalar', '4. Ученики и родители', '4. Pupils and parents')],
+    // Teachers, pupils, parents, the timetable and books are added by the school itself.
   ];
   const go = (next: Step) => { setStep(next); setRows([{ ...EMPTY }]); setMessage(''); setError(''); };
   const setRow = (index: number, patch: Partial<Row>) => setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -87,6 +86,7 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
   return (
     <section className="panel setup-wizard">
       <h2><UserPlus size={16} /> {t(language, 'Maktabni tayyorlash', 'Подготовка школы', 'Prepare the school')}: {schoolName}</h2>
+      <p className="muted">{t(language, 'Siz direktor va zavuchni qo‘shasiz. O‘qituvchilar, sinflar, o‘quvchilar, ota-onalar, dars jadvali va darsliklarni maktabning o‘zi qo‘shadi.', 'Вы добавляете директора и завуча. Учителей, классы, учеников, родителей, расписание и учебники школа добавляет сама.', 'You add the director and deputy. The school adds teachers, classes, pupils, parents, the timetable and books itself.')}</p>
       <div className="setup-steps-tabs">
         {steps.map(([key, label]) => <button key={key} type="button" className={`btn small ${step === key ? 'primary' : ''}`} onClick={() => go(key)}>{label}</button>)}
       </div>

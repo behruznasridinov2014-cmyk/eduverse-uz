@@ -5,6 +5,7 @@ import { Check, ClipboardList, History, Inbox, Pencil, RefreshCw, UserMinus, Use
 import type { Language } from './school-data';
 import { parseTable } from './school-tools';
 import { friendlyError } from './errors';
+import { TEACHER_SUBJECTS, subjectLabel } from './ui/config';
 
 /*
  * People of a school:
@@ -17,7 +18,23 @@ const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
 
 type Kind = 'enroll' | 'expel' | 'transfer' | 'graduate' | 'restore' | 'edit';
-type Person = { id: string; name: string; login: string; role: string; phone: string | null; status: string; statusReason: string; classes: string[] };
+type Person = { id: string; name: string; login: string; role: string; phone: string | null; subjects?: string[]; status: string; statusReason: string; classes: string[] };
+
+/** The subjects a teacher teaches: tap to add or remove (one or several). */
+export function SubjectPicker({ value, onChange, language }: { value: string[]; onChange: (next: string[]) => void; language: Language }) {
+  return (
+    <div className="subject-picker">
+      {TEACHER_SUBJECTS.map((item) => {
+        const on = value.includes(item[1]);
+        return (
+          <button type="button" key={item[1]} className={`chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onChange(on ? value.filter((name) => name !== item[1]) : [...value, item[1]].slice(0, 8))}>
+            {on && <Check size={12} />} {t(language, item[0], item[1], item[2])}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 type Request = {
   id: string; schoolId: string; schoolName: string; kind: Kind; reason: string; status: string; decisionNote: string; createdAt: string;
   payload: { rows?: Array<{ role: string; name: string; className?: string }>; name?: string; phone?: string; className?: string; toSchool?: string };
@@ -81,7 +98,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
   const [statusFilter, setStatusFilter] = useState('active');
   const [action, setAction] = useState<{ person: Person; kind: Kind } | null>(null);
   const [reason, setReason] = useState('');
-  const [edit, setEdit] = useState({ name: '', phone: '', className: '', toSchool: '' });
+  const [edit, setEdit] = useState<{ name: string; phone: string; className: string; toSchool: string; subjects: string[] }>({ name: '', phone: '', className: '', toSchool: '', subjects: [] });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -101,7 +118,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
   function open(person: Person, kind: Kind) {
     setAction({ person, kind });
     setReason('');
-    setEdit({ name: person.name, phone: person.phone ?? '', className: person.classes[0] ?? '', toSchool: '' });
+    setEdit({ name: person.name, phone: person.phone ?? '', className: person.classes[0] ?? '', toSchool: '', subjects: person.subjects ?? [] });
     setMessage(''); setError('');
   }
 
@@ -120,6 +137,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
       if (edit.name.trim() && edit.name.trim() !== person.name) body.name = edit.name.trim();
       if (edit.phone.trim() !== (person.phone ?? '')) body.phone = edit.phone.trim();
       if (edit.className.trim() && edit.className.trim() !== (person.classes[0] ?? '')) body.className = edit.className.trim();
+      if (person.role === 'teacher' && edit.subjects.join('|') !== (person.subjects ?? []).join('|')) body.subjects = edit.subjects;
     }
     if (kind === 'transfer' && edit.toSchool.trim()) body.toSchool = edit.toSchool.trim();
     setBusy(true); setError('');
@@ -172,7 +190,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
             <div key={person.id} className="people-row">
               <div className="people-main">
                 <b>{person.name}</b>
-                <small className="muted">{label(language, ROLE_TEXT[person.role], person.role)}{person.classes.length ? ` · ${person.classes.join(', ')}` : ''} · {person.login}{person.phone ? ` · ${person.phone}` : ''}</small>
+                <small className="muted">{label(language, ROLE_TEXT[person.role], person.role)}{person.role === 'teacher' && person.subjects?.length ? ` · ${person.subjects.map((name) => subjectLabel(name, language)).join(', ')}` : ''}{person.classes.length ? ` · ${person.classes.join(', ')}` : ''} · {person.login}{person.phone ? ` · ${person.phone}` : ''}</small>
                 {person.status !== 'active' && person.statusReason && <small className="muted">{person.statusReason}</small>}
               </div>
               <span className={`tag ${status[3]}`}>{label(language, status, person.status)}</span>
@@ -203,6 +221,12 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
                       <datalist id={`classes-${schoolId}`}>{classes.map((name) => <option key={name} value={name} />)}</datalist>
                     </div>
                   )}
+                  {action.kind === 'edit' && person.role === 'teacher' && (
+                    <div>
+                      <small className="muted">{t(language, 'Qaysi fanlarni o‘qitadi', 'Какие предметы ведёт', 'Subjects taught')}</small>
+                      <SubjectPicker value={edit.subjects} onChange={(subjects) => setEdit({ ...edit, subjects })} language={language} />
+                    </div>
+                  )}
                   {action.kind === 'transfer' && <input className="input" value={edit.toSchool} onChange={(event) => setEdit({ ...edit, toSchool: event.target.value })} placeholder={t(language, 'Qaysi maktabga', 'В какую школу', 'To which school')} />}
                   <input className="input" value={reason} onChange={(event) => setReason(event.target.value)} placeholder={action.kind === 'expel' || action.kind === 'transfer' ? t(language, 'Sabab va buyruq raqami (majburiy)', 'Причина и номер приказа (обязательно)', 'Reason and order number (required)') : t(language, 'Izoh (ixtiyoriy)', 'Комментарий (необязательно)', 'Comment (optional)')} />
                   <div className="row" style={{ gap: 8 }}>
@@ -230,6 +254,22 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
   const [error, setError] = useState('');
   const [created, setCreated] = useState<Created[]>([]);
   const parsed = useMemo(() => parseTable(text), [text]);
+  const [teacher, setTeacher] = useState<{ name: string; phone: string; subjects: string[] }>({ name: '', phone: '', subjects: [] });
+  async function addTeacher() {
+    if (!teacher.name.trim() || !teacher.subjects.length) return;
+    setBusy(true); setError(''); setMessage(''); setCreated([]);
+    try {
+      const response = await customFetch<{ result?: { created?: Created[] } }>(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'enroll', rows: [{ role: 'teacher', name: teacher.name.trim(), phone: teacher.phone.trim() || undefined, subjects: teacher.subjects }] }) });
+      setTeacher({ name: '', phone: '', subjects: [] });
+      setCreated(response.result?.created ?? []);
+      setMessage(t(language, 'O‘qituvchi qo‘shildi. Login va parol pastda.', 'Учитель добавлен. Логин и пароль ниже.', 'Teacher added. Login and password below.'));
+      onSent?.();
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function send() {
     if (parsed.rows.length === 0) return;
     if (!window.confirm(t(language, `${parsed.rows.length} kishi qabul qilinsinmi?`, `Принять в школу: ${parsed.rows.length} чел.?`, `Enrol ${parsed.rows.length} people?`))) return;
@@ -253,6 +293,16 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
       <textarea className="import-area" rows={6} value={text} onChange={(event) => setText(event.target.value)} placeholder={'Азиз Каримов\t7-А\t+998 90 123 45 67\tКарим Каримов'} spellCheck={false} />
       {text.trim() && <p className="muted">{t(language, `Tayyor: ${parsed.rows.length} qator`, `Распознано строк: ${parsed.rows.length}`, `Rows: ${parsed.rows.length}`)}{parsed.errors.length ? ` · ${t(language, 'xato qatorlar', 'ошибки в строках', 'bad rows')}: ${parsed.errors.join(', ')}` : ''}</p>}
       <button type="button" className="btn primary" disabled={busy || parsed.rows.length === 0} onClick={() => void send()}><UserPlus size={14} /> {t(language, 'Qabul qilish', 'Принять', 'Enrol')}</button>
+      <div className="new-teacher">
+        <h3>{t(language, 'Yangi o‘qituvchi', 'Новый учитель', 'New teacher')}</h3>
+        <div className="people-form-grid">
+          <input className="input" value={teacher.name} onChange={(event) => setTeacher({ ...teacher, name: event.target.value })} placeholder={t(language, 'F.I.Sh.', 'ФИО', 'Full name')} />
+          <input className="input" value={teacher.phone} onChange={(event) => setTeacher({ ...teacher, phone: event.target.value })} placeholder={t(language, 'Telefon', 'Телефон', 'Phone')} />
+        </div>
+        <small className="muted">{t(language, 'Qaysi fanlarni o‘qitadi (bitta yoki bir nechta)', 'Какие предметы ведёт (один или несколько)', 'Subjects (one or several)')}</small>
+        <SubjectPicker value={teacher.subjects} onChange={(subjects) => setTeacher({ ...teacher, subjects })} language={language} />
+        <button type="button" className="btn" disabled={busy || !teacher.name.trim() || !teacher.subjects.length} onClick={() => void addTeacher()}><UserPlus size={14} /> {t(language, 'O‘qituvchini qo‘shish', 'Добавить учителя', 'Add teacher')}</button>
+      </div>
       {message && <div className="notice success" style={{ marginTop: 8 }}>{message}</div>}
       {created.length > 0 && (
         <div className="notice success owner-created" style={{ marginTop: 8 }}>

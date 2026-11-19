@@ -26,7 +26,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Picked[]>([]);
   const [title, setTitle] = useState('');
-  const [due, setDue] = useState('');
+  const [due, setDue] = useState(() => { const d = new Date(Date.now() + 86400000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -45,15 +45,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
       seen.add(`${lesson.classId}:${topic.key}`);
       rows.push({ id: lesson.id, label: `${t(language, 'Bugun', 'Сегодня', 'Today')} ${lesson.start} · ${lesson.className} · ${lessonSubjectName(lesson.subject, language)}`, classId: lesson.classId, topic, open: true, bookId: book.id });
     }
-    const planned = upcomingTopics(data, courses);
-    const tomorrow = data.next?.[0];
-    for (const lesson of tomorrow?.lessons ?? []) {
-      const topic = planned.get(lesson.id);
-      const book = bookForLesson(lesson);
-      if (!topic || !book || seen.has(`${lesson.classId}:${topic.key}`)) continue;
-      seen.add(`${lesson.classId}:${topic.key}`);
-      rows.push({ id: lesson.id, label: `${dayLabel(tomorrow!, data.date, language).split(',')[0]} ${lesson.start} · ${lesson.className} · ${lessonSubjectName(lesson.subject, language)}`, classId: lesson.classId, topic, open: false, bookId: book.id });
-    }
+    // Only today's topics: tomorrow's homework is given tomorrow.
     const hasTimetable = data.lessons.length + (data.next ?? []).reduce((sum, day) => sum + day.lessons.length, 0) > 0;
     return hasTimetable ? rows : null;
   }, [today.data, courses, language]);
@@ -79,7 +71,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
     if (!targetClass || picked.length === 0 || !book) return;
     const classId = targetClass;
     const className = teachClasses.find((item) => item.id === classId)?.name ?? '';
-    const name = title.trim() || `${t(language, 'Topshiriqlar varag‘i', 'Лист заданий', 'Worksheet')} · ${SUBJECT_RU[book.subject]} · ${picked.length}`;
+    const name = title.trim() || (slots && slot ? `§${slot.topic.code} ${slot.topic.title}` : `${t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')} · ${SUBJECT_RU[book.subject]}`);
     if (!window.confirm(t(language, `${className} sinfiga ${picked.length} ta topshiriq yuborilsinmi?`, `Отправить классу ${className}: ${picked.length} заданий?`, `Send ${picked.length} tasks to ${className}?`))) return;
     setBusy(true); setError(''); setMessage('');
     try {
@@ -89,6 +81,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
         subject: language === 'English' ? SUBJECT_EN[book.subject] : SUBJECT_RU[book.subject],
         description,
         dueAt: due ? new Date(`${due}T20:00:00`).toISOString() : null,
+        ...(slots && slot ? { topicId: `course:${slot.topic.key}`, topicTitle: `§${slot.topic.code} ${slot.topic.title}` } : {}),
       });
       setMessage(t(language, 'Yuborildi. O‘quvchilar «Vazifalar»da ko‘radi.', 'Отправлено. Ученики увидят в «Заданиях», ответы к заданиям ниже — только для вас.', 'Sent. Pupils see it in Homework.'));
       setPicked([]); setTitle('');
@@ -101,12 +94,12 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
 
   return (
     <section className="panel worksheet">
-      <h2><ClipboardList size={16} /> {t(language, 'Topshiriqlar varag‘i', 'Лист заданий из учебника', 'Worksheet from the textbook')}</h2>
+      <h2><ClipboardList size={16} /> {t(language, 'Bugungi mavzu bo‘yicha uy vazifasi', 'Домашнее задание по сегодняшней теме', 'Homework on today’s topic')}</h2>
       <p className="muted">{slots
-        ? t(language, 'Bugungi dars mavzusidan topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring. Ertangi mavzu ertaga ochiladi.', 'Отметьте задания по теме сегодняшнего урока и отправьте классу как домашку. Тема завтрашнего урока откроется завтра.', 'Tick tasks from today’s lesson topic and send them as homework. Tomorrow’s topic opens tomorrow.')
+        ? t(language, 'Topshiriqlarni belgilang va «Uyga berish» ni bosing.', 'Отметьте задания галочкой и нажмите «Задать на дом».', 'Tick the tasks and press “Assign”.')
         : t(language, 'Istalgan mavzudan tayyor topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring.', 'Отметьте готовые задания из темы и отправьте классу как домашку.', 'Tick ready tasks from any topic and send them as homework.')}</p>
       {slots && (slots.length === 0
-        ? <div className="notice">{t(language, 'Bugun va ertaga darslikli darslar yo‘q.', 'Сегодня и завтра нет уроков по учебнику.', 'No textbook lessons today or tomorrow.')}</div>
+        ? <div className="notice">{t(language, 'Bugun darslik bo‘yicha dars yo‘q.', 'Сегодня нет уроков по учебнику.', 'No textbook lessons today.')}</div>
         : <div className="worksheet-slots" role="tablist">
             {slots.map((item) => (
               <button type="button" role="tab" key={item.id} aria-selected={slot?.id === item.id} className={`studio-tab ${slot?.id === item.id ? 'active' : ''} ${item.open ? '' : 'is-locked'}`} onClick={() => { setSlotId(item.id); setPicked([]); }}>
@@ -141,9 +134,9 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
           <b>{t(language, 'Tanlandi', 'Выбрано', 'Picked')}: {picked.length}</b>
           <ol>{picked.map((item) => <li key={item.id}>{item.q}<small className="muted"> — {t(language, 'javob', 'ответ', 'answer')}: {item.a}</small></li>)}</ol>
           <div className="people-filters">
-            <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t(language, 'Nomi (ixtiyoriy)', 'Название (необязательно)', 'Title (optional)')} />
+            <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={slots && slot ? `§${slot.topic.code} ${slot.topic.title}` : t(language, 'Nomi (ixtiyoriy)', 'Название (необязательно)', 'Title (optional)')} />
             <input className="input" type="date" value={due} onChange={(event) => setDue(event.target.value)} aria-label={t(language, 'Muddat', 'Срок', 'Due')} />
-            <button type="button" className="btn primary" disabled={busy || !targetClass} onClick={() => void send()}><Send size={14} /> {t(language, 'Sinfga yuborish', 'Отправить классу', 'Send to class')}</button>
+            <button type="button" className="btn primary" disabled={busy || !targetClass} onClick={() => void send()}><Send size={14} /> {t(language, 'Uyga berish', 'Задать на дом', 'Assign')}</button>
           </div>
         </div>
       )}
