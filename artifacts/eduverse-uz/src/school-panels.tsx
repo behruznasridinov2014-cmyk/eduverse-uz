@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
@@ -140,7 +141,7 @@ export function SchoolScopeSummary({ school, language }: { school: SchoolData; l
         ? t(language, 'School data loaded', 'Данные школы загружены', 'Maktab ma’lumotlari yuklandi')
         : school.status === 'unavailable'
           ? t(language, 'School data not loaded', 'Данные школы не загрузились', 'Maktab ma’lumotlari yuklanmadi')
-          : t(language, 'Waiting for account session', 'Ожидаем сессию аккаунта', 'Hisob sessiyasi kutilmoqda');
+          : t(language, 'Opening your account…', 'Открываем ваш аккаунт…', 'Hisobingiz ochilmoqda…');
 
   return (
     <Panel className="school-scope-summary">
@@ -771,7 +772,7 @@ export function ServerTeachingPanel({
             title={t(language, 'Publish an assignment', 'Опубликовать задание', 'Topshiriq joylash')}
             detail={activeClass ? `${activeClass.name} · ${activeClass.academicYear}` : undefined}
             tag={
-              <select
+              <Select
                 className="top-select"
                 aria-label={t(language, 'Class', 'Класс', 'Sinf')}
                 value={activeClassId}
@@ -785,7 +786,7 @@ export function ServerTeachingPanel({
                     {item.name} · {item.academicYear}
                   </option>
                 ))}
-              </select>
+              </Select>
             }
           />
           <form className="stack" onSubmit={handleCreate}>
@@ -802,7 +803,7 @@ export function ServerTeachingPanel({
             <div className="grid grid-2">
               <div className="control">
                 <label htmlFor="server-assignment-subject">{t(language, 'Subject', 'Предмет', 'Fan')}</label>
-                <select
+                <Select
                   id="server-assignment-subject"
                   value={form.subject}
                   onChange={(event) => setForm({ ...form, subject: event.target.value })}
@@ -810,7 +811,7 @@ export function ServerTeachingPanel({
                   {['Mathematics', 'Biology', 'History', 'Physics', 'Chemistry', 'Uzbek', 'Russian', 'English'].map((subject) => (
                     <option value={subject} key={subject}>{t(language, ...(SUBJECT_TEXT[subject] ?? [subject, subject, subject]))}</option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div className="control">
                 <label htmlFor="server-assignment-due">{t(language, 'Due date', 'Срок', 'Muddat')}</label>
@@ -824,7 +825,7 @@ export function ServerTeachingPanel({
             </div>
             <div className="control">
               <label htmlFor="server-assignment-topic">{t(language, 'Linked 3D theory topic', 'Связанная тема 3D-теории', 'Bog‘langan 3D nazariya mavzusi')}</label>
-              <select
+              <Select
                 id="server-assignment-topic"
                 value={form.topicId}
                 onChange={(event) => setForm({ ...form, topicId: event.target.value })}
@@ -833,7 +834,7 @@ export function ServerTeachingPanel({
                 {topics.map((topic) => (
                   <option value={topic.id} key={topic.id}>{topic.subject} · {topic.title}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="control">
               <label htmlFor="server-assignment-description">{t(language, 'Instructions', 'Инструкции', 'Ko‘rsatmalar')}</label>
@@ -904,7 +905,7 @@ export function ServerTeachingPanel({
                       <div className="grid grid-2" style={{ gap: 8 }}>
                         <div className="control">
                           <label htmlFor={`review-status-${submission.studentId}`}>{t(language, 'Status', 'Статус', 'Holat')}</label>
-                          <select
+                          <Select
                             id={`review-status-${submission.studentId}`}
                             value={draft.status}
                             onChange={(event) => updateDraft(submission.studentId, { status: event.target.value })}
@@ -912,7 +913,7 @@ export function ServerTeachingPanel({
                             {REVIEW_STATUSES.map((status) => (
                               <option value={status} key={status}>{formatStatus(status)}</option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                         <div className="control">
                           <label htmlFor={`review-score-${submission.studentId}`}>{t(language, 'Score (0–100)', 'Оценка (0–100)', 'Ball (0–100)')}</label>
@@ -1009,7 +1010,7 @@ export function ServerTeachingPanel({
                     </td>
                     <td>{formatDue(assignment.dueAt)}</td>
                     <td>
-                      <select
+                      <Select
                         className="top-select"
                         aria-label={`${t(language, 'Status for', 'Статус для', 'Holati')} ${assignment.title}`}
                         value={assignment.status}
@@ -1019,7 +1020,7 @@ export function ServerTeachingPanel({
                         {ASSIGNMENT_STATUSES.map((status) => (
                           <option value={status} key={status}>{formatStatus(status)}</option>
                         ))}
-                      </select>
+                      </Select>
                     </td>
                     <td>
                       {assignment.submissionCount ?? 0}
@@ -1589,7 +1590,7 @@ export function ServerAccountsPanel({
             : t(language, 'Choose a class', 'Выберите класс', 'Sinfni tanlang')
         }
         tag={
-          <select
+          <Select
             className="top-select"
             aria-label={t(language, 'Class', 'Класс', 'Sinf')}
             value={activeClassId}
@@ -1600,7 +1601,7 @@ export function ServerAccountsPanel({
                 {item.name} · {item.academicYear}
               </option>
             ))}
-          </select>
+          </Select>
         }
       />
       <form className="stack" onSubmit={submit}>
@@ -1770,7 +1771,7 @@ export function ServerTopicAssignPanel({
             : t(language, 'Choose a class', 'Выберите класс', 'Sinfni tanlang')
         }
         tag={
-          <select
+          <Select
             className="top-select"
             aria-label={t(language, 'Class', 'Класс', 'Sinf')}
             value={activeClassId}
@@ -1781,7 +1782,7 @@ export function ServerTopicAssignPanel({
                 {item.name} · {item.academicYear}
               </option>
             ))}
-          </select>
+          </Select>
         }
       />
       {error && <InlineError>{error}</InlineError>}

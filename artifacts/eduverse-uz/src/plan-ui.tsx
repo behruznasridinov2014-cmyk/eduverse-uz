@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { BadgeCheck, Lock } from 'lucide-react';
 import type { Language } from './school-data';
@@ -76,11 +77,11 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
       <h2><BadgeCheck size={16} /> {t(language, 'Maktab tarifi', 'Тариф школы', 'School plan')}</h2>
       <p className="muted">{t(language, 'Bepul: jurnal, davomat, vazifalar. Pro: 3D, onlayn dars, trenajyor. Sinov: Pro sana tugaguncha bepul.', 'Бесплатный: журнал, давомат, домашки, оценки. Pro: 3D-темы, 3D-библиотека, онлайн-уроки, тренажёр. Пилот: всё как в Pro, бесплатно до даты.', 'Free: journal. Pro: 3D, lessons, trainer. Pilot: Pro until a date.')}</p>
       <div className="people-filters">
-        <select className="input" value={plan} onChange={(event) => { const value = event.target.value as typeof plan; setPlan(value); if (value === 'pilot' && !until) setUntil(quarterEnd()); }}>
+        <Select className="input" value={plan} onChange={(event) => { const value = event.target.value as typeof plan; setPlan(value); if (value === 'pilot' && !until) setUntil(quarterEnd()); }}>
           <option value="free">{t(language, 'Bepul', 'Бесплатный (журнал)', 'Free')}</option>
           <option value="pilot">{t(language, 'Sinov (bepul Pro)', 'Пилот (Pro бесплатно до даты)', 'Pilot')}</option>
           <option value="pro">Pro</option>
-        </select>
+        </Select>
         <input className="input" type="date" value={until} onChange={(event) => setUntil(event.target.value)} aria-label={t(language, 'Gacha', 'До', 'Until')} />
         <button type="button" className="btn primary" onClick={() => void save()}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
       </div>

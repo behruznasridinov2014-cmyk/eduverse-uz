@@ -357,4 +357,3 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .public-demo-roles h2{display:flex;align-items:center;gap:8px}
 .public-demo-list{display:grid;gap:4px;max-height:360px;overflow:auto;margin-top:8px}
 .public-demo-topics{display:grid;gap:12px}
-.auth-demo-link{display:block;text-align:center;margin-top:10px;font-weight:600}

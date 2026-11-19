@@ -1,0 +1,97 @@
+/*
+ * Shared controls: dropdown (ev-select), checkbox, "add" row, icon button.
+ * Loaded after the other stylesheets so the look is the same everywhere.
+ */
+
+/* ---------- dropdown ---------- */
+.ev-select { position: relative; display: inline-flex; min-width: 140px; width: 100%; max-width: 100%; vertical-align: middle; }
+.control .ev-select, .people-filters .ev-select { width: 100%; }
+.ev-select-trigger {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+  min-height: var(--control-h, 42px); padding: 0 12px 0 14px; border-radius: 12px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(184, 149, 90, 0.28); color: var(--text);
+  font: inherit; font-size: 14px; text-align: left;
+  transition: border-color .25s var(--ease), box-shadow .25s var(--ease), transform .45s var(--ease-spring, var(--ease));
+}
+.ev-select-trigger:hover:not(:disabled) { border-color: var(--ev-primary-line); }
+.ev-select-trigger:focus-visible, .ev-select.is-open .ev-select-trigger { outline: none; border-color: var(--sky-deep); box-shadow: 0 0 0 4px rgba(143, 200, 238, 0.35); }
+.ev-select-trigger:active:not(:disabled) { transform: scale(0.98); }
+.ev-select-trigger:disabled { opacity: .55; cursor: not-allowed; }
+.ev-select-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-select-value.is-placeholder { color: var(--text-3); }
+.ev-select-chevron { flex: none; color: var(--text-3); transition: transform .35s var(--ease-spring, var(--ease)); }
+.ev-select.is-open .ev-select-chevron { transform: rotate(180deg); color: var(--ev-primary); }
+.ev-select-list {
+  position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; min-width: 100%; max-height: 300px; overflow: auto;
+  margin: 0; padding: 6px; list-style: none; border-radius: 14px;
+  background: rgba(255, 252, 246, 0.96); border: 1px solid rgba(184, 149, 90, 0.28);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: 0 24px 48px -20px rgba(80, 60, 30, 0.35);
+  transform-origin: top center; animation: ev-pop .32s var(--ease-spring, var(--ease)) both;
+}
+.ev-select-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 14px; color: var(--text);
+  white-space: nowrap; transition: background .18s var(--ease);
+}
+.ev-select-option.is-active { background: var(--ev-primary-soft); }
+.ev-select-option.is-selected { font-weight: 600; color: #7A5C26; }
+.ev-select-option.is-selected svg { color: var(--ev-primary); }
+.ev-select-option.is-disabled { opacity: .45; cursor: not-allowed; }
+.ev-select-empty { padding: 9px 12px; color: var(--text-3); }
+@keyframes ev-pop { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+
+html[data-theme="night"] .ev-select-trigger { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.14); color: var(--text); }
+html[data-theme="night"] .ev-select-list { background: rgba(20, 28, 48, 0.96); border-color: rgba(255, 255, 255, 0.12); }
+html[data-theme="night"] .ev-select-option.is-active { background: rgba(227, 173, 108, 0.16); }
+html[data-theme="night"] .ev-select-option.is-selected { color: #EDC08C; }
+
+/* ---------- checkbox ---------- */
+input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative; cursor: pointer;
+  width: 20px; height: 20px; margin: 1px 0 0; border-radius: 7px;
+  background: rgba(255, 255, 255, 0.9); border: 1.5px solid rgba(184, 149, 90, 0.5);
+  transition: background .25s var(--ease), border-color .25s var(--ease), transform .45s var(--ease-spring, var(--ease));
+}
+input[type="checkbox"]::after {
+  content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px;
+  border: solid #fff; border-width: 0 2.2px 2.2px 0; transform: rotate(45deg) scale(0); opacity: 0;
+  transition: transform .4s var(--ease-spring, var(--ease)), opacity .2s var(--ease);
+}
+input[type="checkbox"]:checked { background: linear-gradient(135deg, #CDAE74, var(--ev-primary)); border-color: var(--ev-primary); }
+input[type="checkbox"]:checked::after { transform: rotate(45deg) scale(1); opacity: 1; }
+input[type="checkbox"]:active { transform: scale(.88); }
+input[type="checkbox"]:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(143, 200, 238, 0.4); }
+html[data-theme="night"] input[type="checkbox"] { background: rgba(255, 255, 255, 0.06); border-color: rgba(227, 173, 108, 0.5); }
+.auth-remember input[type="checkbox"], .worksheet-task input[type="checkbox"] { width: 20px; height: 20px; accent-color: auto; }
+.worksheet-task.on { background: var(--ev-primary-soft); }
+
+/* ---------- "type and add" row ---------- */
+.ev-addrow { display: flex; align-items: center; gap: 8px; width: 100%; }
+.ev-addrow .input { flex: 1 1 auto; min-width: 0; width: auto; }
+.ev-icon-btn {
+  display: inline-grid; place-items: center; flex: none; width: var(--control-h, 42px); height: var(--control-h, 42px);
+  padding: 0; border-radius: 12px; cursor: pointer;
+  background: var(--ev-primary-soft); border: 1px solid var(--ev-primary-line); color: #7A5C26;
+  transition: background .25s var(--ease), transform .45s var(--ease-spring, var(--ease));
+}
+.ev-icon-btn:hover:not(:disabled) { background: rgba(184, 149, 90, 0.24); }
+.ev-icon-btn:active:not(:disabled) { transform: scale(.92); }
+.ev-icon-btn:disabled { opacity: .45; cursor: not-allowed; }
+html[data-theme="night"] .ev-icon-btn { color: #EDC08C; background: rgba(227, 173, 108, 0.12); }
+.ev-suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ev-suggest button { border-radius: 999px; padding: 5px 11px; font-size: 13px; cursor: pointer; background: transparent; border: 1px dashed var(--ev-primary-line); color: var(--text-2); transition: background .2s var(--ease), transform .4s var(--ease-spring, var(--ease)); }
+.ev-suggest button:hover { background: var(--ev-primary-soft); }
+.ev-suggest button:active { transform: scale(.94); }
+
+/* ---------- form rhythm ---------- */
+.panel > .control + .control, .panel > .control + .row, .panel > .control + .ev-addrow { margin-top: 14px; }
+.panel > .row:last-child { margin-top: 16px; }
+.panel h2 + .control, .panel h2 + .muted { margin-top: 6px; }
+.ev-select-group { padding: 10px 12px 4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); cursor: default; }
+
+/* compact dropdowns in toolbars and on the sign-in page */
+.ev-select.top-select, .auth-language .ev-select { width: auto; min-width: 130px; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; }
+.ev-select.top-select .ev-select-trigger, .auth-language .ev-select-trigger { min-height: var(--control-h-sm, 34px); font-size: 13px; }
+.auth-language .ev-select-list { left: auto; right: 0; }
+.attendance-toolbar .ev-select, .filters .ev-select { width: 100%; }

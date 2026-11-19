@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { Box, Search } from 'lucide-react';
 import { COURSE, type CourseScene } from './course-data';
 import { CourseScene3D } from './course';
@@ -84,14 +85,14 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
       </div>
       <div className="people-filters">
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'Qidirish: suv, kub, hujayra…', 'Поиск: вода, куб, клетка…', 'Search: water, cube, cell…')} />
-        <select className="input" value={subject} onChange={(event) => setSubject(event.target.value as Subject | 'all')}>
+        <Select className="input" value={subject} onChange={(event) => setSubject(event.target.value as Subject | 'all')}>
           <option value="all">{t(language, 'Barcha fanlar', 'Все предметы', 'All subjects')}</option>
           {(Object.keys(SUBJECT_TEXT) as Subject[]).map((key) => <option key={key} value={key}>{t(language, ...SUBJECT_TEXT[key])}</option>)}
-        </select>
-        <select className="input" value={gradeFilter} onChange={(event) => setGradeFilter(Number(event.target.value))}>
+        </Select>
+        <Select className="input" value={gradeFilter} onChange={(event) => setGradeFilter(Number(event.target.value))}>
           <option value={0}>{t(language, 'Barcha sinflar', 'Все классы', 'All grades')}</option>
           {Array.from({ length: 11 }, (_, index) => index + 1).map((g) => <option key={g} value={g}>{t(language, `${g}-sinf`, `${g} класс`, `Grade ${g}`)}</option>)}
-        </select>
+        </Select>
       </div>
       {open && (
         <div className="panel scene-library-open">

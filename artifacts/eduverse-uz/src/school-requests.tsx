@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { Check, ClipboardList, History, Inbox, Pencil, RefreshCw, UserMinus, UserPlus, X } from 'lucide-react';
 import type { Language } from './school-data';
@@ -151,14 +152,14 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
         : t(language, 'O‘zgartirish darhol kiritiladi va jurnalda saqlanadi. Hech narsa o‘chirilmaydi.', 'Изменение вносится сразу и сохраняется в журнале. Ничего не удаляется: оценки и посещаемость сохраняются.', 'The change is made at once and kept in the log. Nothing is deleted.')}</p>
       <div className="people-filters">
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'F.I.Sh., login, sinf yoki telefon', 'ФИО, логин, класс или телефон', 'Name, login, class or phone')} />
-        <select className="input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+        <Select className="input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
           <option value="all">{t(language, 'Hammasi', 'Все роли', 'All roles')}</option>
           {Object.entries(ROLE_TEXT).map(([key, value]) => <option key={key} value={key}>{label(language, value, key)}</option>)}
-        </select>
-        <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+        </Select>
+        <Select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="all">{t(language, 'Har qanday holat', 'Любой статус', 'Any status')}</option>
           {Object.entries(STATUS_TEXT).map(([key, value]) => <option key={key} value={key}>{label(language, value, key)}</option>)}
-        </select>
+        </Select>
       </div>
       {message && <div className="notice success">{message}</div>}
       {error && <div className="notice">{error}</div>}

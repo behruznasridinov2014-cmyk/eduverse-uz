@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
 import {
@@ -287,20 +288,20 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
       <div className="attendance-toolbar">
         <div className="control">
           <label htmlFor="attendance-class">{copy.pickClass}</label>
-          <select id="attendance-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
+          <Select id="attendance-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
             {classes.length === 0 && <option value="">{copy.noClasses}</option>}
             {classes.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name} · {item.academicYear}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="control">
           <label htmlFor="attendance-subject">{language === 'Русский' ? 'Предмет урока' : language === 'English' ? 'Lesson subject' : 'Dars fani'}</label>
-          <select id="attendance-subject" value={subject} onChange={(event) => { pickSubject(event.target.value); setSavedLesson(false); }}>
+          <Select id="attendance-subject" value={subject} onChange={(event) => { pickSubject(event.target.value); setSavedLesson(false); }}>
             {SUBJECTS.map((item) => <option key={item.value} value={item.value}>{subjectLabel(language, item.value)}</option>)}
-          </select>
+          </Select>
         </div>
         <div className="control">
           <label htmlFor="attendance-date">{copy.date}</label>

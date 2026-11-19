@@ -1,4 +1,5 @@
 import './scenes.css';
+import { Select } from './ui/select';
 import { createPortal } from 'react-dom';
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import type { User } from '@workspace/api-client-react';
@@ -329,14 +330,14 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
         </div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           {isTeacher && classes.length > 1 && (
-            <select className="input" value={classId ?? ''} onChange={(event) => setClassId(event.target.value)} style={{ maxWidth: 160 }} aria-label={t(language, 'Sinf', 'Класс', 'Class')}>
+            <Select className="input" value={classId ?? ''} onChange={(event) => setClassId(event.target.value)} style={{ maxWidth: 160 }} aria-label={t(language, 'Sinf', 'Класс', 'Class')}>
               {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
+            </Select>
           )}
           {isTeacher && grades.length > 1 && (
-            <select className="input" value={grade} onChange={(event) => setGrade(Number(event.target.value))} style={{ maxWidth: 160 }}>
+            <Select className="input" value={grade} onChange={(event) => setGrade(Number(event.target.value))} style={{ maxWidth: 160 }}>
               {grades.map((g) => <option key={g} value={g}>{t(language, `${g}-sinf`, `${g} класс`, `Grade ${g}`)}</option>)}
-            </select>
+            </Select>
           )}
         </div>
       </div>

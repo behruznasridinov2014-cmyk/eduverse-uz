@@ -6,13 +6,15 @@ import './account.css';
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
-import { Bell, BookOpenCheck, Bug, CalendarClock, CheckCheck, CircleHelp, GraduationCap, LifeBuoy, Mail, MessageCircle, MonitorSmartphone, School, Send, ShieldCheck, Users, X } from 'lucide-react';
+import { Bell, BookOpenCheck, Bug, CalendarClock, CheckCheck, CircleHelp, GraduationCap, LifeBuoy, Mail, MessageCircle, MonitorSmartphone, School, Plus, Send, ShieldCheck, Users, X } from 'lucide-react';
 import type { Language } from './school-data';
 import { AvatarPicker, PasswordChange } from './school-tools';
 import { GoogleLinkPanel } from './google-auth';
 import { QrScannerButton } from './qr-scanner';
 import { GlassSwitch, GlassTabs, useSwipeTabs } from './glass-nav';
 import { friendlyError } from './errors';
+import { TEACHER_SUBJECTS, subjectLabel } from './ui/config';
+import { useDismiss } from './ui/dismiss';
 
 const tx = (language: Language, uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
 const locale = (language: Language) => (language === 'English' ? 'en-GB' : 'ru-RU');
@@ -120,12 +122,18 @@ function PersonalSection({ user, language, teaches }: { user: User; language: La
         {teaches && (
           <div className="control">
             <label htmlFor="profile-subject">{tx(language, 'Dars beradigan fanlar', 'Предметы преподавания', 'Subjects you teach')}</label>
-            <div className="chip-row">{subjects.map((item) => <span key={item} className="tag gold">{item}<button type="button" className="chip-x" onClick={() => setSubjects(subjects.filter((s) => s !== item))} aria-label={`× ${item}`}><X size={11} /></button></span>)}</div>
-            <div className="row" style={{ gap: 8 }}>
-              <input id="profile-subject" className="input" list="subject-options" value={subject} onChange={(event) => setSubject(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubject(); } }} placeholder={tx(language, 'Masalan: Fizika', 'Например: Физика', 'e.g. Physics')} />
-              <datalist id="subject-options">{['Физика', 'Химия', 'Биология', 'Математика', 'Алгебра', 'Геометрия', 'Информатика', 'География', 'История', 'Английский язык', 'Родной язык'].map((item) => <option key={item} value={item} />)}</datalist>
-              <button type="button" className="btn" onClick={addSubject}>+</button>
+            <div className="chip-row">{subjects.map((item) => <span key={item} className="tag gold">{subjectLabel(item, language)}<button type="button" className="chip-x" onClick={() => setSubjects(subjects.filter((s) => s !== item))} aria-label={`× ${item}`}><X size={11} /></button></span>)}</div>
+            <div className="ev-addrow">
+              <input id="profile-subject" className="input" value={subject} onChange={(event) => setSubject(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubject(); } }} placeholder={tx(language, 'Fan nomini yozing', 'Впишите предмет', 'Type a subject')} />
+              <button type="button" className="ev-icon-btn" onClick={addSubject} disabled={!subject.trim()} aria-label={tx(language, 'Qo‘shish', 'Добавить', 'Add')}><Plus size={18} /></button>
             </div>
+            {subjects.length < 8 && TEACHER_SUBJECTS.some((item) => !subjects.includes(item[1])) && (
+              <div className="ev-suggest">
+                {TEACHER_SUBJECTS.filter((item) => !subjects.includes(item[1])).map((item) => (
+                  <button type="button" key={item[1]} onClick={() => setSubjects([...subjects, item[1]])}>+ {tx(language, item[0], item[1], item[2])}</button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <div className="row" style={{ gap: 10 }}>
@@ -450,21 +458,16 @@ export function NotificationsBell({ userId, language, onOpen }: { userId: string
     window.addEventListener('focus', onFocus);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); };
   }, [load, userId]);
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
-  }, [open]);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useDismiss(open, () => setOpen(false), [wrapRef]);
   async function readAll() { await customFetch('/api/me/notifications/read-all', { method: 'POST' }).catch(() => {}); load(); }
   return (
-    <div className="bell-wrap">
+    <div className="bell-wrap" ref={wrapRef}>
       <button type="button" className={`glass-icon-btn ${open ? 'on' : ''}`} aria-label={tx(language, 'Bildirishnomalar', 'Уведомления', 'Notifications')} aria-expanded={open} onClick={() => { setOpen((value) => !value); if (!open) load(); }}>
         <Bell size={17} />{unread > 0 && <span className="bell-badge">{unread > 9 ? '9+' : unread}</span>}
       </button>
       {open && (
         <>
-          <div className="bell-backdrop" onClick={() => setOpen(false)} />
           <div className="bell-panel" role="dialog" aria-label={tx(language, 'Bildirishnomalar', 'Уведомления', 'Notifications')}>
             <div className="bell-head"><b>{tx(language, 'Bildirishnomalar', 'Уведомления', 'Notifications')}</b>
               {unread > 0 && <button type="button" className="btn small" onClick={() => void readAll()}><CheckCheck size={14} /> {tx(language, 'Hammasi o‘qildi', 'Прочитать все', 'Mark all read')}</button>}</div>

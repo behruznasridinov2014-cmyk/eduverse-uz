@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { createAssignment } from '@workspace/api-client-react';
 import { ClipboardList, Send } from 'lucide-react';
 import { COURSE } from './course-data';
@@ -66,14 +67,14 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
       <h2><ClipboardList size={16} /> {t(language, 'Topshiriqlar varag‘i', 'Лист заданий из учебника', 'Worksheet from the textbook')}</h2>
       <p className="muted">{t(language, 'Istalgan mavzudan tayyor topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring.', 'Отметьте готовые задания из любых тем (любого класса) и отправьте классу как домашку.', 'Tick ready tasks from any topic and send them as homework.')}</p>
       <div className="people-filters">
-        <select className="input" value={bookId} onChange={(event) => setBookId(event.target.value)}>
+        <Select className="input" value={bookId} onChange={(event) => setBookId(event.target.value)}>
           {COURSE.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-        </select>
+        </Select>
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'Mavzu yoki so‘z', 'Тема или слово', 'Topic or word')} />
-        <select className="input" value={classId} onChange={(event) => setClassId(event.target.value)}>
+        <Select className="input" value={classId} onChange={(event) => setClassId(event.target.value)}>
           {teachClasses.length === 0 && <option value="">{t(language, 'Sinf yo‘q', 'Нет классов', 'No classes')}</option>}
           {teachClasses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
+        </Select>
       </div>
       <div className="worksheet-tasks">
         {tasks.slice(0, 200).map((task) => {

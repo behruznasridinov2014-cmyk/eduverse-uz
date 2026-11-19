@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Select } from './ui/select';
 import { customFetch, type User } from '@workspace/api-client-react';
 import { Bot, CalendarCheck2, Megaphone, RefreshCw, Send, TableProperties, Trash2 } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
@@ -82,9 +83,9 @@ export function AnnouncementsPanel({ school, user, language }: { school: SchoolD
       {canPost && (
         <form className="announce-form" onSubmit={post}>
           {school.classes.length > 1 && (
-            <select className="input" value={classId || school.classes[0]?.id} onChange={(event) => setClassId(event.target.value)} aria-label={t(language, 'Sinf', 'Класс', 'Class')}>
+            <Select className="input" value={classId || school.classes[0]?.id} onChange={(event) => setClassId(event.target.value)} aria-label={t(language, 'Sinf', 'Класс', 'Class')}>
               {school.classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
+            </Select>
           )}
           <input
             className="input"
@@ -164,9 +165,9 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
         <h2><TableProperties size={16} /> {t(language, 'Baholar jurnali', 'Журнал оценок', 'Grade journal')}</h2>
         <div className="row">
           {school.classes.length > 1 && (
-            <select className="input" value={classId} onChange={(event) => setClassId(event.target.value)}>
+            <Select className="input" value={classId} onChange={(event) => setClassId(event.target.value)}>
               {school.classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
+            </Select>
           )}
           <button type="button" className="btn small" onClick={() => void load()} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
         </div>

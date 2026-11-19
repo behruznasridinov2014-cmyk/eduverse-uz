@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import {
   ApiError,
   createTopic,
@@ -370,14 +371,14 @@ export function TopicLibraryPage({
             </div>
             <div className="control">
               <label htmlFor="topic-class">{copy.classLabel}</label>
-              <select id="topic-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
+              <Select id="topic-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
                 <option value="">{copy.noClasses}</option>
                 {classes.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name} · {item.academicYear}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
           {error && <div className="notice" role="alert">{error}</div>}

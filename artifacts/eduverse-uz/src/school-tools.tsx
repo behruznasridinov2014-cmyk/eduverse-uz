@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { Bell, Camera, ClipboardList, Download, FileSpreadsheet, KeyRound, Printer, Send, Sparkles, Trash2, Upload } from 'lucide-react';
 import type { Language } from './school-data';
@@ -282,9 +283,9 @@ export function LessonPlanner({ language }: { language: Language }) {
       </div>
       <p className="muted">{t(language, 'Darslik paragrafini yozing — 30 soniyada reja, savollar va uy vazifasi tayyor.', 'Напишите параграф учебника — за 30 секунд готовы план, вопросы и домашнее задание.', 'Type the textbook paragraph — a plan, questions and homework in 30 seconds.')}</p>
       <div className="planner-form">
-        <select className="input" value={subject} onChange={(event) => setSubject(event.target.value)}>{SUBJECTS.map((item) => <option key={item}>{item}</option>)}</select>
-        <select className="input" value={grade} onChange={(event) => setGrade(Number(event.target.value))}>{Array.from({ length: 11 }, (_, i) => i + 1).map((g) => <option key={g} value={g}>{g}-{t(language, 'sinf', 'класс', 'grade')}</option>)}</select>
-        <select className="input" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))}>{[40, 45, 80, 90].map((m) => <option key={m} value={m}>{m} {t(language, 'daq', 'мин', 'min')}</option>)}</select>
+        <Select className="input" value={subject} onChange={(event) => setSubject(event.target.value)}>{SUBJECTS.map((item) => <option key={item}>{item}</option>)}</Select>
+        <Select className="input" value={grade} onChange={(event) => setGrade(Number(event.target.value))}>{Array.from({ length: 11 }, (_, i) => i + 1).map((g) => <option key={g} value={g}>{g}-{t(language, 'sinf', 'класс', 'grade')}</option>)}</Select>
+        <Select className="input" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))}>{[40, 45, 80, 90].map((m) => <option key={m} value={m}>{m} {t(language, 'daq', 'мин', 'min')}</option>)}</Select>
         <input className="input planner-topic" value={topic} onChange={(event) => setTopic(event.target.value)} placeholder={t(language, '§12. Kislotalar va ularning xossalari', '§12. Кислоты и их свойства', '§12. Acids and their properties')} onKeyDown={(event) => { if (event.key === 'Enter') void make(); }} />
         <button type="button" className="btn primary" disabled={busy || !topic.trim()} onClick={() => void make()}>
           <Sparkles size={15} /> {busy ? t(language, 'Tayyorlanmoqda…', 'Готовим…', 'Working…') : t(language, 'Reja tuzish', 'Составить план', 'Make plan')}
