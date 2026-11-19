@@ -5,6 +5,7 @@ import { COURSE, type CourseScene } from './course-data';
 import { CourseScene3D } from './course';
 import { MOLECULES, REACTIONS } from './chem-lab';
 import type { Language } from './school-data';
+import { lessonSubjectName, topicForLesson, useLessonCourses, useToday } from './today';
 
 /*
  * One library of every EDUVERSE 3D scene. A scene is not tied to one grade:
@@ -27,6 +28,11 @@ const SOLIDS: Array<['cube' | 'prism' | 'pyramid' | 'cylinder' | 'cone' | 'spher
 ];
 
 const sceneKey = (scene: CourseScene) => JSON.stringify(scene);
+/** "7 · §1.5" → "7 класс · §1.5" in the interface language. */
+const gradeText = (topic: string, language: Language) => {
+  const [grade, code] = topic.split(' · ');
+  return `${t(language, `${grade}-sinf`, `${grade} класс`, `Grade ${grade}`)} · ${code}`;
+};
 
 function buildLibrary(language: Language): Entry[] {
   const map = new Map<string, Entry>();
@@ -68,11 +74,31 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
   const [gradeFilter, setGradeFilter] = useState<number | 0>(grade ?? 0);
   const [query, setQuery] = useState('');
   const [openKey, setOpenKey] = useState<string | null>(null);
+  // Today's lessons first: the scenes of today's topics. The whole library opens on request.
+  const today = useToday();
+  const courses = useLessonCourses(today.data?.lessons);
+  const todayScenes = useMemo(() => {
+    const data = today.data;
+    if (!data) return [];
+    const rows: Array<{ entry: Entry; label: string }> = [];
+    const seen = new Set<string>();
+    for (const lesson of data.lessons) {
+      const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
+      if (!topic) continue;
+      const entry = library.find((item) => item.key === sceneKey(topic.scene));
+      if (!entry || seen.has(entry.key)) continue;
+      seen.add(entry.key);
+      rows.push({ entry, label: `${lesson.start} · ${lesson.className} · ${lessonSubjectName(lesson.subject, language)} · §${topic.code}` });
+    }
+    return rows;
+  }, [today.data, courses, library, language]);
+  const [showAll, setShowAll] = useState(false);
+  const allMode = showAll || todayScenes.length === 0;
   const shown = library.filter((entry) =>
     (subject === 'all' || entry.subject === subject)
     && (!gradeFilter || (gradeFilter >= entry.grades[0] && gradeFilter <= entry.grades[1]))
     && (!query.trim() || `${entry.title} ${entry.hint}`.toLowerCase().includes(query.trim().toLowerCase())));
-  const open = library.find((entry) => entry.key === openKey) ?? null;
+  const open = library.find((entry) => entry.key === openKey) ?? (!allMode ? todayScenes[0]?.entry : null) ?? null;
 
   return (
     <section className="scene-library">
@@ -83,7 +109,24 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
           <p className="page-subtitle">{t(language, 'Har bir sahna bir nechta sinfga mos: molekula, jism, hujayra, grafik.', 'Каждая сцена подходит нескольким классам: молекулы, тела, клетки, графики. Откройте и покажите на уроке.', 'Every scene serves several grades.')}</p>
         </div>
       </div>
-      <div className="people-filters">
+      {todayScenes.length > 0 && (
+        <div className="panel scene-library-today">
+          <div className="section-head">
+            <h2><Box size={16} /> {t(language, 'Bugungi darslar mavzulari', 'Темы сегодняшних уроков', 'Topics of today’s lessons')}</h2>
+            <button type="button" className="btn small" onClick={() => setShowAll((value) => !value)}>{showAll ? t(language, 'Faqat bugungi', 'Только сегодняшние', 'Only today') : t(language, 'Barcha sahnalar', 'Все сцены', 'All scenes')}</button>
+          </div>
+          <div className="scene-grid">
+            {todayScenes.map(({ entry, label }) => (
+              <button type="button" key={entry.key} className={`scene-card ${entry.key === openKey ? 'active' : ''}`} onClick={() => setOpenKey(entry.key)}>
+                <span className={`scene-card-tag subject-${entry.subject}`}>{label}</span>
+                <b>{entry.title}</b>
+                {entry.hint && <small>{entry.hint}</small>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {allMode && <div className="people-filters">
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'Qidirish: suv, kub, hujayra…', 'Поиск: вода, куб, клетка…', 'Search: water, cube, cell…')} />
         <Select className="input" value={subject} onChange={(event) => setSubject(event.target.value as Subject | 'all')}>
           <option value="all">{t(language, 'Barcha fanlar', 'Все предметы', 'All subjects')}</option>
@@ -93,7 +136,7 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
           <option value={0}>{t(language, 'Barcha sinflar', 'Все классы', 'All grades')}</option>
           {Array.from({ length: 11 }, (_, index) => index + 1).map((g) => <option key={g} value={g}>{t(language, `${g}-sinf`, `${g} класс`, `Grade ${g}`)}</option>)}
         </Select>
-      </div>
+      </div>}
       {open && (
         <div className="panel scene-library-open">
           <div className="section-head">
@@ -102,19 +145,19 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
           </div>
           {open.hint && <p className="muted">{open.hint}</p>}
           <CourseScene3D scene={open.scene} language={language} />
-          {open.topics.length > 0 && <p className="muted">{t(language, 'Darsliklarda', 'В учебниках', 'In textbooks')}: {open.topics.join(', ')}</p>}
+          {open.topics.length > 0 && <p className="muted">{t(language, 'Darsliklarda', 'В учебниках', 'In textbooks')}: {open.topics.map((item) => gradeText(item, language)).join(', ')}</p>}
         </div>
       )}
-      <div className="scene-grid">
+      {allMode && <div className="scene-grid">
         {shown.length === 0 && <p className="muted"><Search size={14} /> {t(language, 'Hech narsa topilmadi.', 'Ничего не найдено.', 'Nothing found.')}</p>}
         {shown.map((entry) => (
           <button type="button" key={entry.key} className={`scene-card ${entry.key === openKey ? 'active' : ''}`} onClick={() => { setOpenKey(entry.key); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }}>
-            <span className={`scene-card-tag subject-${entry.subject}`}>{t(language, ...SUBJECT_TEXT[entry.subject])} · {entry.grades[0]}–{entry.grades[1]}</span>
+            <span className={`scene-card-tag subject-${entry.subject}`}>{t(language, ...SUBJECT_TEXT[entry.subject])}{entry.topics[0] ? ` · ${gradeText(entry.topics[0], language)}` : ''}</span>
             <b>{entry.title}</b>
             {entry.hint && <small>{entry.hint}</small>}
           </button>
         ))}
-      </div>
+      </div>}
     </section>
   );
 }

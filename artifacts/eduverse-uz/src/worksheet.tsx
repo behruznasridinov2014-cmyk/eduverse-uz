@@ -5,6 +5,8 @@ import { ClipboardList, Send } from 'lucide-react';
 import { COURSE } from './course-data';
 import type { Language, SchoolData } from './school-data';
 import { friendlyError } from './errors';
+import { dayLabel, lessonSubjectName, topicForLesson, upcomingTopics, useLessonCourses, useToday, bookForLesson } from './today';
+import type { CourseTopic } from './course-data';
 
 /*
  * Worksheet builder: the teacher ticks ready tasks from any textbook topic
@@ -28,19 +30,54 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const book = COURSE.find((item) => item.id === bookId) ?? COURSE[0];
+  // Only the lessons of today (open) and tomorrow (shown, opens tomorrow): their topics' tasks.
+  const today = useToday();
+  const courses = useLessonCourses(today.data?.lessons, today.data?.next);
+  const slots = useMemo(() => {
+    const data = today.data;
+    if (!data) return null;
+    const rows: Array<{ id: string; label: string; classId: string; topic: CourseTopic; open: boolean; bookId: string }> = [];
+    const seen = new Set<string>();
+    for (const lesson of data.lessons) {
+      const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
+      const book = bookForLesson(lesson);
+      if (!topic || !book || seen.has(`${lesson.classId}:${topic.key}`)) continue;
+      seen.add(`${lesson.classId}:${topic.key}`);
+      rows.push({ id: lesson.id, label: `${t(language, 'Bugun', 'Сегодня', 'Today')} ${lesson.start} · ${lesson.className} · ${lessonSubjectName(lesson.subject, language)}`, classId: lesson.classId, topic, open: true, bookId: book.id });
+    }
+    const planned = upcomingTopics(data, courses);
+    const tomorrow = data.next?.[0];
+    for (const lesson of tomorrow?.lessons ?? []) {
+      const topic = planned.get(lesson.id);
+      const book = bookForLesson(lesson);
+      if (!topic || !book || seen.has(`${lesson.classId}:${topic.key}`)) continue;
+      seen.add(`${lesson.classId}:${topic.key}`);
+      rows.push({ id: lesson.id, label: `${dayLabel(tomorrow!, data.date, language).split(',')[0]} ${lesson.start} · ${lesson.className} · ${lessonSubjectName(lesson.subject, language)}`, classId: lesson.classId, topic, open: false, bookId: book.id });
+    }
+    const hasTimetable = data.lessons.length + (data.next ?? []).reduce((sum, day) => sum + day.lessons.length, 0) > 0;
+    return hasTimetable ? rows : null;
+  }, [today.data, courses, language]);
+  const [slotId, setSlotId] = useState('');
+  const slot = slots?.find((item) => item.id === slotId) ?? slots?.find((item) => item.open) ?? null;
+  const book = slots ? COURSE.find((item) => item.id === slot?.bookId) : (COURSE.find((item) => item.id === bookId) ?? COURSE[0]);
 
   const tasks = useMemo(() => {
     if (!book) return [];
+    if (slots) {
+      if (!slot || !slot.open) return [];
+      return slot.topic.tasks.map((task, index) => ({ id: `${slot.topic.key}#${index}`, topic: `§${slot.topic.code} ${slot.topic.title}`, q: task.q, a: task.a }));
+    }
     const needle = query.trim().toLowerCase();
     return book.topics.flatMap((topic) => topic.tasks.map((task, index) => ({ id: `${topic.key}#${index}`, topic: `§${topic.code} ${topic.title}`, q: task.q, a: task.a })))
       .filter((task) => !needle || `${task.topic} ${task.q}`.toLowerCase().includes(needle));
-  }, [book, query]);
+  }, [book, query, slots, slot]);
+  const targetClass = slots ? slot?.classId ?? '' : classId;
 
   const toggle = (task: Picked) => setPicked((current) => (current.some((item) => item.id === task.id) ? current.filter((item) => item.id !== task.id) : [...current, task]));
 
   async function send() {
-    if (!classId || picked.length === 0 || !book) return;
+    if (!targetClass || picked.length === 0 || !book) return;
+    const classId = targetClass;
     const className = teachClasses.find((item) => item.id === classId)?.name ?? '';
     const name = title.trim() || `${t(language, 'Topshiriqlar varag‘i', 'Лист заданий', 'Worksheet')} · ${SUBJECT_RU[book.subject]} · ${picked.length}`;
     if (!window.confirm(t(language, `${className} sinfiga ${picked.length} ta topshiriq yuborilsinmi?`, `Отправить классу ${className}: ${picked.length} заданий?`, `Send ${picked.length} tasks to ${className}?`))) return;
@@ -65,8 +102,20 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
   return (
     <section className="panel worksheet">
       <h2><ClipboardList size={16} /> {t(language, 'Topshiriqlar varag‘i', 'Лист заданий из учебника', 'Worksheet from the textbook')}</h2>
-      <p className="muted">{t(language, 'Istalgan mavzudan tayyor topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring.', 'Отметьте готовые задания из любых тем (любого класса) и отправьте классу как домашку.', 'Tick ready tasks from any topic and send them as homework.')}</p>
-      <div className="people-filters">
+      <p className="muted">{slots
+        ? t(language, 'Bugungi dars mavzusidan topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring. Ertangi mavzu ertaga ochiladi.', 'Отметьте задания по теме сегодняшнего урока и отправьте классу как домашку. Тема завтрашнего урока откроется завтра.', 'Tick tasks from today’s lesson topic and send them as homework. Tomorrow’s topic opens tomorrow.')
+        : t(language, 'Istalgan mavzudan tayyor topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring.', 'Отметьте готовые задания из темы и отправьте классу как домашку.', 'Tick ready tasks from any topic and send them as homework.')}</p>
+      {slots && (slots.length === 0
+        ? <div className="notice">{t(language, 'Bugun va ertaga darslikli darslar yo‘q.', 'Сегодня и завтра нет уроков по учебнику.', 'No textbook lessons today or tomorrow.')}</div>
+        : <div className="worksheet-slots" role="tablist">
+            {slots.map((item) => (
+              <button type="button" role="tab" key={item.id} aria-selected={slot?.id === item.id} className={`studio-tab ${slot?.id === item.id ? 'active' : ''} ${item.open ? '' : 'is-locked'}`} onClick={() => { setSlotId(item.id); setPicked([]); }}>
+                <span>{item.label}</span><small>§{item.topic.code} {item.topic.title}</small>
+              </button>
+            ))}
+          </div>)}
+      {slots && slot && !slot.open && <div className="notice">{t(language, 'Bu mavzu ertaga, dars kuni ochiladi.', 'Эта тема откроется завтра, в день урока.', 'This topic opens tomorrow, on the lesson day.')}</div>}
+      {!slots && <div className="people-filters">
         <Select className="input" value={bookId} onChange={(event) => setBookId(event.target.value)}>
           {COURSE.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </Select>
@@ -75,7 +124,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
           {teachClasses.length === 0 && <option value="">{t(language, 'Sinf yo‘q', 'Нет классов', 'No classes')}</option>}
           {teachClasses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </Select>
-      </div>
+      </div>}
       <div className="worksheet-tasks">
         {tasks.slice(0, 200).map((task) => {
           const on = picked.some((item) => item.id === task.id);
@@ -94,7 +143,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
           <div className="people-filters">
             <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={t(language, 'Nomi (ixtiyoriy)', 'Название (необязательно)', 'Title (optional)')} />
             <input className="input" type="date" value={due} onChange={(event) => setDue(event.target.value)} aria-label={t(language, 'Muddat', 'Срок', 'Due')} />
-            <button type="button" className="btn primary" disabled={busy || !classId} onClick={() => void send()}><Send size={14} /> {t(language, 'Sinfga yuborish', 'Отправить классу', 'Send to class')}</button>
+            <button type="button" className="btn primary" disabled={busy || !targetClass} onClick={() => void send()}><Send size={14} /> {t(language, 'Sinfga yuborish', 'Отправить классу', 'Send to class')}</button>
           </div>
         </div>
       )}

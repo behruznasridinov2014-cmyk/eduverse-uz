@@ -51,6 +51,7 @@ import { TopicModels } from './topic-library';
 import { LessonBoard, type BoardStroke } from './lesson-board';
 import { CourseScene3D } from './course';
 import { COURSE, courseTopicByKey } from './course-data';
+import { useLessonPlanTopics } from './today';
 import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
@@ -58,6 +59,20 @@ import { friendlyError } from './errors';
 /* -------------------------------------------------------------------------- */
 
 type SignalPayload = unknown;
+
+/** Options of the topic picker: today / tomorrow / day after, plus the chosen topic if it is not there. */
+function planOptions(plan: NonNullable<ReturnType<typeof useLessonPlanTopics>>, current: string) {
+  const known = plan.some((group) => group.items.some((item) => item.value === current));
+  const extra = !known && current.startsWith('course:') ? courseTopicByKey(current.slice(7)) : null;
+  return [
+    ...(extra ? [<option key="extra" value={current}>§{extra.topic.code} {extra.topic.title}</option>] : []),
+    ...plan.map((group) => (
+      <optgroup key={group.label} label={group.label}>
+        {group.items.map((item) => <option key={`${group.label}:${item.value}`} value={item.value}>{item.label}</option>)}
+      </optgroup>
+    )),
+  ];
+}
 
 export function LessonRoomPage({
   user,
@@ -69,6 +84,7 @@ export function LessonRoomPage({
   prefillTopicId?: string;
 }) {
   const copy = COPY[language];
+  const plan = useLessonPlanTopics(language);
   const isTeacher = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
 
   const [topics, setTopics] = useState<LessonTopic[]>([]);
@@ -275,12 +291,12 @@ export function LessonRoomPage({
                 <label htmlFor="host-topic">{copy.chooseTopic}</label>
                 <Select id="host-topic" value={selectedTopicId} onChange={(event) => setSelectedTopicId(event.target.value)}>
                   <option value="">{copy.noTopic}</option>
-                  {COURSE.map((book) => (
+                  {plan ? planOptions(plan, selectedTopicId) : COURSE.map((book) => (
                     <optgroup key={book.id} label={book.title}>
                       {book.topics.map((item) => <option key={item.key} value={`course:${item.key}`}>§{item.code} {item.title}</option>)}
                     </optgroup>
                   ))}
-                  {[...new Map(topics.map((topic) => [`${topic.subject} · ${topic.title}`, topic])).values()].map((topic) => (
+                  {!plan && [...new Map(topics.map((topic) => [`${topic.subject} · ${topic.title}`, topic])).values()].map((topic) => (
                     <option key={topic.id} value={topic.id}>
                       {topic.subject} · {topic.title}
                     </option>
@@ -383,6 +399,7 @@ function RoomView({
   setError: (value: string) => void;
 }) {
   const copy = COPY[language];
+  const plan = useLessonPlanTopics(language);
   const localVideo = useRef<HTMLVideoElement | null>(null);
   const [chat, setChat] = useState<Array<{ from: string; text: string; mine: boolean; at: number }>>([]);
   const [courseKey, setCourseKey] = useState<string | null>(null);
@@ -822,12 +839,12 @@ function RoomView({
                   <label htmlFor="room-topic">{copy.chooseTopic}</label>
                   <Select id="room-topic" value={topic?.id ?? (courseKey ? `course:${courseKey}` : '')} onChange={(event) => void changeTopic(event.target.value)}>
                     <option value="">{copy.noTopic}</option>
-                    {COURSE.map((book) => (
+                    {plan ? planOptions(plan, topic?.id ?? (courseKey ? `course:${courseKey}` : '')) : COURSE.map((book) => (
                       <optgroup key={book.id} label={book.title}>
                         {book.topics.map((item) => <option key={item.key} value={`course:${item.key}`}>§{item.code} {item.title}</option>)}
                       </optgroup>
                     ))}
-                    {[...new Map(topics.map((item) => [`${item.subject} · ${item.title}`, item])).values()].map((item) => (
+                    {!plan && [...new Map(topics.map((item) => [`${item.subject} · ${item.title}`, item])).values()].map((item) => (
                       <option key={item.id} value={item.id}>{item.subject} · {item.title}</option>
                     ))}
                   </Select>

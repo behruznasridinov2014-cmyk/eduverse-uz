@@ -385,21 +385,18 @@ export function ServerClassesPanel({
                 <span className="tag">{workspace.role ? formatStatus(workspace.role) : t(language, 'Manager access', 'Доступ руководителя', 'Rahbar ruxsati')}</span>
               </div>
               <div className="school-member-chips">
-                {workspace.members.slice(0, 8).map((member) => (
+                {workspace.members.map((member) => (
                   <span className="tag" key={member.userId} title={member.accountRole ?? member.role}>
                     {member.username} · {formatStatus(member.role)}
                   </span>
                 ))}
-                {workspace.members.length > 8 && (
-                  <span className="tag gold">+{workspace.members.length - 8}</span>
-                )}
                 {workspace.members.length === 0 && (
                   <span className="muted">{t(language, 'No roster members have been added yet.', 'В списке пока нет участников.', 'Ro‘yxatga hali a’zo qo‘shilmagan.')}</span>
                 )}
               </div>
               {canManageClass && (
-                <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/teacher')}>
-                  {t(language, 'Manage class in teacher workspace', 'Управлять классом в кабинете учителя', 'Sinfni o‘qituvchi kabinetida boshqarish')}
+                <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/attendance')}>
+                  {t(language, 'Mark attendance', 'Отметить давомат', 'Davomatni belgilash')}
                   <ArrowRight size={15} />
                 </button>
               )}
@@ -590,6 +587,7 @@ export function ServerTeachingPanel({
   language: Language;
 }) {
   const [selectedClassId, setSelectedClassId] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', subject: 'Mathematics', description: '', dueAt: '', topicId: '' });
   const [topics, setTopics] = useState<LessonTopic[]>([]);
   const [creating, setCreating] = useState(false);
@@ -767,6 +765,12 @@ export function ServerTeachingPanel({
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
 
       <div className="grid grid-2" style={{ marginTop: error || notice ? 12 : 0 }}>
+        {!showForm ? (
+          <Panel>
+            <SectionHead title={t(language, 'Your own assignment', 'Своё задание', 'O‘z topshirig‘ingiz')} detail={t(language, 'If the textbook tasks above are not enough, write your own.', 'Если заданий из учебника выше мало, напишите своё.', 'Darslikdagi topshiriqlar yetmasa, o‘zingiz yozing.')} />
+            <button type="button" className="btn" onClick={() => setShowForm(true)}>{t(language, 'Write an assignment', 'Написать задание', 'Topshiriq yozish')}</button>
+          </Panel>
+        ) : (
         <Panel>
           <SectionHead
             title={t(language, 'Publish an assignment', 'Опубликовать задание', 'Topshiriq joylash')}
@@ -858,6 +862,7 @@ export function ServerTeachingPanel({
             </button>
           </form>
         </Panel>
+        )}
 
         <Panel>
           <SectionHead

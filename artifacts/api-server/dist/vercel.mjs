@@ -55523,62 +55523,74 @@ router10.get("/me/today", requireAuthenticatedRole(...everyRole5), async (_req, 
   } else if (viewer.role === "student" || viewer.role === "parent") {
     const studentIds = viewer.role === "student" ? [viewer.id] : (await db.select({ id: parentLinksTable.studentId }).from(parentLinksTable).where(eq(parentLinksTable.parentId, viewer.id))).map((row) => row.id);
     if (!studentIds.length) {
-      res.json({ ...base, lessons: [] });
+      res.json({ ...base, lessons: [], next: [] });
       return;
     }
     const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(inArray(classMembersTable.userId, studentIds), eq(classMembersTable.role, "student")))).map((row) => row.id);
     if (!classIds.length) {
-      res.json({ ...base, lessons: [] });
+      res.json({ ...base, lessons: [], next: [] });
       return;
     }
     where = inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
   } else {
     const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
     if (!schoolIds.length) {
-      res.json({ ...base, lessons: [] });
+      res.json({ ...base, lessons: [], next: [] });
       return;
     }
     where = inArray(timetableSlotsTable.schoolId, schoolIds);
   }
-  const slots = await db.select({
-    id: timetableSlotsTable.id,
-    schoolId: timetableSlotsTable.schoolId,
-    classId: timetableSlotsTable.classId,
-    period: timetableSlotsTable.period,
-    subject: timetableSlotsTable.subject,
-    room: timetableSlotsTable.room,
-    teacherId: timetableSlotsTable.teacherId,
-    className: classesTable.name,
-    grade: classesTable.grade
-  }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, now.weekday === 7 ? 0 : now.weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
   const weekRows = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
   base.week = weekRows;
-  const teacherIds = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id)))];
-  const names = teacherIds.length ? await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, teacherIds)) : [];
-  const nameOf = new Map(names.map((row) => [row.id, row.name]));
+  const teacherNames = /* @__PURE__ */ new Map();
   const bellCache = /* @__PURE__ */ new Map();
-  const lessons = [];
-  for (const slot of slots) {
-    if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
-    const bell = bellCache.get(slot.schoolId)[slot.period - 1];
-    if (!bell) continue;
-    lessons.push({
-      id: slot.id,
-      classId: slot.classId,
-      className: slot.className,
-      grade: slot.grade,
-      period: slot.period,
-      subject: slot.subject,
-      room: slot.room,
-      teacherName: slot.teacherId ? nameOf.get(slot.teacherId) ?? "" : "",
-      start: bell.start,
-      end: bell.end,
-      startsAt: atTashkent(now.date, bell.start),
-      endsAt: atTashkent(now.date, bell.end)
-    });
+  async function lessonsOn(date2, weekday) {
+    if (weekday === 7) return [];
+    const slots = await db.select({
+      id: timetableSlotsTable.id,
+      schoolId: timetableSlotsTable.schoolId,
+      classId: timetableSlotsTable.classId,
+      period: timetableSlotsTable.period,
+      subject: timetableSlotsTable.subject,
+      room: timetableSlotsTable.room,
+      teacherId: timetableSlotsTable.teacherId,
+      className: classesTable.name,
+      grade: classesTable.grade
+    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
+    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id) && !teacherNames.has(id)))];
+    if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
+    const out = [];
+    for (const slot of slots) {
+      if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
+      const bell = bellCache.get(slot.schoolId)[slot.period - 1];
+      if (!bell) continue;
+      out.push({
+        id: slot.id,
+        classId: slot.classId,
+        className: slot.className,
+        grade: slot.grade,
+        period: slot.period,
+        subject: slot.subject,
+        room: slot.room,
+        teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        start: bell.start,
+        end: bell.end,
+        startsAt: atTashkent(date2, bell.start),
+        endsAt: atTashkent(date2, bell.end)
+      });
+    }
+    out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
+    return out;
   }
-  lessons.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
-  res.json({ ...base, lessons });
+  const lessons = await lessonsOn(now.date, now.weekday);
+  const next = [];
+  for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
+    const day = tashkentNow(new Date(Date.now() + offset * 864e5));
+    if (day.weekday === 7) continue;
+    next.push({ date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) });
+  }
+  res.json({ ...base, lessons, next });
+  return;
 });
 var timetable_default = router10;
 

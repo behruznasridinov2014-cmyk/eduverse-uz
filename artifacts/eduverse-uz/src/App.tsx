@@ -324,6 +324,21 @@ const HOME_STEPS:Partial<Record<User['role'],Record<Lang,string[]>>>={
   Русский:['Отметьте давомат по своему предмету','Начните онлайн-урок с карточки сегодняшнего урока','Покажите сегодняшнюю тему в 3D','Выдайте домашку из «Листа заданий» и оцените'],
   English:['Mark attendance for your subject','Start the online lesson from today’s card','Show today’s topic in 3D','Assign homework and grade it'],
  },
+ school_director:{
+  Uzbek:['O‘qituvchi va o‘quvchilarni qo‘shing (Excel’dan ham)','Login va parollarni chop etib tarqating','Dars jadvalini to‘ldiring yoki zavuchga topshiring','Bosh sahifada maktabda bugun nima bo‘layotganini kuzating'],
+  Русский:['Добавьте учителей и учеников (можно из Excel)','Распечатайте и раздайте логины и пароли','Заполните расписание или поручите завучу','Смотрите на главной, что идёт в школе сегодня'],
+  English:['Add teachers and students (Excel works)','Print and hand out logins and passwords','Fill in the timetable or ask the deputy','Watch what is happening at school today on the overview'],
+ },
+ school_admin:{
+  Uzbek:['Dars jadvalini to‘ldiring va yangilab boring','Davomat va baholarni sinflar bo‘yicha tekshiring','O‘quvchilarni qo‘shing, parolni tiklang','O‘qituvchilar darslarini bosh sahifada kuzating'],
+  Русский:['Ведите расписание уроков и звонков','Проверяйте давомат и оценки по классам','Добавляйте учеников, сбрасывайте пароли','Следите за уроками учителей на главной'],
+  English:['Keep the lesson and bell timetable','Check attendance and grades by class','Add students, reset passwords','Follow teachers’ lessons on the overview'],
+ },
+ parent:{
+  Uzbek:['Bosh sahifada farzandingizning bugungi darslari','«Oila kabineti»da baholar va davomat','Uy vazifasi topshirilganini tekshiring','Savol bo‘lsa, maktabga ilova ichida yozing'],
+  Русский:['На главной — уроки ребёнка на сегодня','В «Кабинете семьи» — оценки и посещаемость','Проверьте, сдана ли домашка','Вопросы — школе прямо в приложении'],
+  English:['The overview shows your child’s lessons today','Grades and attendance are in the Family view','Check that homework is handed in','Write to the school in the app'],
+ },
  student:{
   Uzbek:['Bosh sahifada bugungi darslaringizni ko‘ring','Darsga kiring: kamera va mikrofonni yoqing','Mavzuni 3D da o‘rganing va testni bajaring','Uy vazifasini daftar rasmi bilan yuboring'],
   Русский:['Посмотрите уроки на сегодня на главной','Войдите на урок: включите камеру и микрофон','Изучите тему в 3D и пройдите тест','Отправьте домашнее задание фото тетради'],

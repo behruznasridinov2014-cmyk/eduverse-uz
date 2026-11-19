@@ -5,7 +5,7 @@ import type { Language, SchoolData } from './school-data';
 import { CoursePage, CourseScene3D } from './course';
 import { AttendancePage } from './attendance-page';
 import {
-  LESSON_TABS, LessonDayHeader, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
+  LESSON_TABS, LessonDayHeader, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
   lessonSubjectName, useLessonCourses, useToday, type TodayLesson,
 } from './today';
 
@@ -39,18 +39,24 @@ function UpNext({ lessons, now, current, language }: { lessons: TodayLesson[]; n
  */
 export function TodayCoursePage({ user, school, language, onOpen }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const { data, failed, now } = useToday();
-  const courses = useLessonCourses(data?.lessons);
+  const courses = useLessonCourses(data?.lessons, data?.next);
   if (!data && !failed) return <Loading />;
   const lessons = data?.lessons ?? [];
-  if (!data || lessons.length === 0) return <CoursePage user={user} school={school} language={language} onOpen={onOpen} />;
+  // Only the lesson of today: no lessons today → nothing to open, only the plan for the next days.
   const lesson = currentOrNext(lessons, now);
-  if (!lesson) {
+  if (!data || !lesson) {
+    const none = lessons.length === 0;
     return (
-      <div className="empty-state today-finished">
-        <span className="empty-icon"><PartyPopper /></span>
-        <h2>{t(language, 'Bugungi darslar tugadi', 'На сегодня уроки закончились', 'Today’s lessons are over')}</h2>
-        <p>{t(language, 'Ertaga bu yerda birinchi darsning mavzusi chiqadi.', 'Завтра здесь появится тема первого урока.', 'Tomorrow the topic of the first lesson appears here.')}</p>
-      </div>
+      <section className="today-course">
+        <div className="empty-state today-finished">
+          <span className="empty-icon"><PartyPopper /></span>
+          <h2>{none
+            ? (data?.weekday === 7 ? t(language, 'Bugun dam olish kuni', 'Сегодня выходной', 'Today is a day off') : t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today'))
+            : t(language, 'Bugungi darslar tugadi', 'На сегодня уроки закончились', 'Today’s lessons are over')}</h2>
+          <p>{t(language, 'Mavzu dars kuni, dars vaqtida ochiladi. Quyida keyingi darslar rejasi.', 'Тема открывается в день урока, во время урока. Ниже план следующих уроков.', 'A topic opens on the lesson day, during the lesson. Below is the plan of the next lessons.')}</p>
+        </div>
+        {data && <UpcomingDays data={data} courses={courses} language={language} />}
+      </section>
     );
   }
   const status = statusOf(lesson, now);
@@ -71,7 +77,7 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
 /** The page of one lesson from today's cards: topic, attendance, online lesson. */
 export function LessonDayPage({ lessonId, user, school, language, onOpen }: { lessonId: string; user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const { data, failed, now } = useToday();
-  const courses = useLessonCourses(data?.lessons);
+  const courses = useLessonCourses(data?.lessons, data?.next);
   const canAttend = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
   const tabs = LESSON_TABS.filter((tab) => (tab.id === 'attendance' ? canAttend : tab.id === 'online' ? user.role === 'teacher' || user.role === 'student' : true));
   const [tab, setTab] = useState<string>('topic');
@@ -128,7 +134,7 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
  */
 export function LabTodayScene({ language }: { language: Language }) {
   const { data, now } = useToday();
-  const courses = useLessonCourses(data?.lessons);
+  const courses = useLessonCourses(data?.lessons, data?.next);
   const [picked, setPicked] = useState<string>(() => { try { return sessionStorage.getItem('eduverse:3d-lesson') ?? ''; } catch { return ''; } });
   const withBook = (data?.lessons ?? []).filter((lesson) => bookForLesson(lesson));
   if (!data || withBook.length === 0) return null;

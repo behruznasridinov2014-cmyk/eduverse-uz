@@ -129,3 +129,20 @@ html[data-theme="night"] .tt-grid td.has-lesson { background: rgba(255, 255, 255
 .tt-paste { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border-radius: 16px; border: 1px dashed var(--line-2); background: var(--surface); }
 .tt-paste p { margin: 0; }
 .tt-paste textarea { width: 100%; font-family: inherit; resize: vertical; }
+
+/* next school days: only a plan */
+.upcoming-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-top: 14px; }
+.upcoming-day { padding: 14px 16px; border-radius: 18px; background: var(--surface); border: 1px dashed var(--line-2); }
+.upcoming-day h3 { margin: 0 0 8px; font-size: 15px; }
+.upcoming-day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.upcoming-day li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; font-size: 13px; }
+.upcoming-time { font-weight: 700; color: var(--text-2); }
+.upcoming-what { display: grid; gap: 1px; min-width: 0; }
+.upcoming-what small { color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upcoming-teacher { white-space: nowrap; }
+.upcoming-note { grid-column: 1 / -1; margin: 0; font-size: 12px; }
+.worksheet-slots { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.worksheet-slots .studio-tab { display: grid; gap: 2px; text-align: left; height: auto; padding: 8px 12px; }
+.worksheet-slots .studio-tab small { color: var(--text-3); font-size: 12px; font-weight: 500; }
+.worksheet-slots .studio-tab.is-locked { opacity: .6; border-style: dashed; }
+.scene-library-today { display: grid; gap: 12px; margin-bottom: 16px; }

@@ -72,11 +72,13 @@ export function TrainerPage({ user, school, language }: { user: User; school: Sc
   const grade = school.classes[0]?.grade ?? 7;
   const day = new Date().toISOString().slice(0, 10);
   const [allowed, setAllowed] = useState<Allowed | undefined>(undefined);
+  const [noLessons, setNoLessons] = useState(false);
   useEffect(() => {
     let alive = true;
     void (async () => {
       try {
-        const today = await customFetch<{ week?: Array<{ classId: string; subject: string }> }>('/api/me/today', { method: 'GET' });
+        const today = await customFetch<{ week?: Array<{ classId: string; subject: string }>; lessons?: unknown[] }>('/api/me/today', { method: 'GET' });
+        if (alive) setNoLessons(!(today.lessons ?? []).length);
         const pairs = (today.week ?? []).map((pair) => ({ ...pair, book: bookForLesson({ subject: pair.subject, grade: school.classes.find((item) => item.id === pair.classId)?.grade ?? grade }) })).filter((pair) => pair.book);
         if (!(today.week ?? []).length) { if (alive) setAllowed(null); return; }
         const keys = new Set<string>();
@@ -132,6 +134,7 @@ export function TrainerPage({ user, school, language }: { user: User; school: Sc
           <div className="eyebrow">{t(language, 'KUNLIK TRENAJYOR', 'ТРЕНАЖЁР ДНЯ', 'DAILY TRAINER')} · {t(language, `${grade}-sinf`, `${grade} класс`, `Grade ${grade}`)}</div>
           <h1>{t(language, 'Bugungi 5 savol', '5 вопросов дня', 'Today’s 5 questions')}</h1>
           <p className="page-subtitle">{t(language, 'Har kuni o‘z fanlaringiz va o‘tilgan mavzulardan yangi savollar. Birinchi urinish reytingga kiradi.', 'Каждый день новые вопросы по вашим предметам и уже пройденным темам. В рейтинг класса идёт первая попытка дня.', 'New questions every day from your subjects and covered topics. The first try counts.')}</p>
+          {noLessons && allowed && <p className="muted">{t(language, 'Bugun dars yo‘q — o‘tilgan mavzularni takrorlaymiz.', 'Сегодня уроков нет — повторяем уже пройденные темы.', 'No lessons today — we revise covered topics.')}</p>}
         </div>
       </div>
       {allowed === undefined ? <div className="panel"><p className="muted">…</p></div>

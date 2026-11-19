@@ -172,6 +172,10 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
           <button type="button" className="btn small" onClick={() => void load()} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
         </div>
       </div>
+      <p className="muted journal-legend">{t(language,
+        'Har bir ustun — bitta topshiriq. Raqam — baho (5 ballik), «tekshirish» — ish yuborilgan, lekin hali baholanmagan, «—» — ish yuborilmagan. Davomat — darslarga kelgan foizi.',
+        'Каждый столбец — одно задание. Цифра — оценка (из 5), «проверить» — работа сдана, но ещё не оценена, «—» — работу не сдали. Давомат — процент посещённых уроков.',
+        'Each column is one assignment. A number is the grade (out of 5), “review” means handed in but not graded, “—” means not handed in. Attendance is the share of lessons attended.')}</p>
       {error && <div className="notice" role="alert">{error}</div>}
       {journal && journal.rows.length === 0 && <p className="muted">{t(language, 'Sinfda hali o‘quvchi yo‘q.', 'В классе пока нет учеников.', 'No students in this class yet.')}</p>}
       {journal && journal.rows.length > 0 && (
