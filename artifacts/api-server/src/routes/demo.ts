@@ -18,6 +18,7 @@ import {
 import { requireAuthenticatedRole } from "./auth";
 import { importPeople, type ImportRow } from "./school-tools";
 import { isValidUuid } from "../lib/school-access";
+import { fillDemoTimetable } from "./timetable";
 import { writeAudit } from "../lib/audit";
 
 /*
@@ -103,6 +104,9 @@ router.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES), asyn
       await db.insert(trainerResultsTable).values({ userId: pupil.userId, classId: pupil.className === "7-А" ? classA : classB, day: isoDay(day), score: (index + day) % 6, total: 5 }).onConflictDoNothing();
     }
   }
+
+  // A ready timetable, so "today's lessons" work at once.
+  await fillDemoTimetable(schoolId);
 
   await writeAudit(schoolId, viewer.id, "demo-create", null, { people: created.length });
   res.status(201).json({ school, created: created.map(({ userId: _id, ...rest }) => rest) });

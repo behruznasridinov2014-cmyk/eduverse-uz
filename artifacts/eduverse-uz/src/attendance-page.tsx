@@ -135,14 +135,17 @@ const COPY: Record<Language, Record<string, string>> = {
   },
 };
 
-export function AttendancePage({ user, language }: { user: User; language: Language }) {
+/** `lesson` locks the page to one lesson of today's timetable: its class and subject. */
+export function AttendancePage({ user, language, lesson }: { user: User; language: Language; lesson?: { classId: string; subject: string } }) {
   const copy = COPY[language];
   const isTeacher = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [classId, setClassId] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [classId, setClassId] = useState(lesson?.classId ?? '');
+  const [date, setDate] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
   const [, navigate] = useLocation();
   const [subject, setSubject] = useState<string>(() => {
+    const fromLesson = lesson ? SUBJECTS.find((item) => item.book === lesson.subject || item.value === lesson.subject)?.value ?? lesson.subject : null;
+    if (fromLesson) return fromLesson;
     try { return localStorage.getItem('eduverse:attendance-subject') ?? 'Физика'; } catch { return 'Физика'; }
   });
   const [savedLesson, setSavedLesson] = useState(false);
@@ -286,7 +289,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
       </div>
 
       <div className="attendance-toolbar">
-        <div className="control">
+        {!lesson && <><div className="control">
           <label htmlFor="attendance-class">{copy.pickClass}</label>
           <Select id="attendance-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
             {classes.length === 0 && <option value="">{copy.noClasses}</option>}
@@ -302,7 +305,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
           <Select id="attendance-subject" value={subject} onChange={(event) => { pickSubject(event.target.value); setSavedLesson(false); }}>
             {SUBJECTS.map((item) => <option key={item.value} value={item.value}>{subjectLabel(language, item.value)}</option>)}
           </Select>
-        </div>
+        </div></>}
         <div className="control">
           <label htmlFor="attendance-date">{copy.date}</label>
           <input id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />

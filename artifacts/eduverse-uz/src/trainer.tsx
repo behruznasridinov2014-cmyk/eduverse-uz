@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
 import { Check, Trophy, X, Zap } from 'lucide-react';
 import { COURSE } from './course-data';
+import { bookForLesson } from './today';
 import type { Language, SchoolData } from './school-data';
 
 /*
@@ -11,6 +12,8 @@ import type { Language, SchoolData } from './school-data';
 
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
 type Question = { q: string; options: string[]; answer: string; topic: string };
+/** Which topics the trainer may ask: covered topics of the subjects in this person's timetable. null = no timetable, all topics. */
+type Allowed = { keys: Set<string>; label: string } | null;
 type RatingRow = { userId: string; name: string; points: number; days: number; me: boolean };
 
 /** Small deterministic random: the same questions for the whole class on one day. */
@@ -35,12 +38,12 @@ function numberSlips(answer: string, random: () => number): string[] {
     .map(({ text }) => answer.slice(0, target.index) + text + answer.slice((target.index ?? 0) + raw.length));
 }
 
-function todayQuestions(grade: number, day: string): Question[] {
+function todayQuestions(grade: number, day: string, allowed: Allowed): Question[] {
   const books = COURSE.filter((book) => book.grade === grade);
   const pool = books.flatMap((book) => book.topics.flatMap((topic) => topic.tasks.map((task) => ({ ...task, topic: `${book.title} · §${topic.code}`, book: book.id, chapter: topic.chapter, key: topic.key }))))
-    .filter((task) => task.a.length <= 140);
+    .filter((task) => task.a.length <= 140 && (!allowed || allowed.keys.has(task.key)));
   if (pool.length < 4) return [];
-  const random = seeded(hash(`${day}:${grade}`));
+  const random = seeded(hash(`${day}:${grade}:${allowed?.label ?? ''}`));
   const picked: typeof pool = [];
   const used = new Set<number>();
   while (picked.length < Math.min(5, pool.length) && used.size < pool.length) {
@@ -68,7 +71,31 @@ function todayQuestions(grade: number, day: string): Question[] {
 export function TrainerPage({ user, school, language }: { user: User; school: SchoolData; language: Language }) {
   const grade = school.classes[0]?.grade ?? 7;
   const day = new Date().toISOString().slice(0, 10);
-  const questions = useMemo(() => todayQuestions(grade, day), [grade, day]);
+  const [allowed, setAllowed] = useState<Allowed | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const today = await customFetch<{ week?: Array<{ classId: string; subject: string }> }>('/api/me/today', { method: 'GET' });
+        const pairs = (today.week ?? []).map((pair) => ({ ...pair, book: bookForLesson({ subject: pair.subject, grade: school.classes.find((item) => item.id === pair.classId)?.grade ?? grade }) })).filter((pair) => pair.book);
+        if (!(today.week ?? []).length) { if (alive) setAllowed(null); return; }
+        const keys = new Set<string>();
+        for (const classId of [...new Set(pairs.map((pair) => pair.classId))]) {
+          const course = await customFetch<{ progress: Array<{ topicKey: string }> }>(`/api/classes/${classId}/course`, { method: 'GET' }).catch(() => ({ progress: [] }));
+          const covered = new Set(course.progress.map((item) => item.topicKey));
+          for (const pair of pairs.filter((item) => item.classId === classId)) {
+            const topics = pair.book!.topics;
+            const last = topics.reduce((index, topic, i) => (covered.has(topic.key) ? i : index), -1);
+            // Covered topics plus today's (the next one), so a class at the start still gets questions.
+            topics.slice(0, last + 2).forEach((topic) => keys.add(topic.key));
+          }
+        }
+        if (alive) setAllowed({ keys, label: [...keys].sort().join(',') });
+      } catch { if (alive) setAllowed(null); }
+    })();
+    return () => { alive = false; };
+  }, [school.classes, grade]);
+  const questions = useMemo(() => (allowed === undefined ? [] : todayQuestions(grade, day, allowed)), [grade, day, allowed]);
   const [step, setStep] = useState(0);
   const [chosen, setChosen] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -104,10 +131,11 @@ export function TrainerPage({ user, school, language }: { user: User; school: Sc
         <div>
           <div className="eyebrow">{t(language, 'KUNLIK TRENAJYOR', 'ТРЕНАЖЁР ДНЯ', 'DAILY TRAINER')} · {t(language, `${grade}-sinf`, `${grade} класс`, `Grade ${grade}`)}</div>
           <h1>{t(language, 'Bugungi 5 savol', '5 вопросов дня', 'Today’s 5 questions')}</h1>
-          <p className="page-subtitle">{t(language, 'Har kuni yangi savollar. Birinchi urinish reytingga kiradi.', 'Каждый день новые вопросы по вашим учебникам. В рейтинг класса идёт первая попытка дня.', 'New questions every day. The first try counts.')}</p>
+          <p className="page-subtitle">{t(language, 'Har kuni o‘z fanlaringiz va o‘tilgan mavzulardan yangi savollar. Birinchi urinish reytingga kiradi.', 'Каждый день новые вопросы по вашим предметам и уже пройденным темам. В рейтинг класса идёт первая попытка дня.', 'New questions every day from your subjects and covered topics. The first try counts.')}</p>
         </div>
       </div>
-      {questions.length === 0 ? <div className="panel"><p className="muted">{t(language, 'Bu sinf uchun savollar hali yo‘q.', 'Для этого класса вопросов пока нет.', 'No questions for this grade yet.')}</p></div>
+      {allowed === undefined ? <div className="panel"><p className="muted">…</p></div>
+        : questions.length === 0 ? <div className="panel"><p className="muted">{allowed && allowed.keys.size === 0 ? t(language, 'Jadvalingizda darslikli fan yo‘q.', 'В вашем расписании нет предметов с учебником.', 'No textbook subjects in your timetable.') : allowed ? t(language, 'Savollar sinf darslikdan birinchi mavzularni o‘tgach chiqadi.', 'Вопросы появятся, когда класс пройдёт первые темы по учебнику.', 'Questions appear once the class covers the first topics.') : t(language, 'Bu sinf uchun savollar hali yo‘q.', 'Для этого класса вопросов пока нет.', 'No questions for this grade yet.')}</p></div>
         : finished ? (
           <div className="panel trainer-result">
             <Trophy size={28} />

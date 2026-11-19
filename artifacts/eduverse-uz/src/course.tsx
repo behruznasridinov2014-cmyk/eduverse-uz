@@ -6,6 +6,7 @@ import type { User } from '@workspace/api-client-react';
 import { customFetch } from '@workspace/api-client-react';
 import { BookOpen, Box, CalendarCheck2, CheckCircle2, ChevronRight, GraduationCap, Lightbulb, Lock, Maximize2, Minimize2, MonitorPlay, NotebookPen, Sparkles, Target, Users } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
+import { bookForLesson, type TodayLesson } from './today';
 import { COURSE, SUBJECT_LABEL, pdfPageOf, type CourseBook, type CourseScene, type CourseTopic } from './course-data';
 import type { OwnSceneId } from './course-scenes';
 import { MoleculeById, ReactionView } from './chem-lab';
@@ -212,15 +213,20 @@ function useClassCourse(classId: string | null) {
   return [data, load] as const;
 }
 
-export function CoursePage({ user, school, language, onOpen }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
+/**
+ * `lesson` (from today's timetable) locks the page to that lesson: its class, its subject and the
+ * topic the class is on. Without it, the page is the full textbook course (schools with no timetable).
+ */
+export function CoursePage({ user, school, language, onOpen, lesson }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void; lesson?: TodayLesson }) {
   const isStudent = user.role === 'student';
   const isTeacher = !isStudent;
   const grades = useMemo(() => [...new Set(COURSE.map((book) => book.grade))].sort((a, b) => a - b), []);
   const studentGrade = school.classes[0]?.grade ?? null;
-  const [grade, setGrade] = useState<number>(isStudent ? studentGrade ?? 0 : grades[0] ?? 7);
+  const [grade, setGrade] = useState<number>(lesson?.grade ?? (isStudent ? studentGrade ?? 0 : grades[0] ?? 7));
   useEffect(() => {
-    if (isStudent && studentGrade) setGrade(studentGrade);
-  }, [isStudent, studentGrade]);
+    if (lesson) setGrade(lesson.grade);
+    else if (isStudent && studentGrade) setGrade(studentGrade);
+  }, [isStudent, studentGrade, lesson]);
 
   // A student only studies the books of their own grade — not the next years.
   const books = COURSE.filter((book) => book.grade === grade);
@@ -230,7 +236,8 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
     try { wanted = localStorage.getItem('eduverse:course-subject'); localStorage.removeItem('eduverse:course-subject'); } catch { /* private mode */ }
     return books.find((item) => item.subject === wanted)?.id ?? books[0]?.id ?? '';
   });
-  const book: CourseBook | undefined = books.find((item) => item.id === bookId) ?? books[0];
+  const lessonBook = lesson ? bookForLesson(lesson) : undefined;
+  const book: CourseBook | undefined = lesson ? lessonBook : books.find((item) => item.id === bookId) ?? books[0];
   const [topicKey, setTopicKey] = useState<string>(book?.topics[0]?.key ?? '');
   const topic: CourseTopic | undefined = book?.topics.find((item) => item.key === topicKey) ?? book?.topics[0];
   const [openAnswers, setOpenAnswers] = useState<Record<number, boolean>>({});
@@ -242,7 +249,8 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
   const [classId, setClassIdState] = useState<string | null>(classes.find((item) => item.id === savedClass)?.id ?? classes[0]?.id ?? null);
   const setClassId = (id: string | null) => { setClassIdState(id); try { if (id) localStorage.setItem('eduverse:course-class', id); } catch { /* private mode */ } };
   useEffect(() => { if (!classId || !classes.some((item) => item.id === classId)) setClassIdState(classes.find((item) => item.id === savedClass)?.id ?? classes[0]?.id ?? null); }, [classes, classId, savedClass]);
-  const [course, reload] = useClassCourse(classId);
+  const activeClassId = lesson?.classId ?? classId;
+  const [course, reload] = useClassCourse(activeClassId);
   // The tab opens on today's topic: the one the class covered today, else the next one.
   // The whole book list stays hidden until asked for.
   const [showAll, setShowAll] = useState(false);
@@ -266,7 +274,10 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
   useEffect(() => { setOpenAnswers({}); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }, [topicKey]);
   useEffect(() => { if (book && !book.topics.some((item) => item.key === topicKey)) setTopicKey(book.topics[0]?.key ?? ''); }, [book, topicKey]);
 
-  if (isStudent && school.status === 'ready' && !studentGrade) {
+  if (lesson && !lessonBook) {
+    return <Empty text={t(language, 'Bu fan uchun EDUVERSE’da hali darslik yo‘q.', 'Для этого предмета в EDUVERSE пока нет учебника.', 'There is no textbook for this subject in EDUVERSE yet.')} />;
+  }
+  if (isStudent && !lesson && school.status === 'ready' && !studentGrade) {
     return <Empty text={t(language, 'Sizni hali sinfga qo‘shishmagan. O‘qituvchidan so‘rang.', 'Вас ещё не добавили в класс. Попросите учителя.', 'You are not in a class yet. Ask your teacher.')} />;
   }
   if (!book || !topic) {
@@ -304,10 +315,10 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
   const markDate = (key: string) => { const raw = marks.get(key); return raw ? fmt(new Date(`${raw}T12:00:00`)) : ''; };
 
   async function mark(target: CourseTopic, on: boolean) {
-    if (!classId) return;
+    if (!activeClassId) return;
     setBusy(true);
     try {
-      await customFetch(`/api/classes/${classId}/course/${target.key}`, on
+      await customFetch(`/api/classes/${activeClassId}/course/${target.key}`, on
         ? { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doneOn }) }
         : { method: 'DELETE' });
       reload();
@@ -316,14 +327,14 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
     }
   }
   async function changePace(value: number) {
-    if (!classId || value < 1 || value > 10) return;
-    await customFetch(`/api/classes/${classId}/course-pace/${book!.bookId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonsPerWeek: value }) }).catch(() => {});
+    if (!activeClassId || value < 1 || value > 10) return;
+    await customFetch(`/api/classes/${activeClassId}/course-pace/${book!.bookId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonsPerWeek: value }) }).catch(() => {});
     reload();
   }
 
   return (
     <section className="course">
-      <div className="course-head">
+      {!lesson && <div className="course-head">
         <div>
           <div className="eyebrow">{t(language, 'Darslik bo‘yicha', 'По учебнику', 'By the textbook')} · {t(language, `${grade}-sinf`, `${grade} класс`, `Grade ${grade}`)}</div>
           <h1>{t(language, 'Dars mavzulari', 'Темы уроков', 'Lesson topics')}</h1>
@@ -340,22 +351,24 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
             </Select>
           )}
         </div>
-      </div>
+      </div>}
 
-      <div className="course-subjects">
+      {!lesson && <div className="course-subjects">
         {books.map((item) => (
           <button type="button" key={item.id} className={`studio-tab ${item.id === book.id ? 'active' : ''}`} onClick={() => { picked.current = false; setShowAll(false); setBookId(item.id); setTopicKey(item.topics[0]?.key ?? ''); }}>
             <span>●</span>{subjectName(item.subject)}
           </button>
         ))}
-      </div>
+      </div>}
 
       {course && (
         <section className="panel course-plan">
           <div className="course-plan-main">
             <span className="course-plan-icon"><CalendarCheck2 size={20} /></span>
             <div>
-              <b>{nextTopic
+              <b>{nextTopic && lastIndex < 0
+                ? t(language, `Sinf kitobni hali boshlamagan · birinchi mavzu §${nextTopic.code}`, `Класс ещё не начал книгу · первая тема §${nextTopic.code}`, `The class has not started the book · first topic §${nextTopic.code}`)
+                : nextTopic
                 ? t(language, `Sinf to‘xtagan joy: §${book.topics[lastIndex]?.code ?? '—'} · keyingisi §${nextTopic.code}`, `Класс остановился на §${book.topics[lastIndex]?.code ?? '—'} · дальше §${nextTopic.code}`, `Class stopped at §${book.topics[lastIndex]?.code ?? '—'} · next §${nextTopic.code}`)
                 : t(language, 'Kitob to‘liq o‘tildi', 'Книга пройдена полностью', 'The book is finished')}</b>
               <span className="muted">{t(language, `O‘tildi ${covered.length} / ${book.topics.length} mavzu`, `Пройдено ${covered.length} из ${book.topics.length} тем`, `${covered.length} of ${book.topics.length} topics covered`)}{covered.length ? ` · ${t(language, 'oxirgisi', 'последняя', 'last')} ${markDate(book.topics[lastIndex]?.key ?? '')}` : ''}</span>
@@ -375,8 +388,8 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
         </section>
       )}
 
-      <div className="course-layout">
-        <aside className="panel course-nav">
+      <div className={`course-layout ${lesson ? 'is-lesson' : ''}`}>
+        {!lesson && <aside className="panel course-nav">
           {!showAll && (
             <div className="course-chapter">
               <small>{t(language, 'Bugungi mavzu', 'Сегодняшняя тема', 'Today’s topic')}</small>
@@ -385,7 +398,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
                 <span className="course-name">{topic.title}</span>
                 <ChevronRight size={15} />
               </button>
-              <button type="button" className="btn small course-all-btn" onClick={() => setShowAll(true)}>{t(language, `Kitobning barcha mavzulari · ${book.topics.length}`, `Все темы книги · ${book.topics.length}`, `All topics of the book · ${book.topics.length}`)}</button>
+              {!lesson && <button type="button" className="btn small course-all-btn" onClick={() => setShowAll(true)}>{t(language, `Kitobning barcha mavzulari · ${book.topics.length}`, `Все темы книги · ${book.topics.length}`, `All topics of the book · ${book.topics.length}`)}</button>}
             </div>
           )}
           {showAll && <button type="button" className="btn small course-all-btn" onClick={() => setShowAll(false)}>{t(language, 'Faqat bugungi mavzu', 'Только сегодняшняя тема', 'Only today’s topic')}</button>}
@@ -404,7 +417,7 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
           {isStudent && (
             <p className="muted course-lock"><Lock size={13} /> {t(language, 'Faqat o‘z sinfingiz darsliklari ochiq.', 'Открыты только учебники вашего класса.', 'Only your grade’s textbooks are open.')}</p>
           )}
-        </aside>
+        </aside>}
 
         <article className="course-topic-view" key={topic.key}>
           <header className="course-hero">
@@ -468,13 +481,13 @@ export function CoursePage({ user, school, language, onOpen }: { user: User; sch
           </section>
 
           <div className="course-footer">
-            <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
+            {isStudent && <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
               <CheckCircle2 size={15} /> {isStudied ? t(language, 'O‘rganildi ✓', 'Изучено ✓', 'Studied ✓') : t(language, 'Mavzuni o‘rgandim', 'Я изучил тему', 'I studied this topic')}
-            </button>
+            </button>}
             {(() => {
               const index = book.topics.findIndex((item) => item.key === topic.key);
               const next = book.topics[index + 1];
-              return next ? <button type="button" className="btn" onClick={() => chooseTopic(next.key)}>{t(language, 'Keyingi mavzu', 'Следующая тема', 'Next topic')}: §{next.code} <ChevronRight size={15} /></button> : null;
+              return next && !lesson ? <button type="button" className="btn" onClick={() => chooseTopic(next.key)}>{t(language, 'Keyingi mavzu', 'Следующая тема', 'Next topic')}: §{next.code} <ChevronRight size={15} /></button> : null;
             })()}
           </div>
         </article>

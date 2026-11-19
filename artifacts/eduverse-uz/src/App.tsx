@@ -27,7 +27,9 @@ import { TrainerPage } from './trainer';
 import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
 import { LabReports } from './lab-work';
-import { CoursePage } from './course';
+import { TodayLessons } from './today';
+import { TimetableEditor } from './timetable-editor';
+import { LabTodayScene, LessonDayPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell } from './account';
@@ -132,6 +134,7 @@ function App(){
     '/read':['student','teacher','parent'],
     '/topics':['student','teacher'],
     '/course':['student','teacher'],
+    '/today':['student','teacher','parent','school_director','school_admin'],
     '/attendance':['teacher','school_director','school_admin'],
     '/teacher':['teacher'],
     '/parent':['parent'],
@@ -147,7 +150,7 @@ function App(){
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
   const forbidden=Boolean(protectedRoute&&auth.user&&!protectedRoute[1].includes(auth.user.role));
   const current=visible.find(item=>active(item.href));
-  const pageTitle=location==='/profile'?authCopy(lang).profile:book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
+  const pageTitle=location==='/profile'?authCopy(lang).profile:location.startsWith('/today/')?(lang==='Русский'?'Урок':lang==='English'?'Lesson':'Dars'):location==='/trainer'&&!current?(lang==='Русский'?'Тренажёр дня':lang==='English'?'Daily trainer':'Kunlik trenajyor'):book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
   const membership=school.memberships[0];
   const notice=auth.accountNotice;
   return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`} data-lang-changing={langChanging?'':undefined}>
@@ -206,12 +209,13 @@ function App(){
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} />
         :location==='/board'?<Redirect to="/lesson"/>
-        :location==='/lab'&&auth.user?<ChemLabPage language={lang} user={auth.user}/>
+        :location==='/lab'&&auth.user?<><LabTodayScene language={lang}/><ChemLabPage language={lang} user={auth.user}/></>
         :location==='/trainer'&&auth.user?<TrainerPage user={auth.user} school={school} language={lang}/>
         :location==='/scenes'&&auth.user?<SceneLibraryPage language={lang} grade={school.classes[0]?.grade ?? null}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
         :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
-        :location==='/course'&&auth.user?<CoursePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
+        :location==='/course'&&auth.user?<TodayCoursePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
+        :location.startsWith('/today/')&&auth.user?<LessonDayPage lessonId={location.slice(7)} user={auth.user} school={school} language={lang} onOpen={navigate}/>
         :location==='/topics'?<Redirect to="/course"/>
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
         :location==='/support'?<Redirect to="/"/>
@@ -316,14 +320,14 @@ const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
 };
 const HOME_STEPS:Partial<Record<User['role'],Record<Lang,string[]>>>={
  teacher:{
-  Uzbek:['Davomatni fan bo‘yicha belgilang','Onlayn dars oching va kodni o‘quvchilarga bering','Bugungi mavzuni 3D da ko‘rsating','Uy vazifasini bering va baholang'],
-  Русский:['Отметьте давомат по своему предмету','Откройте онлайн-урок и дайте код ученикам','Покажите сегодняшнюю тему в 3D','Выдайте домашку из «Листа заданий» и оцените'],
-  English:['Mark attendance for your subject','Start a lesson and share the code','Show today’s topic in 3D','Assign homework and grade it'],
+  Uzbek:['Davomatni fan bo‘yicha belgilang','Bugungi dars kartasidan onlayn darsni boshlang','Bugungi mavzuni 3D da ko‘rsating','Uy vazifasini bering va baholang'],
+  Русский:['Отметьте давомат по своему предмету','Начните онлайн-урок с карточки сегодняшнего урока','Покажите сегодняшнюю тему в 3D','Выдайте домашку из «Листа заданий» и оцените'],
+  English:['Mark attendance for your subject','Start the online lesson from today’s card','Show today’s topic in 3D','Assign homework and grade it'],
  },
  student:{
-  Uzbek:['O‘qituvchidan dars kodini oling','Darsga kiring: kamera va mikrofonni yoqing','Mavzuni 3D da o‘rganing va testni bajaring','Uy vazifasini daftar rasmi bilan yuboring'],
-  Русский:['Получите код урока у учителя','Войдите на урок: включите камеру и микрофон','Изучите тему в 3D и пройдите тест','Отправьте домашнее задание фото тетради'],
-  English:['Get the lesson code from your teacher','Join: turn on camera and microphone','Study the topic in 3D and take the quiz','Send homework as notebook photos'],
+  Uzbek:['Bosh sahifada bugungi darslaringizni ko‘ring','Darsga kiring: kamera va mikrofonni yoqing','Mavzuni 3D da o‘rganing va testni bajaring','Uy vazifasini daftar rasmi bilan yuboring'],
+  Русский:['Посмотрите уроки на сегодня на главной','Войдите на урок: включите камеру и микрофон','Изучите тему в 3D и пройдите тест','Отправьте домашнее задание фото тетради'],
+  English:['See today’s lessons on the overview','Join: turn on camera and microphone','Study the topic in 3D and take the quiz','Send homework as notebook photos'],
  },
 };
 function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:SchoolData;language:Lang;onOpen:(path:string)=>void}){
@@ -357,7 +361,8 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     <ArrowRight className="home-go"/>
    </button>}
   </div>
-  {school.status==='ready'&&(user.role!=='parent')&&<div className="home-stats">
+  {['teacher','student','parent','school_director','school_admin'].includes(user.role)&&<TodayLessons language={language} onOpen={onOpen} role={user.role}/>}
+  {school.status==='ready'&&!['parent','teacher','student'].includes(user.role)&&<div className="home-stats">
    {stats.map(stat=><div className="home-stat" key={stat.label.English}><b>{stat.value}</b><span>{stat.label[language]}</span></div>)}
   </div>}
   {rest.length>0&&<>
@@ -507,7 +512,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
   <SchoolScopeSummary school={school} language={language}/>
   {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
+   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<TimetableEditor schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 
@@ -526,6 +531,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
    <SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/>
    <details className="panel"><summary><b>{text('Or paste the school’s Excel','Или вставьте Excel школы целиком','Yoki maktab Excelini qo‘ying')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
    <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
+   <TimetableEditor key={`tt-${setup.id}`} schoolId={setup.id} language={language}/>
    <SchoolCalendarPanel schoolId={setup.id} language={language}/>
    <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
   </div>}</>;
