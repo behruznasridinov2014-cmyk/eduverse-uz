@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { Check, ClipboardList, History, Inbox, Pencil, RefreshCw, Send, UserMinus, UserPlus, X } from 'lucide-react';
+import { Check, ClipboardList, History, Inbox, Pencil, RefreshCw, UserMinus, UserPlus, X } from 'lucide-react';
 import type { Language } from './school-data';
 import { parseTable } from './school-tools';
 import { friendlyError } from './errors';
 
 /*
- * People of a school are changed only through EDUVERSE (the owner):
- *  - the school (director / deputy) sends a request;
- *  - the owner confirms it, rejects it, or changes a person directly.
+ * People of a school:
+ *  - the director / deputy makes the change at once (it is kept in the journal);
+ *  - the owner can also change a person directly.
  * Nothing is deleted: an expelled pupil keeps grades and attendance.
  */
 
@@ -69,7 +69,7 @@ function describeRequest(language: Language, request: Request): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * mode "request": the school asks EDUVERSE (director / deputy).
+ * mode "request": the director / deputy changes it at once (school side).
  * mode "owner": EDUVERSE changes the person at once.
  */
 export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { schoolId: string; language: Language; mode: 'request' | 'owner'; onChanged?: () => void }) {
@@ -112,7 +112,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
     const verb = label(language, KIND_TEXT[kind], kind);
     const question = mode === 'owner'
       ? t(language, `${person.name}: ${verb}. Tasdiqlaysizmi?`, `${person.name}: ${verb}. Подтверждаете?`, `${person.name}: ${verb}. Confirm?`)
-      : t(language, `EDUVERSE ga ariza yuborilsinmi? ${person.name}: ${verb}`, `Отправить заявку в EDUVERSE? ${person.name}: ${verb}`, `Send the request to EDUVERSE? ${person.name}: ${verb}`);
+      : t(language, `${person.name}: ${verb}. Tasdiqlaysizmi?`, `${person.name}: ${verb}. Подтверждаете?`, `${person.name}: ${verb}. Confirm?`);
     if (!window.confirm(question)) return;
     const body: Record<string, unknown> = { kind, reason: reason.trim(), userId: person.id };
     if (kind === 'edit') {
@@ -129,8 +129,8 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
         load(); onChanged?.();
       } else {
         await customFetch(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        setMessage(t(language, 'Ariza EDUVERSE ga yuborildi. Tasdiqlangach o‘zgaradi.', 'Заявка отправлена в EDUVERSE. Изменится после подтверждения.', 'Request sent to EDUVERSE. It changes after approval.'));
-        onChanged?.();
+        setMessage(t(language, 'Bajarildi.', 'Готово, изменение внесено.', 'Done.'));
+        load(); onChanged?.();
       }
       setAction(null);
     } catch (requestError) {
@@ -148,7 +148,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
       </div>
       <p className="muted">{mode === 'owner'
         ? t(language, 'Siz to‘g‘ridan-to‘g‘ri o‘zgartirasiz. Hech narsa o‘chirilmaydi: baholar va davomat saqlanadi.', 'Вы меняете сразу. Ничего не удаляется: оценки и посещаемость сохраняются.', 'You change it directly. Nothing is deleted.')
-        : t(language, 'O‘zgartirish EDUVERSE ga ariza bo‘lib boradi. Hech narsa o‘chirilmaydi.', 'Любое изменение уходит заявкой в EDUVERSE. Ничего не удаляется: оценки и посещаемость сохраняются.', 'Every change goes to EDUVERSE as a request. Nothing is deleted.')}</p>
+        : t(language, 'O‘zgartirish darhol kiritiladi va jurnalda saqlanadi. Hech narsa o‘chirilmaydi.', 'Изменение вносится сразу и сохраняется в журнале. Ничего не удаляется: оценки и посещаемость сохраняются.', 'The change is made at once and kept in the log. Nothing is deleted.')}</p>
       <div className="people-filters">
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'F.I.Sh., login, sinf yoki telefon', 'ФИО, логин, класс или телефон', 'Name, login, class or phone')} />
         <select className="input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
@@ -205,7 +205,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
                   {action.kind === 'transfer' && <input className="input" value={edit.toSchool} onChange={(event) => setEdit({ ...edit, toSchool: event.target.value })} placeholder={t(language, 'Qaysi maktabga', 'В какую школу', 'To which school')} />}
                   <input className="input" value={reason} onChange={(event) => setReason(event.target.value)} placeholder={action.kind === 'expel' || action.kind === 'transfer' ? t(language, 'Sabab va buyruq raqami (majburiy)', 'Причина и номер приказа (обязательно)', 'Reason and order number (required)') : t(language, 'Izoh (ixtiyoriy)', 'Комментарий (необязательно)', 'Comment (optional)')} />
                   <div className="row" style={{ gap: 8 }}>
-                    <button type="button" className="btn primary small" disabled={busy} onClick={() => void submit()}>{mode === 'owner' ? <Check size={13} /> : <Send size={13} />} {mode === 'owner' ? t(language, 'Tasdiqlash', 'Подтвердить', 'Confirm') : t(language, 'Ariza yuborish', 'Отправить заявку', 'Send request')}</button>
+                    <button type="button" className="btn primary small" disabled={busy} onClick={() => void submit()}><Check size={13} /> {t(language, 'Tasdiqlash', 'Подтвердить', 'Confirm')}</button>
                     <button type="button" className="btn small" onClick={() => setAction(null)}><X size={13} /> {t(language, 'Bekor qilish', 'Отмена', 'Cancel')}</button>
                   </div>
                 </div>
@@ -227,15 +227,17 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [created, setCreated] = useState<Created[]>([]);
   const parsed = useMemo(() => parseTable(text), [text]);
   async function send() {
     if (parsed.rows.length === 0) return;
-    if (!window.confirm(t(language, `${parsed.rows.length} kishini qabul qilish uchun ariza yuborilsinmi?`, `Отправить заявку на приём: ${parsed.rows.length} чел.?`, `Send a request to enrol ${parsed.rows.length} people?`))) return;
-    setBusy(true); setError(''); setMessage('');
+    if (!window.confirm(t(language, `${parsed.rows.length} kishi qabul qilinsinmi?`, `Принять в школу: ${parsed.rows.length} чел.?`, `Enrol ${parsed.rows.length} people?`))) return;
+    setBusy(true); setError(''); setMessage(''); setCreated([]);
     try {
-      await customFetch(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'enroll', rows: parsed.rows }) });
+      const response = await customFetch<{ result?: { created?: Created[]; skipped?: unknown[] } }>(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'enroll', rows: parsed.rows }) });
       setText('');
-      setMessage(t(language, 'Ariza yuborildi. EDUVERSE tasdiqlagach, loginlar beriladi.', 'Заявка отправлена. После подтверждения EDUVERSE выдаст логины и пароли.', 'Sent. EDUVERSE issues logins after approval.'));
+      setCreated(response.result?.created ?? []);
+      setMessage(t(language, 'Qabul qilindi. Loginlar va parollar pastda.', 'Готово, ученики приняты. Логины и пароли ниже.', 'Done. Logins and passwords are below.'));
       onSent?.();
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -245,12 +247,24 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
   }
   return (
     <section className="panel">
-      <h2><UserPlus size={16} /> {t(language, 'Yangi o‘quvchilarni qabul qilish (ariza)', 'Принять новых учеников (заявка)', 'Enrol new pupils (request)')}</h2>
-      <p className="muted">{t(language, 'Excel’dan qo‘ying: F.I.Sh. · Sinf · Ota-ona telefoni · Ota-ona F.I.Sh. O‘qituvchi uchun birinchi ustunda «o‘qituvchi».', 'Вставьте из Excel: ФИО · Класс · Телефон родителя · ФИО родителя. Для учителя в первом столбце «учитель», для завуча — «завуч». Приказ о зачислении укажите в комментарии к заявке.', 'Paste from Excel: Name · Class · Parent phone · Parent name.')}</p>
+      <h2><UserPlus size={16} /> {t(language, 'Yangi o‘quvchilarni qabul qilish', 'Принять новых учеников', 'Enrol new pupils')}</h2>
+      <p className="muted">{t(language, 'Excel’dan qo‘ying: F.I.Sh. · Sinf · Ota-ona telefoni · Ota-ona F.I.Sh. O‘qituvchi uchun birinchi ustunda «o‘qituvchi».', 'Вставьте из Excel: ФИО · Класс · Телефон родителя · ФИО родителя. Для учителя в первом столбце «учитель», для завуча — «завуч».', 'Paste from Excel: Name · Class · Parent phone · Parent name.')}</p>
       <textarea className="import-area" rows={6} value={text} onChange={(event) => setText(event.target.value)} placeholder={'Азиз Каримов\t7-А\t+998 90 123 45 67\tКарим Каримов'} spellCheck={false} />
       {text.trim() && <p className="muted">{t(language, `Tayyor: ${parsed.rows.length} qator`, `Распознано строк: ${parsed.rows.length}`, `Rows: ${parsed.rows.length}`)}{parsed.errors.length ? ` · ${t(language, 'xato qatorlar', 'ошибки в строках', 'bad rows')}: ${parsed.errors.join(', ')}` : ''}</p>}
-      <button type="button" className="btn primary" disabled={busy || parsed.rows.length === 0} onClick={() => void send()}><Send size={14} /> {t(language, 'EDUVERSE ga yuborish', 'Отправить в EDUVERSE', 'Send to EDUVERSE')}</button>
+      <button type="button" className="btn primary" disabled={busy || parsed.rows.length === 0} onClick={() => void send()}><UserPlus size={14} /> {t(language, 'Qabul qilish', 'Принять', 'Enrol')}</button>
       {message && <div className="notice success" style={{ marginTop: 8 }}>{message}</div>}
+      {created.length > 0 && (
+        <div className="notice success owner-created" style={{ marginTop: 8 }}>
+          <small>{t(language, 'Parollar faqat hozir ko‘rinadi — chop eting yoki saqlang.', 'Пароли видны только сейчас — распечатайте или сохраните.', 'Passwords are shown only now.')}</small>
+          <div className="owner-created-list">
+            {created.map((person) => <div key={person.login}><b>{person.name}</b> {person.className && `· ${person.className}`} · {label(language, ROLE_TEXT[person.role], person.role)} · {t(language, 'login', 'логин', 'login')}: <code>{person.login}</code> · {t(language, 'parol', 'пароль', 'password')}: <code>{person.password}</code></div>)}
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button type="button" className="btn small" onClick={() => window.print()}>{t(language, 'Chop etish', 'Распечатать', 'Print')}</button>
+            <button type="button" className="btn small" onClick={() => setCreated([])}>{t(language, 'Yopish', 'Закрыть', 'Close')}</button>
+          </div>
+        </div>
+      )}
       {error && <div className="notice" style={{ marginTop: 8 }}>{error}</div>}
     </section>
   );
@@ -263,8 +277,8 @@ export function MyRequestsPanel({ schoolId, language, revision = 0 }: { schoolId
   }, [schoolId, revision]);
   return (
     <section className="panel">
-      <h2><ClipboardList size={16} /> {t(language, 'Mening arizalarim', 'Мои заявки в EDUVERSE', 'My requests')}</h2>
-      {requests.length === 0 ? <p className="muted">{t(language, 'Hali ariza yo‘q.', 'Заявок пока нет.', 'No requests yet.')}</p> : (
+      <h2><ClipboardList size={16} /> {t(language, 'Mening o‘zgarishlarim', 'Мои изменения', 'My changes')}</h2>
+      {requests.length === 0 ? <p className="muted">{t(language, 'Hali o‘zgarish yo‘q.', 'Изменений пока нет.', 'No changes yet.')}</p> : (
         <div className="people-list">
           {requests.map((request) => {
             const st = REQ_STATUS[request.status] ?? REQ_STATUS.pending;

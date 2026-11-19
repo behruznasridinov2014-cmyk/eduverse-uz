@@ -28263,7 +28263,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "D:\\MyData\\Desktop\\eduverse-uz\\.claude\\worktrees\\eduverse-audit-fixes-90b31c\\artifacts\\api-server\\dist";
+        const outputDir = "/home/user/eduverse-uz/artifacts/api-server/dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -55057,7 +55057,11 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
     }
     const targetRole = await schoolRoleOf(targetUserId, schoolId);
     if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) {
-      res.status(403).json({ error: "Requests about the director go to EDUVERSE directly." });
+      res.status(403).json({ error: "Changes about the director are made by EDUVERSE." });
+      return;
+    }
+    if (targetRole === "school_admin" && targetUserId !== viewer.id && !isGlobalAdminRole(viewer.role) && await schoolRoleOf(viewer.id, schoolId) !== "school_director") {
+      res.status(403).json({ error: "Only the director changes a deputy." });
       return;
     }
   }
@@ -55070,16 +55074,35 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
     res.status(403).json({ error: "Only EDUVERSE adds a director." });
     return;
   }
-  const [row] = await db.insert(schoolRequestsTable).values({ schoolId, authorId: viewer.id, kind, targetUserId, payload: change.payload, reason }).returning({ id: schoolRequestsTable.id });
-  await writeAudit(schoolId, viewer.id, `request:${kind}`, targetUserId, { requestId: row.id, reason });
+  if (kind === "enroll" && !isGlobalAdminRole(viewer.role) && await schoolRoleOf(viewer.id, schoolId) !== "school_director" && change.payload.rows.some((row2) => row2.role === "school_admin")) {
+    res.status(403).json({ error: "Only the director adds a deputy." });
+    return;
+  }
+  let result;
+  try {
+    result = await applyChange(schoolId, kind, targetUserId, change.payload, reason, viewer.id);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Could not make the change." });
+    return;
+  }
+  const stored = Array.isArray(result.created) ? { ...result, created: result.created.map(({ password: _pw, ...rest }) => rest) } : result;
+  const [row] = await db.insert(schoolRequestsTable).values({
+    schoolId,
+    authorId: viewer.id,
+    kind,
+    targetUserId,
+    payload: change.payload,
+    reason,
+    status: "approved",
+    decidedBy: viewer.id,
+    decidedAt: /* @__PURE__ */ new Date(),
+    result: stored
+  }).returning({ id: schoolRequestsTable.id });
   const owners = await ownerIds();
   const name = await schoolName(schoolId);
-  const what = { enroll: "\u043F\u0440\u0438\u043D\u044F\u0442\u044C \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432", expel: "\u043E\u0442\u0447\u0438\u0441\u043B\u0438\u0442\u044C / \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C", transfer: "\u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u0432 \u0434\u0440\u0443\u0433\u0443\u044E \u0448\u043A\u043E\u043B\u0443", graduate: "\u0432\u044B\u043F\u0443\u0441\u043A", restore: "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C", edit: "\u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435" };
-  await pushNotice(owners, "messages", `\u0417\u0430\u044F\u0432\u043A\u0430: ${what[kind]}`, `${name}${reason ? ` \xB7 ${reason}` : ""}`, "/admin");
-  await notifyUsers(owners, `\u{1F4DD} <b>\u041D\u043E\u0432\u0430\u044F \u0437\u0430\u044F\u0432\u043A\u0430</b>: ${escapeHtml(what[kind])}
-${escapeHtml(name)}${reason ? `
-${escapeHtml(reason)}` : ""}`);
-  res.status(201).json({ id: row.id, status: "pending" });
+  const what = { enroll: "\u043F\u0440\u0438\u043D\u044F\u043B\u0438 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432", expel: "\u043E\u0442\u0447\u0438\u0441\u043B\u0438\u043B\u0438 / \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u043B\u0438", transfer: "\u043F\u0435\u0440\u0435\u0432\u0435\u043B\u0438 \u0432 \u0434\u0440\u0443\u0433\u0443\u044E \u0448\u043A\u043E\u043B\u0443", graduate: "\u0432\u044B\u043F\u0443\u0441\u043A", restore: "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u043B\u0438", edit: "\u0438\u0441\u043F\u0440\u0430\u0432\u0438\u043B\u0438 \u0434\u0430\u043D\u043D\u044B\u0435" };
+  await pushNotice(owners, "messages", `\u0428\u043A\u043E\u043B\u0430: ${what[kind]}`, `${name}${reason ? ` \xB7 ${reason}` : ""}`, "/admin");
+  res.status(201).json({ id: row.id, status: "approved", result });
 });
 async function listRequests(where, limit = 200) {
   const rows = await db.select({

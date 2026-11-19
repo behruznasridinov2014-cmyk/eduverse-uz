@@ -21,10 +21,11 @@ import { escapeHtml, notifyUsers } from "../lib/notify";
 import { userPlan } from "../lib/plans";
 
 /**
- * Everything about people goes through EDUVERSE (the owner):
- *  - a school (director or deputy) sends a request: enrol pupils, expel / transfer /
- *    graduate one, restore one, or correct details (name, phone, class);
- *  - the owner confirms or rejects it, or makes the change directly.
+ * People of a school:
+ *  - the director or deputy makes the change at once (enrol pupils, expel / transfer /
+ *    graduate one, restore one, correct details). It is recorded as a done request and in
+ *    the journal, and the owner gets a quiet note in the bell (no Telegram);
+ *  - the owner can still change a person directly; old pending requests can still be decided.
  * Nothing is deleted: an expelled pupil keeps grades and attendance, only the status changes.
  */
 const router: IRouter = Router();
@@ -157,7 +158,12 @@ router.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_ST
     targetUserId = typeof body.userId === "string" && isValidUuid(body.userId) ? body.userId : null;
     if (!targetUserId || !(await schoolRoleOf(targetUserId, schoolId))) { res.status(400).json({ error: "This person is not in your school." }); return; }
     const targetRole = await schoolRoleOf(targetUserId, schoolId);
-    if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) { res.status(403).json({ error: "Requests about the director go to EDUVERSE directly." }); return; }
+    if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) { res.status(403).json({ error: "Changes about the director are made by EDUVERSE." }); return; }
+    // A deputy does not change another deputy; the director does.
+    if (targetRole === "school_admin" && targetUserId !== viewer.id && !isGlobalAdminRole(viewer.role) && (await schoolRoleOf(viewer.id, schoolId)) !== "school_director") {
+      res.status(403).json({ error: "Only the director changes a deputy." });
+      return;
+    }
   }
   const change = readChange(kind, body);
   if (change.error) { res.status(400).json({ error: change.error }); return; }
@@ -165,15 +171,31 @@ router.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_ST
     res.status(403).json({ error: "Only EDUVERSE adds a director." });
     return;
   }
-  const [row] = await db.insert(schoolRequestsTable).values({ schoolId, authorId: viewer.id, kind, targetUserId, payload: change.payload, reason }).returning({ id: schoolRequestsTable.id });
-  await writeAudit(schoolId, viewer.id, `request:${kind}`, targetUserId, { requestId: row!.id, reason });
-  // Tell the owner right away: the bell and Telegram.
+  if (kind === "enroll" && !isGlobalAdminRole(viewer.role) && (await schoolRoleOf(viewer.id, schoolId)) !== "school_director"
+    && (change.payload.rows as ImportRow[]).some((row) => row.role === "school_admin")) {
+    res.status(403).json({ error: "Only the director adds a deputy." });
+    return;
+  }
+  // The school makes the change itself: no waiting for EDUVERSE.
+  let result: Record<string, unknown>;
+  try {
+    result = await applyChange(schoolId, kind, targetUserId, change.payload, reason, viewer.id);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Could not make the change." });
+    return;
+  }
+  // Store logins only — passwords are shown to the school once and never kept.
+  const stored = Array.isArray(result.created) ? { ...result, created: (result.created as Array<Record<string, unknown>>).map(({ password: _pw, ...rest }) => rest) } : result;
+  const [row] = await db.insert(schoolRequestsTable).values({
+    schoolId, authorId: viewer.id, kind, targetUserId, payload: change.payload, reason,
+    status: "approved", decidedBy: viewer.id, decidedAt: new Date(), result: stored,
+  }).returning({ id: schoolRequestsTable.id });
+  // A quiet note for the owner in the bell only (no Telegram), so nobody is disturbed.
   const owners = await ownerIds();
   const name = await schoolName(schoolId);
-  const what: Record<Kind, string> = { enroll: "принять учеников", expel: "отчислить / отключить", transfer: "перевод в другую школу", graduate: "выпуск", restore: "восстановить", edit: "исправить данные" };
-  await pushNotice(owners, "messages", `Заявка: ${what[kind]}`, `${name}${reason ? ` · ${reason}` : ""}`, "/admin");
-  await notifyUsers(owners, `📝 <b>Новая заявка</b>: ${escapeHtml(what[kind])}\n${escapeHtml(name)}${reason ? `\n${escapeHtml(reason)}` : ""}`);
-  res.status(201).json({ id: row!.id, status: "pending" });
+  const what: Record<Kind, string> = { enroll: "приняли учеников", expel: "отчислили / отключили", transfer: "перевели в другую школу", graduate: "выпуск", restore: "восстановили", edit: "исправили данные" };
+  await pushNotice(owners, "messages", `Школа: ${what[kind]}`, `${name}${reason ? ` · ${reason}` : ""}`, "/admin");
+  res.status(201).json({ id: row!.id, status: "approved", result });
 });
 
 async function listRequests(where: ReturnType<typeof eq> | undefined, limit = 200) {

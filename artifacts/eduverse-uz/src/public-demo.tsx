@@ -60,7 +60,7 @@ export function PublicDemoPage({ language, onLanguageChange, onSignIn }: { langu
           ))}
           <section className="panel">
             <h2>{t(language, 'Xavfsizlik', 'Безопасность', 'Security')}</h2>
-            <p className="muted">{t(language, 'Har kimning o‘z logini; o‘qituvchi o‘quvchi qo‘sha olmaydi; maktablar bir-birini ko‘rmaydi; Google orqali tiklash.', 'У каждого свой логин; учитель не добавляет учеников; школы не видят друг друга; людей меняют только через заявку; украденный аккаунт возвращается через Google и все чужие устройства отключаются.', 'Own login for everyone; schools isolated; recovery via Google.')}</p>
+            <p className="muted">{t(language, 'Har kimning o‘z logini; o‘qituvchi o‘quvchi qo‘sha olmaydi; maktablar bir-birini ko‘rmaydi; Google orqali tiklash.', 'У каждого свой логин; учитель не добавляет учеников; школы не видят друг друга; все изменения людей видны в журнале; украденный аккаунт возвращается через Google и все чужие устройства отключаются.', 'Own login for everyone; schools isolated; recovery via Google.')}</p>
           </section>
         </div>
       )}
