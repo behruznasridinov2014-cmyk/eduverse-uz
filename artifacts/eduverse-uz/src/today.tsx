@@ -4,6 +4,7 @@ import { customFetch } from '@workspace/api-client-react';
 import { ArrowRight, BookOpen, CalendarCheck2, Clock3, DoorOpen, MonitorPlay, Sparkles, UserRound } from 'lucide-react';
 import { COURSE, SUBJECT_LABEL, type CourseBook, type CourseTopic } from './course-data';
 import type { Language } from './school-data';
+import { subjectLabel } from './ui/config';
 
 /*
  * "Today": the lessons of the signed-in person for today (Tashkent time), live status and
@@ -37,7 +38,7 @@ const MONTHS: Record<Language, string[]> = {
 /** Subjects without a textbook in EDUVERSE are shown by their own name. */
 export function lessonSubjectName(subject: string, language: Language): string {
   const label = SUBJECT_LABEL[subject as CourseBook['subject']];
-  return label ? t(language, ...label) : subject;
+  return label ? t(language, ...label) : subjectLabel(subject, language);
 }
 
 export function bookForLesson(lesson: Pick<TodayLesson, 'subject' | 'grade'>): CourseBook | undefined {

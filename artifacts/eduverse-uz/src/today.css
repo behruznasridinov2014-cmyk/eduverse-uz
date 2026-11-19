@@ -126,3 +126,6 @@ html[data-theme="night"] .tt-grid td.has-lesson { background: rgba(255, 255, 255
 .lab-today-head p { margin: 0; }
 .lab-today-pick { display: flex; flex-wrap: wrap; gap: 6px; }
 .lab-today-hint, .lab-today-more { margin: 0; font-size: 13px; }
+.tt-paste { display: grid; gap: 10px; margin-top: 12px; padding: 14px; border-radius: 16px; border: 1px dashed var(--line-2); background: var(--surface); }
+.tt-paste p { margin: 0; }
+.tt-paste textarea { width: 100%; font-family: inherit; resize: vertical; }

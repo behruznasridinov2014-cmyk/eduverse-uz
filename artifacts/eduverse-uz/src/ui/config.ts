@@ -21,8 +21,12 @@ export const TEACHER_SUBJECTS: Array<[string, string, string]> = [
   ['Informatika', 'Информатика', 'Computer science'],
   ['Geografiya', 'География', 'Geography'],
   ['Tarix', 'История', 'History'],
-  ['Ingliz tili', 'Английский язык', 'English'],
+  ['Ingliz tili', 'Английский язык', 'English language'],
   ['Ona tili', 'Родной язык', 'Native language'],
+  ['O‘zbek tili', 'Узбекский язык', 'Uzbek language'],
+  ['Rus tili', 'Русский язык', 'Russian language'],
+  ['Adabiyot', 'Литература', 'Literature'],
+  ['Jismoniy tarbiya', 'Физкультура', 'Physical education'],
 ];
 
 export function subjectLabel(saved: string, language: Language): string {

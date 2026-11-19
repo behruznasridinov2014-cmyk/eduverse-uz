@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { CalendarDays, Clock3, RefreshCw, Save, Sparkles } from 'lucide-react';
+import { CalendarDays, ClipboardPaste, Clock3, RefreshCw, Save, Sparkles } from 'lucide-react';
 import type { Language } from './school-data';
 import { Select } from './ui/select';
 import { friendlyError } from './errors';
 import { lessonSubjectName } from './today';
+import { TEACHER_SUBJECTS } from './ui/config';
 
 /*
  * Weekly timetable of a school, kept by the director or deputy.
@@ -26,6 +27,10 @@ const DAYS: Array<[string, string, string]> = [
 /** Textbook subjects first (they open topics and 3D), then the other school subjects. */
 const SUBJECT_CHOICES = ['math', 'physics', 'chemistry', 'biology', 'Узбекский язык', 'Русский язык', 'Английский язык', 'История', 'География', 'Информатика', 'Литература', 'Физкультура'];
 
+/** Cyrillic and Latin spellings of a name compare equal ("Ахмедов" = "Ahmedov" = "Axmedov"). */
+const CYR: Record<string, string> = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'j', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 's', ч: 'ch', ш: 'sh', щ: 'sh', ъ: '', ы: 'i', ь: '', э: 'e', ю: 'yu', я: 'ya', ў: 'o', қ: 'q', ғ: 'g', ҳ: 'h' };
+const latin = (text: string) => [...text.toLowerCase()].map((ch) => CYR[ch] ?? ch).join('').replace(/x/g, 'h').replace(/[‘’'`]/g, '');
+
 export function TimetableEditor({ schoolId, language }: { schoolId: string; language: Language }) {
   const [data, setData] = useState<Timetable | null>(null);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -35,6 +40,8 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   const apply = useCallback((next: Timetable) => {
     setData(next); setSlots(next.slots); setBells(next.bells); setDirty(false);
@@ -67,6 +74,44 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
     { value: '', label: t(language, 'O‘qituvchi tanlanmagan', 'Учитель не выбран', 'No teacher') },
     ...(data?.teachers ?? []).map((item) => ({ value: item.id, label: item.name })),
   ], [data, language]);
+
+  /** A subject typed in any of the three languages → the stored value. */
+  const subjectFrom = (raw: string): string | null => {
+    const text = raw.trim().toLowerCase();
+    if (!text || text === '-' || text === '—') return null;
+    for (const value of SUBJECT_CHOICES) {
+      const names = (['Uzbek', 'Русский', 'English'] as Language[]).map((lang) => lessonSubjectName(value, lang).toLowerCase());
+      if (names.some((name) => name === text || name.startsWith(text) || text.startsWith(name))) return value;
+    }
+    const other = TEACHER_SUBJECTS.find((names) => names.some((name) => name.toLowerCase() === text));
+    return other ? other[1] : raw.trim().slice(0, 40);
+  };
+  /**
+   * Pasted from Excel for the chosen class: one row per lesson number, one column per day (Monday first).
+   * A cell is "Subject" or "Subject / Teacher surname".
+   */
+  function applyPaste() {
+    const rows = pasteText.replace(/\r/g, '').split('\n').filter((line) => line.trim());
+    if (!rows.length) return;
+    const lines = rows.map((line) => line.split('\t'));
+    // A first column with lesson numbers or times is skipped.
+    const skipFirst = lines.every((cells) => /^\s*(\d+|\d{1,2}[:.]\d{2}.*)?\s*$/.test(cells[0] ?? ''));
+    const next = slots.filter((slot) => slot.classId !== classId);
+    let count = 0;
+    lines.slice(0, bells.length).forEach((cells, rowIndex) => {
+      (skipFirst ? cells.slice(1) : cells).slice(0, DAYS.length).forEach((cellText, dayIndex) => {
+        const [subjectPart, teacherPart] = cellText.split('/');
+        const subject = subjectFrom(subjectPart ?? '');
+        if (!subject) return;
+        const surname = (teacherPart ?? '').trim().toLowerCase();
+        const teacher = surname ? data?.teachers.find((item) => item.name.toLowerCase().includes(surname) || latin(item.name).includes(latin(surname))) : undefined;
+        next.push({ classId, weekday: dayIndex + 1, period: rowIndex + 1, subject, teacherId: teacher?.id ?? null, room: null });
+        count += 1;
+      });
+    });
+    setSlots(next); setDirty(true); setPasteOpen(false); setPasteText('');
+    setMessage(t(language, `${count} ta dars qo‘yildi. Tekshirib, saqlang.`, `Вставлено уроков: ${count}. Проверьте и сохраните.`, `${count} lessons pasted. Check and save.`));
+  }
 
   async function save() {
     setBusy(true); setError(''); setMessage('');
@@ -143,8 +188,22 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
       {editable && (
         <div className="row tt-actions">
           <button type="button" className="btn primary" disabled={busy || !dirty} onClick={() => void save()}><Save size={15} /> {t(language, 'Saqlash', 'Сохранить расписание', 'Save timetable')}</button>
+          <button type="button" className="btn" disabled={busy || !classId} onClick={() => setPasteOpen((open) => !open)}><ClipboardPaste size={15} /> {t(language, 'Excel’dan qo‘yish', 'Вставить из Excel', 'Paste from Excel')}</button>
           <button type="button" className="btn" disabled={busy} onClick={() => void fillDemo()}><Sparkles size={15} /> {t(language, 'Namuna bilan to‘ldirish', 'Заполнить примером', 'Fill with an example')}</button>
           {dirty && <span className="muted">{t(language, 'Saqlanmagan o‘zgarishlar bor', 'Есть несохранённые изменения', 'Unsaved changes')}</span>}
+        </div>
+      )}
+      {editable && pasteOpen && (
+        <div className="tt-paste">
+          <p className="muted">{t(language,
+            'Excel’da shu sinf jadvalini belgilang va nusxa oling: qatorlar — dars raqami, ustunlar — dushanbadan shanbagacha. Katakda «Fan» yoki «Fan / O‘qituvchi familiyasi». Bu yerga qo‘ying.',
+            'Выделите в Excel расписание этого класса и скопируйте: строки — номер урока, столбцы — дни с понедельника по субботу. В клетке «Предмет» или «Предмет / Фамилия учителя». Вставьте сюда.',
+            'In Excel select this class’s timetable and copy it: rows are lesson numbers, columns are days from Monday to Saturday. A cell is “Subject” or “Subject / Teacher surname”. Paste it here.')}</p>
+          <textarea className="input" rows={6} value={pasteText} onChange={(event) => setPasteText(event.target.value)} placeholder={t(language, 'Matematika / Ahmedov\tFizika\t…', 'Математика / Ахмедов\tФизика\t…', 'Maths / Ahmedov\tPhysics\t…')} />
+          <div className="row" style={{ gap: 8 }}>
+            <button type="button" className="btn primary" disabled={!pasteText.trim()} onClick={applyPaste}>{t(language, 'Jadvalga qo‘yish', 'Заполнить таблицу', 'Fill the table')}</button>
+            <button type="button" className="btn" onClick={() => { setPasteOpen(false); setPasteText(''); }}>{t(language, 'Bekor qilish', 'Отмена', 'Cancel')}</button>
+          </div>
         </div>
       )}
       {message && <div className="notice success" role="status">{message}</div>}

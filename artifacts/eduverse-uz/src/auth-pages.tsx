@@ -343,7 +343,7 @@ export function PublicHomePage({
       inDevelopment: 'Ishlab chiqilmoqda',
       features: [
         ['Interaktiv ta’lim', 'Mavzuni ochiq mashqlar va bosqichma-bosqich tushuntirishlar orqali mustahkamlang.', 'available'],
-        ['Onlayn darslar', 'Kamera, mikrofon va ekran namoyishi bilan jonli dars: kodni yuboring va boshlang.', 'available'],
+        ['Onlayn darslar', 'Kamera, mikrofon va ekran namoyishi bilan jonli dars: sinf o‘quvchilari darsni darhol o‘zida ko‘radi.', 'available'],
         ['Davomat', 'Har bir sinf uchun davomatni belgilang va saqlang.', 'available'],
         ['Uy vazifalari', 'Mavzuga bog‘langan vazifa: daftar rasmi, izoh, baho va o‘qituvchi imzosi.', 'available'],
         ['3D mavzular', 'Mavzuni 3D modelda o‘rganing va test bilan mustahkamlang.', 'available'],
@@ -429,7 +429,7 @@ export function PublicHomePage({
       inDevelopment: 'В разработке',
       features: [
         ['Интерактивное обучение', 'Закрепляйте темы с помощью открытых упражнений и пошаговых объяснений.', 'available'],
-        ['Онлайн-уроки', 'Живой урок с камерой, микрофоном и показом экрана: отправьте код и начинайте.', 'available'],
+        ['Онлайн-уроки', 'Живой урок с камерой, микрофоном и показом экрана: ученики класса сразу видят урок у себя.', 'available'],
         ['Посещаемость', 'Отмечайте и сохраняйте посещаемость каждого класса.', 'available'],
         ['Домашние задания', 'Задание по теме: фото тетради, объяснение, оценка и подпись учителя.', 'available'],
         ['3D-темы', 'Изучайте тему на 3D-модели и закрепляйте тестом.', 'available'],
@@ -515,7 +515,7 @@ export function PublicHomePage({
       inDevelopment: 'In development',
       features: [
         ['Interactive learning', 'Practice concepts with open exercises and step-by-step explanations.', 'available'],
-        ['Online lessons', 'Live lessons with camera, microphone and screen sharing: share the code and start.', 'available'],
+        ['Online lessons', 'Live lessons with camera, microphone and screen sharing: students of the class see it at once.', 'available'],
         ['Attendance', 'Mark and save attendance for every class.', 'available'],
         ['Homework', 'Topic-linked tasks: notebook photos, explanation, grade and teacher signature.', 'available'],
         ['3D topics', 'Learn a topic on a 3D model and reinforce it with a test.', 'available'],

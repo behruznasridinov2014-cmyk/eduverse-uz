@@ -286,7 +286,7 @@ type HomeAction={label:Record<Lang,string>;description:Record<Lang,string>;path:
 const L=(uz:string,ru:string,en:string):Record<Lang,string>=>({Uzbek:uz,Русский:ru,English:en});
 const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
  student:[
-  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi bergan kodni kiriting.','Введите код от учителя.','Enter the code from your teacher.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi boshlagan dars shu yerda chiqadi.','Урок, который начал учитель, появится здесь.','The lesson your teacher starts appears here.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
   {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/course',icon:Atom,tone:'violet'},
   {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
   {label:L('3D studiya','3D-студия','3D studio'),description:L('Kimyo, fizika, matematika, biologiya, geografiya — hammasi 3D da.','Химия, физика, математика, биология, география — всё в 3D.','Chemistry, physics, maths, biology, geography — all in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
@@ -422,7 +422,8 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
     return()=>{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{})};
    },[fullscreen]);
  function toggleSave(){setSaved(isSaved?saved.filter(x=>x!==key):[...saved,key]);setMessage(isSaved?'Bookmark removed':'Bookmark saved on this device');setTimeout(()=>setMessage(''),1800)}
- return <><PageHeading eyebrow={`${book.subject} · Grade 7 · ${book.language}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
+ const RL:Record<string,[string,string]>={Mathematics:['Математика','Matematika'],Physics:['Физика','Fizika'],Biology:['Биология','Biologiya'],Chemistry:['Химия','Kimyo'],Russian:['на русском','rus tilida'],Uzbek:['на узбекском','o‘zbek tilida'],English:['на английском','ingliz tilida']};const rl=(v:string)=>language==='Русский'?(RL[v]?.[0]??v):language==='Uzbek'?(RL[v]?.[1]??v):v;
+ return <><PageHeading eyebrow={`${rl(book.subject)} · ${language==='Русский'?'7 класс':language==='Uzbek'?'7-sinf':'Grade 7'} · ${rl(book.language)}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
  {book.pdf?(
     <div className="reader-pdf"><PdfViewer url={book.pdf} title={book.title} language={language}/></div>
   ):(
