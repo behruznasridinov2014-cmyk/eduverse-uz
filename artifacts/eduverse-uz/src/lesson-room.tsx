@@ -277,6 +277,18 @@ function RoomView({
   const lastSeq = useRef(0);
 
   /* ---- WebRTC mesh (camera / microphone / screen) ---- */
+  // Peers are only created once the relay (TURN) list is known, otherwise the
+  // first connections would be built without it.
+  const [iceReady, setIceReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void loadServerIceServers().then(() => {
+      if (live) setIceReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
   const mesh = useLessonMesh({
     roomId: room.id,
     selfUserId: user.id,
@@ -325,6 +337,7 @@ function RoomView({
 
   /* ---- Signalling poll loop (long poll) ---- */
   useEffect(() => {
+    if (!iceReady) return;
     let active = true;
     let timer: number | undefined;
     const poll = async () => {
@@ -369,7 +382,7 @@ function RoomView({
       if (timer) window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.id]);
+  }, [room.id, iceReady]);
 
   useEffect(() => {
     participantsRef.current = participants;
@@ -377,11 +390,12 @@ function RoomView({
 
   /* Everybody connects to everybody as soon as both sides are in the room. */
   useEffect(() => {
+    if (!iceReady) return;
     for (const participant of participants) {
       if (participant.userId === user.id) continue;
       ensurePeer(participant.userId, participant.username);
     }
-  }, [participants, user.id, ensurePeer]);
+  }, [participants, user.id, ensurePeer, iceReady]);
 
   /* ---- Individual AI test for a student ---- */
   const loadMyTest = useCallback(async () => {

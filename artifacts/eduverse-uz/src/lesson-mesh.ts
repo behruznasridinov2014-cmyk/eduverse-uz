@@ -61,23 +61,47 @@ export type MeshError = 'camera' | 'mic' | 'share-denied' | 'share-unsupported' 
  * ICE configuration.
  *
  * STUN finds the server-reflexive candidate (that is enough for most school
- * networks). The public relay is only a fallback for networks that block UDP
- * — it is rate-limited, so a dedicated TURN server should be configured for
- * production (set VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL at
- * build time).
+ * networks). A TURN relay is needed when UDP or peer-to-peer traffic is
+ * blocked. The relay is configured on the API (Cloudflare, Metered, Twilio or
+ * an own coturn server, see docs/turn-server.md) and fetched from
+ * `/api/ice-servers`, so no credentials ship in the browser bundle.
+ * VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL still work as a
+ * legacy build-time option, and a public rate-limited relay is the last resort.
  */
 let serverIce: RTCIceServer[] = [];
+let serverPolicy: RTCIceTransportPolicy = 'all';
+let serverIcePromise: Promise<void> | null = null;
 
-/** Loads relay servers configured on the API (Cloudflare TURN or a custom TURN). */
-export async function loadServerIceServers(): Promise<void> {
-  try {
-    const response = await fetch('/api/ice-servers', { credentials: 'include' });
-    if (!response.ok) return;
-    const body = (await response.json()) as { iceServers?: RTCIceServer[] };
-    if (Array.isArray(body.iceServers)) serverIce = body.iceServers;
-  } catch {
-    /* STUN-only fallback below */
+/**
+ * Loads relay servers configured on the API. The request is made once per page
+ * and never blocks for longer than four seconds, so a slow API cannot stop the
+ * lesson from starting (it then falls back to STUN and the public relay).
+ */
+export function loadServerIceServers(): Promise<void> {
+  if (!serverIcePromise) {
+    const request = (async () => {
+      try {
+        const response = await fetch('/api/ice-servers', { credentials: 'include' });
+        if (!response.ok) throw new Error(`ice-servers ${response.status}`);
+        const body = (await response.json()) as {
+          iceServers?: RTCIceServer[];
+          iceTransportPolicy?: RTCIceTransportPolicy;
+        };
+        if (Array.isArray(body.iceServers)) serverIce = body.iceServers;
+        serverPolicy = serverIce.length && body.iceTransportPolicy === 'relay' ? 'relay' : 'all';
+      } catch {
+        // STUN-only fallback below; the next lesson room asks again.
+        serverIcePromise = null;
+      }
+    })();
+    const timeout = new Promise<void>((resolve) => window.setTimeout(resolve, 4000));
+    serverIcePromise = Promise.race([request, timeout]);
   }
+  return serverIcePromise;
+}
+
+export function iceTransportPolicy(): RTCIceTransportPolicy {
+  return serverPolicy;
 }
 
 export function iceServers(): RTCIceServer[] {
@@ -326,7 +350,11 @@ export function useLessonMesh(options: LessonMeshOptions): LessonMesh {
 
   const createPeer = useCallback(
     (remoteUserId: string, remoteUsername: string): PeerRecord => {
-      const pc = new RTCPeerConnection({ iceServers: iceServers(), iceCandidatePoolSize: 4 });
+      const pc = new RTCPeerConnection({
+        iceServers: iceServers(),
+        iceTransportPolicy: iceTransportPolicy(),
+        iceCandidatePoolSize: 4,
+      });
       const peer: PeerRecord = {
         userId: remoteUserId,
         username: remoteUsername,

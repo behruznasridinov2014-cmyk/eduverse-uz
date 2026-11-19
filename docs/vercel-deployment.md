@@ -132,11 +132,13 @@ is heard within a second instead of after a full polling cycle.
 - The site must be served over **HTTPS** — browsers only grant camera and
   microphone access in a secure context.
 - For participants behind a strict NAT or a corporate firewall a dedicated
-  **TURN** server is required. Set `VITE_TURN_URL`, `VITE_TURN_USERNAME` and
-  `VITE_TURN_CREDENTIAL` in the Vercel project (build-time variables) and
-  redeploy. Without them the mesh falls back to the public STUN servers and the
-  public relay `openrelay.metered.ca`; that relay is rate-limited and must not
-  be relied on for a full class.
+  **TURN** server is required. Configure Cloudflare, Metered, Twilio or an own
+  coturn server with **runtime** environment variables on the API (for example
+  `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN`) and redeploy; see
+  [`turn-server.md`](turn-server.md) for what to buy and what to set. Without
+  it the mesh falls back to the public STUN servers and the public relay
+  `openrelay.metered.ca`; that relay is rate-limited and must not be relied on
+  for a full class.
 - The room shows the connection state and offers a **reconnect** button when
   the path is blocked.
 - After every deploy run `pnpm --filter @workspace/scripts run check:lesson`
