@@ -206,7 +206,7 @@ function App(){
         :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
         :location==='/homework/scan'||location==='/schedule'?<Redirect to={location==='/schedule'?'/dashboard':'/classes'}/>
-        :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
+        :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>{try{localStorage.removeItem(`eduverse:pdf-range:/books/${id}.pdf`)}catch{/* private mode */}navigate('/read/'+id)}}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} />
         :location==='/board'?<Redirect to="/lesson"/>
         :location==='/lab'&&auth.user?<><LabTodayScene language={lang}/><ChemLabPage language={lang} user={auth.user}/></>
@@ -427,6 +427,7 @@ function LibraryPage({ui,progress,saved,onOpen}:{ui:Lang;progress:Record<string,
 }
 function Field({label,placeholder,value,onChange}:{label:string;placeholder?:string;value?:string;onChange?:(v:string)=>void}){return <div className="control"><label>{label}</label><input placeholder={placeholder} value={value} onChange={e=>onChange?.(e.target.value)}/></div>}
 function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{language:string;book:Book;page:number;setPage:(p:number)=>void;saved:string[];setSaved:(v:string[])=>void;note:string;setNote:(v:string)=>void}){
+  const [pdfRange]=useState<{from:number;to:number}|null>(()=>{try{const raw=book.pdf?localStorage.getItem(`eduverse:pdf-range:${book.pdf}`):null;const m=raw?.match(/^(\d+)-(\d+)$/);return m?{from:Number(m[1]),to:Number(m[2])}:null}catch{return null}});
   const [zoom,setZoom]=useState(15);const [query,setQuery]=useState('');const [fullscreen,setFullscreen]=useState(false);const [message,setMessage]=useState('');const [highlights,setHighlights]=useSavedState<string[]>('highlights',[]);const key=`${book.id}:${page}`;const isSaved=saved.includes(key);const isHighlighted=highlights.includes(key);
  const chapter=book.chapters[Math.min(book.chapters.length-1,Math.floor((page-1)/8))];
  const sampleSearchText='demonstration lesson question investigate together known needs to be found representation clearer school garden 24 seedlings 4 equal rows relationship drawing table number sentence strategy calculating answer reasonable explain reasoning classmate mathematical idea';
@@ -440,7 +441,7 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
  const RL:Record<string,[string,string]>={Mathematics:['Математика','Matematika'],Physics:['Физика','Fizika'],Biology:['Биология','Biologiya'],Chemistry:['Химия','Kimyo'],Russian:['на русском','rus tilida'],Uzbek:['на узбекском','o‘zbek tilida'],English:['на английском','ingliz tilida']};const rl=(v:string)=>language==='Русский'?(RL[v]?.[0]??v):language==='Uzbek'?(RL[v]?.[1]??v):v;
  return <><PageHeading eyebrow={`${rl(book.subject)} · ${language==='Русский'?'7 класс':language==='Uzbek'?'7-sinf':'Grade 7'} · ${rl(book.language)}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
  {book.pdf?(
-    <div className="reader-pdf"><PdfViewer url={book.pdf} title={book.title} language={language}/></div>
+    <div className="reader-pdf">{pdfRange&&(()=>{const pages=pdfRange.from===pdfRange.to?String(pdfRange.from):`${pdfRange.from}–${pdfRange.to}`;return <div className="notice" style={{marginBottom:10}}><Info/>{language==='Русский'?`Открыта только сегодняшняя тема, стр. ${pages}`:language==='Uzbek'?`Faqat bugungi mavzu ochiq, ${pages}-bet`:`Only today’s topic is open, p. ${pages}`}</div>})()}<PdfViewer url={book.pdf} title={book.title} language={language} range={pdfRange}/></div>
   ):(
   <>
    <div className="notice" style={{marginBottom:12}}><Info/>Sample page content is original demonstration material, not an official textbook excerpt.</div>

@@ -60,7 +60,7 @@ import { friendlyError } from './errors';
 
 type SignalPayload = unknown;
 
-/** Options of the topic picker: today / tomorrow / day after, plus the chosen topic if it is not there. */
+/** Options of the topic picker: only today’s topics, plus the chosen topic if it is not there. */
 function planOptions(plan: NonNullable<ReturnType<typeof useLessonPlanTopics>>, current: string) {
   const known = plan.some((group) => group.items.some((item) => item.value === current));
   const extra = !known && current.startsWith('course:') ? courseTopicByKey(current.slice(7)) : null;

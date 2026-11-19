@@ -141,6 +141,12 @@ function SceneView({ scene, language }: { scene: CourseScene; language: Language
   }
 }
 
+/** Last PDF page of a topic: the page before the next topic starts (at least its first page). */
+function topicEndPage(book: CourseBook, topic: CourseTopic, start: number): number {
+  const later = book.topics.map((item) => item.page + book.pdfOffset).filter((page) => page > start).sort((a, b) => a - b)[0];
+  return Math.min(book.pdfPages, later ? Math.max(start, later - 1) : start + 3);
+}
+
 const studiedKey = (userId: string) => `eduverse:studied:${userId}`;
 
 /* ------------------------------------------------------------------ */
@@ -362,7 +368,12 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
         ))}
       </div>}
 
-      {course && (
+      {course && lesson && (
+        <p className="muted course-simple-progress">
+          {t(language, `Sinf ${covered.length} / ${book.topics.length} mavzuni o‘tdi`, `Класс прошёл ${covered.length} из ${book.topics.length} тем`, `The class covered ${covered.length} of ${book.topics.length} topics`)}
+        </p>
+      )}
+      {course && !lesson && (
         <section className="panel course-plan">
           <div className="course-plan-main">
             <span className="course-plan-icon"><CalendarCheck2 size={20} /></span>
@@ -428,7 +439,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
               {marks.has(topic.key) && <span className="tag green"><Users size={12} /> {t(language, `Sinfda o‘tildi: ${markDate(topic.key)}`, `Пройдено в классе: ${markDate(topic.key)}`, `Covered in class: ${markDate(topic.key)}`)}</span>}
             </div>
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
+              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${pdfPage}-${topicEndPage(book, topic, pdfPage)}`); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
               {isTeacher && <button type="button" className="btn primary" onClick={() => onOpen(`/lesson/course:${topic.key}`)}><MonitorPlay size={15} /> {t(language, 'Shu mavzuda dars', 'Урок по этой теме', 'Lesson on this topic')}</button>}
             </div>
           </header>
@@ -436,8 +447,8 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           {isTeacher && course?.canEdit && (
             <section className="panel course-mark">
               <GraduationCap size={18} />
-              <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Darsdan keyin belgilang — o‘quvchilar va prognoz yangilanadi.', 'Отметьте после урока — ученики и прогноз обновятся.', 'Mark it after the lesson — students and the forecast update.')}</span>
-              <input className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />
+              <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Dars tugagach, «Darsda o‘tdik» ni bosing.', 'После урока нажмите «Прошли на уроке».', 'After the lesson, press “Covered in class”.')}</span>
+              {!lesson && <input className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
               {marks.has(topic.key)
                 ? <button type="button" className="btn small" disabled={busy} onClick={() => void mark(topic, false)}>{t(language, 'Belgini olib tashlash', 'Снять отметку', 'Remove mark')}</button>
                 : <button type="button" className="btn small primary" disabled={busy} onClick={() => void mark(topic, true)}><CheckCircle2 size={14} /> {t(language, 'Darsda o‘tdik', 'Прошли на уроке', 'Covered in class')}</button>}

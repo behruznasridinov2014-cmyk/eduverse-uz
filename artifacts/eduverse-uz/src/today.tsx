@@ -314,8 +314,7 @@ export function useLessonPlanTopics(language: Language): Array<{ label: string; 
       if (items.length) groups.push({ label, items });
     };
     add(t(language, 'Bugun', 'Сегодня', 'Today'), data.lessons.map((lesson) => ({ lesson, topic: topicForLesson(lesson, courses[lesson.classId], data.date) })));
-    const planned = upcomingTopics(data, courses);
-    for (const day of data.next ?? []) add(dayLabel(day, data.date, language), day.lessons.map((lesson) => ({ lesson, topic: planned.get(lesson.id) })));
+    // Only today's topics: tomorrow's topic opens tomorrow.
     const any = data.lessons.length + (data.next ?? []).reduce((sum, day) => sum + day.lessons.length, 0);
     return any ? groups : null;
   }, [data, courses, language]);

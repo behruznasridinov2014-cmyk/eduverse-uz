@@ -92,8 +92,8 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
     }
     return rows;
   }, [today.data, courses, library, language]);
-  const [showAll, setShowAll] = useState(false);
-  const allMode = showAll || todayScenes.length === 0;
+  // Only today's topics: the next topics open on their lesson day.
+  const allMode = false;
   const shown = library.filter((entry) =>
     (subject === 'all' || entry.subject === subject)
     && (!gradeFilter || (gradeFilter >= entry.grades[0] && gradeFilter <= entry.grades[1]))
@@ -105,15 +105,14 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
       <div className="page-heading">
         <div>
           <div className="eyebrow">{t(language, '3D KUTUBXONA', '3D-БИБЛИОТЕКА', '3D LIBRARY')}</div>
-          <h1>{t(language, 'Barcha 3D sahnalar', 'Все 3D-сцены', 'All 3D scenes')} · {library.length}</h1>
-          <p className="page-subtitle">{t(language, 'Har bir sahna bir nechta sinfga mos: molekula, jism, hujayra, grafik.', 'Каждая сцена подходит нескольким классам: молекулы, тела, клетки, графики. Откройте и покажите на уроке.', 'Every scene serves several grades.')}</p>
+          <h1>{t(language, 'Bugungi mavzular 3D da', 'Сегодняшние темы в 3D', 'Today’s topics in 3D')}</h1>
+          <p className="page-subtitle">{t(language, 'Faqat bugungi darslar mavzulari ochiq.', 'Открыты только темы сегодняшних уроков.', 'Only the topics of today’s lessons are open.')}</p>
         </div>
       </div>
       {todayScenes.length > 0 && (
         <div className="panel scene-library-today">
           <div className="section-head">
             <h2><Box size={16} /> {t(language, 'Bugungi darslar mavzulari', 'Темы сегодняшних уроков', 'Topics of today’s lessons')}</h2>
-            <button type="button" className="btn small" onClick={() => setShowAll((value) => !value)}>{showAll ? t(language, 'Faqat bugungi', 'Только сегодняшние', 'Only today') : t(language, 'Barcha sahnalar', 'Все сцены', 'All scenes')}</button>
           </div>
           <div className="scene-grid">
             {todayScenes.map(({ entry, label }) => (
@@ -124,6 +123,13 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
               </button>
             ))}
           </div>
+        </div>
+      )}
+      {today.data && todayScenes.length === 0 && (
+        <div className="empty-state">
+          <span className="empty-icon"><Box /></span>
+          <h2>{today.data.lessons.length === 0 ? t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today') : t(language, 'Bugungi darslarda 3D yo‘q', 'В сегодняшних уроках нет 3D', 'Today’s lessons have no 3D')}</h2>
+          <p>{t(language, '3D mavzu dars kuni ochiladi.', '3D темы откроется в день урока.', 'The 3D of a topic opens on the lesson day.')}</p>
         </div>
       )}
       {allMode && <div className="people-filters">
@@ -145,7 +151,6 @@ export function SceneLibraryPage({ language, grade }: { language: Language; grad
           </div>
           {open.hint && <p className="muted">{open.hint}</p>}
           <CourseScene3D scene={open.scene} language={language} />
-          {open.topics.length > 0 && <p className="muted">{t(language, 'Darsliklarda', 'В учебниках', 'In textbooks')}: {open.topics.map((item) => gradeText(item, language)).join(', ')}</p>}
         </div>
       )}
       {allMode && <div className="scene-grid">
