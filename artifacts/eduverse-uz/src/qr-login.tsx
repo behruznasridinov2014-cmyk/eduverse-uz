@@ -60,7 +60,7 @@ const COPY: Record<AppLanguage, Copy> = {
     approveError: 'Не удалось подтвердить вход.',
     qrUnavailable: 'Сервер недоступен. Проверьте подключение и нажмите «Повторить».',
     qrRetry: 'Повторить',
-    qrOffline: 'Не удалось создать QR-код. Связь с сервером утеряна.',
+    qrOffline: 'Не удалось создать QR-код. Проверьте интернет.',
   },
   Uzbek: {
     tabCode: 'Login bilan kirish',
@@ -83,7 +83,7 @@ const COPY: Record<AppLanguage, Copy> = {
     approveError: 'Kirishni tasdiqlab bo‘lmadi.',
     qrUnavailable: 'Server ishlamayapti. Ulanishni tekshiring va «Qayta urinish» tugmasini bosing.',
     qrRetry: 'Qayta urinish',
-    qrOffline: 'QR kod yaratib bo‘lmadi. Server bilan aloqa yo‘q.',
+    qrOffline: 'QR kod yaratib bo‘lmadi. Internetni tekshiring.',
   },
   English: {
     tabCode: 'Sign in with login',
@@ -104,9 +104,9 @@ const COPY: Record<AppLanguage, Copy> = {
     approveSubmit: 'Approve sign-in',
     approveDone: 'The device was approved.',
     approveError: 'Could not approve the sign-in.',
-    qrUnavailable: 'The server is unreachable. Check your connection and press Retry.',
+    qrUnavailable: 'No connection. Check the internet and press Retry.',
     qrRetry: 'Retry',
-    qrOffline: 'Could not create the QR code. There is no connection to the server.',
+    qrOffline: 'Could not create the QR code. Check the internet.',
   },
 };
 

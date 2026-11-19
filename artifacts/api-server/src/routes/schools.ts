@@ -14,6 +14,8 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
+import { escapeHtml, notifyFamily } from "../lib/notify";
+import { pushNotice, studentsOfClasses, withParents } from "../lib/inbox";
 import {
   ASSIGNMENT_STATUSES,
   GLOBAL_ADMIN_ROLES,
@@ -276,8 +278,10 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
-        memberCount: sql<number>`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-        classCount: sql<number>`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`,
+        plan: schoolsTable.plan,
+        planUntil: schoolsTable.planUntil,
+        memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+        classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })
       .from(schoolsTable)
       .orderBy(schoolsTable.name);
@@ -331,8 +335,8 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
-        memberCount: sql<number>`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-        classCount: sql<number>`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`,
+        memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+        classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })
       .from(schoolsTable)
       .where(eq(schoolsTable.id, schoolId))
@@ -391,7 +395,7 @@ router.get(
 
 router.post(
   "/schools/:schoolId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
@@ -453,7 +457,7 @@ router.post(
 
 router.delete(
   "/schools/:schoolId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId", "userId")) return;
     const schoolId = String(req.params.schoolId);
@@ -468,6 +472,18 @@ router.delete(
     if (userId === user.id && !isGlobalAdminRole(user.role)) {
       res.status(400).json({ error: "Managers cannot remove their own school membership." });
       return;
+    }
+    // A deputy manages pupils, parents and teachers, never the director or other deputies.
+    const targetRole = await schoolMembershipRole(userId, schoolId);
+    if (!isGlobalAdminRole(user.role)) {
+      if (targetRole === "school_director") {
+        forbidden(res, "Only EDUVERSE staff can remove a school director.");
+        return;
+      }
+      if (targetRole === "school_admin" && schoolRole !== "school_director") {
+        forbidden(res, "Only the director can remove a deputy.");
+        return;
+      }
     }
 
     await db.transaction(async (transaction) => {
@@ -695,7 +711,7 @@ router.get(
 
 router.post(
   "/classes/:classId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId")) return;
     const classId = String(req.params.classId);
@@ -781,7 +797,7 @@ router.post(
 
 router.delete(
   "/classes/:classId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId", "userId")) return;
     const classId = String(req.params.classId);
@@ -949,6 +965,7 @@ router.post(
       })
       .returning();
 
+    await pushNotice(await studentsOfClasses([classId]), "homework", `Новое задание: ${title}`, `${subject}${dueAtResult.value ? ` · до ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes");
     res.status(201).json({ assignment });
   },
 );
@@ -1213,6 +1230,60 @@ router.post(
   },
 );
 
+router.post(
+  "/assignments/:assignmentId/submissions/:studentId/ai-check",
+  requireAuthenticatedRole(...ACCOUNT_ROLES),
+  async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const user = currentUser(res);
+    const context = await authorizeAssignment(user, assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    if (!context.authorization.canReview) {
+      forbidden(res, "Only the teacher can run this check.");
+      return;
+    }
+    const [submission] = await db
+      .select({ id: assignmentSubmissionsTable.id, content: assignmentSubmissionsTable.content })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(1);
+    if (!submission) {
+      res.status(404).json({ error: "Submission not found." });
+      return;
+    }
+    const [info] = await db
+      .select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description })
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.id, assignmentId))
+      .limit(1);
+    const [student] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+    const photos = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .where(eq(submissionFilesTable.submissionId, submission.id))
+      .orderBy(submissionFilesTable.position)
+      .limit(2);
+    const { analyzeHomework } = await import("../lib/ai-content");
+    const check = await analyzeHomework({
+      subject: info?.subject ?? "",
+      task: `${info?.title ?? ""}. ${info?.description ?? ""}`.slice(0, 600),
+      studentName: student?.name ?? "",
+      explanation: submission.content,
+      photos: photos.map((row) => row.data).filter((data) => data.startsWith("data:image/")),
+    });
+    if (!check) {
+      res.status(503).json({ error: "The AI check is not available right now." });
+      return;
+    }
+    res.json({ check });
+  },
+);
+
 router.get(
   "/assignments/:assignmentId/submissions/:studentId/files",
   requireAuthenticatedRole(...ACCOUNT_ROLES),
@@ -1340,6 +1411,21 @@ router.patch(
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });
       return;
+    }
+
+    if (typeof changes.score === "number") {
+      const [info] = await db
+        .select({ title: assignmentsTable.title, subject: assignmentsTable.subject })
+        .from(assignmentsTable)
+        .where(eq(assignmentsTable.id, assignmentId))
+        .limit(1);
+      const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
+      await pushNotice(await withParents([studentId]), "grades", `Новая оценка: ${grade}`, `${info?.subject ?? ""} — ${info?.title ?? ""}`, "/classes");
+      await notifyFamily(
+        studentId,
+        `📝 Yangi baho / Новая оценка: <b>${grade}</b>\n${escapeHtml(info?.subject ?? "")} — ${escapeHtml(info?.title ?? "")}`,
+        true,
+      );
     }
 
     res.json({ submission: updated });

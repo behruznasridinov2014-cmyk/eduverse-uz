@@ -214,7 +214,7 @@ function blueprintFor(subject: string): SubjectBlueprint {
 /* Model call                                                                  */
 /* -------------------------------------------------------------------------- */
 
-type ChatMessage = { role: "system" | "user"; content: string };
+type ChatMessage = { role: "system" | "user"; content: string | Array<Record<string, unknown>> };
 
 async function callModel(messages: ChatMessage[]): Promise<string | null> {
   if (!isAiConfigured()) return null;
@@ -702,6 +702,143 @@ async function enrichFacts(pkg: GeneratedTopicPackage): Promise<GeneratedTopicPa
 /* -------------------------------------------------------------------------- */
 /* Per-student differentiated questions                                        */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Free-form tutoring answer for a student or teacher question, grounded in
+ * the current topic. Returns null when no AI key is configured.
+ */
+export async function answerTutorQuestion(
+  question: string,
+  context: { subject?: string; title?: string; facts?: string[] },
+): Promise<string | null> {
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        "Ты — школьный ИИ-помощник EDUVERSE для Узбекистана. Отвечай кратко (до 120 слов), простым языком, на языке вопроса (узбекский, русский или английский). Объясняй по шагам, приводи один маленький пример. Не выдумывай факты, не отвечай на темы вне школьной программы — вежливо верни разговор к учёбе.",
+    },
+    {
+      role: "user",
+      content: `Тема урока: ${context.title ?? "не выбрана"} (${context.subject ?? "предмет не указан"}). ${
+        context.facts?.length ? `Факты темы: ${context.facts.slice(0, 5).join(" | ")}. ` : ""
+      }Вопрос: ${question}`,
+    },
+  ]);
+  return raw ? raw.trim().slice(0, 2000) : null;
+}
+
+export type LessonPlan = {
+  title: string;
+  goals: string[];
+  steps: Array<{ minutes: number; title: string; activity: string }>;
+  questions: string[];
+  homework: string;
+  experiment: string;
+  source: "ai" | "local";
+};
+
+/** A ready lesson plan for one textbook paragraph. Falls back to a template. */
+export async function generateLessonPlan(input: { subject: string; topic: string; grade: number; minutes: number; language: string }): Promise<LessonPlan> {
+  const m = input.minutes;
+  const fallback: LessonPlan = {
+    title: input.topic,
+    goals: [`${input.topic}: asosiy tushunchalar / основные понятия`, "Mustaqil misol yechish / самостоятельное решение примера"],
+    steps: [
+      { minutes: Math.round(m * 0.1), title: "Kirish / Вступление", activity: "Savol bilan qiziqtirish, oldingi mavzuni eslash." },
+      { minutes: Math.round(m * 0.3), title: "Yangi mavzu / Новая тема", activity: "Darslik paragrafi, 3D model yoki doskada tushuntirish." },
+      { minutes: Math.round(m * 0.3), title: "Amaliyot / Практика", activity: "Juftlikda misollar, o‘qituvchi yordami." },
+      { minutes: Math.round(m * 0.2), title: "Test / Тест", activity: "Onlayn darsda individual test." },
+      { minutes: Math.round(m * 0.1), title: "Yakun / Итог", activity: "Xulosa va uy vazifasi." },
+    ],
+    questions: [`${input.topic} nima?`, "Hayotdan misol keltiring.", "Asosiy qoida qanday?"],
+    homework: "Paragrafni o‘qing va 3 ta savolga daftarda javob yozing.",
+    experiment: "",
+    source: "local",
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        `Ты — методист узбекской школы. Составь план урока строго в JSON: {"title":"","goals":["",""],"steps":[{"minutes":5,"title":"","activity":""}],"questions":["","",""],"homework":"","experiment":""}. Сумма minutes = ${m}. 4–6 шагов. experiment — простой опыт или 3D-демонстрация, если уместно, иначе пустая строка. Язык ответа: ${input.language === "Uzbek" ? "узбекский (латиница)" : input.language === "English" ? "английский" : "русский"}.`,
+    },
+    { role: "user", content: `Предмет: ${input.subject}. Класс: ${input.grade}. Тема/параграф учебника: ${input.topic}. Длительность: ${m} минут.` },
+  ]);
+  if (!raw) return fallback;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return fallback;
+  const list = (value: unknown) => (Array.isArray(value) ? value.map((item) => str(item)).filter(Boolean).slice(0, 8) : []);
+  const steps = Array.isArray(parsed.steps)
+    ? parsed.steps
+        .map((step) => (typeof step === "object" && step !== null ? (step as Record<string, unknown>) : null))
+        .filter((step): step is Record<string, unknown> => step !== null)
+        .map((step) => ({ minutes: Math.max(1, Math.min(90, Math.round(Number(step.minutes) || 5))), title: str(step.title), activity: str(step.activity) }))
+        .filter((step) => step.title)
+        .slice(0, 8)
+    : [];
+  if (!steps.length) return fallback;
+  return {
+    title: str(parsed.title) || input.topic,
+    goals: list(parsed.goals),
+    steps,
+    questions: list(parsed.questions),
+    homework: str(parsed.homework),
+    experiment: str(parsed.experiment),
+    source: "ai",
+  };
+}
+
+export type HomeworkCheck = {
+  verdict: "self" | "unclear" | "ai";
+  confidence: number;
+  handwritten: boolean;
+  matchesTask: boolean;
+  reasons: string[];
+  advice: string;
+};
+
+/**
+ * Looks at the notebook photos and the student's own explanation and gives
+ * the TEACHER a hint whether the work looks self-made or copied from an AI.
+ * It is advice, never proof: no tool can prove that a text was written by AI.
+ */
+export async function analyzeHomework(input: {
+  subject: string;
+  task: string;
+  studentName: string;
+  explanation: string;
+  photos: string[];
+}): Promise<HomeworkCheck | null> {
+  if (!isAiConfigured()) return null;
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: "text",
+      text: `Предмет: ${input.subject}. Задание: ${input.task}. Ученик 7 класса: ${input.studentName}.\nОбъяснение ученика своими словами: «${input.explanation.slice(0, 1500)}».\nФото тетради прикреплены (${input.photos.length}).`,
+    },
+    ...input.photos.slice(0, 2).map((url) => ({ type: "image_url", image_url: { url } })),
+  ];
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        'Ты помощник учителя. Оцени, похоже ли, что ученик сделал работу сам. Признаки самостоятельной работы: решение написано от руки в тетради, есть исправления и черновые шаги, объяснение простым детским языком, совпадает с решением на фото. Признаки ответа ИИ: идеальный «взрослый» текст с терминами не по возрасту, шаблонные фразы, объяснение не совпадает с тетрадью, на фото напечатанный текст или экран. Это только подсказка учителю, не обвинение. Отвечай строго JSON: {"verdict":"self|unclear|ai","confidence":0-100,"handwritten":true|false,"matchesTask":true|false,"reasons":["...","..."],"advice":"что спросить у ученика"}. Пиши по-русски кратко.',
+    },
+    { role: "user", content },
+  ]);
+  if (!raw) return null;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return null;
+  const verdict = parsed.verdict === "self" || parsed.verdict === "ai" ? parsed.verdict : "unclear";
+  const confidence = Math.max(0, Math.min(100, Math.round(Number(parsed.confidence) || 50)));
+  return {
+    verdict,
+    // never claim certainty: an AI detector cannot prove authorship
+    confidence: Math.min(confidence, 90),
+    handwritten: parsed.handwritten === true,
+    matchesTask: parsed.matchesTask !== false,
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice),
+  };
+}
 
 export async function generateTopicTest(
   subject: string,

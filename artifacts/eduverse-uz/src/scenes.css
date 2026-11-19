@@ -1,0 +1,105 @@
+/* EDUVERSE own 3D scenes (CSS 3D stage) and the class course plan. */
+.stage3d { position: relative; width: 100%; perspective: 1100px; perspective-origin: 50% 35%; overflow: hidden; border-radius: 18px; cursor: grab; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.stage3d.is-dragging { cursor: grabbing; }
+.stage3d-world { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .9s var(--ease-spring, cubic-bezier(.34, 1.4, .64, 1)); }
+.stage3d.is-dragging .stage3d-world { transition: transform .08s linear; }
+.stage3d-layer { position: absolute; inset: 0; display: grid; place-items: center; transform-style: preserve-3d; pointer-events: none; }
+.stage3d-layer > * { pointer-events: auto; }
+.stage3d-floor { position: absolute; left: 6%; right: 6%; bottom: 4%; height: 40%; transform: translateZ(-80px) rotateX(78deg); transform-origin: bottom; border-radius: 50%; background: radial-gradient(closest-side, rgba(30, 58, 85, .22), transparent); pointer-events: none; }
+.stage3d-hint { position: absolute; right: 12px; top: 10px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; color: #fff; background: rgba(30, 58, 85, .35); pointer-events: none; }
+.scene-stage { padding: 0 !important; overflow: hidden; background: linear-gradient(180deg, #EAF4FB, #F6EFE2) !important; }
+.stage3d.dark-stage, .stage3d.space-stage { background: radial-gradient(circle at 50% 30%, #2C4F70, #10223A 75%); }
+.scene-svg { width: 100%; height: 100%; max-height: 100%; overflow: visible; font-family: var(--font); }
+.scene-canvas { width: 100%; height: 100%; display: block; }
+.scene-backdrop { width: 92%; height: 86%; border-radius: 20px; background: linear-gradient(160deg, rgba(255, 255, 255, .55), rgba(143, 200, 238, .18)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8); }
+.scene-glass-box { width: 88%; height: 84%; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .05); }
+.scene-modes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.scene-note { color: var(--text-2); font-size: 13.5px; line-height: 1.55; margin: 8px 0 0; }
+.scene-slider { margin-top: 6px; }
+.scene-loading { min-height: 320px; background: linear-gradient(90deg, rgba(255, 255, 255, .4), rgba(255, 255, 255, .7), rgba(255, 255, 255, .4)); }
+.organelle { cursor: pointer; transition: filter .3s, stroke-width .3s; }
+.organelle.on { filter: drop-shadow(0 0 6px rgba(242, 193, 78, .95)); stroke: #F2C14E; stroke-width: 3; }
+.bone { cursor: pointer; }
+.bone.on, .bone.on * { fill: #F2C14E; }
+
+.lab-steps { display: flex; gap: 10px; transform-style: preserve-3d; flex-wrap: wrap; justify-content: center; padding: 0 12px; }
+.lab-step { width: 92px; height: 110px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .9); background: rgba(255, 255, 255, .78); box-shadow: 0 16px 30px -18px rgba(30, 58, 85, .6); display: grid; place-items: center; align-content: center; gap: 6px; font: 700 13px var(--font); color: var(--text); cursor: pointer; transition: transform .6s var(--ease-spring, ease), background .3s; }
+.lab-step b { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #CFE8F8; color: #1E3A55; }
+.lab-step.on { background: #fff; outline: 2px solid #F2C14E; }
+.lab-step.done b { background: #3FA77A; color: #fff; }
+.lab-shelf, .lab-hazards { display: grid; grid-template-columns: repeat(4, minmax(0, 76px)); gap: 12px; transform-style: preserve-3d; }
+.lab-hazards { grid-template-columns: repeat(3, minmax(0, 104px)); }
+.lab-item { width: 76px; height: 86px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .9); background: rgba(255, 255, 255, .7); padding: 8px; cursor: pointer; transition: transform .6s var(--ease-spring, ease); }
+.lab-item svg { width: 100%; height: 100%; }
+.lab-item.on { background: #fff; outline: 2px solid #F2C14E; }
+.hazard-card { position: relative; width: 104px; height: 112px; border: 0; padding: 0; background: none; cursor: pointer; transform-style: preserve-3d; transition: transform .7s var(--ease-spring, ease); }
+.hazard-card.flipped { transform: rotateY(180deg); }
+.hazard-front, .hazard-back { position: absolute; inset: 0; border-radius: 14px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; place-items: center; align-content: center; gap: 4px; padding: 8px; background: rgba(255, 255, 255, .92); border: 1px solid rgba(184, 149, 90, .3); font: 600 11px/1.3 var(--font); color: var(--text); text-align: center; }
+.hazard-front svg { width: 54px; height: 54px; }
+.hazard-back { transform: rotateY(180deg); background: #FFF6E3; }
+
+.units-board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: 92%; transform-style: preserve-3d; }
+.units-board div { display: grid; gap: 4px; padding: 14px 6px; border-radius: 14px; background: rgba(255, 255, 255, .8); text-align: center; transition: transform .5s var(--ease-spring, ease); }
+.units-board div.on { transform: translateZ(40px) scale(1.06); outline: 2px solid #F2C14E; }
+.units-board b { font-size: 15px; color: #1E3A55; word-break: break-all; }
+.area-grid { display: grid; gap: 3px; width: min(80%, 360px); max-height: 85%; transform-style: preserve-3d; }
+.area-grid i { aspect-ratio: 1; border-radius: 4px; background: linear-gradient(135deg, #8FC8EE, #4BA3DB); box-shadow: 0 4px 0 #2F7AAE; animation: tile-in .5s var(--ease-spring, ease) both; }
+@keyframes tile-in { from { opacity: 0; transform: translateZ(30px) scale(.6); } to { opacity: 1; transform: none; } }
+.graph-layer { place-items: end end !important; padding: 10px; }
+.mini-graph { width: 46%; height: auto; background: rgba(255, 255, 255, .92); border-radius: 12px; box-shadow: 0 10px 24px -14px rgba(30, 58, 85, .6); }
+
+.classify-cards { display: grid; grid-template-columns: repeat(4, 80px); gap: 10px; transform-style: preserve-3d; }
+.classify-card { width: 80px; height: 86px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, .9); background: rgba(255, 255, 255, .8); display: grid; place-items: center; align-content: center; cursor: pointer; transition: transform .5s var(--ease-spring, ease); }
+.classify-card span { font-size: 30px; }
+.classify-card small { font-size: 10px; color: var(--text-2); }
+.classify-card.on { transform: translateZ(50px) scale(1.06); outline: 2px solid #F2C14E; }
+.classify-card.ok { background: #E7F7EF; }
+.classify-card.bad { background: #FFECEF; }
+.classify-pair { display: grid; justify-items: center; gap: 10px; padding: 18px 24px; border-radius: 20px; background: rgba(255, 255, 255, .85); font: 700 20px var(--font); color: #1E3A55; text-align: center; max-width: 80%; }
+.classify-pair em { font-style: normal; color: #B8955A; }
+
+.course-plan { display: grid; gap: 10px; }
+.course-plan-main { display: flex; gap: 12px; align-items: center; }
+.course-plan-main > div { display: grid; gap: 2px; }
+.course-plan-icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(143, 200, 238, .25); color: var(--sky-deep); flex: none; }
+.course-plan-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.course-plan-grid > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .55); border: 1px solid rgba(184, 149, 90, .18); }
+.course-plan-grid small { color: var(--text-3); font-size: 11.5px; }
+.course-plan-grid b { font-size: 16px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.course-plan-grid b.warn { color: var(--warn); }
+.course-plan-grid .pace .btn { width: 26px; height: 26px; padding: 0; justify-content: center; }
+.course-plan-warn { margin: 0; color: var(--warn) !important; }
+.course-topic.covered .course-code { color: var(--ok); }
+.course-topic.is-next { box-shadow: inset 3px 0 0 #F2C14E; }
+.course-name { display: grid; gap: 1px; }
+.course-date { color: var(--ok); font-size: 10.5px; font-weight: 700; }
+.course-mark { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px !important; }
+.course-mark > svg { color: var(--gold); }
+.course-mark > span { flex: 1; min-width: 180px; color: var(--text-2); font-size: 13.5px; }
+.course-mark .input { width: auto; }
+.course-method summary { list-style: none; display: flex; align-items: center; gap: 8px; }
+.course-method summary::-webkit-details-marker { display: none; }
+.course-method summary::before { content: '\25B8'; transition: transform .3s ease; }
+.course-method[open] summary::before { transform: rotate(90deg); }
+.course-method ol { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 8px; color: var(--text-2); }
+.course-method ol b { color: var(--gold); margin-right: 4px; }
+.course-hook { font-size: 17px !important; font-weight: 700; color: #9C7A3F !important; }
+
+@media (max-width: 760px) {
+  .course-plan-grid { grid-template-columns: 1fr 1fr; }
+  .lab-shelf { grid-template-columns: repeat(4, 64px); }
+  .lab-item { width: 64px; height: 74px; }
+  .classify-cards { grid-template-columns: repeat(4, 66px); }
+  .classify-card { width: 66px; }
+  .units-board { grid-template-columns: repeat(3, 1fr); }
+  .lab-hazards { grid-template-columns: repeat(3, 92px); }
+  .hazard-card { width: 92px; }
+}
+
+html[data-theme="night"] .scene-stage { background: linear-gradient(180deg, #1A2B45, #142238) !important; }
+html[data-theme="night"] .scene-backdrop { background: rgba(255, 255, 255, .06); box-shadow: none; }
+html[data-theme="night"] .course-plan-grid > div, html[data-theme="night"] .lab-step, html[data-theme="night"] .lab-item,
+html[data-theme="night"] .units-board div, html[data-theme="night"] .classify-card, html[data-theme="night"] .classify-pair { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .1); color: var(--text); }
+html[data-theme="night"] .units-board b, html[data-theme="night"] .classify-pair { color: var(--text); }
+html[data-theme="night"] .course-hook { color: var(--accent-night, #D7A968) !important; }
+@media (prefers-reduced-motion: reduce) { .stage3d-world, .area-grid i, .hazard-card { transition: none !important; animation: none !important; } }

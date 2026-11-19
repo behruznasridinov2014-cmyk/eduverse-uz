@@ -19,6 +19,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
+import { checkNewDevice, sessionMeta } from "../lib/inbox";
 import {
   createSessionToken,
   DUMMY_PASSWORD_HASH,
@@ -48,6 +49,7 @@ import {
   verifyTotpStep,
 } from "../lib/two-factor";
 import { logger } from "../lib/logger";
+import { writeAudit } from "../lib/audit";
 import {
   isActiveTelegramBindNonce,
   matchesTelegramWebhookSecret,
@@ -55,6 +57,10 @@ import {
 } from "../lib/telegram-security";
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+/** Study statuses that cannot sign in (graduates keep access). */
+const ACCOUNT_BLOCKED = ["expelled", "transferred", "disabled"];
+/** Without “remember me” the cookie dies with the browser; the server copy lives at most 12 hours. */
+const SHORT_SESSION_MS = 12 * 60 * 60 * 1000;
 const isProduction = process.env.NODE_ENV === "production";
 const allowPublicRegistration = process.env.EDUVERSE_ALLOW_PUBLIC_REGISTRATION === "1";
 const sessionCookieName = "eduverse.sid";
@@ -303,8 +309,13 @@ export function getAuthSecurityConfiguration() {
   };
 }
 
-function setSessionCookie(res: Response, token: string): void {
-  res.cookie(sessionCookieName, token, cookieOptions);
+function setSessionCookie(res: Response, token: string, remember = true): void {
+  if (remember) {
+    res.cookie(sessionCookieName, token, cookieOptions);
+    return;
+  }
+  const { maxAge: _maxAge, ...browserSession } = cookieOptions;
+  res.cookie(sessionCookieName, token, browserSession);
 }
 
 function clearSessionCookie(res: Response): void {
@@ -331,6 +342,8 @@ async function authenticatedUserForRequest(req: Request): Promise<User | null> {
       ),
     )
     .limit(1);
+  // Expelled, transferred or disabled accounts lose access at once.
+  if (user && ACCOUNT_BLOCKED.includes(user.account.status)) return null;
   return user?.account ?? null;
 }
 
@@ -362,6 +375,9 @@ export function requireAuthenticatedRole(
       .select({
         id: usersTable.id,
         role: usersTable.role,
+        sessionId: sessionsTable.id,
+        lastSeenAt: sessionsTable.lastSeenAt,
+        device: sessionsTable.device,
       })
       .from(sessionsTable)
       .innerJoin(usersTable, eq(sessionsTable.userId, usersTable.id))
@@ -385,7 +401,15 @@ export function requireAuthenticatedRole(
       return;
     }
 
-    res.locals.authenticatedUser = user;
+    // "Last seen" for the devices list (at most every 5 minutes); the first request
+    // of a new session also checks whether the device is new for this account.
+    const now = Date.now();
+    if (!user.lastSeenAt || now - user.lastSeenAt.getTime() > 5 * 60 * 1000) {
+      await db.update(sessionsTable).set({ lastSeenAt: new Date(now) }).where(eq(sessionsTable.id, user.sessionId)).catch(() => {});
+      if (!user.lastSeenAt) await checkNewDevice(user.id, user.sessionId, user.device);
+    }
+    res.locals.authenticatedUser = { id: user.id, role: user.role };
+    res.locals.sessionId = user.sessionId;
     next();
   };
 }
@@ -479,6 +503,7 @@ router.post(
         await transaction.insert(sessionsTable).values({
           userId: createdUser.id,
           tokenHash: hashSessionToken(sessionToken),
+          ...sessionMeta(req),
           expiresAt,
         });
 
@@ -504,7 +529,7 @@ router.post(
   loginRateLimiter,
   loginAddressLimiter,
   async (req, res) => {
-    if (!hasOnlyFields(req.body, ["login", "password"])) {
+    if (!hasOnlyFields(req.body, ["login", "password", "remember"])) {
       res.status(400).json({ error: "Unexpected sign-in fields." });
       return;
     }
@@ -533,6 +558,10 @@ router.post(
     const passwordIsValid = await verifyPassword(password, passwordHash);
     if (!user || !passwordIsValid) {
       res.status(401).json({ error: "Login or password is incorrect." });
+      return;
+    }
+    if (ACCOUNT_BLOCKED.includes(user.status)) {
+      res.status(403).json({ error: "This account is closed by the school. Contact the school administration." });
       return;
     }
 
@@ -593,14 +622,24 @@ router.post(
       return;
     }
 
+    // Curators (EDUVERSE staff) are appointed by the owner in the hosting settings:
+    // EDUVERSE_CURATOR_LOGINS="login1,login2". No password ever leaves the owner.
+    const curatorLogins = (process.env.EDUVERSE_CURATOR_LOGINS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+    if (curatorLogins.includes(user.loginNormalized) && user.role !== "platform_superadmin") {
+      await db.update(usersTable).set({ role: "platform_superadmin", updatedAt: new Date() }).where(eq(usersTable.id, user.id));
+      user.role = "platform_superadmin";
+    }
+
+    const remember = (req.body as { remember?: unknown }).remember === true;
     const sessionToken = createSessionToken();
     await db.insert(sessionsTable).values({
       userId: user.id,
       tokenHash: hashSessionToken(sessionToken),
-      expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
+      ...sessionMeta(req),
+      expiresAt: new Date(Date.now() + (remember ? SESSION_DURATION_MS : SHORT_SESSION_MS)),
     });
 
-    setSessionCookie(res, sessionToken);
+    setSessionCookie(res, sessionToken, remember);
     res.json({ user: publicUser(user) });
   },
 );
@@ -1179,6 +1218,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
       await tx.insert(sessionsTable).values({
         userId: account.id,
         tokenHash: hashSessionToken(sessionToken),
+        ...sessionMeta(req),
         expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
       });
       return account;
@@ -1539,6 +1579,7 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
     await tx.insert(sessionsTable).values({
       userId: account.id,
       tokenHash: hashSessionToken(freshToken),
+      ...sessionMeta(req),
       expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
     });
     await tx
@@ -1549,6 +1590,147 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
 
   setSessionCookie(res, freshToken);
   res.json({ user: publicUser(account) });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Sign-in with Google                                                         */
+/* -------------------------------------------------------------------------- */
+/*
+ * Accounts are still created only by the school (or EDUVERSE). A user who is
+ * signed in links their Google account in the profile; after that the
+ * "Sign in with Google" button works for them. Nobody can register through Google.
+ *
+ * Needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the hosting settings, and the
+ * redirect URI https://<site>/api/auth/google/callback added in Google Cloud.
+ */
+const GOOGLE_COOKIE = "eduverse.goauth";
+const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+const base64url = (buffer: Buffer) => buffer.toString("base64url");
+
+function googleRedirectUri(req: Request): string {
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+  const host = req.get("x-forwarded-host") || req.get("host") || "";
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+
+router.get("/auth/google/status", async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ enabled: googleConfigured(), linkedEmail: viewer?.googleEmail ?? null });
+});
+
+router.get("/auth/google/start", loginAddressLimiter, async (req, res) => {
+  if (!googleConfigured()) { res.redirect(302, "/login?google=off"); return; }
+  const mode = req.query.mode === "link" ? "link" : req.query.mode === "recover" ? "recover" : "login";
+  if (mode === "link" && !(await authenticatedUserForRequest(req))) { res.redirect(302, "/login"); return; }
+  const state = base64url(randomBytes(24));
+  const verifier = base64url(randomBytes(48));
+  const challenge = base64url(createHash("sha256").update(verifier).digest());
+  res.cookie(GOOGLE_COOKIE, JSON.stringify({ state, verifier, mode }), { httpOnly: true, secure: isProduction, sameSite: "lax", path: "/api/auth/google", maxAge: 10 * 60 * 1000 });
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    redirect_uri: googleRedirectUri(req),
+    response_type: "code",
+    scope: "openid email",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    prompt: "select_account",
+  });
+  res.redirect(302, `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
+  const fail = (reason: string) => { res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" }); res.redirect(302, `/login?google=${reason}`); };
+  if (!googleConfigured()) { fail("off"); return; }
+  let saved: { state?: string; verifier?: string; mode?: string } = {};
+  try { saved = JSON.parse(String(req.cookies?.[GOOGLE_COOKIE] ?? "{}")); } catch { saved = {}; }
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  const state = typeof req.query.state === "string" ? req.query.state : "";
+  if (!code || !state || !saved.state || !saved.verifier || state !== saved.state) { fail("error"); return; }
+
+  // Exchange the code over TLS directly with Google; the ID token comes from Google itself.
+  let claims: { sub?: string; email?: string; email_verified?: boolean; aud?: string; iss?: string; exp?: number } = {};
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: googleRedirectUri(req),
+        grant_type: "authorization_code",
+        code_verifier: saved.verifier,
+      }).toString(),
+    });
+    if (!response.ok) { logger.warn({ status: response.status }, "google token exchange failed"); fail("error"); return; }
+    const body = (await response.json()) as { id_token?: string };
+    const payload = body.id_token?.split(".")[1];
+    claims = payload ? JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) : {};
+  } catch (error) {
+    logger.warn({ err: error }, "google sign-in failed");
+    fail("error");
+    return;
+  }
+  const validIssuer = claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com";
+  if (!claims.sub || claims.aud !== process.env.GOOGLE_CLIENT_ID || !validIssuer || !claims.exp || claims.exp * 1000 < Date.now() || claims.email_verified !== true) {
+    fail("error");
+    return;
+  }
+  res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" });
+
+  if (saved.mode === "link") {
+    const viewer = await authenticatedUserForRequest(req);
+    if (!viewer) { res.redirect(302, "/login"); return; }
+    const [taken] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+    if (taken && taken.id !== viewer.id) { res.redirect(302, "/profile?google=taken"); return; }
+    await db.update(usersTable).set({ googleSub: claims.sub, googleEmail: claims.email ?? null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+    res.redirect(302, "/profile?google=linked");
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+  if (!user) { res.redirect(302, "/login?google=notlinked"); return; }
+  if (ACCOUNT_BLOCKED.includes(user.status)) { res.redirect(302, "/login?google=blocked"); return; }
+
+  if (saved.mode === "recover") {
+    // The account was stolen or the password forgotten: Google proved the owner.
+    // Close every sign-in on every device, then let the owner set a new password.
+    const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, user.id)).returning({ id: sessionsTable.id });
+    await db.update(usersTable).set({ mustChangePassword: true, recoveryUntil: new Date(Date.now() + 15 * 60 * 1000), updatedAt: new Date() }).where(eq(usersTable.id, user.id));
+    await writeAudit(null, user.id, "recover-google", user.id, { sessionsClosed: closed.length });
+    const recoveryToken = createSessionToken();
+    await db.insert(sessionsTable).values({
+      userId: user.id,
+      tokenHash: hashSessionToken(recoveryToken),
+      ...sessionMeta(req),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+    setSessionCookie(res, recoveryToken, false);
+    res.redirect(302, `/profile?google=recovered&closed=${closed.length}`);
+    return;
+  }
+  const sessionToken = createSessionToken();
+  await db.insert(sessionsTable).values({
+    userId: user.id,
+    tokenHash: hashSessionToken(sessionToken),
+    ...sessionMeta(req),
+    expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
+  });
+  setSessionCookie(res, sessionToken, true);
+  res.redirect(302, "/dashboard");
+});
+
+router.post("/auth/google/unlink", requireAllowedOrigin, loginAddressLimiter, async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  if (!viewer) { res.status(401).json({ error: "Authentication required." }); return; }
+  // A thief with a stolen session must not remove the owner's way back.
+  const password = getString(req.body, "password") ?? "";
+  if (!(await verifyPassword(password, viewer.passwordHash))) { res.status(400).json({ error: "The current password is wrong." }); return; }
+  await db.update(usersTable).set({ googleSub: null, googleEmail: null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ unlinked: true });
 });
 
 export default router;

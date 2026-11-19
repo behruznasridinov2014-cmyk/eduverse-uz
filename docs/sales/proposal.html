@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>EDUVERSE — предложение для школы</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", "DM Sans", Arial, sans-serif; color: #1C1C21; font-size: 11pt; line-height: 1.5; }
+  .page { width: 210mm; height: 297mm; padding: 18mm 18mm 16mm; position: relative; page-break-after: always; overflow: hidden; }
+  .page:last-child { page-break-after: auto; }
+  .cover { background: #0A0A0B; color: #F2F2F3; padding: 0; }
+  .cover-inner { padding: 28mm 20mm; height: 100%; display: flex; flex-direction: column; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .mark { width: 46px; height: 46px; border-radius: 8px; background: #C8102E; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 24px; }
+  .brand b { font-size: 20pt; letter-spacing: .08em; }
+  .cover h1 { font-size: 34pt; line-height: 1.12; margin: 34mm 0 8mm; font-weight: 800; }
+  .cover h1 em { font-style: normal; color: #E02544; }
+  .cover p.lead { font-size: 14pt; color: #C9C9CE; max-width: 150mm; margin: 0; }
+  .cover .chips { margin-top: 14mm; display: flex; flex-wrap: wrap; gap: 8px; }
+  .cover .chip { border: 1px solid #3A3A42; border-radius: 4px; padding: 6px 12px; color: #D6D1C4; font-size: 10.5pt; }
+  .cover .foot { margin-top: auto; border-top: 1px solid #26262C; padding-top: 8mm; color: #8E8E96; font-size: 10pt; display: flex; justify-content: space-between; }
+  .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6mm; background: #C8102E; }
+  h2 { font-size: 19pt; margin: 0 0 4mm; font-weight: 800; }
+  h2 small { display: block; font-size: 9.5pt; color: #C8102E; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 2mm; font-weight: 700; }
+  h3 { font-size: 12pt; margin: 0 0 2mm; }
+  p { margin: 0 0 3mm; }
+  .muted { color: #5C5C66; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; }
+  .card { border: 1px solid #E4E4E8; border-radius: 6px; padding: 3.6mm; background: #FAFAFB; break-inside: avoid; }
+  .card h3 { color: #1C1C21; }
+  .card .ico { display: inline-grid; place-items: center; width: 9mm; height: 9mm; border-radius: 4px; background: #FBE7EA; color: #C8102E; font-weight: 800; margin-bottom: 2mm; }
+  .card p { font-size: 9.6pt; color: #44444C; margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+  th, td { text-align: left; padding: 2.6mm 3mm; border-bottom: 1px solid #E4E4E8; vertical-align: top; }
+  th { background: #1C1C21; color: #fff; font-weight: 700; }
+  tr.hl td { background: #FBE7EA; }
+  .price { font-size: 15pt; font-weight: 800; color: #C8102E; white-space: nowrap; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+  li { margin-bottom: 1.2mm; }
+  .steps { display: grid; gap: 3mm; }
+  .step { display: grid; grid-template-columns: 22mm 1fr; gap: 4mm; align-items: start; }
+  .step b.w { background: #1C1C21; color: #fff; border-radius: 4px; padding: 2mm; text-align: center; font-size: 9.5pt; }
+  .note { border-left: 3px solid #C8102E; background: #F6F6F8; padding: 3mm 4mm; font-size: 10pt; margin-top: 4mm; }
+  .pageno { position: absolute; bottom: 8mm; right: 18mm; font-size: 9pt; color: #8E8E96; }
+  .sig { margin-top: 10mm; display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; }
+  .sig div { border-top: 1px solid #1C1C21; padding-top: 2mm; font-size: 10pt; color: #44444C; }
+  .fill { border-bottom: 1px solid #8E8E96; display: inline-block; min-width: 60mm; height: 5mm; vertical-align: bottom; }
+</style>
+</head>
+<body>
+
+<!-- 1. Cover -->
+<section class="page cover">
+  <div class="cover-inner">
+    <div class="brand"><span class="mark">E</span><b>EDUVERSE</b></div>
+    <h1>Цифровая школа<br>с <em>3D-уроками</em>, онлайн-классом<br>и ИИ-помощником</h1>
+    <p class="lead">Одна платформа для учителей, учеников, родителей и директора. На узбекском, русском и английском языках. Работает на телефоне и компьютере.</p>
+    <div class="chips">
+      <span class="chip">Онлайн-уроки</span><span class="chip">3D-лаборатория</span><span class="chip">ИИ-план урока</span>
+      <span class="chip">Давомат и журнал</span><span class="chip">Кабинет родителя</span><span class="chip">Telegram-уведомления</span>
+    </div>
+    <div class="foot"><span>Коммерческое предложение для частных школ Узбекистана</span><span>2026</span></div>
+  </div>
+</section>
+
+<!-- 2. What school gets -->
+<section class="page">
+  <div class="bar"></div>
+  <h2><small>Что получает школа</small>Всё, что нужно для урока — в одном месте</h2>
+  <p class="muted">Платформа уже работает. Ниже — то, что школа получает с первого дня пилота.</p>
+  <div class="grid2">
+    <div class="card"><span class="ico">1</span><h3>Онлайн-урок</h3><p>Камера, микрофон, демонстрация экрана, чат. Учитель меняет тему прямо на уроке — ученики сразу видят 3D-модель. Урок не прерывается, если учитель открыл учебник.</p></div>
+    <div class="card"><span class="ico">2</span><h3>3D-лаборатория</h3><p>Химия: ученик собирает молекулу из атомов и видит её в 3D, проверяет, может ли она существовать, и как вещество выглядит в жизни. Реакции с уравнениями. Физика: маятник на разных планетах и электрическая цепь по закону Ома.</p></div>
+    <div class="card"><span class="ico">3</span><h3>ИИ-помощник и план урока</h3><p>Учитель пишет параграф учебника — за 30 секунд готовы цели, ход урока по минутам, опыт, вопросы и домашнее задание. Ученик задаёт вопрос по теме и получает короткое объяснение.</p></div>
+    <div class="card"><span class="ico">4</span><h3>Индивидуальные тесты</h3><p>Каждому ученику — свои 5 вопросов в своём порядке. Учитель видит в реальном времени, кто и где ошибся.</p></div>
+    <div class="card"><span class="ico">5</span><h3>Давомат, журнал, домашние задания</h3><p>Отметка присутствия в один клик. Журнал оценок по классу со средней и посещаемостью. Ученик сдаёт домашнюю работу фото тетради, учитель оценивает и подписывает.</p></div>
+    <div class="card"><span class="ico">6</span><h3>Кабинет родителя</h3><p>Оценки, посещаемость, несданные задания и комментарии учителя по каждому ребёнку. Уведомления в Telegram: пропуск, опоздание, новая оценка, объявление класса.</p></div>
+    <div class="card"><span class="ico">7</span><h3>Панель директора</h3><p>Ученики, учителя, посещаемость за 30 дней, средняя оценка, онлайн-уроки, непроверенные работы. Классы с проблемами подсвечиваются.</p></div>
+    <div class="card"><span class="ico">8</span><h3>Быстрый запуск</h3><p>Школа присылает таблицу Excel — классы, ученики, учителя и родители создаются автоматически, логины печатаются карточками. Библиотека учебников с читалкой.</p></div>
+  </div>
+  <span class="pageno">2</span>
+</section>
+
+<!-- 3. Pricing & advance -->
+<section class="page">
+  <div class="bar"></div>
+  <h2><small>Стоимость</small>Начинаем с пилота — без риска для школы</h2>
+  <table>
+    <tr><th style="width:30%">Этап</th><th>Что входит</th><th style="width:20%">Стоимость</th></tr>
+    <tr class="hl"><td><b>Аванс на запуск</b><br><span class="muted">один раз, при подписании</span></td>
+      <td>Отдельный защищённый сервер и база данных для школы, собственный адрес (домен), платный ИИ, настройка под школу: логотип, цвета, предметы, система оценок, загрузка учеников и учителей, обучение персонала.</td>
+      <td><span class="price">$500</span></td></tr>
+    <tr><td><b>Пилот</b><br><span class="muted">1–2 месяца, 1–2 класса</span></td>
+      <td>Все функции платформы, поддержка по телефону и Telegram в учебное время, еженедельный отчёт директору.</td>
+      <td><span class="price">$250</span> / мес</td></tr>
+    <tr><td><b>Лицензия на школу</b><br><span class="muted">после пилота</span></td>
+      <td>Все классы и филиалы, все кабинеты, обновления и новые 3D-лаборатории, поддержка, резервное копирование.</td>
+      <td><span class="price">от $3</span> за ученика / мес<br><span class="muted">или фиксированно по договорённости</span></td></tr>
+  </table>
+  <div class="note"><b>Пример:</b> школа на 400 учеников × $3 = $1 200 в месяц. Это меньше 1% от стоимости обучения в средней частной школе Ташкента.</div>
+
+  <h3 style="margin-top:7mm">Зачем нужен аванс</h3>
+  <ul>
+    <li><b>Сервер и база данных</b> — данные школы хранятся отдельно и защищённо, с ежедневными резервными копиями.</li>
+    <li><b>Домен</b> — свой адрес платформы, например <i>school.eduverse.uz</i>.</li>
+    <li><b>Платный ИИ</b> — чтобы ИИ-помощник и план урока работали для всех учеников без ограничений.</li>
+    <li><b>Сервер связи для онлайн-уроков</b> — стабильное видео через школьный Wi-Fi и мобильный интернет.</li>
+    <li><b>Настройка и инструменты разработки</b> — подготовка платформы под методику школы.</li>
+  </ul>
+  <p class="muted">Аванс засчитывается в первый месяц лицензии, если школа продолжает работу после пилота.</p>
+  <span class="pageno">3</span>
+</section>
+
+<!-- 4. What we need from the school -->
+<section class="page">
+  <div class="bar"></div>
+  <h2><small>Что нужно от школы</small>Данные для запуска</h2>
+  <div class="grid2">
+    <div class="card"><h3>1. Списки (Excel)</h3><p>
+      <b>Ученики:</b> ФИО, класс (например, 7-А).<br>
+      <b>Учителя:</b> ФИО, предметы, классы, классный руководитель.<br>
+      <b>Родители:</b> ФИО, телефон, чей ребёнок.<br>
+      <b>Администрация:</b> директор, завуч, ответственный за платформу.</p></div>
+    <div class="card"><h3>2. Методика обучения</h3><p>
+      Система оценок (5-, 10-, 100-балльная, IB).<br>
+      Как выставляются четвертные и итоговые.<br>
+      Правила пропусков по уважительной причине.<br>
+      Предметы, где 3D нужно в первую очередь.</p></div>
+    <div class="card"><h3>3. Учебный процесс</h3><p>
+      Расписание уроков и звонков.<br>
+      Учебники и программы по классам (PDF, если школа имеет право их использовать).<br>
+      Сколько учеников на одном онлайн-уроке.</p></div>
+    <div class="card"><h3>4. Оформление</h3><p>
+      Логотип школы в хорошем качестве.<br>
+      Фирменные цвета.<br>
+      Название платформы, например «[Школа] EDUVERSE».</p></div>
+    <div class="card"><h3>5. Юридическое</h3><p>
+      Реквизиты школы, кто подписывает договор.<br>
+      Согласие родителей на обработку персональных данных.<br>
+      Требование к хранению данных (на серверах в Узбекистане или нет).</p></div>
+    <div class="card"><h3>6. Организационное</h3><p>
+      Контактное лицо со стороны школы.<br>
+      Класс(ы) для пилота и срок.<br>
+      Цифры успеха: например, «80% учителей ведут уроки в системе».</p></div>
+  </div>
+  <span class="pageno">4</span>
+</section>
+
+<!-- 5. What we provide + timeline -->
+<section class="page">
+  <div class="bar"></div>
+  <h2><small>Что делаем мы</small>Запуск за 4 недели</h2>
+  <div class="steps">
+    <div class="step"><b class="w">Неделя 1</b><div><b>Подготовка.</b> Сервер, база, домен, ИИ. Логотип, цвета и название школы на платформе. Настройка системы оценок и предметов.</div></div>
+    <div class="step"><b class="w">Неделя 2</b><div><b>Загрузка данных.</b> Импорт учеников, учителей и родителей. Печать карточек с логинами. Подключение Telegram-уведомлений.</div></div>
+    <div class="step"><b class="w">Неделя 3</b><div><b>Обучение.</b> 1–2 часа с учителями: онлайн-урок, 3D-лаборатория, тесты, журнал, ИИ-план. 30 минут с директором. Короткая инструкция для родителей.</div></div>
+    <div class="step"><b class="w">Неделя 4</b><div><b>Пилот в классе.</b> Реальные уроки. Ежедневная поддержка. Отчёт директору: посещаемость, активность, оценки, отзывы учителей.</div></div>
+  </div>
+
+  <h3 style="margin-top:7mm">Наши обязательства</h3>
+  <ul>
+    <li>Поддержка в учебное время: ответ в течение рабочего дня, срочные проблемы урока — в течение часа.</li>
+    <li>Ежедневные резервные копии данных школы.</li>
+    <li>Данные школы не передаются третьим лицам и используются только для работы платформы.</li>
+    <li>Обновления и новые функции без доплаты в рамках лицензии.</li>
+  </ul>
+
+  <h3 style="margin-top:6mm">Что добавим по запросу школы</h3>
+  <div class="grid3">
+    <div class="card"><p><b>3D по биологии и географии:</b> клетка, сердце, глобус, вулкан.</p></div>
+    <div class="card"><p><b>Подготовка к IELTS / SAT</b> с проверкой эссе ИИ.</p></div>
+    <div class="card"><p><b>Табель за четверть</b> в PDF и электронный дневник.</p></div>
+    <div class="card"><p><b>Оплата обучения</b> через Payme / Click и напоминания.</p></div>
+    <div class="card"><p><b>Сравнение филиалов</b> для сетей школ.</p></div>
+    <div class="card"><p><b>Запись онлайн-уроков</b> для пропустивших учеников.</p></div>
+  </div>
+  <span class="pageno">5</span>
+</section>
+
+<!-- 6. Next step -->
+<section class="page">
+  <div class="bar"></div>
+  <h2><small>Следующий шаг</small>Как начать</h2>
+  <ol>
+    <li><b>Демонстрация — 20 минут.</b> Покажем онлайн-урок, 3D-лабораторию, кабинеты родителя и директора на живом примере.</li>
+    <li><b>Договор и аванс.</b> Фиксируем класс(ы) пилота, срок и цифры успеха.</li>
+    <li><b>Данные от школы.</b> Списки в Excel, логотип, система оценок, расписание (стр. 4).</li>
+    <li><b>Запуск через 4 недели</b> — по плану на стр. 5.</li>
+    <li><b>Итоги пилота</b> и решение о лицензии на всю школу.</li>
+  </ol>
+
+  <div class="note">Пилот можно завершить после первого месяца, если платформа не подходит школе. Данные школы будут выгружены в Excel и удалены с наших серверов.</div>
+
+  <h3 style="margin-top:9mm">Контакты</h3>
+  <p>Имя: <span class="fill"></span></p>
+  <p>Телефон / Telegram: <span class="fill"></span></p>
+  <p>Демо-платформа: <b>eduverse-uz1.vercel.app</b></p>
+
+  <div class="sig">
+    <div>Школа: подпись, дата</div>
+    <div>EDUVERSE: подпись, дата</div>
+  </div>
+  <span class="pageno">6</span>
+</section>
+
+</body>
+</html>

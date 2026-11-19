@@ -33,7 +33,6 @@ import {
   Timer,
   Users,
 } from 'lucide-react';
-import { Interactive3d } from './interactive-3d';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
 
@@ -88,7 +87,7 @@ type Copy = {
 
 const COPY: Record<Language, Copy> = {
   Русский: {
-    eyebrow: 'ИИ · УЧЕБНЫЕ ПАКЕТЫ',
+    eyebrow: 'УЧЕБНЫЕ ПАКЕТЫ',
     titleTeacher: 'Выберите тему урока',
     titleStudent: 'Темы уроков',
     subtitleTeacher: 'ИИ подготовит слайды, факты, интерактивный 3D-объект и тест по выбранной теме.',
@@ -107,9 +106,9 @@ const COPY: Record<Language, Copy> = {
     lessonLength: 'Длительность урока',
     minutes: 'минут',
     emptyTitle: 'Темы пока не опубликованы',
-    emptyText: 'Учитель сначала выбирает предмет и тему — ИИ создаст учебный пакет.',
-    aiOn: 'ИИ подключён',
-    aiOff: 'Локальный генератор',
+    emptyText: 'Учитель выбирает предмет и тему и получает готовый учебный пакет.',
+    aiOn: 'Готово',
+    aiOff: 'Шаблон',
     openLessonRoom: 'Открыть онлайн-урок по теме',
     openLessonHint: 'Создайте комнату и поделитесь кодом с классом.',
     answer: 'Ответить',
@@ -134,7 +133,7 @@ const COPY: Record<Language, Copy> = {
     creatingTest: 'Создаём тест…',
   },
   Uzbek: {
-    eyebrow: 'AI · O‘QUV PAKETLARI',
+    eyebrow: 'O‘QUV PAKETLARI',
     titleTeacher: 'Dars mavzusini tanlang',
     titleStudent: 'Dars mavzulari',
     subtitleTeacher: 'AI tanlangan mavzu bo‘yicha slaydlar, faktlar, interaktiv 3D obyekt va test tayyorlaydi.',
@@ -153,9 +152,9 @@ const COPY: Record<Language, Copy> = {
     lessonLength: 'Dars davomiyligi',
     minutes: 'daqiqa',
     emptyTitle: 'Hozircha mavzular e’lon qilinmagan',
-    emptyText: 'O‘qituvchi avval fan va mavzuni tanlaydi — AI o‘quv paketini yaratadi.',
-    aiOn: 'AI ulangan',
-    aiOff: 'Mahalliy generator',
+    emptyText: 'O‘qituvchi fan va mavzuni tanlaydi va tayyor o‘quv paketini oladi.',
+    aiOn: 'Tayyor',
+    aiOff: 'Namuna',
     openLessonRoom: 'Mavzu bo‘yicha onlayn dars ochish',
     openLessonHint: 'Xona yarating va kodni sinf bilan ulashing.',
     answer: 'Javob berish',
@@ -180,7 +179,7 @@ const COPY: Record<Language, Copy> = {
     creatingTest: 'Test yaratilmoqda…',
   },
   English: {
-    eyebrow: 'AI · LESSON PACKAGES',
+    eyebrow: 'LESSON PACKAGES',
     titleTeacher: 'Choose a lesson topic',
     titleStudent: 'Lesson topics',
     subtitleTeacher: 'The AI prepares slides, facts, an interactive 3D object, and a quiz for the chosen topic.',
@@ -199,9 +198,9 @@ const COPY: Record<Language, Copy> = {
     lessonLength: 'Lesson length',
     minutes: 'minutes',
     emptyTitle: 'No topics published yet',
-    emptyText: 'The teacher first picks a subject and topic — the AI builds a lesson package.',
-    aiOn: 'AI connected',
-    aiOff: 'Local generator',
+    emptyText: 'The teacher picks a subject and topic and gets a ready lesson package.',
+    aiOn: 'Ready',
+    aiOff: 'Template',
     openLessonRoom: 'Open an online lesson for this topic',
     openLessonHint: 'Create a room and share the code with the class.',
     answer: 'Answer',
@@ -494,7 +493,6 @@ function TopicDetail({
             <p className="muted">{topic.visual3d.label}</p>
           </div>
         </div>
-        <Interactive3d scene={topic.visual3d} language={language} />
       </section>
       <QuizPanel topic={topic} copy={copy} onOpenRoom={onOpenRoom} canCreate={canCreate} />
     </>
@@ -521,6 +519,11 @@ const MODEL_QUERIES: Record<string, string> = {
   volcano: 'volcano eruption model',
   water: 'ocean water waves',
 };
+
+/** The same web 3D models, reusable in the live lesson. */
+export function TopicModels({ topic, language }: { topic: LessonTopic; language: Language }) {
+  return <Models3dPanel topic={topic} copy={COPY[language]} />;
+}
 
 function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
   // The kind of the 3D object is an English keyword ("globe", "ocean",
@@ -574,7 +577,7 @@ function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
     return (
       <section className="panel reveal-up">
         <div className="section-head">
-          <h2><Box size={16} /> 3D-модели из интернета</h2>
+          <h2><Box size={16} /> {copy.modelsTitle}</h2>
         </div>
         <p className="muted">{copy.modelsEmpty}</p>
         {searchUrl && (
@@ -591,7 +594,7 @@ function Models3dPanel({ topic, copy }: { topic: LessonTopic; copy: Copy }) {
     <section className="panel reveal-up topic-models3d">
       <div className="section-head">
         <div>
-          <h2><Box size={16} /> 3D-модели из интернета</h2>
+          <h2><Box size={16} /> {copy.modelsTitle}</h2>
           <p className="muted">{copy.modelsHint}</p>
         </div>
       </div>

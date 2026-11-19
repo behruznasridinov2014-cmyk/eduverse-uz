@@ -1,7 +1,7 @@
 /**
  * Seeds a complete, clearly-marked demo school for local demonstrations.
  * Idempotent: keys are unique names; existing demo data is re-used (never deleted).
- * Safe for a demo database only. Passwords are printed once so the operator can sign in.
+ * Safe for a demo database only. One random password (or DEMO_PASSWORD) is printed once; accounts that already exist keep their old password.
  *
  * Run: node scripts/seed-demo-school.mjs
  */
@@ -75,7 +75,7 @@ async function upsertClassMember(classId, userId, role) {
   );
 }
 
-const PASSWORD = "demo-school-2026";
+const PASSWORD = process.env.DEMO_PASSWORD || randomBytes(6).toString("base64url");
 console.log("Seeding demo school…");
 
 // --- Accounts ----------------------------------------------------------------
@@ -171,9 +171,9 @@ for (let day = 0; day < 5; day += 1) {
   for (let i = 0; i < listB.length; i += 1) {
     const status = attendancePlan[(i + day) % attendancePlan.length];
     await pool.query(
-      `insert into attendance (class_id, student_id, marked_by, attendance_date, status, note)
-       values ($1,$2,$3,$4,$5,$6)
-       on conflict (class_id, student_id, attendance_date)
+      `insert into attendance (class_id, student_id, marked_by, attendance_date, subject, status, note)
+       values ($1,$2,$3,$4,'Физика',$5,$6)
+       on conflict (class_id, student_id, attendance_date, subject)
        do update set status = excluded.status, updated_at = now()`,
       [classB, listB[i].id, teacher.id, date, status, status === "absent" ? "kasal" : ""],
     );
@@ -361,14 +361,61 @@ await pool.query(
   [classB, teacher.id, "Игровой тест по теме урока", "Биология", "Проверка знаний по теме с автоматической оценкой за 1 место."],
 );
 
+// --- Textbook progress: class 7-B is on its way through physics ------------------
+const DAY = 24 * 3600 * 1000;
+const physics = ["1.1", "1.2", "1.3", "1.4", "1.5", "1.6"];
+for (let i = 0; i < physics.length; i += 1) {
+  const doneOn = new Date(Date.now() - (physics.length - i) * 4 * DAY).toISOString().slice(0, 10);
+  await pool.query(
+    `insert into course_progress (class_id, topic_key, done_on, marked_by) values ($1,$2,$3,$4)
+     on conflict (class_id, topic_key) do nothing`,
+    [classB, `phys7-${physics[i]}`, doneOn, teacher.id],
+  );
+}
+await pool.query(
+  `insert into course_pace (class_id, book, lessons_per_week) values ($1,'physics-7',2)
+   on conflict (class_id, book) do nothing`,
+  [classB],
+);
+console.log("textbook progress: physics 7, six topics marked for 7-B");
+
+// --- Homework with grades (scores are 0–100; the site shows score / 20 as a 5-point mark) ---
+const tasks = [
+  ["Физика · §1.4 Лабораторное оборудование", "Физика", "Назовите три прибора и что каждый измеряет."],
+  ["Физика · §1.5 Техника безопасности", "Физика", "Составьте 5 правил безопасности в лаборатории."],
+];
+const marksPattern = [5, 5, 4, 5, 3, 4, 5, 4, 5, 4, 5, 4];
+for (let t = 0; t < tasks.length; t += 1) {
+  const [title, subject, description] = tasks[t];
+  let assignment = (await pool.query("select id from assignments where class_id=$1 and title=$2", [classB, title])).rows[0];
+  if (!assignment) {
+    assignment = (await pool.query(
+      `insert into assignments (class_id, created_by, title, subject, description, status, due_at)
+       values ($1,$2,$3,$4,$5,'assigned', now() + interval '3 days') returning id`,
+      [classB, teacher.id, title, subject, description],
+    )).rows[0];
+  }
+  // listB[0] is the student to show (Aziza Karimova): always checked with a top mark.
+  for (let i = 0; i < listB.length - 1 - t; i += 1) {
+    const checked = i < 9;
+    await pool.query(
+      `insert into assignment_submissions (assignment_id, student_id, status, content, score, feedback)
+       values ($1,$2,$3,$4,$5,$6) on conflict (assignment_id, student_id) do nothing`,
+      [assignment.id, listB[i].id, checked ? "checked" : "submitted", "Решение в тетради, объяснение своими словами.", checked ? marksPattern[i] * 20 : null, checked ? "Хорошо, продолжайте." : ""],
+    );
+  }
+}
+console.log("homework: 2 tasks with grades for 7-B");
+
 console.log("\nDemo school ready:");
 console.log("  School:        EDUVERSE Demo School №24");
-console.log("  Director:      demo_director /", PASSWORD, "(создаёт классы, учеников, темы)");
-console.log("  Teacher:       demo_teacher  /", PASSWORD);
-console.log("  Administrator: demo_admin    /", PASSWORD);
+console.log("  Password (all demo accounts, shown once):", PASSWORD);
+console.log("  Director:      demo_director");
+console.log("  Teacher:       demo_teacher");
+console.log("  Administrator: demo_admin");
 console.log(`  Classes:       7-B (12), 7-A (${listA.length}), 8-A (${list8A.length})`);
 console.log("  Students:      demo_student_b_1 .. demo_student_b_12");
-console.log("  Topics:        4 ИИ-темы опубликованы в классе 7-B");
+console.log("  Topics:        4 темы опубликованы в классе 7-B");
 console.log("  Attendance:    последние 5 дней");
 
 await pool.end();

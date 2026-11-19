@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
   createAssignment,
@@ -40,6 +41,7 @@ import {
   Copy,
   GraduationCap,
   Info,
+  KeyRound,
   Plus,
   RefreshCw,
   Send,
@@ -56,7 +58,7 @@ import {
   type Language,
   type SchoolData,
 } from './school-data';
-import { PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
+import { HomeworkAiCheck, PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
 
 const ASSIGNMENT_STATUSES = [
   'assigned',
@@ -119,14 +121,25 @@ function RefreshButton({ onClick, busy, language }: { onClick: () => void; busy:
 /* Account school scope                                                        */
 /* -------------------------------------------------------------------------- */
 
+const SUBJECT_TEXT: Record<string, [string, string, string]> = {
+  Mathematics: ['Mathematics', 'Математика', 'Matematika'],
+  Biology: ['Biology', 'Биология', 'Biologiya'],
+  History: ['History', 'История', 'Tarix'],
+  Physics: ['Physics', 'Физика', 'Fizika'],
+  Chemistry: ['Chemistry', 'Химия', 'Kimyo'],
+  Uzbek: ['Uzbek', 'Узбекский язык', 'O‘zbek tili'],
+  Russian: ['Russian', 'Русский язык', 'Rus tili'],
+  English: ['English', 'Английский язык', 'Ingliz tili'],
+};
+
 export function SchoolScopeSummary({ school, language }: { school: SchoolData; language: Language }) {
   const statusLabel =
     school.status === 'loading'
-      ? t(language, 'Loading server records…', 'Загружаем данные сервера…', 'Server ma’lumotlari yuklanmoqda…')
+      ? t(language, 'Loading…', 'Загружаем…', 'Yuklanmoqda…')
       : school.status === 'ready'
-        ? t(language, 'Server school data connected', 'Данные школы подключены', 'Maktab server ma’lumotlari ulandi')
+        ? t(language, 'School data loaded', 'Данные школы загружены', 'Maktab ma’lumotlari yuklandi')
         : school.status === 'unavailable'
-          ? t(language, 'Server school data unavailable', 'Данные школы недоступны', 'Maktab server ma’lumotlari mavjud emas')
+          ? t(language, 'School data not loaded', 'Данные школы не загрузились', 'Maktab ma’lumotlari yuklanmadi')
           : t(language, 'Waiting for account session', 'Ожидаем сессию аккаунта', 'Hisob sessiyasi kutilmoqda');
 
   return (
@@ -136,7 +149,7 @@ export function SchoolScopeSummary({ school, language }: { school: SchoolData; l
         detail={statusLabel}
         tag={
           <span className={`tag ${school.status === 'ready' ? 'green' : school.status === 'unavailable' ? 'gold' : 'blue'}`}>
-            {school.status === 'ready' ? t(language, 'Live', 'Активно', 'Faol') : t(language, 'Server', 'Сервер', 'Server')}
+            {school.status === 'ready' ? t(language, 'Live', 'Активно', 'Faol') : t(language, 'Wait', 'Ждём', 'Kuting')}
           </span>
         }
       />
@@ -346,7 +359,7 @@ export function ServerClassesPanel({
           <SectionHead
             title={activeClass?.name ?? t(language, 'Class', 'Класс', 'Sinf')}
             detail={activeClass?.schoolName}
-            tag={<span className="tag green">{t(language, 'Server roster', 'Список с сервера', 'Server ro‘yxati')}</span>}
+            tag={<span className="tag green">{t(language, 'Class list', 'Список класса', 'Sinf ro‘yxati')}</span>}
           />
           {workspace.loading ? (
             <p className="muted" role="status">{t(language, 'Loading roster…', 'Загружаем список…', 'Ro‘yxat yuklanmoqda…')}</p>
@@ -661,7 +674,7 @@ export function ServerTeachingPanel({
       await createAssignment(activeClassId, payload);
       setForm({ title: '', subject: form.subject, description: '', dueAt: '', topicId: '' });
       setNotice(
-        t(language, 'Assignment published to the server.', 'Задание опубликовано на сервере.', 'Topshiriq serverga joylandi.'),
+        t(language, 'Assignment published.', 'Задание опубликовано.', 'Topshiriq joylandi.'),
       );
       await school.refresh();
     } catch (requestError) {
@@ -795,7 +808,7 @@ export function ServerTeachingPanel({
                   onChange={(event) => setForm({ ...form, subject: event.target.value })}
                 >
                   {['Mathematics', 'Biology', 'History', 'Physics', 'Chemistry', 'Uzbek', 'Russian', 'English'].map((subject) => (
-                    <option value={subject} key={subject}>{subject}</option>
+                    <option value={subject} key={subject}>{t(language, ...(SUBJECT_TEXT[subject] ?? [subject, subject, subject]))}</option>
                   ))}
                 </select>
               </div>
@@ -887,6 +900,7 @@ export function ServerTeachingPanel({
                       <p className="muted school-assignment-copy">
                         <b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}
                       </p>
+                      <HomeworkAiCheck assignmentId={reviewAssignment.id} studentId={submission.studentId} language={language} />
                       <div className="grid grid-2" style={{ gap: 8 }}>
                         <div className="control">
                           <label htmlFor={`review-status-${submission.studentId}`}>{t(language, 'Status', 'Статус', 'Holat')}</label>
@@ -1063,6 +1077,21 @@ export function ServerSchoolOverview({
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [detail, setDetail] = useState<SchoolRecord | null>(null);
   const [members, setMembers] = useState<SchoolMember[]>([]);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [resetCard, setResetCard] = useState<{ name: string; login: string; password: string } | null>(null);
+  const [resetError, setResetError] = useState('');
+  async function resetPassword(member: SchoolMember) {
+    if (!activeSchoolId) return;
+    if (!window.confirm(t(language, `Give ${member.username} a new one-time password? The old one stops working.`, `Выдать новый одноразовый пароль: ${member.username}? Старый перестанет работать.`, `${member.username} uchun yangi bir martalik parol berilsinmi? Eskisi ishlamaydi.`))) return;
+    setResetError('');
+    try {
+      const result = await customFetch<{ name: string; login: string; password: string }>(`/api/schools/${activeSchoolId}/members/${member.userId}/reset-password`, { method: 'POST' });
+      setResetCard(result);
+    } catch (requestError) {
+      setResetCard(null);
+      setResetError(describeSchoolError(requestError));
+    }
+  }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -1127,7 +1156,7 @@ export function ServerSchoolOverview({
       };
       await createClass(activeSchoolId, payload);
       setClassForm({ ...classForm, name: '' });
-      setNotice(t(language, 'Class created on the server.', 'Класс создан на сервере.', 'Sinf serverda yaratildi.'));
+      setNotice(t(language, 'Class created.', 'Класс создан.', 'Sinf yaratildi.'));
       await school.refresh();
       setRevision((value) => value + 1);
     } catch (requestError) {
@@ -1153,7 +1182,7 @@ export function ServerSchoolOverview({
           ))}
         </div>
         <div className="row">
-          <span className="tag green">{t(language, 'Server records', 'Данные сервера', 'Server ma’lumotlari')}</span>
+          <span className="tag green">{t(language, 'School data', 'Данные школы', 'Maktab ma’lumotlari')}</span>
           <RefreshButton onClick={() => setRevision((value) => value + 1)} busy={loading} language={language} />
         </div>
       </div>
@@ -1167,7 +1196,7 @@ export function ServerSchoolOverview({
             <div>
               <div className="metric-label">{t(language, 'Members', 'Участники', 'A’zolar')}</div>
               <div className="metric-value">{detail?.memberCount ?? members.length}</div>
-              <div className="metric-note">{t(language, 'From the server roster', 'Из списка сервера', 'Server ro‘yxatidan')}</div>
+              <div className="metric-note">{t(language, 'From the class list', 'Из списка класса', 'Sinf ro‘yxatidan')}</div>
             </div>
             <div className="metric-icon"><Users /></div>
           </div>
@@ -1217,7 +1246,7 @@ export function ServerSchoolOverview({
                   ? [activeMembership.region, activeMembership.district].filter(Boolean).join(' · ')
                   : undefined
             }
-            tag={<span className="tag blue">{t(language, 'Server record', 'Запись сервера', 'Server yozuvi')}</span>}
+            tag={<span className="tag blue">{t(language, 'Record', 'Запись', 'Yozuv')}</span>}
           />
           {loading ? (
             <p className="muted" role="status">{t(language, 'Loading school record…', 'Загружаем школу…', 'Maktab yozuvi yuklanmoqda…')}</p>
@@ -1227,17 +1256,37 @@ export function ServerSchoolOverview({
               {members.length === 0 ? (
                 <div className="callout">
                   {canManage
-                    ? t(language, 'No members yet. Add accounts through the school API or a teacher workspace.', 'Участников пока нет. Добавьте аккаунты через API школы или кабинет учителя.', 'Hali a’zo yo‘q. Hisoblarni maktab API’si yoki o‘qituvchi kabineti orqali qo‘shing.')
+                    ? t(language, 'No members yet. The director or deputy adds them from an Excel list.', 'Участников пока нет. Директор или завуч добавляет их из списка Excel.', 'Hali a’zo yo‘q. Direktor yoki zavuch Excel ro‘yxatidan qo‘shadi.')
                     : t(language, 'The roster is only shown to school managers.', 'Список видят только руководители школы.', 'Ro‘yxat faqat maktab rahbarlariga ko‘rinadi.')}
                 </div>
               ) : (
-                <div className="school-member-chips">
-                  {members.map((member) => (
-                    <span className="tag" key={member.userId} title={member.login ?? member.accountRole}>
-                      {member.username} · {formatStatus(member.role)}
-                    </span>
-                  ))}
-                </div>
+                <>
+                  {canManage && (
+                    <input className="input" style={{ marginBottom: 8 }} value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder={t(language, 'Find a person (name or login)', 'Найти человека (ФИО или логин)', 'Odamni topish (F.I.Sh. yoki login)')} />
+                  )}
+                  {resetError && <InlineError>{resetError}</InlineError>}
+                  {resetCard && (
+                    <div className="notice school-inline-success reset-card" role="status">
+                      <KeyRound size={15} />
+                      <span>{resetCard.name} · {t(language, 'login', 'логин', 'login')}: <b>{resetCard.login}</b> · {t(language, 'new password', 'новый пароль', 'yangi parol')}: <b>{resetCard.password}</b><br /><small>{t(language, 'Shown once. They set their own password at the next sign-in.', 'Показывается один раз. При входе человек поставит свой пароль.', 'Bir marta ko‘rsatiladi. Keyingi kirishda o‘z parolini qo‘yadi.')}</small></span>
+                      <button type="button" className="btn small" onClick={() => setResetCard(null)}>{t(language, 'Done', 'Готово', 'Tayyor')}</button>
+                    </div>
+                  )}
+                  <div className="school-member-list">
+                    {members
+                      .filter((member) => !memberQuery.trim() || `${member.username} ${member.login ?? ''}`.toLowerCase().includes(memberQuery.trim().toLowerCase()))
+                      .map((member) => (
+                        <div className="school-member-row" key={member.userId}>
+                          <span><b>{member.username}</b> <small className="muted">{formatStatus(member.role)}{member.login ? ` · ${member.login}` : ''}</small></span>
+                          {canManage && member.role !== 'school_director' && (
+                            <button type="button" className="btn small" onClick={() => void resetPassword(member)}>
+                              <KeyRound size={13} /> {t(language, 'New password', 'Новый пароль', 'Yangi parol')}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </>
               )}
             </>
           )}
@@ -1327,7 +1376,7 @@ export function ServerSchoolOverview({
 /* Administration                                                              */
 /* -------------------------------------------------------------------------- */
 
-export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
+export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; selectedId?: string }) {
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1370,7 +1419,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
       };
       await createSchool(payload);
       setForm({ name: '', region: form.region, district: '', address: '' });
-      setNotice(t(language, 'School created on the server.', 'Школа создана на сервере.', 'Maktab serverda yaratildi.'));
+      setNotice(t(language, 'School created.', 'Школа создана.', 'Maktab yaratildi.'));
       setRevision((value) => value + 1);
     } catch (requestError) {
       setError(describeSchoolError(requestError));
@@ -1402,7 +1451,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
         <p className="muted" role="status">{t(language, 'Loading schools…', 'Загружаем школы…', 'Maktablar yuklanmoqda…')}</p>
       ) : schools.length === 0 ? (
         <div className="callout">
-          {t(language, 'No school records exist on the server yet.', 'На сервере пока нет школ.', 'Serverda hali maktab yozuvlari yo‘q.')}
+          {t(language, 'No schools yet.', 'Школ пока нет.', 'Hali maktablar yo‘q.')}
         </div>
       ) : (
         <div className="table-wrap">
@@ -1414,6 +1463,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
                 <th>{t(language, 'District', 'Район', 'Tuman')}</th>
                 <th>{t(language, 'Members', 'Участники', 'A’zolar')}</th>
                 <th>{t(language, 'Classes', 'Классы', 'Sinflar')}</th>
+                {onSelect && <th />}
               </tr>
             </thead>
             <tbody>
@@ -1424,6 +1474,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
                   <td>{item.district || '—'}</td>
                   <td>{item.memberCount ?? 0}</td>
                   <td>{item.classCount ?? 0}</td>
+                  {onSelect && <td><button type="button" className={`btn small ${selectedId === item.id ? 'primary' : ''}`} onClick={() => onSelect({ id: item.id, name: item.name })}>{t(language, 'Set up', 'Настроить', 'Sozlash')}</button></td>}
                 </tr>
               ))}
             </tbody>
@@ -1786,7 +1837,7 @@ export function ServerTopicAssignPanel({
       <div className="row" style={{ marginTop: 14 }}>
         <a className="btn primary" href="/topics">
           <Sparkles size={15} />
-          {t(language, 'Create a topic with AI', 'Создать тему с ИИ', 'AI bilan mavzu yaratish')}
+          {t(language, 'Create your own topic', 'Создать свою тему', 'O‘z mavzuingizni yaratish')}
         </a>
       </div>
     </Panel>
