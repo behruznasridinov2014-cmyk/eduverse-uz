@@ -21,6 +21,7 @@ PWA for Android/iPhone/iPad/laptop.
 - Optional env: `YOUTUBE_API_KEY` — embed the exact YouTube video by topic (or reuse the Gemini key)
 - Optional env: `SKETCHFAB_API_KEY` — embed real 3D models by topic
 - Optional env: `AI_BASE_URL` (default `http://127.0.0.1:11434/v1`), `AI_API_KEY`, `AI_MODEL` — any OpenAI-compatible endpoint instead of Gemini
+- Optional env: TURN relay for online lessons — `CLOUDFLARE_TURN_KEY_ID` + `CLOUDFLARE_TURN_API_TOKEN`, or `METERED_TURN_DOMAIN` + `METERED_TURN_API_KEY`, or `TWILIO_ACCOUNT_SID` + `TWILIO_API_KEY_SID` + `TWILIO_API_KEY_SECRET`, or `TURN_URLS` + `TURN_USERNAME`/`TURN_CREDENTIAL` (or `TURN_SHARED_SECRET` for coturn). See `docs/turn-server.md`
 - Optional env: `CORS_ORIGINS` — comma-separated trusted origins for reverse-proxy deployments
 - Optional env: `EDUVERSE_REGISTRATION_RATE_LIMIT`, `EDUVERSE_LOGIN_RATE_LIMIT`
 - Optional env: `EDUVERSE_ALLOW_AUTO_GRADING=0` — disable awarding a grade to the end-of-lesson game winner

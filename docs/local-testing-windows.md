@@ -138,8 +138,8 @@ pnpm --filter @workspace/scripts run check:qr
 Testing between different networks or real mobile devices requires reachable
 signalling endpoints and a TURN server with appropriate credentials and
 firewall configuration. Without a dedicated TURN server the mesh falls back to
-public relays (`VITE_TURN_URL`, `VITE_TURN_USERNAME` and
-`VITE_TURN_CREDENTIAL` set them at build time). Do not expose a development
+a rate-limited public relay; configure one on the API as described in
+`docs/turn-server.md`. Do not expose a development
 server publicly as a substitute. Use synthetic accounts and room membership
 checks in automated tests; require user consent before enabling camera,
 microphone, or screen sharing.
