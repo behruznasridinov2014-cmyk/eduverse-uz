@@ -1397,7 +1397,7 @@ router.patch(
       changes.feedback = feedback;
     }
 
-    const [updated] = await db
+    let [updated] = await db
       .update(assignmentSubmissionsTable)
       .set(changes)
       .where(
@@ -1407,6 +1407,22 @@ router.patch(
         ),
       )
       .returning();
+
+    // The teacher may grade a pupil who handed in nothing (for example, work done in class).
+    if (!updated && typeof changes.score === "number") {
+      const [member] = await db
+        .select({ id: classMembersTable.id })
+        .from(classMembersTable)
+        .where(and(eq(classMembersTable.classId, context.assignment.classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student")))
+        .limit(1);
+      if (member) {
+        [updated] = await db
+          .insert(assignmentSubmissionsTable)
+          .values({ assignmentId, studentId, status: "checked", content: "", score: changes.score, feedback: changes.feedback ?? "" })
+          .onConflictDoNothing()
+          .returning();
+      }
+    }
 
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });

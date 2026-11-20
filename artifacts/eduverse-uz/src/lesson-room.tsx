@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Select } from './ui/select';
 import {
   ApiError,
   answerMyRoomTest,
@@ -50,6 +51,7 @@ import { TopicModels } from './topic-library';
 import { LessonBoard, type BoardStroke } from './lesson-board';
 import { CourseScene3D } from './course';
 import { COURSE, courseTopicByKey } from './course-data';
+import { useLessonPlanTopics } from './today';
 import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
@@ -57,6 +59,20 @@ import { friendlyError } from './errors';
 /* -------------------------------------------------------------------------- */
 
 type SignalPayload = unknown;
+
+/** Options of the topic picker: only today’s topics, plus the chosen topic if it is not there. */
+function planOptions(plan: NonNullable<ReturnType<typeof useLessonPlanTopics>>, current: string) {
+  const known = plan.some((group) => group.items.some((item) => item.value === current));
+  const extra = !known && current.startsWith('course:') ? courseTopicByKey(current.slice(7)) : null;
+  return [
+    ...(extra ? [<option key="extra" value={current}>§{extra.topic.code} {extra.topic.title}</option>] : []),
+    ...plan.map((group) => (
+      <optgroup key={group.label} label={group.label}>
+        {group.items.map((item) => <option key={`${group.label}:${item.value}`} value={item.value}>{item.label}</option>)}
+      </optgroup>
+    )),
+  ];
+}
 
 export function LessonRoomPage({
   user,
@@ -68,6 +84,7 @@ export function LessonRoomPage({
   prefillTopicId?: string;
 }) {
   const copy = COPY[language];
+  const plan = useLessonPlanTopics(language);
   const isTeacher = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
 
   const [topics, setTopics] = useState<LessonTopic[]>([]);
@@ -272,19 +289,19 @@ export function LessonRoomPage({
               <p className="muted">{copy.hostHint}</p>
               <div className="control">
                 <label htmlFor="host-topic">{copy.chooseTopic}</label>
-                <select id="host-topic" value={selectedTopicId} onChange={(event) => setSelectedTopicId(event.target.value)}>
+                <Select id="host-topic" value={selectedTopicId} onChange={(event) => setSelectedTopicId(event.target.value)}>
                   <option value="">{copy.noTopic}</option>
-                  {COURSE.map((book) => (
+                  {plan ? planOptions(plan, selectedTopicId) : COURSE.map((book) => (
                     <optgroup key={book.id} label={book.title}>
                       {book.topics.map((item) => <option key={item.key} value={`course:${item.key}`}>§{item.code} {item.title}</option>)}
                     </optgroup>
                   ))}
-                  {[...new Map(topics.map((topic) => [`${topic.subject} · ${topic.title}`, topic])).values()].map((topic) => (
+                  {!plan && [...new Map(topics.map((topic) => [`${topic.subject} · ${topic.title}`, topic])).values()].map((topic) => (
                     <option key={topic.id} value={topic.id}>
                       {topic.subject} · {topic.title}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <button type="button" className="btn primary" disabled={busy} onClick={() => void hostLesson()}>
                 {busy ? <RefreshCw className="school-spin" size={15} /> : <Video size={15} />}
@@ -382,6 +399,7 @@ function RoomView({
   setError: (value: string) => void;
 }) {
   const copy = COPY[language];
+  const plan = useLessonPlanTopics(language);
   const localVideo = useRef<HTMLVideoElement | null>(null);
   const [chat, setChat] = useState<Array<{ from: string; text: string; mine: boolean; at: number }>>([]);
   const [courseKey, setCourseKey] = useState<string | null>(null);
@@ -819,17 +837,17 @@ function RoomView({
               {isHost && (
                 <div className="control lesson-topic-picker">
                   <label htmlFor="room-topic">{copy.chooseTopic}</label>
-                  <select id="room-topic" value={topic?.id ?? (courseKey ? `course:${courseKey}` : '')} onChange={(event) => void changeTopic(event.target.value)}>
+                  <Select id="room-topic" value={topic?.id ?? (courseKey ? `course:${courseKey}` : '')} onChange={(event) => void changeTopic(event.target.value)}>
                     <option value="">{copy.noTopic}</option>
-                    {COURSE.map((book) => (
+                    {plan ? planOptions(plan, topic?.id ?? (courseKey ? `course:${courseKey}` : '')) : COURSE.map((book) => (
                       <optgroup key={book.id} label={book.title}>
                         {book.topics.map((item) => <option key={item.key} value={`course:${item.key}`}>§{item.code} {item.title}</option>)}
                       </optgroup>
                     ))}
-                    {[...new Map(topics.map((item) => [`${item.subject} · ${item.title}`, item])).values()].map((item) => (
+                    {!plan && [...new Map(topics.map((item) => [`${item.subject} · ${item.title}`, item])).values()].map((item) => (
                       <option key={item.id} value={item.id}>{item.subject} · {item.title}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
               {topic && (<>
@@ -1226,14 +1244,14 @@ const COPY: Record<Language, Record<string, string>> = {
   Русский: {
     eyebrow: 'ЖИВОЙ УРОК · ВИДЕО, МИКРОФОН, ЭКРАН',
     title: 'Онлайн-урок',
-    subtitle: 'Откройте урок по теме, поделитесь кодом, и ученики подключатся со своими камерами и экранами.',
+    subtitle: 'Начните урок по теме — ученики класса увидят его у себя и подключатся с камерой и экраном.',
     hostCard: 'Открыть урок (учитель)',
-    hostHint: 'Выберите тему, создайте комнату и передайте код классу.',
+    hostHint: 'Выберите тему и начните урок. Ученики класса увидят его у себя.',
     chooseTopic: 'Тема урока',
     noTopic: 'Без темы (пустая комната)',
     hostAction: 'Создать комнату',
     joinCard: 'Подключиться к уроку',
-    joinHint: 'Введите код, который показал учитель.',
+    joinHint: 'Если урока нет в списке, введите номер урока от учителя.',
     joinCode: 'Код урока',
     joinAction: 'Войти в урок',
     leave: 'Выйти',
@@ -1250,7 +1268,7 @@ const COPY: Record<Language, Record<string, string>> = {
     largeClass: 'Режим большого класса: ученики видят и слышат учителя, учитель видит всех. Так урок работает даже на слабом интернете.',
     rejoin: 'Вернуться',
     testsSent: 'Тесты отправлены ученикам: {n}. Каждый видит только свой вопрос.',
-    inviteHint: 'Сообщите ученикам код {code}. Каждый ученик входит со своего устройства и под своим аккаунтом. Для проверки на одном компьютере откройте ученика в окне инкогнито (Ctrl+Shift+N).',
+    inviteHint: 'Урок начат. Ученики класса увидят его у себя и нажмут «Войти».',
     topicEmpty: 'Выберите тему — ученики увидят 3D-объект и факты.',
     chatPlaceholder: 'Написать сообщение…',
     teachPanel: 'Управление уроком',
@@ -1299,14 +1317,14 @@ const COPY: Record<Language, Record<string, string>> = {
   Uzbek: {
     eyebrow: 'JONLI DARS · VIDEO, MIKROFON, EKRAN',
     title: 'Onlayn dars',
-    subtitle: 'Mavzu bo‘yicha dars oching, kodni ulashing — o‘quvchilar kamera va ekran bilan ulanadi.',
+    subtitle: 'Mavzu bo‘yicha darsni boshlang — sinf o‘quvchilari uni o‘zida ko‘rib, kamera va ekran bilan ulanadi.',
     hostCard: 'Dars ochish (o‘qituvchi)',
-    hostHint: 'Mavzuni tanlang, xona yarating va kodni sinfga bering.',
+    hostHint: 'Mavzuni tanlang va darsni boshlang. Sinf o‘quvchilari uni o‘zida ko‘radi.',
     chooseTopic: 'Dars mavzusi',
     noTopic: 'Mavzusiz (bo‘sh xona)',
     hostAction: 'Xona yaratish',
     joinCard: 'Darsga ulanish',
-    joinHint: 'O‘qituvchi ko‘rsatgan kodni kiriting.',
+    joinHint: 'Dars ro‘yxatda bo‘lmasa, o‘qituvchi aytgan dars raqamini kiriting.',
     joinCode: 'Dars kodi',
     joinAction: 'Darsga kirish',
     leave: 'Chiqish',
@@ -1323,7 +1341,7 @@ const COPY: Record<Language, Record<string, string>> = {
     largeClass: 'Katta sinf rejimi: o‘quvchilar o‘qituvchini ko‘radi va eshitadi, o‘qituvchi hammani ko‘radi. Sekin internetda ham dars ishlaydi.',
     rejoin: 'Qaytish',
     testsSent: 'Testlar o‘quvchilarga yuborildi: {n}. Har kim faqat o‘z savolini ko‘radi.',
-    inviteHint: 'O‘quvchilarga {code} kodini ayting. Har bir o‘quvchi o‘z qurilmasidan va o‘z hisobidan kiradi. Bitta kompyuterda sinash uchun o‘quvchini inkognito oynada oching (Ctrl+Shift+N).',
+    inviteHint: 'Dars boshlandi. Sinf o‘quvchilari uni o‘zlarida ko‘rib, «Kirish»ni bosadi.',
     topicEmpty: 'Mavzuni tanlang — o‘quvchilar 3D obyekt va faktlarni ko‘radi.',
     chatPlaceholder: 'Xabar yozish…',
     teachPanel: 'Darsni boshqarish',
@@ -1372,14 +1390,14 @@ const COPY: Record<Language, Record<string, string>> = {
   English: {
     eyebrow: 'LIVE LESSON · VIDEO, MIC, SCREEN',
     title: 'Online lesson',
-    subtitle: 'Open a lesson for a topic, share the code, and students join with their cameras and screens.',
+    subtitle: 'Start a lesson on a topic — students of the class see it and join with camera and screen.',
     hostCard: 'Host a lesson (teacher)',
-    hostHint: 'Choose a topic, create a room, and share the code with the class.',
+    hostHint: 'Choose a topic and start. Students of the class see it.',
     chooseTopic: 'Lesson topic',
     noTopic: 'No topic (empty room)',
     hostAction: 'Create room',
     joinCard: 'Join a lesson',
-    joinHint: 'Enter the code the teacher shared.',
+    joinHint: 'If the lesson is not listed, enter the lesson number from the teacher.',
     joinCode: 'Lesson code',
     joinAction: 'Join lesson',
     leave: 'Leave',
@@ -1396,7 +1414,7 @@ const COPY: Record<Language, Record<string, string>> = {
     largeClass: 'Large class mode: students see and hear the teacher, the teacher sees everyone. Works even on slow internet.',
     rejoin: 'Return',
     testsSent: 'Tests sent to {n} students. Each one sees only their own question.',
-    inviteHint: 'Give the students the code {code}. Every student joins from their own device and account. To try it on one computer, open the student in an incognito window (Ctrl+Shift+N).',
+    inviteHint: 'The lesson has started. Students of the class see it and press “Join”.',
     topicEmpty: 'Choose a topic — students will see the 3D object and facts.',
     chatPlaceholder: 'Write a message…',
     teachPanel: 'Lesson controls',

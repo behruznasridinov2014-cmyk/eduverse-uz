@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Select } from './ui/select';
 import { FlaskConical, Minus, Plus, RotateCcw, Sparkles, Atom } from 'lucide-react';
 import type { User } from '@workspace/api-client-react';
 import { PhysicsLab } from './physics-lab';
 import { MathLab, WebModelsLab } from './studio-labs';
 import type { Language } from './school-data';
+import { StudioGallery } from './course';
 
 /**
  * 3D chemistry lab.
@@ -374,6 +376,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         </div>}
       </div>
 
+      {subject !== 'any' && (subject !== 'chem' || mode === 'build') && <StudioGallery key={subject} subject={subject} language={language} />}
       {subject === 'phys' ? <PhysicsLab language={language} user={user} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
@@ -432,13 +435,13 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         <div className="chem-grid">
           <div className="panel chem-stage">
             <div className="chem-mix">
-              <select className="input" value={mixA} onChange={(e) => { setMixA(e.target.value); setMixed(undefined); }}>
+              <Select className="input" value={mixA} onChange={(e) => { setMixA(e.target.value); setMixed(undefined); }}>
                 {MOLECULES.map((m) => <option key={m.id} value={m.id}>{m.formula} · {tx(m.name)}</option>)}
-              </select>
+              </Select>
               <span className="chem-plus">+</span>
-              <select className="input" value={mixB} onChange={(e) => { setMixB(e.target.value); setMixed(undefined); }}>
+              <Select className="input" value={mixB} onChange={(e) => { setMixB(e.target.value); setMixed(undefined); }}>
                 {MOLECULES.map((m) => <option key={m.id} value={m.id}>{m.formula} · {tx(m.name)}</option>)}
-              </select>
+              </Select>
               <button type="button" className="btn primary" onClick={mix}><Sparkles /> {tx(L('Aralashtirish', 'Смешать', 'Mix'))}</button>
             </div>
             {mixed === undefined && (

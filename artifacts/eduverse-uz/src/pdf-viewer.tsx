@@ -59,7 +59,7 @@ function paintStroke(context: CanvasRenderingContext2D, stroke: Stroke, width: n
 }
 
 /** In-app PDF reader: renders pages to a canvas, so it works under a strict CSP and frame policy. */
-export function PdfViewer({ url, title, language = 'English' }: { url: string; title: string; language?: string }) {
+export function PdfViewer({ url, title, language = 'English', range }: { url: string; title: string; language?: string; range?: { from: number; to: number } | null }) {
   const text = LABELS[language] ?? LABELS.English;
   const stage = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -104,7 +104,9 @@ export function PdfViewer({ url, title, language = 'English' }: { url: string; t
         }
         doc.current = loaded;
         setPages(loaded.numPages);
-        setPage((current) => Math.min(Math.max(1, current), loaded.numPages));
+        const lo = range ? Math.min(range.from, loaded.numPages) : 1;
+        const hi = range ? Math.min(range.to, loaded.numPages) : loaded.numPages;
+        setPage((current) => Math.min(Math.max(lo, current), hi));
         setState('ready');
       })
       .catch(() => {
@@ -286,10 +288,16 @@ export function PdfViewer({ url, title, language = 'English' }: { url: string; t
   const undo = () => { if (!strokes.length) return; const next = strokes.slice(0, -1); setStrokes(next); save(next); };
   const clearPage = () => { if (!strokes.length || !window.confirm(text.clearAsk)) return; setStrokes([]); save([]); };
 
+  // A topic opens only its own pages, not the whole book.
+  const first = range ? Math.min(range.from, pages || range.from) : 1;
+  const last = range ? Math.min(range.to, pages || range.to) : pages || 1;
   const go = (next: number) => {
-    setPage(Math.min(Math.max(1, next), pages || 1));
+    setPage(Math.min(Math.max(first, next), last));
     stage.current?.scrollTo({ top: 0 });
   };
+  useEffect(() => {
+    if (range && pages) setPage((current) => Math.min(Math.max(first, current), last));
+  }, [range, pages, first, last]);
 
   const onKey = (event: React.KeyboardEvent) => {
     if (event.target instanceof HTMLInputElement) return;
@@ -327,24 +335,24 @@ export function PdfViewer({ url, title, language = 'English' }: { url: string; t
   const viewer = (
     <div className={`pdfv ${wide ? 'is-wide' : ''}`} tabIndex={0} onKeyDown={onKey} aria-label={title}>
       <div className="pdfv-bar">
-        <button type="button" className="pdfv-btn" onClick={() => go(page - 1)} disabled={page <= 1} aria-label="Previous page">
+        <button type="button" className="pdfv-btn" onClick={() => go(page - 1)} disabled={page <= first} aria-label="Previous page">
           <ChevronLeft size={18} />
         </button>
         <label className="pdfv-page">
           <span>{text.page}</span>
           <input
             type="number"
-            min={1}
-            max={pages || 1}
+            min={first}
+            max={last}
             value={page}
             onChange={(event) => go(Number(event.target.value) || 1)}
             aria-label={text.page}
           />
           <span>
-            {text.of} {pages || '–'}
+            {text.of} {range ? last : pages || '–'}
           </span>
         </label>
-        <button type="button" className="pdfv-btn" onClick={() => go(page + 1)} disabled={page >= pages} aria-label="Next page">
+        <button type="button" className="pdfv-btn" onClick={() => go(page + 1)} disabled={page >= last} aria-label="Next page">
           <ChevronRight size={18} />
         </button>
         <span className="pdfv-spacer" />
@@ -379,10 +387,10 @@ export function PdfViewer({ url, title, language = 'English' }: { url: string; t
           <span className={`ink-status ${saveState}`}>{saveState === 'saving' ? text.saving : saveState === 'saved' ? `✓ ${text.saved}` : saveState === 'offline' ? text.offline : text.hint}</span>
         </div>
       )}
-      {notedPages.length > 0 && (
+      {notedPages.some((value) => value >= first && value <= last) && (
         <div className="pdfv-notes" aria-label={text.notes}>
           <span>✎ {text.notes}:</span>
-          {notedPages.slice(0, 24).map((value) => <button key={value} type="button" className={value === page ? 'on' : ''} onClick={() => go(value)}>{value}</button>)}
+          {notedPages.filter((value) => value >= first && value <= last).slice(0, 24).map((value) => <button key={value} type="button" className={value === page ? 'on' : ''} onClick={() => go(value)}>{value}</button>)}
         </div>
       )}
       <div className="pdfv-stage" ref={stage}>

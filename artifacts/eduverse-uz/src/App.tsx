@@ -1,7 +1,10 @@
 import './app.css';
+import { Select } from './ui/select';
 import './theme.css';
 import './glass.css';
 import './motion.css';
+import './ui/ui.css';
+import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocaleDom } from './localization';
@@ -16,16 +19,16 @@ import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
 import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { SchoolCalendarPanel } from './school-calendar';
-import { SceneLibraryPage } from './scene-library';
+import { GradesPage } from './grades';
 import { WorksheetBuilder } from './worksheet';
 import { SchoolSetupWizard } from './setup-wizard';
-import { DemoSchoolPanel } from './demo-panel';
-import { PublicDemoPage } from './public-demo';
 import { TrainerPage } from './trainer';
 import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
 import { LabReports } from './lab-work';
-import { CoursePage } from './course';
+import { TodayLessons } from './today';
+import { TimetableEditor } from './timetable-editor';
+import { LabPage, LessonDayPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell } from './account';
@@ -55,9 +58,9 @@ type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam va chat','3D library':'3D kutubxona',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
-  Русский:{Support:'Поддержка и чат','3D library':'3D-библиотека',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
-  English:{Support:'Support & chat','3D library':'3D library',Trainer:'Trainer',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
+  Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
+  Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
+  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -76,7 +79,7 @@ function App(){
   const [lang,setLang]=useSavedState<Lang>('language','Uzbek');
   const auth=useAuth();
   const plan=usePlan(auth.user?.id);
-  const proLocked=(path:string)=>Boolean(plan&&!plan.pro&&['/course','/lab','/scenes','/lesson','/topics','/trainer'].some(p=>path===p||path.startsWith(p+'/')));
+  const proLocked=(path:string)=>Boolean(plan&&!plan.pro&&['/course','/lab','/lesson','/topics','/trainer'].some(p=>path===p||path.startsWith(p+'/')));
   const hasLocalSession=auth.status==='authenticated'||auth.status==='offline';
   useLocaleDom(lang,location);
   useEffect(()=>{localStorage.removeItem('eduverse:role')},[]);
@@ -93,6 +96,8 @@ function App(){
     if(hasLocalSession&&auth.user&&!hasQrCode&&(location==='/login'||location==='/register'))setLocation('/dashboard');
   },[hasLocalSession,auth.user,location,setLocation]);
   useEffect(()=>{setMobileOpen(false);window.scrollTo?.({top:0})},[location]);
+  const sidebarRef=useRef<HTMLElement>(null);const menuBtnRef=useRef<HTMLButtonElement>(null);
+  useDismiss(mobileOpen,()=>setMobileOpen(false),[sidebarRef,menuBtnRef]);
   const userRole=auth.user?.role;
   const visible=userRole?ROLE_NAV[userRole].map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
@@ -108,7 +113,6 @@ function App(){
   const routeMatch=location.match(/^\/read\/([^/]+)/);const book=routeMatch?BOOKS.find(b=>b.id===routeMatch[1]):undefined;
   const lessonRoomMatch=location.match(/^\/lesson(?:\/([^/]+))?/);const lessonTopicId=lessonRoomMatch?.[1];
   const progressValue=(bookId:string)=>progress[bookId]??1;
-  if(location==='/demo')return <PublicDemoPage language={lang} onLanguageChange={setLang} onSignIn={()=>navigate(auth.user?'/dashboard':'/login')}/>;
   if(location==='/'&&auth.status==='loading')return <AuthLoadingPage language={lang} onLanguageChange={setLang}/>;
   if(location==='/'&&!hasLocalSession)return <LoginPage language={lang} onLanguageChange={setLang} onSuccess={()=>navigate('/dashboard')}/>;
   if(location==='/login'||location==='/register'){
@@ -129,6 +133,7 @@ function App(){
     '/read':['student','teacher','parent'],
     '/topics':['student','teacher'],
     '/course':['student','teacher'],
+    '/today':['student','teacher','parent','school_director','school_admin'],
     '/attendance':['teacher','school_director','school_admin'],
     '/teacher':['teacher'],
     '/parent':['parent'],
@@ -136,7 +141,7 @@ function App(){
     '/admin':['education_admin','ministry_admin','platform_superadmin'],
     '/board':['teacher'],
     '/lab':['student','teacher'],
-    '/scenes':['student','teacher'],
+    '/grades':['student'],
     '/trainer':['student','teacher'],
     '/lesson':['student','teacher'],
     '/support':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
@@ -144,11 +149,11 @@ function App(){
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
   const forbidden=Boolean(protectedRoute&&auth.user&&!protectedRoute[1].includes(auth.user.role));
   const current=visible.find(item=>active(item.href));
-  const pageTitle=location==='/profile'?authCopy(lang).profile:book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
+  const pageTitle=location==='/profile'?authCopy(lang).profile:location.startsWith('/today/')?(lang==='Русский'?'Урок':lang==='English'?'Lesson':'Dars'):location==='/trainer'&&!current?(lang==='Русский'?'Тренажёр дня':lang==='English'?'Daily trainer':'Kunlik trenajyor'):book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
   const membership=school.memberships[0];
   const notice=auth.accountNotice;
   return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`} data-lang-changing={langChanging?'':undefined}>
-    <aside className="sidebar" aria-label="EDUVERSE">
+    <aside ref={sidebarRef} className="sidebar" aria-label="EDUVERSE">
       <button className="sidebar-close" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}><X size={18}/></button>
       <Link href="/dashboard" className="brand" onClick={()=>setMobileOpen(false)}>
         <span className="brand-mark">E</span>
@@ -167,7 +172,7 @@ function App(){
     <main className="main-column">
       <header className="topbar">
         <div className="top-left">
-          <button className="mobile-menu" aria-label="Open navigation" onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={20}/></button>
+          <button ref={menuBtnRef} className="mobile-menu" aria-label="Open navigation" onClick={()=>setMobileOpen(!mobileOpen)}><Menu size={20}/></button>
           <span className="topbar-title">{pageTitle}</span>
         </div>
         <div className="top-actions">
@@ -185,7 +190,7 @@ function App(){
         <Info size={18}/>
         <div>
           <b>{lang==='Uzbek'?`Endi siz ${notice.username} hisobidasiz`:lang==='Русский'?`Теперь вы в аккаунте ${notice.username}`:`You are now signed in as ${notice.username}`}</b>
-          <span>{lang==='Uzbek'?'Boshqa oynada boshqa hisobga kirildi. Bitta brauzerda barcha oynalar uchun bitta hisob ishlaydi. O‘qituvchi va o‘quvchini bitta kompyuterda sinash uchun ikkinchisini inkognito oynada (Ctrl+Shift+N) yoki boshqa brauzerda oching.':lang==='Русский'?'В другой вкладке вошли в другой аккаунт. В одном браузере все вкладки работают под одним аккаунтом. Чтобы проверить учителя и ученика на одном компьютере, откройте второй аккаунт в окне инкогнито (Ctrl+Shift+N) или в другом браузере.':'Another tab signed in with a different account. All tabs of one browser share one account. To try a teacher and a student on one computer, open the second account in an incognito window (Ctrl+Shift+N) or another browser.'}</span>
+          <span>{lang==='Uzbek'?'Boshqa oynada boshqa hisobga kirildi. Bitta brauzer — bitta hisob. Ikkinchi hisob uchun Chrome’da yangi profil oching (yuqori o‘ngdagi profil belgisi → «Qo‘shish»).':lang==='Русский'?'В другой вкладке вошли в другой аккаунт. Один браузер — один аккаунт. Для второго аккаунта откройте в Chrome новый профиль (значок профиля справа вверху → «Добавить»).':'Another tab signed in with a different account. One browser, one account. For a second account, open a new Chrome profile (profile icon at the top right → “Add”).'}</span>
         </div>
         <button type="button" className="btn small" onClick={auth.dismissAccountNotice} aria-label="Close"><X size={14}/></button>
       </div>}
@@ -200,15 +205,17 @@ function App(){
         :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
         :location==='/homework/scan'||location==='/schedule'?<Redirect to={location==='/schedule'?'/dashboard':'/classes'}/>
-        :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>navigate('/read/'+id)}/>
+        :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>{try{localStorage.removeItem(`eduverse:pdf-range:/books/${id}.pdf`)}catch{/* private mode */}navigate('/read/'+id)}}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} />
         :location==='/board'?<Redirect to="/lesson"/>
-        :location==='/lab'&&auth.user?<ChemLabPage language={lang} user={auth.user}/>
+        :location==='/lab'&&auth.user?<LabPage user={auth.user} language={lang}><ChemLabPage language={lang} user={auth.user}/></LabPage>
         :location==='/trainer'&&auth.user?<TrainerPage user={auth.user} school={school} language={lang}/>
-        :location==='/scenes'&&auth.user?<SceneLibraryPage language={lang} grade={school.classes[0]?.grade ?? null}/>
+        :location==='/scenes'?<Redirect to="/lab"/>
+        :location==='/grades'&&auth.user?<GradesPage school={school} language={lang}/>
         :location.startsWith('/lesson')&&auth.user?<LessonRoomPage user={auth.user} language={lang} prefillTopicId={lessonTopicId}/>
         :location==='/classes'?<ClassesPage school={school} user={auth.user!} language={lang} onOpen={navigate}/>
-        :location==='/course'&&auth.user?<CoursePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
+        :location==='/course'&&auth.user?<TodayCoursePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
+        :location.startsWith('/today/')&&auth.user?<LessonDayPage lessonId={location.slice(7)} user={auth.user} school={school} language={lang} onOpen={navigate}/>
         :location==='/topics'?<Redirect to="/course"/>
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
         :location==='/support'?<Redirect to="/"/>
@@ -232,7 +239,7 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Homework',href:'/classes',icon:NotebookPen,tone:'orange'},
   {label:'Classes',href:'/classes',icon:Users,tone:'teal'},
   {label:'Chemistry lab',href:'/lab',icon:FlaskConical,tone:'pink'},
-  {label:'3D library',href:'/scenes',icon:FlaskConical,tone:'blue'},
+  {label:'My grades',href:'/grades',icon:BookMarked,tone:'gold'},
   {label:'Trainer',href:'/trainer',icon:FlaskConical,tone:'gold'},
   {label:'Interactive board',href:'/board',icon:PenTool,tone:'pink'},
   {label:'Textbook library',href:'/library',icon:BookMarked,tone:'teal'},
@@ -241,8 +248,8 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Lesson room','Topics & 3D','Trainer','Chemistry lab','3D library','Homework','Textbook library'],
-  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','3D library','Attendance','Teacher workspace','Textbook library'],
+  student:['Overview','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
+  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Textbook library'],
   parent:['Overview','Family view','Textbook library'],
   school_director:['Overview','School insights','Classes','Attendance'],
   school_admin:['Overview','School insights','Classes','Attendance'],
@@ -262,9 +269,9 @@ const MOBILE_NAV:Record<User['role'],string[]>={
   platform_superadmin:['Overview','Administration'],
 };
 const NAV_SHORT:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam','3D library':'3D kutubxona',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
-  Русский:{Support:'Чат','3D library':'3D-сцены',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
-  English:{Support:'Support','3D library':'3D library',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
+  Uzbek:{Support:'Yordam','My grades':'Baholar',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
+  Русский:{Support:'Чат','My grades':'Оценки',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
+  English:{Support:'Support','My grades':'Grades',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
 };
 function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
 function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
@@ -279,7 +286,7 @@ type HomeAction={label:Record<Lang,string>;description:Record<Lang,string>;path:
 const L=(uz:string,ru:string,en:string):Record<Lang,string>=>({Uzbek:uz,Русский:ru,English:en});
 const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
  student:[
-  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi bergan kodni kiriting.','Введите код от учителя.','Enter the code from your teacher.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
+  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi boshlagan dars shu yerda chiqadi.','Урок, который начал учитель, появится здесь.','The lesson your teacher starts appears here.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
   {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/course',icon:Atom,tone:'violet'},
   {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
   {label:L('3D studiya','3D-студия','3D studio'),description:L('Kimyo, fizika, matematika, biologiya, geografiya — hammasi 3D da.','Химия, физика, математика, биология, география — всё в 3D.','Chemistry, physics, maths, biology, geography — all in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
@@ -313,14 +320,29 @@ const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
 };
 const HOME_STEPS:Partial<Record<User['role'],Record<Lang,string[]>>>={
  teacher:{
-  Uzbek:['Davomatni fan bo‘yicha belgilang','Onlayn dars oching va kodni o‘quvchilarga bering','Bugungi mavzuni 3D da ko‘rsating','Uy vazifasini bering va baholang'],
-  Русский:['Отметьте давомат по своему предмету','Откройте онлайн-урок и дайте код ученикам','Покажите сегодняшнюю тему в 3D','Выдайте домашку из «Листа заданий» и оцените'],
-  English:['Mark attendance for your subject','Start a lesson and share the code','Show today’s topic in 3D','Assign homework and grade it'],
+  Uzbek:['Davomatni fan bo‘yicha belgilang','Bugungi dars kartasidan onlayn darsni boshlang','Bugungi mavzuni 3D da ko‘rsating','Uy vazifasini bering va baholang'],
+  Русский:['Отметьте давомат по своему предмету','Начните онлайн-урок с карточки сегодняшнего урока','Покажите сегодняшнюю тему в 3D','Выдайте домашку из «Листа заданий» и оцените'],
+  English:['Mark attendance for your subject','Start the online lesson from today’s card','Show today’s topic in 3D','Assign homework and grade it'],
+ },
+ school_director:{
+  Uzbek:['O‘qituvchi va o‘quvchilarni qo‘shing (Excel’dan ham)','Login va parollarni chop etib tarqating','Dars jadvalini to‘ldiring yoki zavuchga topshiring','Bosh sahifada maktabda bugun nima bo‘layotganini kuzating'],
+  Русский:['Добавьте учителей и учеников (можно из Excel)','Распечатайте и раздайте логины и пароли','Заполните расписание или поручите завучу','Смотрите на главной, что идёт в школе сегодня'],
+  English:['Add teachers and students (Excel works)','Print and hand out logins and passwords','Fill in the timetable or ask the deputy','Watch what is happening at school today on the overview'],
+ },
+ school_admin:{
+  Uzbek:['Dars jadvalini to‘ldiring va yangilab boring','Davomat va baholarni sinflar bo‘yicha tekshiring','O‘quvchilarni qo‘shing, parolni tiklang','O‘qituvchilar darslarini bosh sahifada kuzating'],
+  Русский:['Ведите расписание уроков и звонков','Проверяйте давомат и оценки по классам','Добавляйте учеников, сбрасывайте пароли','Следите за уроками учителей на главной'],
+  English:['Keep the lesson and bell timetable','Check attendance and grades by class','Add students, reset passwords','Follow teachers’ lessons on the overview'],
+ },
+ parent:{
+  Uzbek:['Bosh sahifada farzandingizning bugungi darslari','«Oila kabineti»da baholar va davomat','Uy vazifasi topshirilganini tekshiring','Savol bo‘lsa, maktabga ilova ichida yozing'],
+  Русский:['На главной — уроки ребёнка на сегодня','В «Кабинете семьи» — оценки и посещаемость','Проверьте, сдана ли домашка','Вопросы — школе прямо в приложении'],
+  English:['The overview shows your child’s lessons today','Grades and attendance are in the Family view','Check that homework is handed in','Write to the school in the app'],
  },
  student:{
-  Uzbek:['O‘qituvchidan dars kodini oling','Darsga kiring: kamera va mikrofonni yoqing','Mavzuni 3D da o‘rganing va testni bajaring','Uy vazifasini daftar rasmi bilan yuboring'],
-  Русский:['Получите код урока у учителя','Войдите на урок: включите камеру и микрофон','Изучите тему в 3D и пройдите тест','Отправьте домашнее задание фото тетради'],
-  English:['Get the lesson code from your teacher','Join: turn on camera and microphone','Study the topic in 3D and take the quiz','Send homework as notebook photos'],
+  Uzbek:['Bosh sahifada bugungi darslaringizni ko‘ring','Darsga kiring: kamera va mikrofonni yoqing','Mavzuni 3D da o‘rganing va testni bajaring','Uy vazifasini daftar rasmi bilan yuboring'],
+  Русский:['Посмотрите уроки на сегодня на главной','Войдите на урок: включите камеру и микрофон','Изучите тему в 3D и пройдите тест','Отправьте домашнее задание фото тетради'],
+  English:['See today’s lessons on the overview','Join: turn on camera and microphone','Study the topic in 3D and take the quiz','Send homework as notebook photos'],
  },
 };
 function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:SchoolData;language:Lang;onOpen:(path:string)=>void}){
@@ -334,13 +356,9 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   ?`${['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'][now.getDay()]}, ${now.getDate()}-${['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'][now.getMonth()]}`
   :now.toLocaleDateString(locale,{weekday:'long',day:'numeric',month:'long'});
  const actions=HOME_ACTIONS[user.role];
- const [primary,...rest]=actions;
+ // Online lesson and school management have their own tabs: the overview only shows today.
+ const rest=user.role==='parent'?actions:[];
  const steps=HOME_STEPS[user.role]?.[language];
- const stats=[
-  {label:L('Sinflar','Классы','Classes'),value:school.classes.length},
-  {label:L('Topshiriqlar','Задания','Assignments'),value:school.assignments.length},
-  ...(user.role==='student'?[{label:L('Yuborilgan','Отправлено','Submitted'),value:school.mySubmissionCount}]:[]),
- ];
  return <section className="home" data-locale-preserve="true">
   <div className="home-hero">
    <div className="home-hero-text">
@@ -348,15 +366,8 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     <h1>{greeting[language]}, {user.username}</h1>
     <p>{getRoleLabel(language,user.role)}{membership?.schoolName?` · ${membership.schoolName}`:''}</p>
    </div>
-   {primary&&<button type="button" className={`home-primary tone-${primary.tone}`} onClick={()=>onOpen(primary.path)}>
-    <span className="home-primary-icon"><primary.icon/></span>
-    <span><b>{primary.label[language]}</b><small>{primary.description[language]}</small></span>
-    <ArrowRight className="home-go"/>
-   </button>}
   </div>
-  {school.status==='ready'&&(user.role!=='parent')&&<div className="home-stats">
-   {stats.map(stat=><div className="home-stat" key={stat.label.English}><b>{stat.value}</b><span>{stat.label[language]}</span></div>)}
-  </div>}
+  {['teacher','student','parent','school_director','school_admin'].includes(user.role)&&<TodayLessons language={language} onOpen={onOpen} role={user.role}/>}
   {rest.length>0&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Bo‘limlar':language==='Русский'?'Разделы':'Sections'}</h2>
    <div className="home-tiles">
@@ -370,17 +381,6 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   </>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
   {user.role==='student'&&<AttendanceSummary language={language}/>}
-  {user.role==='student'&&school.assignments.length>0&&<>
-   <h2 className="home-section-title">{language==='Uzbek'?'Mening baholarim':language==='Русский'?'Мои оценки':'My grades'}</h2>
-   <div className="panel"><table className="grade-table"><thead><tr><th>{language==='Uzbek'?'Topshiriq':language==='Русский'?'Задание':'Assignment'}</th><th>{language==='Uzbek'?'Holat':language==='Русский'?'Статус':'Status'}</th><th>{language==='Uzbek'?'Baho':language==='Русский'?'Оценка':'Grade'}</th></tr></thead><tbody>
-    {school.assignments.slice(0,8).map(item=>{
-     const submission=item.mySubmission;
-     const score=typeof submission?.score==='number'?submission.score:null;
-     const state=!submission?L('Bajarilmagan','Не сдано','Not submitted'):score!==null?L('Tekshirildi','Проверено','Checked'):L('Tekshirilmoqda','На проверке','In review');
-     return <tr key={item.id}><td><b>{item.title}</b><br/><span className="muted">{item.subject}</span></td><td>{state[language]}</td><td>{score!==null?<span className="grade-mark">{Math.max(2,Math.min(5,Math.round(score/20)))}</span>:'—'}</td></tr>;
-    })}
-   </tbody></table></div>
-  </>}
   {steps&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Qanday ishlaydi':language==='Русский'?'Как это работает':'How it works'}</h2>
    <ol className="home-steps">{steps.map((step,index)=><li key={step}><span>{index+1}</span>{step}</li>)}</ol>
@@ -395,15 +395,16 @@ function LibraryPage({ui,progress,saved,onOpen}:{ui:Lang;progress:Record<string,
  const [search,setSearch]=useState('');const [subject,setSubject]=useState('All subjects');const [language,setLanguage]=useState('All languages');const [year,setYear]=useState('Any year');const [author,setAuthor]=useState('All authors');const [importOpen,setImportOpen]=useState(false);const [selectedFile,setSelectedFile]=useState('');const [importDraft,setImportDraft]=useState({title:'',subject:'',language:'Uzbek',year:'2024–25'});const [imported,setImported]=useSavedState('authorized-file-metadata',{title:'',subject:'',language:'',year:'',file:''});
  const LIB:Record<string,[string,string]>={'All subjects':['Все предметы','Barcha fanlar'],'All languages':['Все языки','Barcha tillar'],'All authors':['Все авторы','Barcha mualliflar'],'Any year':['Любой год','Istalgan yil'],Mathematics:['Математика','Matematika'],Physics:['Физика','Fizika'],Biology:['Биология','Biologiya'],Chemistry:['Химия','Kimyo'],Uzbek:['Узбекский','O‘zbekcha'],Russian:['Русский','Ruscha'],English:['Английский','Inglizcha']};const lib=(v:string)=>ui==='Русский'?(LIB[v]?.[0]??v):ui==='Uzbek'?(LIB[v]?.[1]??v):v;
  const subjects=['All subjects',...Array.from(new Set(BOOKS.map(b=>b.subject)))];const authors=['All authors',...Array.from(new Set(BOOKS.map(b=>b.author)))];const filtered=BOOKS.filter(b=>(subject==='All subjects'||b.subject===subject)&&(language==='All languages'||b.language===language)&&(year==='Any year'||b.year===year)&&(author==='All authors'||b.author===author)&&`${b.title} ${b.subject} ${b.author}`.toLowerCase().includes(search.toLowerCase()));
- return <><PageHeading eyebrow={ui==='Русский'?'7 класс · школьная библиотека':ui==='Uzbek'?'7-sinf · maktab kutubxonasi':'Grade 7 · school library'} title={ui==='Русский'?'Библиотека учебников':ui==='Uzbek'?'Darsliklar kutubxonasi':'Textbook library'} subtitle={ui==='Русский'?'Учебники и рабочие тетради 7 класса.':ui==='Uzbek'?'7-sinf darsliklari va daftarlari.':'Grade 7 textbooks and workbooks.'}/><div className="filters"><div className="control"><label htmlFor="library-search">{ui==='Русский'?'Поиск':ui==='Uzbek'?'Qidiruv':'Search'}</label><input id="library-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder={ui==='Русский'?'Например: биология':ui==='Uzbek'?'Masalan: biologiya':'e.g. biology'}/></div><div className="control"><label htmlFor="filter-subject">{ui==='Русский'?'Предмет':ui==='Uzbek'?'Fan':'Subject'}</label><select id="filter-subject" value={subject} onChange={e=>setSubject(e.target.value)}>{subjects.map(s=><option key={s} value={s}>{lib(s)}</option>)}</select></div><div className="control"><label htmlFor="filter-language">{ui==='Русский'?'Язык':ui==='Uzbek'?'Til':'Language'}</label><select id="filter-language" value={language} onChange={e=>setLanguage(e.target.value)}>{['All languages','Uzbek','Russian','English'].map(v=><option key={v} value={v}>{lib(v)}</option>)}</select></div><div className="control"><label htmlFor="filter-author">{ui==='Русский'?'Автор':ui==='Uzbek'?'Muallif':'Author'}</label><select id="filter-author" value={author} onChange={e=>setAuthor(e.target.value)}>{authors.map(a=><option key={a} value={a}>{lib(a)}</option>)}</select></div><div className="control"><label htmlFor="filter-year">{ui==='Русский'?'Год':ui==='Uzbek'?'Yil':'Year'}</label><select id="filter-year" value={year} onChange={e=>setYear(e.target.value)}><option value="Any year">{lib('Any year')}</option><option value="2026">2026</option></select></div></div>
+ return <><PageHeading eyebrow={ui==='Русский'?'7 класс · школьная библиотека':ui==='Uzbek'?'7-sinf · maktab kutubxonasi':'Grade 7 · school library'} title={ui==='Русский'?'Библиотека учебников':ui==='Uzbek'?'Darsliklar kutubxonasi':'Textbook library'} subtitle={ui==='Русский'?'Учебники и рабочие тетради 7 класса.':ui==='Uzbek'?'7-sinf darsliklari va daftarlari.':'Grade 7 textbooks and workbooks.'}/><div className="filters"><div className="control"><label htmlFor="library-search">{ui==='Русский'?'Поиск':ui==='Uzbek'?'Qidiruv':'Search'}</label><input id="library-search" value={search} onChange={e=>setSearch(e.target.value)} placeholder={ui==='Русский'?'Например: биология':ui==='Uzbek'?'Masalan: biologiya':'e.g. biology'}/></div><div className="control"><label htmlFor="filter-subject">{ui==='Русский'?'Предмет':ui==='Uzbek'?'Fan':'Subject'}</label><Select id="filter-subject" value={subject} onChange={e=>setSubject(e.target.value)}>{subjects.map(s=><option key={s} value={s}>{lib(s)}</option>)}</Select></div><div className="control"><label htmlFor="filter-language">{ui==='Русский'?'Язык':ui==='Uzbek'?'Til':'Language'}</label><Select id="filter-language" value={language} onChange={e=>setLanguage(e.target.value)}>{['All languages','Uzbek','Russian','English'].map(v=><option key={v} value={v}>{lib(v)}</option>)}</Select></div><div className="control"><label htmlFor="filter-author">{ui==='Русский'?'Автор':ui==='Uzbek'?'Muallif':'Author'}</label><Select id="filter-author" value={author} onChange={e=>setAuthor(e.target.value)}>{authors.map(a=><option key={a} value={a}>{lib(a)}</option>)}</Select></div><div className="control"><label htmlFor="filter-year">{ui==='Русский'?'Год':ui==='Uzbek'?'Yil':'Year'}</label><Select id="filter-year" value={year} onChange={e=>setYear(e.target.value)}><option value="Any year">{lib('Any year')}</option><option value="2026">2026</option></Select></div></div>
  <div className="row-between" style={{marginBottom:12}}><span className="muted">{filtered.length} {ui==='Русский'?'учебников':ui==='Uzbek'?'ta darslik':'books'}</span><span className="muted"><Bookmark size={13}/> {saved.length} {ui==='Русский'?'закладок':ui==='Uzbek'?'ta xatcho‘p':'bookmarks'}</span></div>
  {imported.title&&<Panel style={{marginTop:16}}><div className="section-head"><h2>Local file metadata</h2><span className="tag gold">This device only</span></div><p className="muted">{imported.title} · {imported.subject} · {imported.language} · {imported.year} · {imported.file}</p><span className="muted">Metadata only; the selected file is not stored or parsed.</span></Panel>}
  {filtered.length?<div className="grid grid-3">{filtered.map(b=><Panel key={b.id} className="book-card"><button type="button" className={`book-cover ${b.tone}`} onClick={()=>onOpen(b.id)} aria-label={b.title}>{b.pdf?<img src={`/books/covers/${b.id}.jpg`} alt={b.title} loading="lazy"/>:<span className="cover-title">{b.title}</span>}</button><div className="book-info"><span className="tag blue">{lib(b.subject)}</span><h3 className="book-title">{b.title}</h3><p>{lib(b.language)} · {b.author} · {b.year}</p><div className="progress-track"><div className="progress-fill" style={{width:`${Math.min(100,(progress[b.id]??0)*2)}%`}}/></div><div className="row-between" style={{marginTop:12}}><span className="muted">{progress[b.id]?`${ui==='Русский'?'Стр.':ui==='Uzbek'?'Bet':'Page'} ${progress[b.id]}`:''}</span><button className="btn small primary" onClick={()=>onOpen(b.id)}>{ui==='Русский'?'Открыть':ui==='Uzbek'?'Ochish':'Open'}</button></div></div></Panel>)}</div>:<Panel><div className="stack" style={{textAlign:'center',padding:25}}><Search size={24} color="#73828d"/><h3>{ui==='Uzbek'?'Hech narsa topilmadi':ui==='English'?'Nothing found':'Ничего не найдено'}</h3><span className="muted">{ui==='Uzbek'?'Filtrlarni o‘zgartiring.':ui==='English'?'Change the filters.':'Измените фильтры или поищите другой предмет.'}</span><button className="btn" onClick={()=>{setSearch('');setSubject('All subjects');setLanguage('All languages')}}>{ui==='Русский'?'Сбросить фильтры':ui==='Uzbek'?'Filtrlarni tozalash':'Clear filters'}</button></div></Panel>}
- {importOpen&&<Modal title="Import an authorized textbook" close={()=>setImportOpen(false)}><div className="stack"><div className="notice"><ShieldCheck/>Local file selection only. Nothing is uploaded. Use only files you are authorized to access.</div><div className="control"><label htmlFor="local-file">Choose a PDF or EPUB</label><input id="local-file" type="file" accept=".pdf,.epub,application/pdf" onChange={e=>setSelectedFile(e.target.files?.[0]?.name??'')}/></div>{selectedFile&&<div className="callout"><b>Selected locally:</b> {selectedFile}<br/>Metadata preview only. Reader parsing is not part of this prototype.</div>}<div className="grid grid-2"><Field label="Book title" value={importDraft.title} onChange={v=>setImportDraft({...importDraft,title:v})} placeholder="Enter title"/><Field label="Subject" value={importDraft.subject} onChange={v=>setImportDraft({...importDraft,subject:v})} placeholder="e.g. Mathematics"/><div className="control"><label>Language</label><select value={importDraft.language} onChange={e=>setImportDraft({...importDraft,language:e.target.value})}><option>Uzbek</option><option>Russian</option><option>English</option></select></div><Field label="Academic year" value={importDraft.year} onChange={v=>setImportDraft({...importDraft,year:v})} placeholder="e.g. 2024–25"/></div><div className="row"><button className="btn primary" disabled={!importDraft.title.trim()} onClick={()=>{setImported({...importDraft,file:selectedFile||'No file selected'});setImportOpen(false);setSelectedFile('')}}>Save local metadata demo</button><button className="btn" onClick={()=>setImportOpen(false)}>Cancel</button></div></div></Modal>}
+ {importOpen&&<Modal title="Import an authorized textbook" close={()=>setImportOpen(false)}><div className="stack"><div className="notice"><ShieldCheck/>Local file selection only. Nothing is uploaded. Use only files you are authorized to access.</div><div className="control"><label htmlFor="local-file">Choose a PDF or EPUB</label><input id="local-file" type="file" accept=".pdf,.epub,application/pdf" onChange={e=>setSelectedFile(e.target.files?.[0]?.name??'')}/></div>{selectedFile&&<div className="callout"><b>Selected locally:</b> {selectedFile}<br/>Metadata preview only. Reader parsing is not part of this prototype.</div>}<div className="grid grid-2"><Field label="Book title" value={importDraft.title} onChange={v=>setImportDraft({...importDraft,title:v})} placeholder="Enter title"/><Field label="Subject" value={importDraft.subject} onChange={v=>setImportDraft({...importDraft,subject:v})} placeholder="e.g. Mathematics"/><div className="control"><label>Language</label><Select value={importDraft.language} onChange={e=>setImportDraft({...importDraft,language:e.target.value})}><option>Uzbek</option><option>Russian</option><option>English</option></Select></div><Field label="Academic year" value={importDraft.year} onChange={v=>setImportDraft({...importDraft,year:v})} placeholder="e.g. 2024–25"/></div><div className="row"><button className="btn primary" disabled={!importDraft.title.trim()} onClick={()=>{setImported({...importDraft,file:selectedFile||'No file selected'});setImportOpen(false);setSelectedFile('')}}>Save local metadata demo</button><button className="btn" onClick={()=>setImportOpen(false)}>Cancel</button></div></div></Modal>}
  </>
 }
 function Field({label,placeholder,value,onChange}:{label:string;placeholder?:string;value?:string;onChange?:(v:string)=>void}){return <div className="control"><label>{label}</label><input placeholder={placeholder} value={value} onChange={e=>onChange?.(e.target.value)}/></div>}
 function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{language:string;book:Book;page:number;setPage:(p:number)=>void;saved:string[];setSaved:(v:string[])=>void;note:string;setNote:(v:string)=>void}){
+  const [pdfRange]=useState<{from:number;to:number}|null>(()=>{try{const raw=book.pdf?localStorage.getItem(`eduverse:pdf-range:${book.pdf}`):null;const m=raw?.match(/^(\d+)-(\d+)$/);return m?{from:Number(m[1]),to:Number(m[2])}:null}catch{return null}});
   const [zoom,setZoom]=useState(15);const [query,setQuery]=useState('');const [fullscreen,setFullscreen]=useState(false);const [message,setMessage]=useState('');const [highlights,setHighlights]=useSavedState<string[]>('highlights',[]);const key=`${book.id}:${page}`;const isSaved=saved.includes(key);const isHighlighted=highlights.includes(key);
  const chapter=book.chapters[Math.min(book.chapters.length-1,Math.floor((page-1)/8))];
  const sampleSearchText='demonstration lesson question investigate together known needs to be found representation clearer school garden 24 seedlings 4 equal rows relationship drawing table number sentence strategy calculating answer reasonable explain reasoning classmate mathematical idea';
@@ -414,9 +415,10 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
     return()=>{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{})};
    },[fullscreen]);
  function toggleSave(){setSaved(isSaved?saved.filter(x=>x!==key):[...saved,key]);setMessage(isSaved?'Bookmark removed':'Bookmark saved on this device');setTimeout(()=>setMessage(''),1800)}
- return <><PageHeading eyebrow={`${book.subject} · Grade 7 · ${book.language}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
+ const RL:Record<string,[string,string]>={Mathematics:['Математика','Matematika'],Physics:['Физика','Fizika'],Biology:['Биология','Biologiya'],Chemistry:['Химия','Kimyo'],Russian:['на русском','rus tilida'],Uzbek:['на узбекском','o‘zbek tilida'],English:['на английском','ingliz tilida']};const rl=(v:string)=>language==='Русский'?(RL[v]?.[0]??v):language==='Uzbek'?(RL[v]?.[1]??v):v;
+ return <><PageHeading eyebrow={`${rl(book.subject)} · ${language==='Русский'?'7 класс':language==='Uzbek'?'7-sinf':'Grade 7'} · ${rl(book.language)}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
  {book.pdf?(
-    <div className="reader-pdf"><PdfViewer url={book.pdf} title={book.title} language={language}/></div>
+    <div className="reader-pdf">{pdfRange&&(()=>{const pages=pdfRange.from===pdfRange.to?String(pdfRange.from):`${pdfRange.from}–${pdfRange.to}`;return <div className="notice" style={{marginBottom:10}}><Info/>{language==='Русский'?`Открыта только сегодняшняя тема, стр. ${pages}`:language==='Uzbek'?`Faqat bugungi mavzu ochiq, ${pages}-bet`:`Only today’s topic is open, p. ${pages}`}</div>})()}<PdfViewer url={book.pdf} title={book.title} language={language} range={pdfRange}/></div>
   ):(
   <>
    <div className="notice" style={{marginBottom:12}}><Info/>Sample page content is original demonstration material, not an official textbook excerpt.</div>
@@ -433,8 +435,9 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
 }
 function Modal({title,children,close}:{title:string;children:ReactNode;close:()=>void}){
  const [closing,requestClose]=useClosable(close);
- useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if(e.key==='Escape')requestClose()};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[requestClose]);
- return <div className={`modal-backdrop ${closing?'is-closing':''}`} role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)requestClose()}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="row-between" style={{marginBottom:15}}><h2>{title}</h2><button className="btn small" onClick={requestClose} aria-label="Close"><X/></button></div>{children}</section></div>}
+ const boxRef=useRef<HTMLElement>(null);
+ useDismiss(true,requestClose,[boxRef]);
+ return <div className={`modal-backdrop ${closing?'is-closing':''}`} role="presentation"><section ref={boxRef} className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="row-between" style={{marginBottom:15}}><h2>{title}</h2><button className="btn small" onClick={requestClose} aria-label="Close"><X/></button></div>{children}</section></div>}
 function BoardPage(){
  const canvasRef=useRef<HTMLCanvasElement|null>(null);const drawing=useRef(false);const last=useRef<{x:number;y:number}|null>(null);const shapeStart=useRef<{x:number;y:number}|null>(null);const shapeBase=useRef<ImageData|null>(null);
   const [tool,setTool]=useState('pen');const [color,setColor]=useState('#344f67');const [width,setWidth]=useState(3);const [history,setHistory]=useState<string[]>([]);const [redo,setRedo]=useState<string[]>([]);const [saved,setSaved]=useSavedState('board-image','');const [topic,setTopic]=useSavedState('board-topic','Ratios: comparing quantities');const [quiz,setQuiz]=useState(false);const [poll,setPoll]=useState(false);const [vote,setVote]=useState('');const [boardZoom,setBoardZoom]=useState(100);const [presenting,setPresenting]=useState(false);const [timerRunning,setTimerRunning]=useState(false);const [timerSeconds,setTimerSeconds]=useState(0);
@@ -501,9 +504,8 @@ function ParentPage({language}:{language:Lang}){
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
-  <SchoolScopeSummary school={school} language={language}/>
   {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
+   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<TimetableEditor schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 
@@ -514,7 +516,6 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  const title=role==='platform_superadmin'?text('Platform administration','Управление платформой','Platforma boshqaruvi'):role==='ministry_admin'?text('National education oversight','Национальный контроль образования','Milliy ta’lim nazorati'):text('Regional education administration','Региональное управление образованием','Hududiy ta’lim boshqaruvi');
  return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
   <OwnerRequestsPanel language={language}/>
-  <div style={{marginTop:16}}><DemoSchoolPanel language={language} onChanged={()=>setSchoolsRevision(v=>v+1)}/></div>
   <div style={{marginTop:16}}><ServerAdminSchoolsPanel key={schoolsRevision} language={language} selectedId={setup?.id} onSelect={setSetup}/></div>
   {setup&&<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
    <div className="row-between"><b>{setup.name}</b><button className="btn small" onClick={()=>setSetup(null)}>{text('Close','Закрыть','Yopish')}</button></div>
@@ -522,7 +523,6 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
    <SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/>
    <details className="panel"><summary><b>{text('Or paste the school’s Excel','Или вставьте Excel школы целиком','Yoki maktab Excelini qo‘ying')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
    <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
-   <SchoolCalendarPanel schoolId={setup.id} language={language}/>
    <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
   </div>}</>;
 }

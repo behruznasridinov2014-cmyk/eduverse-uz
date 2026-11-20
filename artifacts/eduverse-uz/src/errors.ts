@@ -28,7 +28,7 @@ export function friendlyError(error: unknown, language: Language, fallback?: { e
       return pick(language, 'Too many attempts. Wait a minute and try again.', 'Слишком много попыток. Подождите минуту.', 'Juda ko‘p urinish. Bir daqiqa kuting.');
     }
     if (error.status >= 500) {
-      return pick(language, 'The server is busy. Try again in a few seconds.', 'Сервер занят. Попробуйте через несколько секунд.', 'Server band. Bir necha soniyadan keyin urinib ko‘ring.');
+      return pick(language, 'EDUVERSE is busy right now. Try again in a few seconds.', 'EDUVERSE сейчас занят. Попробуйте через несколько секунд.', 'EDUVERSE hozir band. Bir necha soniyadan keyin urinib ko‘ring.');
     }
     if (typeof error.data === 'object' && error.data !== null && 'error' in error.data) {
       const message = (error.data as { error?: unknown }).error;

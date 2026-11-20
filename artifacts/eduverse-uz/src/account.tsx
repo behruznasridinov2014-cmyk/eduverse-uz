@@ -6,13 +6,15 @@ import './account.css';
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
-import { Bell, BookOpenCheck, Bug, CalendarClock, CheckCheck, CircleHelp, GraduationCap, LifeBuoy, Mail, MessageCircle, MonitorSmartphone, School, Send, ShieldCheck, Users, X } from 'lucide-react';
+import { Bell, BookOpenCheck, Bug, CalendarClock, CheckCheck, CircleHelp, GraduationCap, LifeBuoy, Mail, MessageCircle, MonitorSmartphone, School, Plus, Send, ShieldCheck, Users, X } from 'lucide-react';
 import type { Language } from './school-data';
 import { AvatarPicker, PasswordChange } from './school-tools';
 import { GoogleLinkPanel } from './google-auth';
 import { QrScannerButton } from './qr-scanner';
 import { GlassSwitch, GlassTabs, useSwipeTabs } from './glass-nav';
 import { friendlyError } from './errors';
+import { TEACHER_SUBJECTS, subjectLabel } from './ui/config';
+import { useDismiss } from './ui/dismiss';
 
 const tx = (language: Language, uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
 const locale = (language: Language) => (language === 'English' ? 'en-GB' : 'ru-RU');
@@ -120,12 +122,18 @@ function PersonalSection({ user, language, teaches }: { user: User; language: La
         {teaches && (
           <div className="control">
             <label htmlFor="profile-subject">{tx(language, 'Dars beradigan fanlar', 'Предметы преподавания', 'Subjects you teach')}</label>
-            <div className="chip-row">{subjects.map((item) => <span key={item} className="tag gold">{item}<button type="button" className="chip-x" onClick={() => setSubjects(subjects.filter((s) => s !== item))} aria-label={`× ${item}`}><X size={11} /></button></span>)}</div>
-            <div className="row" style={{ gap: 8 }}>
-              <input id="profile-subject" className="input" list="subject-options" value={subject} onChange={(event) => setSubject(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubject(); } }} placeholder={tx(language, 'Masalan: Fizika', 'Например: Физика', 'e.g. Physics')} />
-              <datalist id="subject-options">{['Физика', 'Химия', 'Биология', 'Математика', 'Алгебра', 'Геометрия', 'Информатика', 'География', 'История', 'Английский язык', 'Родной язык'].map((item) => <option key={item} value={item} />)}</datalist>
-              <button type="button" className="btn" onClick={addSubject}>+</button>
+            <div className="chip-row">{subjects.map((item) => <span key={item} className="tag gold">{subjectLabel(item, language)}<button type="button" className="chip-x" onClick={() => setSubjects(subjects.filter((s) => s !== item))} aria-label={`× ${item}`}><X size={11} /></button></span>)}</div>
+            <div className="ev-addrow">
+              <input id="profile-subject" className="input" value={subject} onChange={(event) => setSubject(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubject(); } }} placeholder={tx(language, 'Fan nomini yozing', 'Впишите предмет', 'Type a subject')} />
+              <button type="button" className="ev-icon-btn" onClick={addSubject} disabled={!subject.trim()} aria-label={tx(language, 'Qo‘shish', 'Добавить', 'Add')}><Plus size={18} /></button>
             </div>
+            {subjects.length < 8 && TEACHER_SUBJECTS.some((item) => !subjects.includes(item[1])) && (
+              <div className="ev-suggest">
+                {TEACHER_SUBJECTS.filter((item) => !subjects.includes(item[1])).map((item) => (
+                  <button type="button" key={item[1]} onClick={() => setSubjects([...subjects, item[1]])}>+ {tx(language, item[0], item[1], item[2])}</button>
+                ))}
+              </div>
+            )}
           </div>
         )}
         <div className="row" style={{ gap: 10 }}>
@@ -267,13 +275,31 @@ function StatsSection({ language }: { language: Language }) {
   );
 }
 
-const FAQ: Array<[string, string]> = [
-  ['Как начать онлайн-урок?', 'Меню → «Онлайн-урок» → выберите тему из учебника → «Открыть комнату». Ученики входят по коду или увидят урок в уведомлениях.'],
-  ['Как добавить учеников и родителей?', 'Только директор или завуч: «Управление школой» → импорт из Excel (ФИО · Класс · Телефон родителя). Учитель учеников не добавляет. Логины и пароли создаются сами.'],
-  ['Ученик забыл пароль', 'Директор или завуч: «Управление школой» → список людей → «Новый пароль». При первом входе ученик поставит свой.'],
-  ['Почему учебник открывается не на всех страницах?', 'В библиотеку загружена часть учебника. Полная версия появится после загрузки школой.'],
-  ['Как ученик сдаёт домашку?', '«Задания» → выбрать задание → сфотографировать тетрадь и объяснить решение своими словами.'],
-  ['Работает ли платформа на телефоне?', 'Да. Откройте сайт в браузере и нажмите «Установить» — появится иконка как у приложения.'],
+type Faq = { roles: string[] | 'all'; q: [string, string, string]; a: [string, string, string] };
+/** Questions in three languages; each person sees the ones for their role. */
+const FAQ: Faq[] = [
+  { roles: ['teacher'], q: ['Onlayn darsni qanday boshlash kerak?', 'Как начать онлайн-урок?', 'How do I start an online lesson?'],
+    a: ['«Umumiy ko‘rinish»da bugungi dars kartasini bosing → «Onlayn dars» → «Boshlash». Mavzu darslik bo‘yicha o‘zi tanlanadi. Sinf o‘quvchilari darsni o‘zida ko‘rib, «Kirish»ni bosadi.', 'На главной нажмите карточку сегодняшнего урока → «Онлайн-урок» → «Начать». Тема по учебнику выбирается сама. Ученики класса увидят урок у себя и нажмут «Войти».', 'On the overview tap today’s lesson card → “Online lesson” → “Start”. The textbook topic is chosen for you. Students of the class see the lesson and press “Join”.'] },
+  { roles: ['teacher'], q: ['Mavzu qayerdan olinadi?', 'Откуда берётся тема урока?', 'Where does the lesson topic come from?'],
+    a: ['Dars jadvali va darslikdan: sinf o‘tgan oxirgi mavzudan keyingisi. Darsni tushuntirgach «O‘tildi» deb belgilang — ertaga keyingi mavzu chiqadi.', 'Из расписания и учебника: следующая тема после последней пройденной классом. После урока отметьте тему пройденной — завтра откроется следующая.', 'From the timetable and the textbook: the next topic after the last one the class covered. Mark it covered after the lesson and the next one opens tomorrow.'] },
+  { roles: ['teacher'], q: ['Uy vazifasini qanday berish kerak?', 'Как выдать домашнее задание?', 'How do I set homework?'],
+    a: ['«O‘qituvchi kabineti» → «Vazifalar»: bugungi dars mavzusidan topshiriqlarni belgilang va «Sinfga yuborish»ni bosing. Ertangi mavzu ertaga ochiladi.', '«Кабинет учителя» → «Задания»: отметьте задания по теме сегодняшнего урока и нажмите «Отправить классу». Тема завтрашнего урока откроется завтра.', 'Teacher workspace → Homework: tick tasks from today’s lesson topic and press “Send to class”. Tomorrow’s topic opens tomorrow.'] },
+  { roles: ['school_director', 'school_admin'], q: ['O‘quvchi va o‘qituvchilarni qanday qo‘shish kerak?', 'Как добавить учеников и учителей?', 'How do I add students and teachers?'],
+    a: ['Direktor yoki zavuch: «Maktab boshqaruvi» → «O‘zgarishlar» → o‘quvchi yoki o‘qituvchi qo‘shish (Excel’dan ham bo‘ladi). Login va parollar darhol chiqadi — chop eting va tarqating.', 'Директор или завуч: «Управление школой» → «Изменения» → добавить ученика или учителя (можно из Excel). Логины и пароли появятся сразу — распечатайте и раздайте.', 'Director or deputy: School management → Changes → add a student or teacher (Excel works too). Logins and passwords appear at once — print and hand them out.'] },
+  { roles: ['school_director', 'school_admin'], q: ['Dars jadvalini qanday to‘ldirish kerak?', 'Как заполнить расписание?', 'How do I fill in the timetable?'],
+    a: ['«Maktab boshqaruvi» → «Dars jadvali»: har bir katakda fan va o‘qituvchi. Excel’dan qo‘yish yoki namuna bilan to‘ldirish mumkin. Saqlagach, hamma bugungi darslarini ko‘radi.', '«Управление школой» → «Расписание уроков»: в каждой клетке предмет и учитель. Можно вставить из Excel или заполнить примером. После сохранения все видят свои уроки на сегодня.', 'School management → Timetable: a subject and a teacher in each cell. Paste from Excel or fill with an example. After saving everyone sees today’s lessons.'] },
+  { roles: ['school_director', 'school_admin', 'teacher'], q: ['O‘quvchi parolni unutdi', 'Ученик забыл пароль', 'A student forgot the password'],
+    a: ['Direktor yoki zavuch: «Maktab boshqaruvi» → odamlar ro‘yxati → «Yangi parol». Birinchi kirishda o‘quvchi o‘z parolini qo‘yadi.', 'Директор или завуч: «Управление школой» → список людей → «Новый пароль». При первом входе ученик поставит свой.', 'Director or deputy: School management → people → “New password”. The student sets their own at first sign-in.'] },
+  { roles: ['student'], q: ['Darsga qanday kiraman?', 'Как войти на урок?', 'How do I join a lesson?'],
+    a: ['O‘qituvchi darsni boshlaganda, u «Umumiy ko‘rinish»da va «Onlayn dars»da chiqadi. «Kirish»ni bosing.', 'Когда учитель начнёт урок, он появится на главной и в «Онлайн-уроке». Нажмите «Войти».', 'When the teacher starts, the lesson appears on the overview and in “Online lesson”. Press “Join”.'] },
+  { roles: ['student'], q: ['Uy vazifasini qanday topshiraman?', 'Как сдать домашку?', 'How do I hand in homework?'],
+    a: ['«Uy vazifalari» → vazifani tanlang → daftarni suratga oling va yechimni o‘z so‘zlaringiz bilan tushuntiring.', '«Домашние задания» → выберите задание → сфотографируйте тетрадь и объясните решение своими словами.', 'Homework → choose the task → photograph your notebook and explain the solution in your own words.'] },
+  { roles: ['parent'], q: ['Farzandimning baholarini qayerda ko‘raman?', 'Где видеть оценки ребёнка?', 'Where do I see my child’s grades?'],
+    a: ['«Oila kabineti»da: baholar, davomat va uy vazifalari. Bosh sahifada farzandingizning bugungi darslari.', 'В «Кабинете семьи»: оценки, посещаемость и домашние задания. На главной — уроки ребёнка на сегодня.', 'In the Family view: grades, attendance and homework. The overview shows your child’s lessons today.'] },
+  { roles: 'all', q: ['Nega darslik hamma betda ochilmaydi?', 'Почему учебник открывается не на всех страницах?', 'Why doesn’t the textbook open on every page?'],
+    a: ['Kutubxonaga darslikning bir qismi yuklangan. To‘liq nusxa maktab yuklagandan keyin chiqadi.', 'В библиотеку загружена часть учебника. Полная версия появится после загрузки школой.', 'Only part of the textbook is uploaded. The full version appears once the school uploads it.'] },
+  { roles: 'all', q: ['Telefonda ishlaydimi?', 'Работает ли платформа на телефоне?', 'Does it work on a phone?'],
+    a: ['Ha. Saytni brauzerda oching va «O‘rnatish»ni bosing — ilova kabi belgi paydo bo‘ladi.', 'Да. Откройте сайт в браузере и нажмите «Установить» — появится иконка как у приложения.', 'Yes. Open the site in a browser and press “Install” — an app icon appears.'] },
 ];
 
 function HelpSection({ user, language }: { user: User; language: Language }) {
@@ -281,7 +307,7 @@ function HelpSection({ user, language }: { user: User; language: Language }) {
     <>
       <section className="panel">
         <h2><CircleHelp size={16} /> {tx(language, 'Yordam markazi · FAQ', 'Центр помощи · Частые вопросы', 'Help centre · FAQ')}</h2>
-        <div className="faq-list">{FAQ.map(([q, a]) => <details key={q}><summary>{q}</summary><p>{a}</p></details>)}</div>
+        <div className="faq-list">{FAQ.filter((item) => item.roles === 'all' || item.roles.includes(user.role)).map((item) => <details key={item.q[1]}><summary>{tx(language, ...item.q)}</summary><p>{tx(language, ...item.a)}</p></details>)}</div>
       </section>
           </>
   );
@@ -450,21 +476,16 @@ export function NotificationsBell({ userId, language, onOpen }: { userId: string
     window.addEventListener('focus', onFocus);
     return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); };
   }, [load, userId]);
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
-  }, [open]);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useDismiss(open, () => setOpen(false), [wrapRef]);
   async function readAll() { await customFetch('/api/me/notifications/read-all', { method: 'POST' }).catch(() => {}); load(); }
   return (
-    <div className="bell-wrap">
+    <div className="bell-wrap" ref={wrapRef}>
       <button type="button" className={`glass-icon-btn ${open ? 'on' : ''}`} aria-label={tx(language, 'Bildirishnomalar', 'Уведомления', 'Notifications')} aria-expanded={open} onClick={() => { setOpen((value) => !value); if (!open) load(); }}>
         <Bell size={17} />{unread > 0 && <span className="bell-badge">{unread > 9 ? '9+' : unread}</span>}
       </button>
       {open && (
         <>
-          <div className="bell-backdrop" onClick={() => setOpen(false)} />
           <div className="bell-panel" role="dialog" aria-label={tx(language, 'Bildirishnomalar', 'Уведомления', 'Notifications')}>
             <div className="bell-head"><b>{tx(language, 'Bildirishnomalar', 'Уведомления', 'Notifications')}</b>
               {unread > 0 && <button type="button" className="btn small" onClick={() => void readAll()}><CheckCheck size={14} /> {tx(language, 'Hammasi o‘qildi', 'Прочитать все', 'Mark all read')}</button>}</div>

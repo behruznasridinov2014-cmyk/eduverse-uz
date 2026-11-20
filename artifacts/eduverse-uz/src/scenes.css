@@ -103,3 +103,4 @@ html[data-theme="night"] .units-board div, html[data-theme="night"] .classify-ca
 html[data-theme="night"] .units-board b, html[data-theme="night"] .classify-pair { color: var(--text); }
 html[data-theme="night"] .course-hook { color: var(--accent-night, #D7A968) !important; }
 @media (prefers-reduced-motion: reduce) { .stage3d-world, .area-grid i, .hazard-card { transition: none !important; animation: none !important; } }
+.scene-text{display:contents}

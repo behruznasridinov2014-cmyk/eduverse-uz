@@ -1,4 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { Select } from './ui/select';
+import { LANGUAGES } from './ui/config';
 import { Link } from 'wouter';
 import {
   Activity,
@@ -124,7 +126,7 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logout: 'Hisobdan chiqish',
     home: 'Bosh sahifa',
     loading: 'Yuklanmoqda…',
-    checking: 'Hisob sessiyasi tekshirilmoqda.',
+    checking: 'Hisobingiz ochilmoqda…',
     retry: 'Qayta urinish',
     unavailableTitle: 'Hisob xizmatiga ulanib bo‘lmadi',
     unavailableText: 'Server bilan aloqa vaqtincha mavjud emas. Birozdan so‘ng qayta urinib ko‘ring.',
@@ -135,7 +137,7 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logoutError: 'Hisobdan chiqishda xatolik. Qayta urinib ko‘ring.',
     independentLearner: 'Mustaqil o‘quvchi',
     role: 'Hisob turi',
-    serviceWarning: 'Hisob serveri bilan aloqa yo‘q. Ro‘yxatdan o‘tish va kirish vaqtincha ishlamaydi.',
+    serviceWarning: 'Hozir EDUVERSE bilan aloqa yo‘q. Bir daqiqadan keyin kirib ko‘ring.',
     qrTitle: 'Telefon orqali kirish',
     qrUnavailable: 'QR orqali kirish EDUVERSE mobil ilovasi tayyor bo‘lganda yoqiladi. Hozircha login va parol bilan kiring.',
     localAccess: 'Faqat mahalliy sinov muhiti',
@@ -179,7 +181,7 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logout: 'Выйти из аккаунта',
     home: 'На главную',
     loading: 'Загрузка…',
-    checking: 'Проверяем сессию аккаунта.',
+    checking: 'Открываем ваш аккаунт…',
     retry: 'Повторить',
     unavailableTitle: 'Не удалось подключиться к сервису аккаунтов',
     unavailableText: 'Нет связи. Проверьте интернет и попробуйте ещё раз.',
@@ -190,7 +192,7 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logoutError: 'Не удалось выйти из аккаунта. Попробуйте ещё раз.',
     independentLearner: 'Самостоятельный ученик',
     role: 'Тип аккаунта',
-    serviceWarning: 'Нет связи с сервером аккаунтов. Вход и регистрация временно недоступны.',
+    serviceWarning: 'Сейчас нет связи с EDUVERSE. Попробуйте войти через минуту.',
     qrTitle: 'Вход с телефона',
     qrUnavailable: 'Вход по QR появится после выхода мобильного приложения EDUVERSE. Пока используйте логин и пароль.',
     localAccess: 'Только локальная тестовая среда',
@@ -234,7 +236,7 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logout: 'Sign out',
     home: 'Home',
     loading: 'Loading…',
-    checking: 'Checking your account session.',
+    checking: 'Opening your account…',
     retry: 'Try again',
     unavailableTitle: 'Account service is unavailable',
     unavailableText: 'The server connection is temporarily unavailable. Please try again shortly.',
@@ -245,7 +247,7 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logoutError: 'Could not sign out. Please try again.',
     independentLearner: 'Independent learner',
     role: 'Account type',
-    serviceWarning: 'The account server is unreachable. Sign-in and registration are temporarily unavailable.',
+    serviceWarning: 'EDUVERSE cannot be reached right now. Try signing in again in a minute.',
     qrTitle: 'Sign in with your phone',
     qrUnavailable: 'QR sign-in will be available when the EDUVERSE mobile app is ready. For now, use your login and password.',
     localAccess: 'Local test environment only',
@@ -341,7 +343,7 @@ export function PublicHomePage({
       inDevelopment: 'Ishlab chiqilmoqda',
       features: [
         ['Interaktiv ta’lim', 'Mavzuni ochiq mashqlar va bosqichma-bosqich tushuntirishlar orqali mustahkamlang.', 'available'],
-        ['Onlayn darslar', 'Kamera, mikrofon va ekran namoyishi bilan jonli dars: kodni yuboring va boshlang.', 'available'],
+        ['Onlayn darslar', 'Kamera, mikrofon va ekran namoyishi bilan jonli dars: sinf o‘quvchilari darsni darhol o‘zida ko‘radi.', 'available'],
         ['Davomat', 'Har bir sinf uchun davomatni belgilang va saqlang.', 'available'],
         ['Uy vazifalari', 'Mavzuga bog‘langan vazifa: daftar rasmi, izoh, baho va o‘qituvchi imzosi.', 'available'],
         ['3D mavzular', 'Mavzuni 3D modelda o‘rganing va test bilan mustahkamlang.', 'available'],
@@ -427,7 +429,7 @@ export function PublicHomePage({
       inDevelopment: 'В разработке',
       features: [
         ['Интерактивное обучение', 'Закрепляйте темы с помощью открытых упражнений и пошаговых объяснений.', 'available'],
-        ['Онлайн-уроки', 'Живой урок с камерой, микрофоном и показом экрана: отправьте код и начинайте.', 'available'],
+        ['Онлайн-уроки', 'Живой урок с камерой, микрофоном и показом экрана: ученики класса сразу видят урок у себя.', 'available'],
         ['Посещаемость', 'Отмечайте и сохраняйте посещаемость каждого класса.', 'available'],
         ['Домашние задания', 'Задание по теме: фото тетради, объяснение, оценка и подпись учителя.', 'available'],
         ['3D-темы', 'Изучайте тему на 3D-модели и закрепляйте тестом.', 'available'],
@@ -513,7 +515,7 @@ export function PublicHomePage({
       inDevelopment: 'In development',
       features: [
         ['Interactive learning', 'Practice concepts with open exercises and step-by-step explanations.', 'available'],
-        ['Online lessons', 'Live lessons with camera, microphone and screen sharing: share the code and start.', 'available'],
+        ['Online lessons', 'Live lessons with camera, microphone and screen sharing: students of the class see it at once.', 'available'],
         ['Attendance', 'Mark and save attendance for every class.', 'available'],
         ['Homework', 'Topic-linked tasks: notebook photos, explanation, grade and teacher signature.', 'available'],
         ['3D topics', 'Learn a topic on a 3D model and reinforce it with a test.', 'available'],
@@ -588,11 +590,7 @@ export function PublicHomePage({
         <div className="public-home-actions">
           <label className="auth-language">
             <span className="sr-only">{authCopy(language).language}</span>
-            <select value={language} onChange={(event) => onLanguageChange(event.target.value as AppLanguage)}>
-              <option value="Uzbek">O‘zbekcha</option>
-              <option value="Русский">Русский</option>
-              <option value="English">English</option>
-            </select>
+            <Select value={language} aria-label={authCopy(language).language} options={LANGUAGES.map((item) => ({ value: item.value, label: item.label }))} onChange={(_event, value) => onLanguageChange(value as AppLanguage)} />
           </label>
           <button
             type="button"
@@ -847,11 +845,7 @@ function AuthFrame({
           <Link href="/login" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>
           <label className="auth-language">
             <span className="sr-only">{copy.language}</span>
-            <select value={language} onChange={(event) => onLanguageChange(event.target.value as AppLanguage)}>
-              <option value="Uzbek">O‘zbekcha</option>
-              <option value="Русский">Русский</option>
-              <option value="English">English</option>
-            </select>
+            <Select value={language} aria-label={authCopy(language).language} options={LANGUAGES.map((item) => ({ value: item.value, label: item.label }))} onChange={(_event, value) => onLanguageChange(value as AppLanguage)} />
           </label>
         </div>
       </header>
@@ -1017,7 +1011,6 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           )}
           {(tab === 'code' || (isPhone && !qrCode)) && <GoogleSignInButton language={language} />}
           <div className="auth-switch">{copy.noAccount}</div>
-          <a className="auth-demo-link" href="/demo">{language === 'Uzbek' ? 'Kirishsiz demo: 3D mavzular' : language === 'English' ? 'Demo without signing in: 3D topics' : 'Демо без входа: темы с 3D'}</a>
         </>
       )}
       <p className="auth-note">{copy.emailNotice}</p>

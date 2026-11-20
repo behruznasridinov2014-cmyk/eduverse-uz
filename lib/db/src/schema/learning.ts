@@ -434,3 +434,56 @@ export const trainerResultsTable = pgTable("trainer_results", {
   uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
   index("trainer_results_class_day_idx").on(table.classId, table.day),
 ]);
+
+/**
+ * Trainer test of one subject on one lesson day: 8 questions on the topic of that lesson.
+ * A pupil may redo it within 24 hours of the lesson; the best score stays.
+ */
+export const trainerTestsTable = pgTable("trainer_tests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+  /** YYYY-MM-DD: the lesson day */
+  day: text("day").notNull(),
+  /** textbook subject key: physics / chemistry / biology / math */
+  subject: text("subject").notNull(),
+  topicKey: text("topic_key").notNull().default(""),
+  score: integer("score").notNull(),
+  total: integer("total").notNull(),
+  attempts: integer("attempts").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("trainer_tests_user_day_subject_unique").on(table.userId, table.day, table.subject),
+  index("trainer_tests_class_day_idx").on(table.classId, table.day),
+]);
+
+/**
+ * The school's weekly timetable: on which weekday (1 = Monday … 6 = Saturday) and in which
+ * period a class has which subject and with which teacher. The bell times of the periods are
+ * kept per school in `school_bells`. Subject is the textbook subject key
+ * (physics / chemistry / biology / math) or any other subject name.
+ */
+export const timetableSlotsTable = pgTable("timetable_slots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  weekday: integer("weekday").notNull(),
+  period: integer("period").notNull(),
+  subject: text("subject").notNull(),
+  teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+  room: text("room"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("timetable_slots_class_day_period_unique").on(table.classId, table.weekday, table.period),
+  index("timetable_slots_teacher_idx").on(table.teacherId, table.weekday),
+  index("timetable_slots_school_idx").on(table.schoolId),
+]);
+
+/** Bell times of a school: [{ start: "08:30", end: "09:15" }, …], period 1 first. */
+export const schoolBellsTable = pgTable("school_bells", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  periods: jsonb("periods").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("school_bells_school_unique").on(table.schoolId)]);

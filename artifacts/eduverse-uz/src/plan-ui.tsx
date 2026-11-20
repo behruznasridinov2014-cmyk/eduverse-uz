@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { BadgeCheck, Lock } from 'lucide-react';
 import type { Language } from './school-data';
@@ -25,9 +26,9 @@ export function ProLock({ language }: { language: Language }) {
       <span className="pro-lock-icon"><Lock size={22} /></span>
       <h2>{t(language, 'EDUVERSE Pro bo‘limi', 'Раздел тарифа EDUVERSE Pro', 'EDUVERSE Pro section')}</h2>
       <p className="muted">{t(language,
-        'Jurnal, davomat, uy vazifalari va baholar bepul. 3D mavzular, 3D kutubxona, onlayn darslar va trenajyor — Pro tarifida.',
-        'Журнал, давомат, домашние задания и оценки — бесплатно. 3D-темы по учебнику, 3D-библиотека, онлайн-уроки и тренажёр — в тарифе Pro.',
-        'Journal, attendance, homework and grades are free. 3D topics, the 3D library, online lessons and the trainer are in Pro.')}</p>
+        'Jurnal, davomat, uy vazifalari va baholar bepul. 3D mavzular, 3D studiya, onlayn darslar va trenajyor — Pro tarifida.',
+        'Журнал, давомат, домашние задания и оценки — бесплатно. 3D-темы по учебнику, 3D-студия, онлайн-уроки и тренажёр — в тарифе Pro.',
+        'Journal, attendance, homework and grades are free. 3D topics, the 3D studio, online lessons and the trainer are in Pro.')}</p>
       <p className="muted">{t(language, 'Maktab ma’muriyati EDUVERSE bilan bog‘lansin: bir chorak bepul sinov mumkin.', 'Пусть администрация школы свяжется с EDUVERSE: возможен бесплатный пилот на четверть.', 'Ask the school to contact EDUVERSE: a free one-quarter pilot is possible.')}</p>
     </section>
   );
@@ -74,13 +75,13 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
   return (
     <section className="panel">
       <h2><BadgeCheck size={16} /> {t(language, 'Maktab tarifi', 'Тариф школы', 'School plan')}</h2>
-      <p className="muted">{t(language, 'Bepul: jurnal, davomat, vazifalar. Pro: 3D, onlayn dars, trenajyor. Sinov: Pro sana tugaguncha bepul.', 'Бесплатный: журнал, давомат, домашки, оценки. Pro: 3D-темы, 3D-библиотека, онлайн-уроки, тренажёр. Пилот: всё как в Pro, бесплатно до даты.', 'Free: journal. Pro: 3D, lessons, trainer. Pilot: Pro until a date.')}</p>
+      <p className="muted">{t(language, 'Bepul: jurnal, davomat, vazifalar. Pro: 3D, onlayn dars, trenajyor. Sinov: Pro sana tugaguncha bepul.', 'Бесплатный: журнал, давомат, домашки, оценки. Pro: 3D-темы, 3D-студия, онлайн-уроки, тренажёр. Пилот: всё как в Pro, бесплатно до даты.', 'Free: journal. Pro: 3D, lessons, trainer. Pilot: Pro until a date.')}</p>
       <div className="people-filters">
-        <select className="input" value={plan} onChange={(event) => { const value = event.target.value as typeof plan; setPlan(value); if (value === 'pilot' && !until) setUntil(quarterEnd()); }}>
+        <Select className="input" value={plan} onChange={(event) => { const value = event.target.value as typeof plan; setPlan(value); if (value === 'pilot' && !until) setUntil(quarterEnd()); }}>
           <option value="free">{t(language, 'Bepul', 'Бесплатный (журнал)', 'Free')}</option>
           <option value="pilot">{t(language, 'Sinov (bepul Pro)', 'Пилот (Pro бесплатно до даты)', 'Pilot')}</option>
           <option value="pro">Pro</option>
-        </select>
+        </Select>
         <input className="input" type="date" value={until} onChange={(event) => setUntil(event.target.value)} aria-label={t(language, 'Gacha', 'До', 'Until')} />
         <button type="button" className="btn primary" onClick={() => void save()}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
       </div>

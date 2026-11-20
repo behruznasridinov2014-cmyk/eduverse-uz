@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router12;
+    module.exports = Router13;
     module.exports.Route = Route;
-    function Router12(options) {
-      if (!(this instanceof Router12)) {
-        return new Router12(options);
+    function Router13(options) {
+      if (!(this instanceof Router13)) {
+        return new Router13(options);
       }
       const opts = options || {};
-      function router12(req, res, next) {
-        router12.handle(req, res, next);
+      function router13(req, res, next) {
+        router13.handle(req, res, next);
       }
-      Object.setPrototypeOf(router12, this);
-      router12.caseSensitive = opts.caseSensitive;
-      router12.mergeParams = opts.mergeParams;
-      router12.params = {};
-      router12.strict = opts.strict;
-      router12.stack = [];
-      return router12;
+      Object.setPrototypeOf(router13, this);
+      router13.caseSensitive = opts.caseSensitive;
+      router13.mergeParams = opts.mergeParams;
+      router13.params = {};
+      router13.strict = opts.strict;
+      router13.stack = [];
+      return router13;
     }
-    Router12.prototype = function() {
+    Router13.prototype = function() {
     };
-    Router12.prototype.param = function param(name, fn) {
+    Router13.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router12.prototype.handle = function handle(req, res, callback) {
+    Router13.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router12.prototype.use = function use(handler) {
+    Router13.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router12.prototype.route = function route(path) {
+    Router13.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router12.prototype[method] = function(path) {
+      Router13.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router12 = require_router();
+    var Router13 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router12 = null;
+      var router13 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router12 === null) {
-            router12 = new Router12({
+          if (router13 === null) {
+            router13 = new Router13({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router12;
+          return router13;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router12 = this.router;
+      var router13 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router12.use(path, fn2);
+          return router13.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router12.use(path, function mounted_app(req, res, next) {
+        router13.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router12 = require_router();
+    var Router13 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router12.Route;
-    exports.Router = Router12;
+    exports.Route = Router13.Route;
+    exports.Router = Router13;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -28263,7 +28263,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "D:\\MyData\\Desktop\\eduverse-uz\\.claude\\worktrees\\eduverse-audit-fixes-90b31c\\artifacts\\api-server\\dist";
+        const outputDir = "/home/user/eduverse-uz/artifacts/api-server/dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -42788,7 +42788,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43168,6 +43168,45 @@ var init_learning = __esm({
       uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
       index("trainer_results_class_day_idx").on(table.classId, table.day)
     ]);
+    trainerTestsTable = pgTable("trainer_tests", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+      /** YYYY-MM-DD: the lesson day */
+      day: text("day").notNull(),
+      /** textbook subject key: physics / chemistry / biology / math */
+      subject: text("subject").notNull(),
+      topicKey: text("topic_key").notNull().default(""),
+      score: integer("score").notNull(),
+      total: integer("total").notNull(),
+      attempts: integer("attempts").notNull().default(1),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("trainer_tests_user_day_subject_unique").on(table.userId, table.day, table.subject),
+      index("trainer_tests_class_day_idx").on(table.classId, table.day)
+    ]);
+    timetableSlotsTable = pgTable("timetable_slots", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      weekday: integer("weekday").notNull(),
+      period: integer("period").notNull(),
+      subject: text("subject").notNull(),
+      teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+      room: text("room"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("timetable_slots_class_day_period_unique").on(table.classId, table.weekday, table.period),
+      index("timetable_slots_teacher_idx").on(table.teacherId, table.weekday),
+      index("timetable_slots_school_idx").on(table.schoolId)
+    ]);
+    schoolBellsTable = pgTable("school_bells", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      periods: jsonb("periods").notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("school_bells_school_unique").on(table.schoolId)]);
   }
 });
 
@@ -43203,6 +43242,7 @@ __export(schema_exports, {
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
+  schoolBellsTable: () => schoolBellsTable,
   schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
@@ -43214,7 +43254,9 @@ __export(schema_exports, {
   supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  timetableSlotsTable: () => timetableSlotsTable,
   trainerResultsTable: () => trainerResultsTable,
+  trainerTestsTable: () => trainerTestsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -43264,6 +43306,7 @@ __export(src_exports, {
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
+  schoolBellsTable: () => schoolBellsTable,
   schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
@@ -43275,7 +43318,9 @@ __export(src_exports, {
   supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  timetableSlotsTable: () => timetableSlotsTable,
   trainerResultsTable: () => trainerResultsTable,
+  trainerTestsTable: () => trainerTestsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -44012,12 +44057,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express12 = __toESM(require_express2(), 1);
+var import_express13 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express11 = __toESM(require_express2(), 1);
+var import_express12 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -53918,12 +53963,18 @@ router5.patch(
       }
       changes.feedback = feedback;
     }
-    const [updated] = await db.update(assignmentSubmissionsTable).set(changes).where(
+    let [updated] = await db.update(assignmentSubmissionsTable).set(changes).where(
       and(
         eq(assignmentSubmissionsTable.assignmentId, assignmentId),
         eq(assignmentSubmissionsTable.studentId, studentId)
       )
     ).returning();
+    if (!updated && typeof changes.score === "number") {
+      const [member] = await db.select({ id: classMembersTable.id }).from(classMembersTable).where(and(eq(classMembersTable.classId, context.assignment.classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
+      if (member) {
+        [updated] = await db.insert(assignmentSubmissionsTable).values({ assignmentId, studentId, status: "checked", content: "", score: changes.score, feedback: changes.feedback ?? "" }).onConflictDoNothing().returning();
+      }
+    }
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });
       return;
@@ -54113,6 +54164,10 @@ router6.post(
     res.json({ login: member.login, name: member.name, role: member.role, password });
   }
 );
+function readSubjects(value) {
+  if (!Array.isArray(value)) return void 0;
+  return [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+}
 function normalizePhone(value) {
   if (typeof value !== "string") return void 0;
   const digits = value.replace(/\D/g, "");
@@ -54133,7 +54188,8 @@ function readRows(body) {
       name,
       className: cleanText(item.className, 40) ?? void 0,
       childName: cleanText(item.childName, 80) ?? void 0,
-      phone: normalizePhone(item.phone)
+      phone: normalizePhone(item.phone),
+      subjects: role === "teacher" ? readSubjects(item.subjects) : void 0
     });
   }
   return rows;
@@ -54180,6 +54236,7 @@ async function importPeople(schoolId, rows, actorId) {
           passwordHash,
           role: row.role,
           phone: row.phone ?? null,
+          ...row.subjects?.length ? { subjects: row.subjects } : {},
           mustChangePassword: true
         }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
         account = inserted ?? null;
@@ -54682,6 +54739,85 @@ router7.get("/trainer/rating", requireAuthenticatedRole(...everyRole3), async (r
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
 });
+var TRAINER_SUBJECTS = /* @__PURE__ */ new Set(["math", "physics", "chemistry", "biology"]);
+var tashkentDay = (offsetDays = 0) => new Date(Date.now() + 5 * 36e5 + offsetDays * 864e5).toISOString().slice(0, 10);
+router7.get("/trainer/tests", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf2(res);
+  const days = String(req.query.days ?? "").split(",").filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(0, 4);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!days.length) {
+    res.json({ tests: [] });
+    return;
+  }
+  const rows = await db.select({ day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.userId, viewer.id), inArray(trainerTestsTable.day, days)));
+  res.json({ tests: rows });
+});
+router7.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf2(res);
+  const body = isRecord6(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  const day = typeof body.day === "string" ? body.day : "";
+  const subject = typeof body.subject === "string" ? body.subject : "";
+  const topicKey = typeof body.topicKey === "string" ? body.topicKey.slice(0, 60) : "";
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total || !TRAINER_SUBJECTS.has(subject)) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
+  if (!allowed.includes(day)) {
+    res.status(400).json({ error: "The time for this test is over." });
+    return;
+  }
+  const classId = await pupilClass(viewer.id);
+  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day, subject, topicKey, score, total }).onConflictDoUpdate({
+    target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
+    set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
+  });
+  res.status(201).json({ saved: true });
+});
+router7.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const viewer = viewerOf2(res);
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access = await classAccess(viewer, classId);
+  if (!access.read) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const since = tashkentDay(-6);
+  const rows = await db.select({ userId: trainerTestsTable.userId, day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.classId, classId), gte(trainerTestsTable.day, since))).orderBy(desc(trainerTestsTable.day));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ tests: rows });
+});
+async function remindTrainer(teacherId, day, lessons) {
+  try {
+    const book = lessons.filter((lesson) => TRAINER_SUBJECTS.has(lesson.subject));
+    if (!book.length) return;
+    const lastEnd = Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt)));
+    if (Date.now() < lastEnd + 2 * 36e5) return;
+    const title = `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 ${day}`;
+    const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
+    if (already) return;
+    const parts = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const lesson of book) {
+      const key = `${lesson.classId}:${lesson.subject}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, lesson.classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
+      if (!pupils.length) continue;
+      const done = await db.select({ id: trainerTestsTable.userId }).from(trainerTestsTable).where(and(eq(trainerTestsTable.day, day), eq(trainerTestsTable.subject, lesson.subject), inArray(trainerTestsTable.userId, pupils.map((row) => row.id))));
+      const missing = pupils.length - done.length;
+      if (missing > 0) parts.push(`${lesson.className}: ${missing} \u0438\u0437 ${pupils.length}`);
+    }
+    await db.insert(userNotificationsTable).values({ userId: teacherId, kind: "grades", title, body: parts.length ? `\u041D\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442: ${parts.join(", ")}. \u041C\u043E\u0433\u0443\u0442 \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 24 \u0447\u0430\u0441\u043E\u0432.` : "\u0412\u0441\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442.", link: "/teacher" });
+  } catch {
+  }
+}
 var course_default = router7;
 
 // src/routes/account.ts
@@ -54980,6 +55116,8 @@ function readChange(kind, body) {
     if (name) payload.name = name;
     if (phone !== null && phone !== void 0) payload.phone = phone;
     if (className) payload.className = className;
+    const subjects = readSubjects(body.subjects);
+    if (subjects) payload.subjects = subjects;
     if (Object.keys(payload).length === 0) return { payload, error: "Nothing to change." };
     return { payload };
   }
@@ -55007,6 +55145,7 @@ async function applyChange(schoolId, kind, targetUserId, payload, reason, actorI
       set.usernameNormalized = payload.name.toLowerCase();
     }
     if (typeof payload.phone === "string") set.phone = payload.phone || null;
+    if (Array.isArray(payload.subjects) && person.role === "teacher") set.subjects = payload.subjects;
     await db.update(usersTable).set(set).where(eq(usersTable.id, person.id));
     if (typeof payload.className === "string" && (person.role === "student" || person.role === "teacher")) {
       const schoolClassIds = (await db.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId))).map((row) => row.id);
@@ -55057,7 +55196,11 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
     }
     const targetRole = await schoolRoleOf(targetUserId, schoolId);
     if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) {
-      res.status(403).json({ error: "Requests about the director go to EDUVERSE directly." });
+      res.status(403).json({ error: "Changes about the director are made by EDUVERSE." });
+      return;
+    }
+    if (targetRole === "school_admin" && targetUserId !== viewer.id && !isGlobalAdminRole(viewer.role) && await schoolRoleOf(viewer.id, schoolId) !== "school_director") {
+      res.status(403).json({ error: "Only the director changes a deputy." });
       return;
     }
   }
@@ -55070,16 +55213,35 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
     res.status(403).json({ error: "Only EDUVERSE adds a director." });
     return;
   }
-  const [row] = await db.insert(schoolRequestsTable).values({ schoolId, authorId: viewer.id, kind, targetUserId, payload: change.payload, reason }).returning({ id: schoolRequestsTable.id });
-  await writeAudit(schoolId, viewer.id, `request:${kind}`, targetUserId, { requestId: row.id, reason });
+  if (kind === "enroll" && !isGlobalAdminRole(viewer.role) && await schoolRoleOf(viewer.id, schoolId) !== "school_director" && change.payload.rows.some((row2) => row2.role === "school_admin")) {
+    res.status(403).json({ error: "Only the director adds a deputy." });
+    return;
+  }
+  let result;
+  try {
+    result = await applyChange(schoolId, kind, targetUserId, change.payload, reason, viewer.id);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Could not make the change." });
+    return;
+  }
+  const stored = Array.isArray(result.created) ? { ...result, created: result.created.map(({ password: _pw, ...rest }) => rest) } : result;
+  const [row] = await db.insert(schoolRequestsTable).values({
+    schoolId,
+    authorId: viewer.id,
+    kind,
+    targetUserId,
+    payload: change.payload,
+    reason,
+    status: "approved",
+    decidedBy: viewer.id,
+    decidedAt: /* @__PURE__ */ new Date(),
+    result: stored
+  }).returning({ id: schoolRequestsTable.id });
   const owners = await ownerIds();
   const name = await schoolName(schoolId);
-  const what = { enroll: "\u043F\u0440\u0438\u043D\u044F\u0442\u044C \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432", expel: "\u043E\u0442\u0447\u0438\u0441\u043B\u0438\u0442\u044C / \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C", transfer: "\u043F\u0435\u0440\u0435\u0432\u043E\u0434 \u0432 \u0434\u0440\u0443\u0433\u0443\u044E \u0448\u043A\u043E\u043B\u0443", graduate: "\u0432\u044B\u043F\u0443\u0441\u043A", restore: "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C", edit: "\u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435" };
-  await pushNotice(owners, "messages", `\u0417\u0430\u044F\u0432\u043A\u0430: ${what[kind]}`, `${name}${reason ? ` \xB7 ${reason}` : ""}`, "/admin");
-  await notifyUsers(owners, `\u{1F4DD} <b>\u041D\u043E\u0432\u0430\u044F \u0437\u0430\u044F\u0432\u043A\u0430</b>: ${escapeHtml(what[kind])}
-${escapeHtml(name)}${reason ? `
-${escapeHtml(reason)}` : ""}`);
-  res.status(201).json({ id: row.id, status: "pending" });
+  const what = { enroll: "\u043F\u0440\u0438\u043D\u044F\u043B\u0438 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432", expel: "\u043E\u0442\u0447\u0438\u0441\u043B\u0438\u043B\u0438 / \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u043B\u0438", transfer: "\u043F\u0435\u0440\u0435\u0432\u0435\u043B\u0438 \u0432 \u0434\u0440\u0443\u0433\u0443\u044E \u0448\u043A\u043E\u043B\u0443", graduate: "\u0432\u044B\u043F\u0443\u0441\u043A", restore: "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u043B\u0438", edit: "\u0438\u0441\u043F\u0440\u0430\u0432\u0438\u043B\u0438 \u0434\u0430\u043D\u043D\u044B\u0435" };
+  await pushNotice(owners, "messages", `\u0428\u043A\u043E\u043B\u0430: ${what[kind]}`, `${name}${reason ? ` \xB7 ${reason}` : ""}`, "/admin");
+  res.status(201).json({ id: row.id, status: "approved", result });
 });
 async function listRequests(where, limit = 200) {
   const rows = await db.select({
@@ -55129,7 +55291,7 @@ router9.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAF
     res.status(403).json({ error: "Not your school." });
     return;
   }
-  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(usersTable.username);
+  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, subjects: usersTable.subjects, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(usersTable.username);
   const classIds = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
   const memberships = classIds.length ? await db.select({ userId: classMembersTable.userId, classId: classMembersTable.classId }).from(classMembersTable).where(inArray(classMembersTable.classId, classIds.map((row) => row.id))) : [];
   const className = new Map(classIds.map((row) => [row.id, row.name]));
@@ -55247,11 +55409,316 @@ var requests_default = router9;
 
 // src/routes/demo.ts
 init_drizzle_orm();
+var import_express11 = __toESM(require_express2(), 1);
+init_src();
+
+// src/routes/timetable.ts
+init_drizzle_orm();
 var import_express10 = __toESM(require_express2(), 1);
 init_src();
 var router10 = (0, import_express10.Router)();
-var OWNER_ROLES2 = ["education_admin", "ministry_admin", "platform_superadmin"];
 var viewerOf5 = (res) => res.locals.authenticatedUser;
+var isRecord9 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var everyRole5 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var MANAGERS = ["school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var TASHKENT_OFFSET_MIN = 5 * 60;
+var TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+var SUBJECT_RE = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
+var MAX_PERIODS = 10;
+var DEFAULT_BELLS = [
+  { start: "08:30", end: "09:15" },
+  { start: "09:25", end: "10:10" },
+  { start: "10:20", end: "11:05" },
+  { start: "11:20", end: "12:05" },
+  { start: "12:15", end: "13:00" },
+  { start: "13:10", end: "13:55" },
+  { start: "14:05", end: "14:50" }
+];
+function tashkentNow(now = /* @__PURE__ */ new Date()) {
+  const local = new Date(now.getTime() + TASHKENT_OFFSET_MIN * 60 * 1e3);
+  const date2 = local.toISOString().slice(0, 10);
+  const weekday = local.getUTCDay() === 0 ? 7 : local.getUTCDay();
+  return { date: date2, weekday, minutes: local.getUTCHours() * 60 + local.getUTCMinutes() };
+}
+function atTashkent(date2, time2) {
+  return (/* @__PURE__ */ new Date(`${date2}T${time2}:00+05:00`)).toISOString();
+}
+function cleanBells(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PERIODS) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord9(item) || typeof item.start !== "string" || typeof item.end !== "string") return null;
+    if (!TIME_RE.test(item.start) || !TIME_RE.test(item.end) || item.start >= item.end) return null;
+    if (out.length && out[out.length - 1].end > item.start) return null;
+    out.push({ start: item.start, end: item.end });
+  }
+  return out;
+}
+async function bellsOf(schoolId) {
+  const [row] = await db.select({ periods: schoolBellsTable.periods }).from(schoolBellsTable).where(eq(schoolBellsTable.schoolId, schoolId)).limit(1);
+  return cleanBells(row?.periods) ?? DEFAULT_BELLS;
+}
+async function schoolRoleOf2(userId, schoolId) {
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+  return row?.role ?? null;
+}
+async function canRead(viewer, schoolId) {
+  return isGlobalAdminRole(viewer.role) || Boolean(await schoolRoleOf2(viewer.id, schoolId));
+}
+async function canEdit(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const role = await schoolRoleOf2(viewer.id, schoolId);
+  return role === "school_director" || role === "school_admin";
+}
+var editLimiter = createRateLimiter(120, 10 * 60 * 1e3, "Too many changes. Try again later.", "timetable");
+async function loadTimetable(schoolId) {
+  const [slots, classes, teachers, bells] = await Promise.all([
+    db.select({ id: timetableSlotsTable.id, classId: timetableSlotsTable.classId, weekday: timetableSlotsTable.weekday, period: timetableSlotsTable.period, subject: timetableSlotsTable.subject, teacherId: timetableSlotsTable.teacherId, room: timetableSlotsTable.room }).from(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId)).orderBy(asc(timetableSlotsTable.weekday), asc(timetableSlotsTable.period)),
+    db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name)),
+    db.select({ id: usersTable.id, name: usersTable.username, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username)),
+    bellsOf(schoolId)
+  ]);
+  return { slots, classes, teachers, bells };
+}
+router10.get("/schools/:schoolId/timetable", requireAuthenticatedRole(...everyRole5), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf5(res);
+  if (!await canRead(viewer, schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ ...await loadTimetable(schoolId), canEdit: await canEdit(viewer, schoolId) });
+});
+router10.put("/schools/:schoolId/timetable", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf5(res);
+  if (!await canEdit(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
+    return;
+  }
+  const body = isRecord9(req.body) ? req.body : {};
+  const bells = body.bells === void 0 ? await bellsOf(schoolId) : cleanBells(body.bells);
+  if (!bells) {
+    res.status(400).json({ error: "Check the bell times." });
+    return;
+  }
+  if (!Array.isArray(body.slots) || body.slots.length > 2e3) {
+    res.status(400).json({ error: "Invalid timetable." });
+    return;
+  }
+  const { classes, teachers } = await loadTimetable(schoolId);
+  const classIds = new Set(classes.map((item) => item.id));
+  const teacherIds = new Set(teachers.map((item) => item.id));
+  const seen = /* @__PURE__ */ new Set();
+  const rows = [];
+  for (const item of body.slots) {
+    if (!isRecord9(item)) {
+      res.status(400).json({ error: "Invalid lesson." });
+      return;
+    }
+    const classId = String(item.classId ?? "");
+    const weekday = Number(item.weekday);
+    const period = Number(item.period);
+    const subject = typeof item.subject === "string" ? item.subject.trim() : "";
+    const teacherId = typeof item.teacherId === "string" && item.teacherId ? item.teacherId : null;
+    const room = typeof item.room === "string" ? item.room.trim().slice(0, 20) || null : null;
+    if (!classIds.has(classId) || !Number.isInteger(weekday) || weekday < 1 || weekday > 6 || !Number.isInteger(period) || period < 1 || period > bells.length || !SUBJECT_RE.test(subject)) {
+      res.status(400).json({ error: "A lesson has a wrong class, day, period or subject." });
+      return;
+    }
+    if (teacherId && !teacherIds.has(teacherId)) {
+      res.status(400).json({ error: "A lesson has a teacher from another school." });
+      return;
+    }
+    const key = `${classId}:${weekday}:${period}`;
+    if (seen.has(key)) {
+      res.status(400).json({ error: "Two lessons in one class at the same time." });
+      return;
+    }
+    seen.add(key);
+    rows.push({ schoolId, classId, weekday, period, subject, teacherId, room });
+  }
+  const busy = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    if (!row.teacherId) continue;
+    const key = `${row.teacherId}:${row.weekday}:${row.period}`;
+    if (busy.has(key)) {
+      res.status(400).json({ error: "One teacher has two lessons at the same time." });
+      return;
+    }
+    busy.set(key, row.classId);
+  }
+  await db.transaction(async (tx) => {
+    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
+    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    await tx.insert(schoolBellsTable).values({ schoolId, periods: bells, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: schoolBellsTable.schoolId, set: { periods: bells, updatedAt: /* @__PURE__ */ new Date() } });
+  });
+  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: rows.length });
+  res.json({ ...await loadTimetable(schoolId), canEdit: true });
+});
+async function fillDemoTimetable(schoolId) {
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  if (!classes.length) return 0;
+  const teachers = await db.select({ id: usersTable.id, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username));
+  const SUBJECTS = ["math", "physics", "chemistry", "biology"];
+  const SUBJECT_RU = { math: "\u043C\u0430\u0442\u0435\u043C", physics: "\u0444\u0438\u0437\u0438\u043A", chemistry: "\u0445\u0438\u043C\u0438", biology: "\u0431\u0438\u043E\u043B\u043E\u0433" };
+  const teaches = (teacher, subject) => Array.isArray(teacher.subjects) && teacher.subjects.some((item) => typeof item === "string" && item.toLowerCase().includes(SUBJECT_RU[subject]));
+  const ownerOf = /* @__PURE__ */ new Map();
+  SUBJECTS.forEach((subject, index2) => {
+    const own = teachers.filter((teacher) => teaches(teacher, subject)).map((teacher) => teacher.id);
+    const fallback = teachers.length ? [teachers[index2 % teachers.length].id] : [];
+    ownerOf.set(subject, own.length ? own : fallback);
+  });
+  const WEEK = [
+    ["math", "physics", "chemistry", "math", "biology"],
+    ["chemistry", "math", "biology", "physics", "math"],
+    ["math", "biology", "physics", "math", "chemistry"],
+    ["physics", "math", "chemistry", "biology", "math"],
+    ["biology", "chemistry", "math", "physics", "math"],
+    ["math", "physics", "biology", "chemistry"]
+  ];
+  const rows = [];
+  const busy = /* @__PURE__ */ new Set();
+  classes.forEach((klass, classIndex) => {
+    WEEK.forEach((day, dayIndex) => {
+      const weekday = dayIndex + 1;
+      day.forEach((_, period0) => {
+        const period = period0 + 1;
+        let subject = day[(period0 + classIndex) % day.length];
+        let teacherId = null;
+        for (let attempt = 0; attempt < day.length && !teacherId; attempt += 1) {
+          subject = day[(period0 + classIndex + attempt) % day.length];
+          teacherId = (ownerOf.get(subject) ?? []).find((id) => !busy.has(`${id}:${weekday}:${period}`)) ?? null;
+        }
+        if (teacherId) busy.add(`${teacherId}:${weekday}:${period}`);
+        rows.push({ schoolId, classId: klass.id, weekday, period, subject, teacherId, room: String(201 + classIndex) });
+      });
+    });
+  });
+  await db.transaction(async (tx) => {
+    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
+    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    await tx.insert(schoolBellsTable).values({ schoolId, periods: DEFAULT_BELLS }).onConflictDoNothing();
+  });
+  return rows.length;
+}
+router10.post("/schools/:schoolId/timetable/demo", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf5(res);
+  if (!await canEdit(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
+    return;
+  }
+  const count = await fillDemoTimetable(schoolId);
+  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: count, demo: true });
+  res.json({ ...await loadTimetable(schoolId), canEdit: true });
+});
+router10.get("/me/today", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf5(res);
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  const base = { date: now.date, weekday: now.weekday, now: (/* @__PURE__ */ new Date()).toISOString(), week: [] };
+  let where;
+  if (viewer.role === "teacher") {
+    where = eq(timetableSlotsTable.teacherId, viewer.id);
+  } else if (viewer.role === "student" || viewer.role === "parent") {
+    const studentIds = viewer.role === "student" ? [viewer.id] : (await db.select({ id: parentLinksTable.studentId }).from(parentLinksTable).where(eq(parentLinksTable.parentId, viewer.id))).map((row) => row.id);
+    if (!studentIds.length) {
+      res.json({ ...base, lessons: [], next: [] });
+      return;
+    }
+    const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(inArray(classMembersTable.userId, studentIds), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!classIds.length) {
+      res.json({ ...base, lessons: [], next: [] });
+      return;
+    }
+    where = inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
+  } else {
+    const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
+    if (!schoolIds.length) {
+      res.json({ ...base, lessons: [], next: [] });
+      return;
+    }
+    where = inArray(timetableSlotsTable.schoolId, schoolIds);
+  }
+  const weekRows = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
+  base.week = weekRows;
+  const teacherNames = /* @__PURE__ */ new Map();
+  const bellCache = /* @__PURE__ */ new Map();
+  async function lessonsOn(date2, weekday) {
+    if (weekday === 7) return [];
+    const slots = await db.select({
+      id: timetableSlotsTable.id,
+      schoolId: timetableSlotsTable.schoolId,
+      classId: timetableSlotsTable.classId,
+      period: timetableSlotsTable.period,
+      subject: timetableSlotsTable.subject,
+      room: timetableSlotsTable.room,
+      teacherId: timetableSlotsTable.teacherId,
+      className: classesTable.name,
+      grade: classesTable.grade
+    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
+    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id) && !teacherNames.has(id)))];
+    if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
+    const out = [];
+    for (const slot of slots) {
+      if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
+      const bell = bellCache.get(slot.schoolId)[slot.period - 1];
+      if (!bell) continue;
+      out.push({
+        id: slot.id,
+        classId: slot.classId,
+        className: slot.className,
+        grade: slot.grade,
+        period: slot.period,
+        subject: slot.subject,
+        room: slot.room,
+        teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        start: bell.start,
+        end: bell.end,
+        startsAt: atTashkent(date2, bell.start),
+        endsAt: atTashkent(date2, bell.end)
+      });
+    }
+    out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
+    return out;
+  }
+  const lessons = await lessonsOn(now.date, now.weekday);
+  const next = [];
+  for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
+    const day = tashkentNow(new Date(Date.now() + offset * 864e5));
+    if (day.weekday === 7) continue;
+    next.push({ date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) });
+  }
+  let prev = null;
+  for (let offset = 1; !prev && offset <= 3; offset += 1) {
+    const day = tashkentNow(new Date(Date.now() - offset * 864e5));
+    if (day.weekday === 7) continue;
+    prev = { date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) };
+  }
+  if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
+  res.json({ ...base, lessons, next, prev });
+  return;
+});
+var timetable_default = router10;
+
+// src/routes/demo.ts
+var router11 = (0, import_express11.Router)();
+var OWNER_ROLES2 = ["education_admin", "ministry_admin", "platform_superadmin"];
+var viewerOf6 = (res) => res.locals.authenticatedUser;
 var PUPILS_A = ["\u041A\u0430\u0440\u0438\u043C\u043E\u0432\u0430 \u0410\u0437\u0438\u0437\u0430 \u0420\u0443\u0441\u0442\u0430\u043C\u043E\u0432\u043D\u0430", "\u042E\u0441\u0443\u043F\u043E\u0432 \u0411\u0435\u043A\u0437\u043E\u0434 \u0410\u043B\u0438\u0435\u0432\u0438\u0447", "\u0418\u0441\u043C\u043E\u0438\u043B\u043E\u0432\u0430 \u0414\u0438\u043B\u043D\u043E\u0437\u0430 \u0428\u0430\u0432\u043A\u0430\u0442\u043E\u0432\u043D\u0430", "\u0422\u0443\u0440\u0441\u0443\u043D\u043E\u0432 \u0416\u0430\u0441\u0443\u0440 \u0411\u0430\u0445\u0442\u0438\u0451\u0440\u043E\u0432\u0438\u0447", "\u0421\u043E\u0431\u0438\u0440\u043E\u0432\u0430 \u041C\u0430\u043B\u0438\u043A\u0430 \u0410\u043D\u0432\u0430\u0440\u043E\u0432\u043D\u0430", "\u0420\u0430\u0445\u0438\u043C\u043E\u0432 \u0421\u0430\u0440\u0434\u043E\u0440 \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u043E\u0432\u0438\u0447", "\u0410\u043B\u0438\u043C\u043E\u0432\u0430 \u041D\u0438\u0433\u043E\u0440\u0430 \u0424\u0430\u0440\u0445\u043E\u0434\u043E\u0432\u043D\u0430", "\u0421\u0430\u0434\u0443\u043B\u043B\u0430\u0435\u0432 \u0414\u0438\u0451\u0440\u0431\u0435\u043A \u0410\u043A\u043C\u0430\u043B\u043E\u0432\u0438\u0447", "\u041C\u0438\u0440\u0437\u0430\u0435\u0432\u0430 \u0421\u0435\u0432\u0438\u043D\u0447 \u041E\u0439\u0431\u0435\u043A\u043E\u0432\u043D\u0430", "\u0425\u043E\u043B\u043C\u0430\u0442\u043E\u0432 \u041E\u0442\u0430\u0431\u0435\u043A \u0420\u0430\u0441\u0443\u043B\u043E\u0432\u0438\u0447"];
 var PUPILS_B = ["\u0410\u0441\u0430\u0434\u043E\u0432\u0430 \u041B\u0430\u0439\u043B\u043E \u0418\u043A\u0440\u043E\u043C\u043E\u0432\u043D\u0430", "\u0418\u0441\u043C\u0430\u0438\u043B\u043E\u0432 \u0410\u0437\u0438\u0437\u0431\u0435\u043A \u0422\u0438\u043C\u0443\u0440\u043E\u0432\u0438\u0447", "\u041E\u043B\u0438\u043C\u043E\u0432\u0430 \u0414\u0438\u043B\u0434\u043E\u0440\u0430 \u041A\u0430\u043C\u043E\u043B\u043E\u0432\u043D\u0430", "\u0422\u043E\u0448\u043C\u0430\u0442\u043E\u0432 \u042D\u043B\u0431\u0435\u043A \u041D\u043E\u0434\u0438\u0440\u043E\u0432\u0438\u0447", "\u0410\u0431\u0434\u0443\u043B\u043B\u0430\u0435\u0432\u0430 \u0424\u0430\u0440\u0437\u043E\u043D\u0430 \u0411\u0430\u0445\u043E\u0434\u0438\u0440\u043E\u0432\u043D\u0430", "\u0416\u0443\u0440\u0430\u0435\u0432 \u0413\u0438\u0451\u0441\u0431\u0435\u043A \u0428\u0443\u0445\u0440\u0430\u0442\u043E\u0432\u0438\u0447", "\u0421\u0430\u0434\u0438\u043A\u043E\u0432\u0430 \u0413\u0443\u043B\u043D\u043E\u0437\u0430 \u042D\u0440\u043A\u0438\u043D\u043E\u0432\u043D\u0430", "\u0420\u0430\u0445\u0438\u043C\u043E\u0432 \u0425\u0443\u043C\u043E\u044E\u043D \u0410\u0437\u0430\u043C\u0430\u0442\u043E\u0432\u0438\u0447", "\u0419\u0443\u043B\u0434\u043E\u0448\u0435\u0432\u0430 \u0418\u0440\u043E\u0434\u0430\u0445\u043E\u043D \u041C\u0443\u0445\u0430\u043C\u043C\u0430\u0434\u043E\u0432\u043D\u0430", "\u0418\u0441\u0440\u043E\u0438\u043B\u043E\u0432 \u041A\u0430\u043C\u0440\u043E\u043D\u0431\u0435\u043A \u0416\u0430\u043C\u0448\u0438\u0434\u043E\u0432\u0438\u0447"];
 var fatherOf = (pupil) => {
@@ -55262,8 +55729,8 @@ var fatherOf = (pupil) => {
 };
 var phoneOf = (index2) => `+99890${String(1e6 + index2 * 7919).slice(-7)}`;
 var isoDay2 = (offset) => new Date(Date.now() - offset * 864e5).toISOString().slice(0, 10);
-router10.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
-  const viewer = viewerOf5(res);
+router11.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
+  const viewer = viewerOf6(res);
   const until = new Date(Date.now() + 90 * 864e5);
   const [school] = await db.insert(schoolsTable).values({ name: `\u0414\u0435\u043C\u043E-\u0448\u043A\u043E\u043B\u0430 EDUVERSE \xB7 ${(/* @__PURE__ */ new Date()).toLocaleDateString("ru-RU")}`, region: "\u0422\u0430\u0448\u043A\u0435\u043D\u0442", district: "\u042E\u043D\u0443\u0441\u0430\u0431\u0430\u0434", address: "\u0414\u0435\u043C\u043E", plan: "pilot", planUntil: until, isDemo: true }).returning({ id: schoolsTable.id, name: schoolsTable.name });
   const schoolId = school.id;
@@ -55314,15 +55781,16 @@ router10.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), a
       await db.insert(trainerResultsTable).values({ userId: pupil.userId, classId: pupil.className === "7-\u0410" ? classA : classB, day: isoDay2(day), score: (index2 + day) % 6, total: 5 }).onConflictDoNothing();
     }
   }
+  await fillDemoTimetable(schoolId);
   await writeAudit(schoolId, viewer.id, "demo-create", null, { people: created.length });
   res.status(201).json({ school, created: created.map(({ userId: _id, ...rest }) => rest) });
 });
-router10.get("/admin/demo-schools", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
+router11.get("/admin/demo-schools", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
   const rows = await db.select({ id: schoolsTable.id, name: schoolsTable.name, createdAt: schoolsTable.createdAt }).from(schoolsTable).where(eq(schoolsTable.isDemo, true));
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ schools: rows });
 });
-router10.delete("/admin/demo-school/:schoolId", requireAuthenticatedRole(...OWNER_ROLES2), async (req, res) => {
+router11.delete("/admin/demo-school/:schoolId", requireAuthenticatedRole(...OWNER_ROLES2), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   if (!isValidUuid(schoolId)) {
     res.status(400).json({ error: "Invalid school." });
@@ -55344,10 +55812,10 @@ router10.delete("/admin/demo-school/:schoolId", requireAuthenticatedRole(...OWNE
     await tx.delete(schoolsTable).where(eq(schoolsTable.id, schoolId));
     if (onlyHere.length) await tx.delete(usersTable).where(and(inArray(usersTable.id, onlyHere), notInArray(usersTable.role, ["platform_superadmin", "education_admin", "ministry_admin"])));
   });
-  await writeAudit(null, viewerOf5(res).id, "demo-delete", null, { schoolId, people: onlyHere.length });
+  await writeAudit(null, viewerOf6(res).id, "demo-delete", null, { schoolId, people: onlyHere.length });
   res.json({ deleted: true, people: onlyHere.length });
 });
-var demo_default = router10;
+var demo_default = router11;
 
 // src/lib/schema-sync.ts
 init_drizzle_orm();
@@ -55520,9 +55988,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router11 = (0, import_express11.Router)();
-router11.use(health_default);
-router11.use(async (_req, _res, next) => {
+var router12 = (0, import_express12.Router)();
+router12.use(health_default);
+router12.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -55530,19 +55998,20 @@ router11.use(async (_req, _res, next) => {
   }
   next();
 });
-router11.use(school_tools_default);
-router11.use(course_default);
-router11.use(account_default);
-router11.use(requests_default);
-router11.use(demo_default);
-router11.use(auth_default);
-router11.use(learning_default);
-router11.use(lesson_rooms_default);
-router11.use(schools_default);
-var routes_default = router11;
+router12.use(school_tools_default);
+router12.use(course_default);
+router12.use(account_default);
+router12.use(requests_default);
+router12.use(demo_default);
+router12.use(timetable_default);
+router12.use(auth_default);
+router12.use(learning_default);
+router12.use(lesson_rooms_default);
+router12.use(schools_default);
+var routes_default = router12;
 
 // src/app.ts
-var app = (0, import_express12.default)();
+var app = (0, import_express13.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -55593,8 +56062,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express12.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express12.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express13.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express13.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {

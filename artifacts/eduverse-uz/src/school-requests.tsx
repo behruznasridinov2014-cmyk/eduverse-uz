@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
-import { Check, ClipboardList, History, Inbox, Pencil, RefreshCw, Send, UserMinus, UserPlus, X } from 'lucide-react';
+import { Check, ClipboardList, History, Inbox, Pencil, RefreshCw, UserMinus, UserPlus, X } from 'lucide-react';
 import type { Language } from './school-data';
 import { parseTable } from './school-tools';
 import { friendlyError } from './errors';
+import { TEACHER_SUBJECTS, subjectLabel } from './ui/config';
 
 /*
- * People of a school are changed only through EDUVERSE (the owner):
- *  - the school (director / deputy) sends a request;
- *  - the owner confirms it, rejects it, or changes a person directly.
+ * People of a school:
+ *  - the director / deputy makes the change at once (it is kept in the journal);
+ *  - the owner can also change a person directly.
  * Nothing is deleted: an expelled pupil keeps grades and attendance.
  */
 
@@ -16,7 +18,23 @@ const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
 
 type Kind = 'enroll' | 'expel' | 'transfer' | 'graduate' | 'restore' | 'edit';
-type Person = { id: string; name: string; login: string; role: string; phone: string | null; status: string; statusReason: string; classes: string[] };
+type Person = { id: string; name: string; login: string; role: string; phone: string | null; subjects?: string[]; status: string; statusReason: string; classes: string[] };
+
+/** The subjects a teacher teaches: tap to add or remove (one or several). */
+export function SubjectPicker({ value, onChange, language }: { value: string[]; onChange: (next: string[]) => void; language: Language }) {
+  return (
+    <div className="subject-picker">
+      {TEACHER_SUBJECTS.map((item) => {
+        const on = value.includes(item[1]);
+        return (
+          <button type="button" key={item[1]} className={`chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onChange(on ? value.filter((name) => name !== item[1]) : [...value, item[1]].slice(0, 8))}>
+            {on && <Check size={12} />} {t(language, item[0], item[1], item[2])}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 type Request = {
   id: string; schoolId: string; schoolName: string; kind: Kind; reason: string; status: string; decisionNote: string; createdAt: string;
   payload: { rows?: Array<{ role: string; name: string; className?: string }>; name?: string; phone?: string; className?: string; toSchool?: string };
@@ -69,7 +87,7 @@ function describeRequest(language: Language, request: Request): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * mode "request": the school asks EDUVERSE (director / deputy).
+ * mode "request": the director / deputy changes it at once (school side).
  * mode "owner": EDUVERSE changes the person at once.
  */
 export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { schoolId: string; language: Language; mode: 'request' | 'owner'; onChanged?: () => void }) {
@@ -80,7 +98,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
   const [statusFilter, setStatusFilter] = useState('active');
   const [action, setAction] = useState<{ person: Person; kind: Kind } | null>(null);
   const [reason, setReason] = useState('');
-  const [edit, setEdit] = useState({ name: '', phone: '', className: '', toSchool: '' });
+  const [edit, setEdit] = useState<{ name: string; phone: string; className: string; toSchool: string; subjects: string[] }>({ name: '', phone: '', className: '', toSchool: '', subjects: [] });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -100,7 +118,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
   function open(person: Person, kind: Kind) {
     setAction({ person, kind });
     setReason('');
-    setEdit({ name: person.name, phone: person.phone ?? '', className: person.classes[0] ?? '', toSchool: '' });
+    setEdit({ name: person.name, phone: person.phone ?? '', className: person.classes[0] ?? '', toSchool: '', subjects: person.subjects ?? [] });
     setMessage(''); setError('');
   }
 
@@ -112,13 +130,14 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
     const verb = label(language, KIND_TEXT[kind], kind);
     const question = mode === 'owner'
       ? t(language, `${person.name}: ${verb}. Tasdiqlaysizmi?`, `${person.name}: ${verb}. Подтверждаете?`, `${person.name}: ${verb}. Confirm?`)
-      : t(language, `EDUVERSE ga ariza yuborilsinmi? ${person.name}: ${verb}`, `Отправить заявку в EDUVERSE? ${person.name}: ${verb}`, `Send the request to EDUVERSE? ${person.name}: ${verb}`);
+      : t(language, `${person.name}: ${verb}. Tasdiqlaysizmi?`, `${person.name}: ${verb}. Подтверждаете?`, `${person.name}: ${verb}. Confirm?`);
     if (!window.confirm(question)) return;
     const body: Record<string, unknown> = { kind, reason: reason.trim(), userId: person.id };
     if (kind === 'edit') {
       if (edit.name.trim() && edit.name.trim() !== person.name) body.name = edit.name.trim();
       if (edit.phone.trim() !== (person.phone ?? '')) body.phone = edit.phone.trim();
       if (edit.className.trim() && edit.className.trim() !== (person.classes[0] ?? '')) body.className = edit.className.trim();
+      if (person.role === 'teacher' && edit.subjects.join('|') !== (person.subjects ?? []).join('|')) body.subjects = edit.subjects;
     }
     if (kind === 'transfer' && edit.toSchool.trim()) body.toSchool = edit.toSchool.trim();
     setBusy(true); setError('');
@@ -129,8 +148,8 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
         load(); onChanged?.();
       } else {
         await customFetch(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        setMessage(t(language, 'Ariza EDUVERSE ga yuborildi. Tasdiqlangach o‘zgaradi.', 'Заявка отправлена в EDUVERSE. Изменится после подтверждения.', 'Request sent to EDUVERSE. It changes after approval.'));
-        onChanged?.();
+        setMessage(t(language, 'Bajarildi.', 'Готово, изменение внесено.', 'Done.'));
+        load(); onChanged?.();
       }
       setAction(null);
     } catch (requestError) {
@@ -148,17 +167,17 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
       </div>
       <p className="muted">{mode === 'owner'
         ? t(language, 'Siz to‘g‘ridan-to‘g‘ri o‘zgartirasiz. Hech narsa o‘chirilmaydi: baholar va davomat saqlanadi.', 'Вы меняете сразу. Ничего не удаляется: оценки и посещаемость сохраняются.', 'You change it directly. Nothing is deleted.')
-        : t(language, 'O‘zgartirish EDUVERSE ga ariza bo‘lib boradi. Hech narsa o‘chirilmaydi.', 'Любое изменение уходит заявкой в EDUVERSE. Ничего не удаляется: оценки и посещаемость сохраняются.', 'Every change goes to EDUVERSE as a request. Nothing is deleted.')}</p>
+        : t(language, 'O‘zgartirish darhol kiritiladi va jurnalda saqlanadi. Hech narsa o‘chirilmaydi.', 'Изменение вносится сразу и сохраняется в журнале. Ничего не удаляется: оценки и посещаемость сохраняются.', 'The change is made at once and kept in the log. Nothing is deleted.')}</p>
       <div className="people-filters">
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'F.I.Sh., login, sinf yoki telefon', 'ФИО, логин, класс или телефон', 'Name, login, class or phone')} />
-        <select className="input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+        <Select className="input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
           <option value="all">{t(language, 'Hammasi', 'Все роли', 'All roles')}</option>
           {Object.entries(ROLE_TEXT).map(([key, value]) => <option key={key} value={key}>{label(language, value, key)}</option>)}
-        </select>
-        <select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+        </Select>
+        <Select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="all">{t(language, 'Har qanday holat', 'Любой статус', 'Any status')}</option>
           {Object.entries(STATUS_TEXT).map(([key, value]) => <option key={key} value={key}>{label(language, value, key)}</option>)}
-        </select>
+        </Select>
       </div>
       {message && <div className="notice success">{message}</div>}
       {error && <div className="notice">{error}</div>}
@@ -171,7 +190,7 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
             <div key={person.id} className="people-row">
               <div className="people-main">
                 <b>{person.name}</b>
-                <small className="muted">{label(language, ROLE_TEXT[person.role], person.role)}{person.classes.length ? ` · ${person.classes.join(', ')}` : ''} · {person.login}{person.phone ? ` · ${person.phone}` : ''}</small>
+                <small className="muted">{label(language, ROLE_TEXT[person.role], person.role)}{person.role === 'teacher' && person.subjects?.length ? ` · ${person.subjects.map((name) => subjectLabel(name, language)).join(', ')}` : ''}{person.classes.length ? ` · ${person.classes.join(', ')}` : ''} · {person.login}{person.phone ? ` · ${person.phone}` : ''}</small>
                 {person.status !== 'active' && person.statusReason && <small className="muted">{person.statusReason}</small>}
               </div>
               <span className={`tag ${status[3]}`}>{label(language, status, person.status)}</span>
@@ -202,10 +221,16 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
                       <datalist id={`classes-${schoolId}`}>{classes.map((name) => <option key={name} value={name} />)}</datalist>
                     </div>
                   )}
+                  {action.kind === 'edit' && person.role === 'teacher' && (
+                    <div>
+                      <small className="muted">{t(language, 'Qaysi fanlarni o‘qitadi', 'Какие предметы ведёт', 'Subjects taught')}</small>
+                      <SubjectPicker value={edit.subjects} onChange={(subjects) => setEdit({ ...edit, subjects })} language={language} />
+                    </div>
+                  )}
                   {action.kind === 'transfer' && <input className="input" value={edit.toSchool} onChange={(event) => setEdit({ ...edit, toSchool: event.target.value })} placeholder={t(language, 'Qaysi maktabga', 'В какую школу', 'To which school')} />}
                   <input className="input" value={reason} onChange={(event) => setReason(event.target.value)} placeholder={action.kind === 'expel' || action.kind === 'transfer' ? t(language, 'Sabab va buyruq raqami (majburiy)', 'Причина и номер приказа (обязательно)', 'Reason and order number (required)') : t(language, 'Izoh (ixtiyoriy)', 'Комментарий (необязательно)', 'Comment (optional)')} />
                   <div className="row" style={{ gap: 8 }}>
-                    <button type="button" className="btn primary small" disabled={busy} onClick={() => void submit()}>{mode === 'owner' ? <Check size={13} /> : <Send size={13} />} {mode === 'owner' ? t(language, 'Tasdiqlash', 'Подтвердить', 'Confirm') : t(language, 'Ariza yuborish', 'Отправить заявку', 'Send request')}</button>
+                    <button type="button" className="btn primary small" disabled={busy} onClick={() => void submit()}><Check size={13} /> {t(language, 'Tasdiqlash', 'Подтвердить', 'Confirm')}</button>
                     <button type="button" className="btn small" onClick={() => setAction(null)}><X size={13} /> {t(language, 'Bekor qilish', 'Отмена', 'Cancel')}</button>
                   </div>
                 </div>
@@ -227,15 +252,33 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [created, setCreated] = useState<Created[]>([]);
   const parsed = useMemo(() => parseTable(text), [text]);
+  const [teacher, setTeacher] = useState<{ name: string; phone: string; subjects: string[] }>({ name: '', phone: '', subjects: [] });
+  async function addTeacher() {
+    if (!teacher.name.trim() || !teacher.subjects.length) return;
+    setBusy(true); setError(''); setMessage(''); setCreated([]);
+    try {
+      const response = await customFetch<{ result?: { created?: Created[] } }>(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'enroll', rows: [{ role: 'teacher', name: teacher.name.trim(), phone: teacher.phone.trim() || undefined, subjects: teacher.subjects }] }) });
+      setTeacher({ name: '', phone: '', subjects: [] });
+      setCreated(response.result?.created ?? []);
+      setMessage(t(language, 'O‘qituvchi qo‘shildi. Login va parol pastda.', 'Учитель добавлен. Логин и пароль ниже.', 'Teacher added. Login and password below.'));
+      onSent?.();
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
   async function send() {
     if (parsed.rows.length === 0) return;
-    if (!window.confirm(t(language, `${parsed.rows.length} kishini qabul qilish uchun ariza yuborilsinmi?`, `Отправить заявку на приём: ${parsed.rows.length} чел.?`, `Send a request to enrol ${parsed.rows.length} people?`))) return;
-    setBusy(true); setError(''); setMessage('');
+    if (!window.confirm(t(language, `${parsed.rows.length} kishi qabul qilinsinmi?`, `Принять в школу: ${parsed.rows.length} чел.?`, `Enrol ${parsed.rows.length} people?`))) return;
+    setBusy(true); setError(''); setMessage(''); setCreated([]);
     try {
-      await customFetch(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'enroll', rows: parsed.rows }) });
+      const response = await customFetch<{ result?: { created?: Created[]; skipped?: unknown[] } }>(`/api/schools/${schoolId}/requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'enroll', rows: parsed.rows }) });
       setText('');
-      setMessage(t(language, 'Ariza yuborildi. EDUVERSE tasdiqlagach, loginlar beriladi.', 'Заявка отправлена. После подтверждения EDUVERSE выдаст логины и пароли.', 'Sent. EDUVERSE issues logins after approval.'));
+      setCreated(response.result?.created ?? []);
+      setMessage(t(language, 'Qabul qilindi. Loginlar va parollar pastda.', 'Готово, ученики приняты. Логины и пароли ниже.', 'Done. Logins and passwords are below.'));
       onSent?.();
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -245,12 +288,34 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
   }
   return (
     <section className="panel">
-      <h2><UserPlus size={16} /> {t(language, 'Yangi o‘quvchilarni qabul qilish (ariza)', 'Принять новых учеников (заявка)', 'Enrol new pupils (request)')}</h2>
-      <p className="muted">{t(language, 'Excel’dan qo‘ying: F.I.Sh. · Sinf · Ota-ona telefoni · Ota-ona F.I.Sh. O‘qituvchi uchun birinchi ustunda «o‘qituvchi».', 'Вставьте из Excel: ФИО · Класс · Телефон родителя · ФИО родителя. Для учителя в первом столбце «учитель», для завуча — «завуч». Приказ о зачислении укажите в комментарии к заявке.', 'Paste from Excel: Name · Class · Parent phone · Parent name.')}</p>
+      <h2><UserPlus size={16} /> {t(language, 'Yangi o‘quvchilarni qabul qilish', 'Принять новых учеников', 'Enrol new pupils')}</h2>
+      <p className="muted">{t(language, 'Excel’dan qo‘ying: F.I.Sh. · Sinf · Ota-ona telefoni · Ota-ona F.I.Sh. O‘qituvchi uchun birinchi ustunda «o‘qituvchi».', 'Вставьте из Excel: ФИО · Класс · Телефон родителя · ФИО родителя. Для учителя в первом столбце «учитель», для завуча — «завуч».', 'Paste from Excel: Name · Class · Parent phone · Parent name.')}</p>
       <textarea className="import-area" rows={6} value={text} onChange={(event) => setText(event.target.value)} placeholder={'Азиз Каримов\t7-А\t+998 90 123 45 67\tКарим Каримов'} spellCheck={false} />
       {text.trim() && <p className="muted">{t(language, `Tayyor: ${parsed.rows.length} qator`, `Распознано строк: ${parsed.rows.length}`, `Rows: ${parsed.rows.length}`)}{parsed.errors.length ? ` · ${t(language, 'xato qatorlar', 'ошибки в строках', 'bad rows')}: ${parsed.errors.join(', ')}` : ''}</p>}
-      <button type="button" className="btn primary" disabled={busy || parsed.rows.length === 0} onClick={() => void send()}><Send size={14} /> {t(language, 'EDUVERSE ga yuborish', 'Отправить в EDUVERSE', 'Send to EDUVERSE')}</button>
+      <button type="button" className="btn primary" disabled={busy || parsed.rows.length === 0} onClick={() => void send()}><UserPlus size={14} /> {t(language, 'Qabul qilish', 'Принять', 'Enrol')}</button>
+      <div className="new-teacher">
+        <h3>{t(language, 'Yangi o‘qituvchi', 'Новый учитель', 'New teacher')}</h3>
+        <div className="people-form-grid">
+          <input className="input" value={teacher.name} onChange={(event) => setTeacher({ ...teacher, name: event.target.value })} placeholder={t(language, 'F.I.Sh.', 'ФИО', 'Full name')} />
+          <input className="input" value={teacher.phone} onChange={(event) => setTeacher({ ...teacher, phone: event.target.value })} placeholder={t(language, 'Telefon', 'Телефон', 'Phone')} />
+        </div>
+        <small className="muted">{t(language, 'Qaysi fanlarni o‘qitadi (bitta yoki bir nechta)', 'Какие предметы ведёт (один или несколько)', 'Subjects (one or several)')}</small>
+        <SubjectPicker value={teacher.subjects} onChange={(subjects) => setTeacher({ ...teacher, subjects })} language={language} />
+        <button type="button" className="btn" disabled={busy || !teacher.name.trim() || !teacher.subjects.length} onClick={() => void addTeacher()}><UserPlus size={14} /> {t(language, 'O‘qituvchini qo‘shish', 'Добавить учителя', 'Add teacher')}</button>
+      </div>
       {message && <div className="notice success" style={{ marginTop: 8 }}>{message}</div>}
+      {created.length > 0 && (
+        <div className="notice success owner-created" style={{ marginTop: 8 }}>
+          <small>{t(language, 'Parollar faqat hozir ko‘rinadi — chop eting yoki saqlang.', 'Пароли видны только сейчас — распечатайте или сохраните.', 'Passwords are shown only now.')}</small>
+          <div className="owner-created-list">
+            {created.map((person) => <div key={person.login}><b>{person.name}</b> {person.className && `· ${person.className}`} · {label(language, ROLE_TEXT[person.role], person.role)} · {t(language, 'login', 'логин', 'login')}: <code>{person.login}</code> · {t(language, 'parol', 'пароль', 'password')}: <code>{person.password}</code></div>)}
+          </div>
+          <div className="row" style={{ gap: 8 }}>
+            <button type="button" className="btn small" onClick={() => window.print()}>{t(language, 'Chop etish', 'Распечатать', 'Print')}</button>
+            <button type="button" className="btn small" onClick={() => setCreated([])}>{t(language, 'Yopish', 'Закрыть', 'Close')}</button>
+          </div>
+        </div>
+      )}
       {error && <div className="notice" style={{ marginTop: 8 }}>{error}</div>}
     </section>
   );
@@ -263,8 +328,8 @@ export function MyRequestsPanel({ schoolId, language, revision = 0 }: { schoolId
   }, [schoolId, revision]);
   return (
     <section className="panel">
-      <h2><ClipboardList size={16} /> {t(language, 'Mening arizalarim', 'Мои заявки в EDUVERSE', 'My requests')}</h2>
-      {requests.length === 0 ? <p className="muted">{t(language, 'Hali ariza yo‘q.', 'Заявок пока нет.', 'No requests yet.')}</p> : (
+      <h2><ClipboardList size={16} /> {t(language, 'Mening o‘zgarishlarim', 'Мои изменения', 'My changes')}</h2>
+      {requests.length === 0 ? <p className="muted">{t(language, 'Hali o‘zgarish yo‘q.', 'Изменений пока нет.', 'No changes yet.')}</p> : (
         <div className="people-list">
           {requests.map((request) => {
             const st = REQ_STATUS[request.status] ?? REQ_STATUS.pending;

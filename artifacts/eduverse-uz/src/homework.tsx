@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { customFetch, getSubmissionFiles } from '@workspace/api-client-react';
 import { Camera, Eraser, ImagePlus, X } from 'lucide-react';
 import type { Language } from './school-data';
+import { useDismiss } from './ui/dismiss';
 
 const tr = (language: Language, en: string, ru: string, uz: string) =>
   language === 'Русский' ? ru : language === 'Uzbek' ? uz : en;
@@ -164,10 +165,7 @@ export function SubmissionPhotos({
         ))}
       </div>
       {zoom && (
-        <div className="hw-lightbox" role="dialog" aria-modal="true" onClick={() => setZoom(null)}>
-          <button type="button" className="hw-lightbox-close" aria-label="Close" onClick={() => setZoom(null)}><X size={20} /></button>
-          <img src={zoom} alt="" onClick={(event) => event.stopPropagation()} />
-        </div>
+        <Lightbox src={zoom} onClose={() => setZoom(null)} />
       )}
     </>
   );
@@ -327,6 +325,19 @@ export function HomeworkAiCheck({ assignmentId, studentId, language }: { assignm
         </div>
       )}
       {error && <span className="muted">{error}</span>}
+    </div>
+  );
+}
+
+/** Full-size photo; closes on a click outside the picture or on Escape. */
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useDismiss(true, onClose, [imgRef, closeRef]);
+  return (
+    <div className="hw-lightbox" role="dialog" aria-modal="true">
+      <button ref={closeRef} type="button" className="hw-lightbox-close" aria-label="Close" onClick={onClose}><X size={20} /></button>
+      <img ref={imgRef} src={src} alt="" />
     </div>
   );
 }
