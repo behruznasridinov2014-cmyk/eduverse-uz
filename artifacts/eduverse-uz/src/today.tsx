@@ -21,7 +21,7 @@ export type TodayLesson = {
   start: string; end: string; startsAt: string; endsAt: string;
 };
 export type NextDay = { date: string; weekday: number; lessons: TodayLesson[] };
-type TodayResponse = { date: string; weekday: number; now: string; lessons: TodayLesson[]; next?: NextDay[] };
+export type TodayResponse = { date: string; weekday: number; now: string; lessons: TodayLesson[]; next?: NextDay[]; prev?: NextDay | null };
 export type LessonStatus = 'upcoming' | 'current' | 'done';
 type ClassCourse = { progress: Array<{ topicKey: string; doneOn: string }> };
 
@@ -401,7 +401,6 @@ export function LessonDayHeader({ lesson, topic, status, now, language }: { less
 export const LESSON_TABS = [
   { id: 'topic', icon: BookOpen, label: ['Mavzu', 'Тема урока', 'Topic'] },
   { id: 'attendance', icon: CalendarCheck2, label: ['Davomat', 'Давомат', 'Attendance'] },
-  { id: 'online', icon: MonitorPlay, label: ['Onlayn dars', 'Онлайн-урок', 'Online lesson'] },
 ] as const;
 
 /**

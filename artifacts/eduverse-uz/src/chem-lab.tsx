@@ -5,6 +5,7 @@ import type { User } from '@workspace/api-client-react';
 import { PhysicsLab } from './physics-lab';
 import { MathLab, WebModelsLab } from './studio-labs';
 import type { Language } from './school-data';
+import { StudioGallery } from './course';
 
 /**
  * 3D chemistry lab.
@@ -375,6 +376,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         </div>}
       </div>
 
+      {subject !== 'any' && (subject !== 'chem' || mode === 'build') && <StudioGallery key={subject} subject={subject} language={language} />}
       {subject === 'phys' ? <PhysicsLab language={language} user={user} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">

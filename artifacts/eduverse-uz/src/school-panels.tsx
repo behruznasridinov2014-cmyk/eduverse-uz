@@ -319,20 +319,24 @@ export function ServerClassesPanel({
   }
 
   const isStudent = user.role === 'student';
+  // A pupil sees only what is still to do; handed-in work goes to "My grades".
+  const todoAssignments = classAssignments.filter((item) => !item.mySubmission);
   const [showStudents, setShowStudents] = useState(false);
   if (isStudent) {
-    // A pupil sees only the homework: what to do, what is sent, what is checked.
+    // A pupil sees only the homework that is still to do.
     return (
       <Panel>
           {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
           {mutationError && <InlineError>{mutationError}</InlineError>}
-          {classAssignments.length === 0 ? (
+          {todoAssignments.length === 0 ? (
             <div className="callout">
-              {t(language, 'No homework yet.', 'Заданий пока нет.', 'Hali vazifa yo‘q.')}
+              {classAssignments.length === 0
+                ? t(language, 'No homework yet.', 'Заданий пока нет.', 'Hali vazifa yo‘q.')
+                : t(language, 'All homework is done. Grades are in “My grades”.', 'Все задания сделаны. Оценки — во вкладке «Мои оценки».', 'Barcha vazifalar bajarilgan. Baholar — «Mening baholarim»da.')}
             </div>
           ) : (
             <div className="stack school-assignment-list">
-              {classAssignments.map((assignment) => {
+              {todoAssignments.map((assignment) => {
                 const submission = assignment.mySubmission;
                 const isEditing = draftAssignmentId === assignment.id;
                 return (

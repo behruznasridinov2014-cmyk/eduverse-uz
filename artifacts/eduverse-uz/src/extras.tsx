@@ -145,6 +145,7 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tests, setTests] = useState<Record<string, { score: number; total: number; day: string; subject: string }>>({});
   async function grade(assignmentId: string, studentId: string, mark: number) {
     setSaving(true); setError('');
     try {
@@ -163,6 +164,10 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
     setError('');
     try {
       setJournal(await customFetch<Journal>(`/api/classes/${classId}/journal`, { method: 'GET' }));
+      const trainer = await customFetch<{ tests: Array<{ userId: string; score: number; total: number; day: string; subject: string }> }>(`/api/trainer/class/${classId}`, { method: 'GET' }).catch(() => ({ tests: [] }));
+      const latest: Record<string, { score: number; total: number; day: string; subject: string }> = {};
+      for (const row of trainer.tests) if (!latest[row.userId]) latest[row.userId] = row;
+      setTests(latest);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     }
@@ -187,9 +192,9 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
         </div>
       </div>
       <p className="muted journal-legend">{t(language,
-        'Baho qo‘yish uchun katakni bosing va 2, 3, 4 yoki 5 ni tanlang. Ustun — bitta vazifa. «tekshirish» — ish yuborilgan, «—» — yuborilmagan.',
-        'Чтобы поставить оценку, нажмите на клетку и выберите 2, 3, 4 или 5. Столбец — одно задание. «проверить» — работа сдана, «—» — не сдана.',
-        'To grade, tap a cell and pick 2, 3, 4 or 5. A column is one assignment. “review” — handed in, “—” — not handed in.')}</p>
+        'Baho qo‘yish uchun katakni bosing va 2, 3, 4 yoki 5 ni tanlang. Ustun — bitta vazifa. «tekshirish» — ish yuborilgan, «—» — yuborilmagan. «Trenajyor» — o‘quvchining oxirgi kunlik testi.',
+        'Чтобы поставить оценку, нажмите на клетку и выберите 2, 3, 4 или 5. Столбец — одно задание. «проверить» — работа сдана, «—» — не сдана. «Тренажёр» — последний тест ученика за день.',
+        'To grade, tap a cell and pick 2, 3, 4 or 5. A column is one assignment. “review” — handed in, “—” — not handed in. “Trainer” — the pupil’s latest daily test.')}</p>
       {error && <div className="notice" role="alert">{error}</div>}
       {journal && journal.rows.length === 0 && <p className="muted">{t(language, 'Sinfda hali o‘quvchi yo‘q.', 'В классе пока нет учеников.', 'No students in this class yet.')}</p>}
       {journal && journal.rows.length > 0 && (
@@ -201,6 +206,7 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
                 {journal.assignments.map((item) => <th key={item.id} title={item.title}>{item.title.length > 14 ? `${item.title.slice(0, 13)}…` : item.title}</th>)}
                 <th>{t(language, 'O‘rtacha', 'Средняя', 'Average')}</th>
                 <th>{t(language, 'Davomat', 'Давомат', 'Attendance')}</th>
+                <th title={t(language, 'Oxirgi kunlik test', 'Последний тест тренажёра', 'Latest daily test')}>{t(language, 'Trenajyor', 'Тренажёр', 'Trainer')}</th>
               </tr>
             </thead>
             <tbody>
@@ -227,6 +233,9 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
                   })}
                   <td>{row.average !== null ? <b className="journal-average">{row.average.toFixed(1)}</b> : '—'}</td>
                   <td>{row.attendancePercent !== null ? `${row.attendancePercent}%` : '—'}</td>
+                  <td>{tests[row.studentId]
+                    ? <span className={`tag ${tests[row.studentId].score / tests[row.studentId].total >= 0.75 ? 'green' : 'gold'}`} title={`${tests[row.studentId].day.split('-').reverse().join('.')}`}>{tests[row.studentId].score}/{tests[row.studentId].total}</span>
+                    : <span className="muted">—</span>}</td>
                 </tr>
               ))}
             </tbody>

@@ -203,6 +203,16 @@ export function IconChat(props: IconProps) {
   );
 }
 
+export function IconTrainer(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="9" fill="currentColor" opacity={SOFT} />
+      <circle cx="12" cy="12" r="5.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="m9.6 12.1 1.7 1.7 3.2-3.4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 /** Icon for each navigation key used in App.tsx (ROLE_NAV labels). */
 export const NAV_ICON: Record<string, (props: IconProps) => ReactElement> = {
   Overview: IconHome,
@@ -218,6 +228,7 @@ export const NAV_ICON: Record<string, (props: IconProps) => ReactElement> = {
   'School insights': IconSchool,
   Classes: IconClasses,
   'My grades': IconJournal,
+  Trainer: IconTrainer,
   Administration: IconAdmin,
   Support: IconChat,
 };

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { User } from '@workspace/api-client-react';
-import { ArrowLeft, Box, CalendarCheck2, MonitorPlay, PartyPopper } from 'lucide-react';
+import { ArrowLeft, Box, CalendarCheck2, Lock, PartyPopper } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { CoursePage, CourseScene3D } from './course';
 import { AttendancePage } from './attendance-page';
@@ -74,12 +74,12 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
   );
 }
 
-/** The page of one lesson from today's cards: topic, attendance, online lesson. */
+/** The page of one lesson from today's cards: topic and attendance. */
 export function LessonDayPage({ lessonId, user, school, language, onOpen }: { lessonId: string; user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const { data, failed, now } = useToday();
   const courses = useLessonCourses(data?.lessons, data?.next);
   const canAttend = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
-  const tabs = LESSON_TABS.filter((tab) => (tab.id === 'attendance' ? canAttend : tab.id === 'online' ? user.role === 'teacher' || user.role === 'student' : true));
+  const tabs = LESSON_TABS.filter((tab) => (tab.id === 'attendance' ? canAttend : true));
   const [tab, setTab] = useState<string>('topic');
   if (!data && !failed) return <Loading />;
   const lesson = data?.lessons.find((item) => item.id === lessonId);
@@ -107,7 +107,7 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
     <section className="lesson-day">
       <button type="button" className="btn small lesson-day-back" onClick={() => onOpen('/dashboard')}><ArrowLeft size={14} /> {t(language, 'Bugungi darslar', 'Уроки на сегодня', 'Today’s lessons')}</button>
       <LessonDayHeader lesson={lesson} topic={topic} status={status} now={now} language={language} />
-      <div className="lesson-day-tabs" role="tablist">
+      {tabs.length > 1 && <div className="lesson-day-tabs" role="tablist">
         {tabs.map((item) => {
           const Icon = item.icon;
           return (
@@ -116,24 +116,9 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
             </button>
           );
         })}
-      </div>
+      </div>}
       {tab === 'topic' && <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} />}
       {tab === 'attendance' && canAttend && <AttendancePage key={lesson.id} user={user} language={language} lesson={{ classId: lesson.classId, subject: lesson.subject }} />}
-      {tab === 'online' && (
-        <section className="panel lesson-day-online">
-          <MonitorPlay size={28} />
-          <div>
-            <h2>{user.role === 'teacher' ? t(language, 'Onlayn darsni boshlash', 'Начать онлайн-урок', 'Start the online lesson') : t(language, 'Onlayn darsga kirish', 'Войти на онлайн-урок', 'Join the online lesson')}</h2>
-            <p className="muted">{user.role === 'teacher'
-              ? t(language, 'Doska, kamera va test shu mavzu bilan ochiladi. O‘quvchilar darsni o‘zlarida ko‘radi.', 'Доска, камера и тест откроются сразу с этой темой. Ученики класса увидят урок у себя.', 'The board, camera and quiz open with this topic. Students see the lesson.')
-              : t(language, 'O‘qituvchi darsni boshlaganda, u shu yerda chiqadi.', 'Когда учитель начнёт урок, он появится здесь.', 'When the teacher starts, it appears here.')}</p>
-            <p className="muted">{timeText(lesson, now, language)}</p>
-          </div>
-          <button type="button" className="btn primary" onClick={() => onOpen(user.role === 'teacher' && topic ? `/lesson/course:${topic.key}` : '/lesson')}>
-            <MonitorPlay size={15} /> {user.role === 'teacher' ? t(language, 'Boshlash', 'Начать', 'Start') : t(language, 'Kirish', 'Войти', 'Join')}
-          </button>
-        </section>
-      )}
     </section>
   );
 }
@@ -142,14 +127,17 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
  * Top of the 3D studio: the 3D object of today's lesson topic.
  * Opens on the lesson chosen on "Lesson topic" (remembered), else the lesson going on now / next.
  */
-export function LabTodayScene({ language }: { language: Language }) {
+export function LabTodayScene({ language, locked = false }: { language: Language; locked?: boolean }) {
   const { data, now } = useToday();
   const courses = useLessonCourses(data?.lessons, data?.next);
   const [picked, setPicked] = useState<string>(() => { try { return sessionStorage.getItem('eduverse:3d-lesson') ?? ''; } catch { return ''; } });
   const withBook = (data?.lessons ?? []).filter((lesson) => bookForLesson(lesson));
   if (!data || withBook.length === 0) return null;
   const open = withBook.filter((lesson) => statusOf(lesson, now) !== 'done');
-  const lesson = withBook.find((item) => item.id === picked) ?? currentOrNext(withBook, now);
+  // Locked (a pupil during the school day): only the lesson going on now, or the next one.
+  const lesson = locked
+    ? withBook.find((item) => statusOf(item, now) === 'current') ?? currentOrNext(withBook, now)
+    : withBook.find((item) => item.id === picked) ?? currentOrNext(withBook, now);
   if (!lesson) return null;
   const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
   const status = statusOf(lesson, now);
@@ -161,7 +149,7 @@ export function LabTodayScene({ language }: { language: Language }) {
           <h2>{topic ? <>§{topic.code} {topic.title}</> : lessonSubjectName(lesson.subject, language)}</h2>
           <p className="muted">{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)} · {lessonSubjectName(lesson.subject, language)} · {lesson.start}–{lesson.end} · {timeText(lesson, now, language)}</p>
         </div>
-        {open.length > 1 && (
+        {!locked && open.length > 1 && (
           <div className="lab-today-pick" role="tablist">
             {open.map((item) => (
               <button type="button" role="tab" key={item.id} aria-selected={item.id === lesson.id} className={`studio-tab ${item.id === lesson.id ? 'active' : ''}`} onClick={() => { setPicked(item.id); rememberLessonFor3D(item); }}>
@@ -178,7 +166,32 @@ export function LabTodayScene({ language }: { language: Language }) {
         </>
       ) : <p className="muted">{t(language, 'Bu dars uchun 3D mavzu yo‘q.', 'Для этого урока нет 3D-темы.', 'No 3D topic for this lesson.')}</p>}
       {status === 'done' && <p className="muted">{t(language, 'Bu dars tugagan.', 'Этот урок уже закончился.', 'This lesson is over.')}</p>}
-      <p className="muted lab-today-more">{t(language, 'Pastda — boshqa mavzular uchun erkin 3D studiya.', 'Ниже — свободная 3D-студия для любых тем.', 'Below is the free 3D studio for any topic.')}</p>
+      {!locked && <p className="muted lab-today-more">{t(language, 'Pastda — boshqa mavzular uchun erkin 3D studiya.', 'Ниже — свободная 3D-студия для любых тем.', 'Below is the free 3D studio for any topic.')}</p>}
     </section>
+  );
+}
+
+/**
+ * The 3D studio page. A pupil, while today's lessons go on, sees only the 3D of the lesson topic,
+ * so the studio does not take attention from the lesson. After the last lesson everything is open.
+ */
+export function LabPage({ user, language, children }: { user: User; language: Language; children: ReactNode }) {
+  const { data, failed, now } = useToday();
+  if (user.role !== 'student') return <><LabTodayScene language={language} />{children}</>;
+  if (!data && !failed) return <Loading />;
+  const lessons = data?.lessons ?? [];
+  const firstStart = lessons.length ? Math.min(...lessons.map((lesson) => Date.parse(lesson.startsAt))) : 0;
+  const lastEnd = lessons.length ? Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt))) : 0;
+  const schoolDay = lessons.length > 0 && now >= firstStart && now < lastEnd;
+  if (!schoolDay) return <><LabTodayScene language={language} />{children}</>;
+  const end = new Date(lastEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
+  return (
+    <>
+      <div className="notice lab-locked"><Lock size={16} /><span>{t(language,
+        `Dars vaqtida faqat dars mavzusining 3D modeli ochiq. Erkin 3D studiya darslardan keyin (${end} dan) ochiladi.`,
+        `Во время уроков открыта только 3D-модель темы урока. Свободная 3D-студия откроется после уроков, в ${end}.`,
+        `During lessons only the 3D of the lesson topic is open. The free 3D studio opens after lessons, at ${end}.`)}</span></div>
+      <LabTodayScene language={language} locked />
+    </>
   );
 }

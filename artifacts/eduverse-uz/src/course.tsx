@@ -142,6 +142,11 @@ function SceneView({ scene, language }: { scene: CourseScene; language: Language
 }
 
 /** Last PDF page of a topic: the page before the next topic starts (at least its first page). */
+/** The essence as short points, one sentence each. */
+function keyPoints(topic: CourseTopic): string[] {
+  return topic.essence.split(/(?<=[.!?])\s+(?=[A-ZА-ЯЁЎҚҒҲ0-9«])/u).map((item) => item.trim()).filter((item) => item.length > 12);
+}
+
 function topicEndPage(book: CourseBook, topic: CourseTopic, start: number): number {
   const later = book.topics.map((item) => item.page + book.pdfOffset).filter((page) => page > start).sort((a, b) => a - b)[0];
   return Math.min(book.pdfPages, later ? Math.max(start, later - 1) : start + 3);
@@ -248,6 +253,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
   const [topicKey, setTopicKey] = useState<string>(book?.topics[0]?.key ?? '');
   const topic: CourseTopic | undefined = book?.topics.find((item) => item.key === topicKey) ?? book?.topics[0];
   const [openAnswers, setOpenAnswers] = useState<Record<number, boolean>>({});
+  const [selfCheck, setSelfCheck] = useState<Record<number, boolean>>({});
   const [studied, setStudied] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(studiedKey(user.id)) ?? '[]') as string[]; } catch { return []; }
   });
@@ -278,7 +284,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
   useEffect(() => {
     try { localStorage.setItem(studiedKey(user.id), JSON.stringify(studied)); } catch { /* private mode */ }
   }, [studied, user.id]);
-  useEffect(() => { setOpenAnswers({}); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }, [topicKey]);
+  useEffect(() => { setOpenAnswers({}); setSelfCheck({}); window.scrollTo?.({ top: 0, behavior: 'smooth' }); }, [topicKey]);
   useEffect(() => { if (book && !book.topics.some((item) => item.key === topicKey)) setTopicKey(book.topics[0]?.key ?? ''); }, [book, topicKey]);
 
   if (lesson && !lessonBook) {
@@ -368,18 +374,13 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
         ))}
       </div>}
 
-      {course && lesson && (
-        <p className="muted course-simple-progress">
-          {t(language, `Sinf ${covered.length} / ${book.topics.length} mavzuni o‘tdi`, `Класс прошёл ${covered.length} из ${book.topics.length} тем`, `The class covered ${covered.length} of ${book.topics.length} topics`)}
-        </p>
-      )}
       {course && !lesson && (
         <section className="panel course-plan">
           <div className="course-plan-main">
             <span className="course-plan-icon"><CalendarCheck2 size={20} /></span>
             <div>
               <b>{nextTopic && lastIndex < 0
-                ? t(language, `Sinf kitobni hali boshlamagan · birinchi mavzu §${nextTopic.code}`, `Класс ещё не начал книгу · первая тема §${nextTopic.code}`, `The class has not started the book · first topic §${nextTopic.code}`)
+                ? t(language, `Bugungi mavzu: §${nextTopic.code}`, `Тема урока: §${nextTopic.code}`, `Lesson topic: §${nextTopic.code}`)
                 : nextTopic
                 ? t(language, `Sinf to‘xtagan joy: §${book.topics[lastIndex]?.code ?? '—'} · keyingisi §${nextTopic.code}`, `Класс остановился на §${book.topics[lastIndex]?.code ?? '—'} · дальше §${nextTopic.code}`, `Class stopped at §${book.topics[lastIndex]?.code ?? '—'} · next §${nextTopic.code}`)
                 : t(language, 'Kitob to‘liq o‘tildi', 'Книга пройдена полностью', 'The book is finished')}</b>
@@ -439,8 +440,8 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
               {marks.has(topic.key) && <span className="tag green"><Users size={12} /> {t(language, `Sinfda o‘tildi: ${markDate(topic.key)}`, `Пройдено в классе: ${markDate(topic.key)}`, `Covered in class: ${markDate(topic.key)}`)}</span>}
             </div>
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${pdfPage}-${topicEndPage(book, topic, pdfPage)}`); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
-              {isTeacher && <button type="button" className="btn primary" onClick={() => onOpen(`/lesson/course:${topic.key}`)}><MonitorPlay size={15} /> {t(language, 'Shu mavzuda dars', 'Урок по этой теме', 'Lesson on this topic')}</button>}
+              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${pdfPage}-${topicEndPage(book, topic, pdfPage)}`); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {lesson ? t(language, `Darslik · ${topic.page}-bet: o‘qish va yozish`, `Учебник · стр. ${topic.page}: читать и писать`, `Textbook · p. ${topic.page}: read and write`) : t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
+              {isTeacher && !lesson && <button type="button" className="btn primary" onClick={() => onOpen(`/lesson/course:${topic.key}`)}><MonitorPlay size={15} /> {t(language, 'Shu mavzuda dars', 'Урок по этой теме', 'Lesson on this topic')}</button>}
             </div>
           </header>
 
@@ -456,41 +457,99 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           )}
 
 
-          <section className="panel course-essence">
-            <h3><Lightbulb size={17} /> {t(language, 'Mohiyati', 'Суть темы', 'The essence')}</h3>
+          {lesson && (
+            <nav className="lesson-steps" aria-label={t(language, 'Dars bosqichlari', 'Шаги урока', 'Lesson steps')}>
+              {[
+                ['step-topic', t(language, 'Mavzu', 'Тема', 'Topic')],
+                ['step-check', t(language, 'Test', 'Тест', 'Test')],
+                ['step-3d', '3D'],
+              ].map(([id, label], index) => (
+                <a key={id} href={`#${id}`} onClick={(event) => { event.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+                  <b>{index + 1}</b> {label}
+                </a>
+              ))}
+            </nav>
+          )}
+
+          <section className="panel course-essence" id="step-topic">
+            <h3><Lightbulb size={17} /> {lesson ? `1 · ${t(language, 'Mavzu: esda qoldiring', 'Тема: запомните', 'The topic: remember')}` : t(language, 'Mohiyati', 'Суть темы', 'The essence')}</h3>
             {topic.hook && <p className="course-hook">{topic.hook}</p>}
-            <p>{topic.essence}</p>
+            {lesson && keyPoints(topic).length > 1
+              ? <ol className="course-points">{keyPoints(topic).map((point, index) => <li key={index}>{point}</li>)}</ol>
+              : <p>{topic.essence}</p>}
             <div className="course-life"><Target size={15} /> <span><b>{t(language, 'Hayotda:', 'В жизни:', 'In life:')}</b> {topic.life}</span></div>
           </section>
 
-          <section className="course-3d">
-            <div className="course-3d-head">
-              <h3><Box size={17} /> {t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
-              <p className="muted">{topic.sceneHint}</p>
-            </div>
-            <CourseScene3D scene={topic.scene} language={language} />
-          </section>
 
-
-          <section className="panel">
-            <h3><NotebookPen size={17} /> {t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
+          <section className="panel course-check" id="step-check">
+            <h3><NotebookPen size={17} /> {lesson ? `2 · ${t(language, 'O‘zingizni tekshiring', 'Проверьте себя', 'Check yourself')}` : t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
+            {lesson && <p className="muted">{t(language, 'Avval o‘zingiz javob bering, keyin javobni oching va belgilang.', 'Сначала ответьте сами, потом откройте ответ и отметьте, верно ли.', 'Answer first, then open the answer and mark it.')}</p>}
             <ol className="course-tasks">
               {topic.tasks.map((task, index) => (
                 <li key={index}>
                   <p>{task.q}</p>
                   {openAnswers[index]
-                    ? <div className="course-answer">{task.a}</div>
+                    ? <>
+                      <div className="course-answer">{task.a}</div>
+                      {lesson && (
+                        <div className="course-self">
+                          <button type="button" className={`btn small ${selfCheck[index] === true ? 'primary' : ''}`} onClick={() => setSelfCheck((current) => ({ ...current, [index]: true }))}><CheckCircle2 size={13} /> {t(language, 'To‘g‘ri', 'Верно', 'Right')}</button>
+                          <button type="button" className={`btn small ${selfCheck[index] === false ? 'danger' : ''}`} onClick={() => setSelfCheck((current) => ({ ...current, [index]: false }))}>{t(language, 'Xato', 'Ошибся', 'Wrong')}</button>
+                        </div>
+                      )}
+                    </>
                     : <button type="button" className="btn small" onClick={() => setOpenAnswers((current) => ({ ...current, [index]: true }))}>{t(language, 'Javobni tekshirish', 'Проверить ответ', 'Check the answer')}</button>}
                 </li>
               ))}
             </ol>
+            {lesson && Object.keys(selfCheck).length > 0 && (() => {
+              const right = Object.values(selfCheck).filter(Boolean).length;
+              const total = topic.tasks.length;
+              const answered = Object.keys(selfCheck).length;
+              return (
+                <div className={`course-self-score ${right / total >= 0.75 ? 'good' : ''}`}>
+                  <b>{t(language, `To‘g‘ri: ${right} / ${total}`, `Верно: ${right} из ${total}`, `Right: ${right} of ${total}`)}</b>
+                  <span className="muted">{answered < total
+                    ? t(language, 'Qolgan savollarga ham javob bering.', 'Ответьте и на остальные вопросы.', 'Answer the rest too.')
+                    : right / total >= 0.75
+                      ? t(language, 'Zo‘r! Mavzu tushunarli.', 'Отлично! Тема понятна.', 'Great! You got the topic.')
+                      : t(language, 'Mavzuni yana bir o‘qing va 3D ni ko‘ring.', 'Перечитайте тему и посмотрите 3D.', 'Read the topic again and look at the 3D.')}</span>
+                </div>
+              );
+            })()}
           </section>
 
-          <section className="panel course-homework">
-            <h3>{t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h3>
-            <p>{topic.homework}</p>
-            {isStudent && <button type="button" className="btn" onClick={() => onOpen('/classes')}><NotebookPen size={15} /> {t(language, 'Daftar rasmini yuborish', 'Отправить фото тетради', 'Send a notebook photo')}</button>}
+          <section className={`course-3d ${lesson ? 'with-facts' : ''}`} id="step-3d">
+            <div className="course-3d-head">
+              <h3><Box size={17} /> {lesson ? `3 · ${t(language, '3D da ko‘ring', 'Посмотрите в 3D', 'See it in 3D')}` : t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
+              {!lesson && <p className="muted">{topic.sceneHint}</p>}
+            </div>
+            <div className="course-3d-body">
+              <CourseScene3D scene={topic.scene} language={language} />
+              {lesson && (
+                <aside className="panel course-facts">
+                  <b><Lightbulb size={15} /> {t(language, 'Nimani ko‘ramiz', 'Что на модели', 'What the model shows')}</b>
+                  <p>{topic.sceneHint}</p>
+                  {topic.facts.length > 0 && <>
+                    <b><Sparkles size={15} /> {t(language, 'Qiziqarli faktlar', 'Интересные факты', 'Fun facts')}</b>
+                    <ul>{topic.facts.map((fact, index) => <li key={index}>{fact}</li>)}</ul>
+                  </>}
+                </aside>
+              )}
+            </div>
           </section>
+
+          {lesson ? (
+            <p className="muted course-homework-later"><NotebookPen size={14} /> {isTeacher
+              ? t(language, 'Uy vazifasini dars tugagach «Vazifalar» bo‘limida bering.', 'Домашнее задание дайте после урока — в разделе «Задания».', 'Give homework after the lesson, in “Homework”.')
+              : t(language, 'Uy vazifasi dars tugagach «Vazifalar» bo‘limida chiqadi.', 'Домашнее задание появится после урока — во вкладке «Задания».', 'Homework appears after the lesson, in “Homework”.')}</p>
+          ) : (
+            <section className="panel course-homework">
+              <h3>{t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h3>
+              <p>{topic.homework}</p>
+              {isStudent && <button type="button" className="btn" onClick={() => onOpen('/classes')}><NotebookPen size={15} /> {t(language, 'Daftar rasmini yuborish', 'Отправить фото тетради', 'Send a notebook photo')}</button>}
+            </section>
+          )}
 
           <div className="course-footer">
             {isStudent && <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
@@ -514,5 +573,62 @@ function Empty({ text }: { text: string }) {
       <span className="empty-icon"><BookOpen /></span>
       <h2>{text}</h2>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3D studio: our own models per subject                                       */
+/* -------------------------------------------------------------------------- */
+
+type GalleryItem = [OwnSceneId, string | undefined, [string, string, string]];
+const GALLERY: Record<'chem' | 'phys' | 'math' | 'bio' | 'geo', GalleryItem[]> = {
+  chem: [
+    ['particles', 'states', ['Moddaning holatlari', 'Состояния вещества', 'States of matter']],
+    ['particles', 'atoms', ['Atom va molekula', 'Атомы и молекулы', 'Atoms and molecules']],
+    ['mixtures', 'mix', ['Aralashmalar', 'Смеси', 'Mixtures']],
+    ['mixtures', 'separate', ['Ajratish usullari', 'Разделение смесей', 'Separating mixtures']],
+    ['ph', 'scale', ['Kislota va ishqor', 'Кислоты и щёлочи', 'Acids and bases']],
+  ],
+  phys: [
+    ['motion', 'speed', ['Harakat va tezlik', 'Движение и скорость', 'Motion and speed']],
+    ['forces', 'arrows', ['Kuchlar', 'Силы', 'Forces']],
+    ['forces', 'friction', ['Ishqalanish', 'Трение', 'Friction']],
+    ['measure', 'length', ['O‘lchash', 'Измерения', 'Measuring']],
+    ['lab', 'equipment', ['Laboratoriya asboblari', 'Лабораторные приборы', 'Lab equipment']],
+  ],
+  math: [
+    ['geometry', 'triangle', ['Geometriya', 'Геометрия', 'Geometry']],
+    ['factors', 'gcd', ['Bo‘luvchilar', 'Делители', 'Divisors']],
+    ['numberline', 'integers', ['Sonlar o‘qi', 'Числовая прямая', 'Number line']],
+    ['balance', 'equation', ['Tenglama tarozisi', 'Весы уравнения', 'Equation balance']],
+  ],
+  bio: [
+    ['cell', 'animal', ['Hujayra', 'Клетка', 'Cell']],
+    ['body', 'skeleton', ['Inson tanasi', 'Тело человека', 'Human body']],
+    ['leaf', 'light', ['Barg va fotosintez', 'Лист и фотосинтез', 'Leaf and photosynthesis']],
+    ['microbes', 'types', ['Mikroblar', 'Микробы', 'Microbes']],
+    ['foodweb', 'web', ['Oziq zanjiri', 'Пищевая цепь', 'Food web']],
+    ['classify', 'kingdoms', ['Tirik olam', 'Царства живого', 'Kingdoms of life']],
+  ],
+  geo: [
+    ['solar', 'system', ['Quyosh tizimi', 'Солнечная система', 'Solar system']],
+  ],
+};
+
+/** Our own 3D models of a subject: pick one, rotate it, change it. */
+export function StudioGallery({ subject, language }: { subject: keyof typeof GALLERY; language: Language }) {
+  const items = GALLERY[subject];
+  const [index, setIndex] = useState(0);
+  useEffect(() => setIndex(0), [subject]);
+  const item = items[index] ?? items[0]!;
+  return (
+    <section className="panel studio-gallery">
+      {items.length > 1 && <div className="chem-presets">
+        {items.map(([scene, mode, label], at) => (
+          <button type="button" key={`${scene}:${mode}`} className={`tag ${at === index ? 'gold' : ''}`} onClick={() => setIndex(at)}>{t(language, ...label)}</button>
+        ))}
+      </div>}
+      <CourseScene3D key={`${item[0]}:${item[1]}`} scene={{ kind: 'own', scene: item[0], mode: item[1] }} language={language} />
+    </section>
   );
 }

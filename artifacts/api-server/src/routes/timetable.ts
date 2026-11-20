@@ -14,6 +14,7 @@ import {
 import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { writeAudit } from "../lib/audit";
+import { remindTrainer } from "./course";
 
 /**
  * Weekly timetable and "today's lessons".
@@ -306,7 +307,15 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
     if (day.weekday === 7) continue;
     next.push({ date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) });
   }
-  res.json({ ...base, lessons, next });
+  // The school day before (for the trainer: a test can be done within 24 hours of the lesson).
+  let prev: { date: string; weekday: number; lessons: Awaited<ReturnType<typeof lessonsOn>> } | null = null;
+  for (let offset = 1; !prev && offset <= 3; offset += 1) {
+    const day = tashkentNow(new Date(Date.now() - offset * 86400000));
+    if (day.weekday === 7) continue;
+    prev = { date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) };
+  }
+  if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
+  res.json({ ...base, lessons, next, prev });
   return;
 });
 

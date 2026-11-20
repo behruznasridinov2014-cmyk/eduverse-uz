@@ -28,7 +28,7 @@ import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea }
 import { LabReports } from './lab-work';
 import { TodayLessons } from './today';
 import { TimetableEditor } from './timetable-editor';
-import { LabTodayScene, LessonDayPage, TodayCoursePage } from './today-pages';
+import { LabPage, LessonDayPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell } from './account';
@@ -208,7 +208,7 @@ function App(){
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>{try{localStorage.removeItem(`eduverse:pdf-range:/books/${id}.pdf`)}catch{/* private mode */}navigate('/read/'+id)}}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} />
         :location==='/board'?<Redirect to="/lesson"/>
-        :location==='/lab'&&auth.user?<><LabTodayScene language={lang}/><ChemLabPage language={lang} user={auth.user}/></>
+        :location==='/lab'&&auth.user?<LabPage user={auth.user} language={lang}><ChemLabPage language={lang} user={auth.user}/></LabPage>
         :location==='/trainer'&&auth.user?<TrainerPage user={auth.user} school={school} language={lang}/>
         :location==='/scenes'?<Redirect to="/lab"/>
         :location==='/grades'&&auth.user?<GradesPage school={school} language={lang}/>

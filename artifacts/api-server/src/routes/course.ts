@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter, type Response } from "express";
 import {
   bookAnnotationsTable,
@@ -9,6 +9,8 @@ import {
   db,
   schoolCalendarTable,
   trainerResultsTable,
+  trainerTestsTable,
+  userNotificationsTable,
   usersTable,
   schoolMembersTable,
   type AccountRole,
@@ -311,5 +313,99 @@ router.get("/trainer/rating", requireAuthenticatedRole(...everyRole), async (req
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
 });
+
+/* -------------------------------------------------------------------------- */
+/* 5. Trainer tests: one per subject per lesson day, 8 questions               */
+/* -------------------------------------------------------------------------- */
+
+const TRAINER_SUBJECTS = new Set(["math", "physics", "chemistry", "biology"]);
+const tashkentDay = (offsetDays = 0) => new Date(Date.now() + 5 * 3600000 + offsetDays * 86400000).toISOString().slice(0, 10);
+
+/** The pupil's tests of the given days (today and the school day before). */
+router.get("/trainer/tests", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const days = String(req.query.days ?? "").split(",").filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(0, 4);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!days.length) { res.json({ tests: [] }); return; }
+  const rows = await db.select({ day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total })
+    .from(trainerTestsTable).where(and(eq(trainerTestsTable.userId, viewer.id), inArray(trainerTestsTable.day, days)));
+  res.json({ tests: rows });
+});
+
+/** A finished test. Only for today or the day before (24 hours to catch up); the best score stays. */
+router.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const body = isRecord(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  const day = typeof body.day === "string" ? body.day : "";
+  const subject = typeof body.subject === "string" ? body.subject : "";
+  const topicKey = typeof body.topicKey === "string" ? body.topicKey.slice(0, 60) : "";
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total || !TRAINER_SUBJECTS.has(subject)) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  // Today, or up to three days back (the school day before, across a Sunday).
+  const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
+  if (!allowed.includes(day)) { res.status(400).json({ error: "The time for this test is over." }); return; }
+  const classId = await pupilClass(viewer.id);
+  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day, subject, topicKey, score, total })
+    .onConflictDoUpdate({
+      target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
+      set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: new Date() },
+    });
+  res.status(201).json({ saved: true });
+});
+
+/** The teacher sees who did the test of a lesson day (to remember it when grading). */
+router.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) { res.status(400).json({ error: "Invalid class." }); return; }
+  const access = await classAccess(viewer, classId);
+  if (!access.read) { res.status(403).json({ error: "Not your class." }); return; }
+  const since = tashkentDay(-6);
+  const rows = await db.select({ userId: trainerTestsTable.userId, day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total })
+    .from(trainerTestsTable).where(and(eq(trainerTestsTable.classId, classId), gte(trainerTestsTable.day, since)))
+    .orderBy(desc(trainerTestsTable.day));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ tests: rows });
+});
+
+/**
+ * After the teacher's last lesson of the day: a note in the bell about pupils who have not
+ * done the trainer test of that lesson. Once a day per teacher.
+ */
+export async function remindTrainer(teacherId: string, day: string, lessons: Array<{ classId: string; className: string; subject: string; endsAt: string }>): Promise<void> {
+  try {
+    const book = lessons.filter((lesson) => TRAINER_SUBJECTS.has(lesson.subject));
+    if (!book.length) return;
+    const lastEnd = Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt)));
+    if (Date.now() < lastEnd + 2 * 3600000) return;
+    const title = `Тренажёр ${day}`;
+    const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable)
+      .where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
+    if (already) return;
+    const parts: string[] = [];
+    const seen = new Set<string>();
+    for (const lesson of book) {
+      const key = `${lesson.classId}:${lesson.subject}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable)
+        .innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId))
+        .where(and(eq(classMembersTable.classId, lesson.classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
+      if (!pupils.length) continue;
+      const done = await db.select({ id: trainerTestsTable.userId }).from(trainerTestsTable)
+        .where(and(eq(trainerTestsTable.day, day), eq(trainerTestsTable.subject, lesson.subject), inArray(trainerTestsTable.userId, pupils.map((row) => row.id))));
+      const missing = pupils.length - done.length;
+      if (missing > 0) parts.push(`${lesson.className}: ${missing} из ${pupils.length}`);
+    }
+    // Write the note even when everyone did it, so it is checked only once a day.
+    await db.insert(userNotificationsTable).values({ userId: teacherId, kind: "grades", title, body: parts.length ? `Не прошли тест: ${parts.join(", ")}. Могут исправить в течение 24 часов.` : "Все ученики прошли тест.", link: "/teacher" });
+  } catch {
+    /* a reminder never breaks the page */
+  }
+}
 
 export default router;

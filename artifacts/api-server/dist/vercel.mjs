@@ -42788,7 +42788,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, timetableSlotsTable, schoolBellsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43168,6 +43168,24 @@ var init_learning = __esm({
       uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
       index("trainer_results_class_day_idx").on(table.classId, table.day)
     ]);
+    trainerTestsTable = pgTable("trainer_tests", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+      /** YYYY-MM-DD: the lesson day */
+      day: text("day").notNull(),
+      /** textbook subject key: physics / chemistry / biology / math */
+      subject: text("subject").notNull(),
+      topicKey: text("topic_key").notNull().default(""),
+      score: integer("score").notNull(),
+      total: integer("total").notNull(),
+      attempts: integer("attempts").notNull().default(1),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("trainer_tests_user_day_subject_unique").on(table.userId, table.day, table.subject),
+      index("trainer_tests_class_day_idx").on(table.classId, table.day)
+    ]);
     timetableSlotsTable = pgTable("timetable_slots", {
       id: uuid("id").defaultRandom().primaryKey(),
       schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
@@ -43238,6 +43256,7 @@ __export(schema_exports, {
   telegramOutboxTable: () => telegramOutboxTable,
   timetableSlotsTable: () => timetableSlotsTable,
   trainerResultsTable: () => trainerResultsTable,
+  trainerTestsTable: () => trainerTestsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -43301,6 +43320,7 @@ __export(src_exports, {
   telegramOutboxTable: () => telegramOutboxTable,
   timetableSlotsTable: () => timetableSlotsTable,
   trainerResultsTable: () => trainerResultsTable,
+  trainerTestsTable: () => trainerTestsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -54719,6 +54739,85 @@ router7.get("/trainer/rating", requireAuthenticatedRole(...everyRole3), async (r
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
 });
+var TRAINER_SUBJECTS = /* @__PURE__ */ new Set(["math", "physics", "chemistry", "biology"]);
+var tashkentDay = (offsetDays = 0) => new Date(Date.now() + 5 * 36e5 + offsetDays * 864e5).toISOString().slice(0, 10);
+router7.get("/trainer/tests", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf2(res);
+  const days = String(req.query.days ?? "").split(",").filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(0, 4);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!days.length) {
+    res.json({ tests: [] });
+    return;
+  }
+  const rows = await db.select({ day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.userId, viewer.id), inArray(trainerTestsTable.day, days)));
+  res.json({ tests: rows });
+});
+router7.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf2(res);
+  const body = isRecord6(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  const day = typeof body.day === "string" ? body.day : "";
+  const subject = typeof body.subject === "string" ? body.subject : "";
+  const topicKey = typeof body.topicKey === "string" ? body.topicKey.slice(0, 60) : "";
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total || !TRAINER_SUBJECTS.has(subject)) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
+  if (!allowed.includes(day)) {
+    res.status(400).json({ error: "The time for this test is over." });
+    return;
+  }
+  const classId = await pupilClass(viewer.id);
+  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day, subject, topicKey, score, total }).onConflictDoUpdate({
+    target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
+    set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
+  });
+  res.status(201).json({ saved: true });
+});
+router7.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const viewer = viewerOf2(res);
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access = await classAccess(viewer, classId);
+  if (!access.read) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const since = tashkentDay(-6);
+  const rows = await db.select({ userId: trainerTestsTable.userId, day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.classId, classId), gte(trainerTestsTable.day, since))).orderBy(desc(trainerTestsTable.day));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ tests: rows });
+});
+async function remindTrainer(teacherId, day, lessons) {
+  try {
+    const book = lessons.filter((lesson) => TRAINER_SUBJECTS.has(lesson.subject));
+    if (!book.length) return;
+    const lastEnd = Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt)));
+    if (Date.now() < lastEnd + 2 * 36e5) return;
+    const title = `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 ${day}`;
+    const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
+    if (already) return;
+    const parts = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const lesson of book) {
+      const key = `${lesson.classId}:${lesson.subject}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, lesson.classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
+      if (!pupils.length) continue;
+      const done = await db.select({ id: trainerTestsTable.userId }).from(trainerTestsTable).where(and(eq(trainerTestsTable.day, day), eq(trainerTestsTable.subject, lesson.subject), inArray(trainerTestsTable.userId, pupils.map((row) => row.id))));
+      const missing = pupils.length - done.length;
+      if (missing > 0) parts.push(`${lesson.className}: ${missing} \u0438\u0437 ${pupils.length}`);
+    }
+    await db.insert(userNotificationsTable).values({ userId: teacherId, kind: "grades", title, body: parts.length ? `\u041D\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442: ${parts.join(", ")}. \u041C\u043E\u0433\u0443\u0442 \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 24 \u0447\u0430\u0441\u043E\u0432.` : "\u0412\u0441\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442.", link: "/teacher" });
+  } catch {
+  }
+}
 var course_default = router7;
 
 // src/routes/account.ts
@@ -55604,7 +55703,14 @@ router10.get("/me/today", requireAuthenticatedRole(...everyRole5), async (_req, 
     if (day.weekday === 7) continue;
     next.push({ date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) });
   }
-  res.json({ ...base, lessons, next });
+  let prev = null;
+  for (let offset = 1; !prev && offset <= 3; offset += 1) {
+    const day = tashkentNow(new Date(Date.now() - offset * 864e5));
+    if (day.weekday === 7) continue;
+    prev = { date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) };
+  }
+  if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
+  res.json({ ...base, lessons, next, prev });
   return;
 });
 var timetable_default = router10;
