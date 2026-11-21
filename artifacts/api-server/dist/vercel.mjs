@@ -25169,11 +25169,11 @@ var require_time = __commonJS({
       const date2 = new Date(msSinceEpoch);
       const year = date2.getUTCFullYear();
       const month = (date2.getUTCMonth() + 1).toString().padStart(2, "0");
-      const day = date2.getUTCDate().toString().padStart(2, "0");
+      const day2 = date2.getUTCDate().toString().padStart(2, "0");
       const hours = date2.getUTCHours().toString().padStart(2, "0");
       const minutes = date2.getUTCMinutes().toString().padStart(2, "0");
       const seconds = date2.getUTCSeconds().toString().padStart(2, "0");
-      return `,"time":"${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${nanosWithinSecond.toString().padStart(9, "0")}Z"`;
+      return `,"time":"${year}-${month}-${day2}T${hours}:${minutes}:${seconds}.${nanosWithinSecond.toString().padStart(9, "0")}Z"`;
     };
     module.exports = { nullTime, epochTime, unixTime, isoTime, isoTimeNano };
   }
@@ -32720,7 +32720,7 @@ var require_postgres_date = __commonJS({
         year = bcYearToNegativeYear(year);
       }
       var month = parseInt(matches[2], 10) - 1;
-      var day = matches[3];
+      var day2 = matches[3];
       var hour = parseInt(matches[4], 10);
       var minute = parseInt(matches[5], 10);
       var second = parseInt(matches[6], 10);
@@ -32729,7 +32729,7 @@ var require_postgres_date = __commonJS({
       var date2;
       var offset = timeZoneOffset(isoDate);
       if (offset != null) {
-        date2 = new Date(Date.UTC(year, month, day, hour, minute, second, ms));
+        date2 = new Date(Date.UTC(year, month, day2, hour, minute, second, ms));
         if (is0To99(year)) {
           date2.setUTCFullYear(year);
         }
@@ -32737,7 +32737,7 @@ var require_postgres_date = __commonJS({
           date2.setTime(date2.getTime() - offset);
         }
       } else {
-        date2 = new Date(year, month, day, hour, minute, second, ms);
+        date2 = new Date(year, month, day2, hour, minute, second, ms);
         if (is0To99(year)) {
           date2.setFullYear(year);
         }
@@ -32755,8 +32755,8 @@ var require_postgres_date = __commonJS({
         year = bcYearToNegativeYear(year);
       }
       var month = parseInt(matches[2], 10) - 1;
-      var day = matches[3];
-      var date2 = new Date(year, month, day);
+      var day2 = matches[3];
+      var date2 = new Date(year, month, day2);
       if (is0To99(year)) {
         date2.setFullYear(year);
       }
@@ -51837,14 +51837,14 @@ router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles)
       if (submission.score === null) return { state: "review", grade: null };
       return { state: "graded", grade: Math.max(2, Math.min(5, Math.round(submission.score / 20))) };
     });
-    const grades = cells.map((cell) => cell.grade).filter((grade) => grade !== null);
+    const grades2 = cells.map((cell) => cell.grade).filter((grade) => grade !== null);
     const marks = attendance.filter((item) => item.studentId === student.id);
     const attended = marks.filter((item) => item.status === "present" || item.status === "late").length;
     return {
       studentId: student.id,
       studentName: student.name,
       cells,
-      average: grades.length ? Math.round(grades.reduce((sum, grade) => sum + grade, 0) / grades.length * 10) / 10 : null,
+      average: grades2.length ? Math.round(grades2.reduce((sum, grade) => sum + grade, 0) / grades2.length * 10) / 10 : null,
       attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null
     };
   });
@@ -51925,7 +51925,7 @@ router3.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res
     const classIds = classes.map((item) => item.id);
     const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)).orderBy(desc(assignmentsTable.createdAt)).limit(20) : [];
     const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, feedback: assignmentSubmissionsTable.feedback }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, child.id), inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))) : [];
-    const homework = assignments.map((item) => {
+    const homework2 = assignments.map((item) => {
       const sub = submissions.find((row) => row.assignmentId === item.id);
       return {
         ...item,
@@ -51936,15 +51936,15 @@ router3.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res
     });
     const marks = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, child.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(60);
     const attended = marks.filter((row) => row.status === "present" || row.status === "late").length;
-    const grades = homework.map((item) => item.grade).filter((grade) => grade !== null);
+    const grades2 = homework2.map((item) => item.grade).filter((grade) => grade !== null);
     children.push({
       id: child.id,
       name: child.name,
       classes: classes.map((item) => item.name),
-      average: grades.length ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length * 10) / 10 : null,
+      average: grades2.length ? Math.round(grades2.reduce((a, b) => a + b, 0) / grades2.length * 10) / 10 : null,
       attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null,
       absences: marks.filter((row) => row.status === "absent").slice(0, 5).map((row) => row.date),
-      homework
+      homework: homework2
     });
   }
   res.json({ children });
@@ -51972,8 +51972,8 @@ router3.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_di
     const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
     const own = marks.filter((row) => row.studentId === person.id);
     const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
-    const grades = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score / 20))));
-    const average = grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : "";
+    const grades2 = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score / 20))));
+    const average = grades2.length ? (grades2.reduce((a, b) => a + b, 0) / grades2.length).toFixed(1) : "";
     lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round(attended / own.length * 100) : ""].map(cell).join(";"));
   }
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -53161,8 +53161,8 @@ router5.post(
       return;
     }
     try {
-      const [school] = await db.insert(schoolsTable).values({ name, region, district, address }).returning();
-      res.status(201).json({ school });
+      const [school2] = await db.insert(schoolsTable).values({ name, region, district, address }).returning();
+      res.status(201).json({ school: school2 });
     } catch (error) {
       if (isUniqueConstraintViolation2(error)) {
         res.status(409).json({ error: "This school already exists." });
@@ -53179,7 +53179,7 @@ router5.get(
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
     const user3 = currentUser(res);
-    const [school] = await db.select({
+    const [school2] = await db.select({
       id: schoolsTable.id,
       name: schoolsTable.name,
       region: schoolsTable.region,
@@ -53189,7 +53189,7 @@ router5.get(
       memberCount: sql`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
       classCount: sql`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`
     }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
-    if (!school) {
+    if (!school2) {
       res.status(404).json({ error: "School not found." });
       return;
     }
@@ -53198,7 +53198,7 @@ router5.get(
       forbidden(res);
       return;
     }
-    res.json({ school, role: schoolRole3 });
+    res.json({ school: school2, role: schoolRole3 });
   }
 );
 router5.get(
@@ -54076,17 +54076,930 @@ var schools_default = router5;
 
 // src/routes/school-tools.ts
 init_drizzle_orm();
-var import_express6 = __toESM(require_express2(), 1);
+var import_express8 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
-init_ai_content();
+
+// src/lib/bot-commands.ts
+init_drizzle_orm();
+init_src();
+
+// src/routes/timetable.ts
+init_drizzle_orm();
+var import_express7 = __toESM(require_express2(), 1);
+init_src();
+
+// src/routes/course.ts
+init_drizzle_orm();
+var import_express6 = __toESM(require_express2(), 1);
+init_src();
 var router6 = (0, import_express6.Router)();
+var viewerOf = (res) => res.locals.authenticatedUser;
+var isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var perSession2 = (req) => {
   const token = req.cookies?.["eduverse.sid"];
   return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
 };
-var viewerOf = (res) => res.locals.authenticatedUser;
-var isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var everyRole2 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var BOOK_RE = /^[a-z0-9][a-z0-9-]{1,59}$/;
+var TOPIC_RE = /^[a-z0-9][a-z0-9.\-]{1,39}$/;
+var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+var MAX_STROKES = 400;
+var MAX_POINTS = 1600;
+var MAX_JSON = 300 * 1024;
+function cleanStrokes(value) {
+  if (!Array.isArray(value) || value.length > MAX_STROKES) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord5(item)) return null;
+    const c = typeof item.c === "string" && /^#[0-9a-fA-F]{6}$/.test(item.c) ? item.c : null;
+    const w = typeof item.w === "number" && Number.isFinite(item.w) ? Math.min(0.06, Math.max(5e-4, item.w)) : null;
+    const m = item.m === "marker" ? "marker" : item.m === "pen" ? "pen" : null;
+    if (!c || w === null || !m || !Array.isArray(item.p) || item.p.length < 2 || item.p.length > MAX_POINTS || item.p.length % 2) return null;
+    const p = [];
+    for (const n of item.p) {
+      if (typeof n !== "number" || !Number.isFinite(n)) return null;
+      p.push(Math.round(Math.min(1, Math.max(0, n)) * 1e4) / 1e4);
+    }
+    out.push({ c, w: Math.round(w * 1e5) / 1e5, m, p });
+  }
+  return out;
+}
+var annotationLimiter = createRateLimiter(240, 10 * 60 * 1e3, "Too many saves. Try again in a minute.", "annotations", perSession2);
+router6.get("/me/annotations/:book", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const book = String(req.params.book ?? "");
+  if (!BOOK_RE.test(book)) {
+    res.status(400).json({ error: "Invalid book." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const rows = await db.select({ page: bookAnnotationsTable.page, count: sql`jsonb_array_length(${bookAnnotationsTable.strokes})` }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book))).orderBy(asc(bookAnnotationsTable.page));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ pages: rows.filter((row) => Number(row.count) > 0).map((row) => ({ page: row.page, strokes: Number(row.count) })) });
+});
+router6.get("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const book = String(req.params.book ?? "");
+  const page = Number(req.params.page);
+  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
+    res.status(400).json({ error: "Invalid page." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const [row] = await db.select({ strokes: bookAnnotationsTable.strokes, updatedAt: bookAnnotationsTable.updatedAt }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book), eq(bookAnnotationsTable.page, page))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ strokes: Array.isArray(row?.strokes) ? row.strokes : [], updatedAt: row?.updatedAt ?? null });
+});
+router6.put("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole2), annotationLimiter, async (req, res) => {
+  const book = String(req.params.book ?? "");
+  const page = Number(req.params.page);
+  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
+    res.status(400).json({ error: "Invalid page." });
+    return;
+  }
+  const strokes = cleanStrokes(isRecord5(req.body) ? req.body.strokes : null);
+  if (!strokes || JSON.stringify(strokes).length > MAX_JSON) {
+    res.status(400).json({ error: "The drawing is too large or invalid." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(bookAnnotationsTable).values({ userId: viewer.id, book, page, strokes, updatedAt: now }).onConflictDoUpdate({ target: [bookAnnotationsTable.userId, bookAnnotationsTable.book, bookAnnotationsTable.page], set: { strokes, updatedAt: now } });
+  res.json({ saved: true, strokes: strokes.length, updatedAt: now });
+});
+async function classAccess(viewer, classId) {
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  if (!klass) return { read: false, edit: false };
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [schoolRow] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  const [classRow] = await db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1);
+  const edit = canManageClass(viewer.role, schoolRow?.role ?? null, classRow?.role ?? null);
+  return { read: edit || Boolean(classRow), edit };
+}
+var progressLimiter = createRateLimiter(200, 10 * 60 * 1e3, "Too many changes. Try again later.", "course-progress", perSession2);
+router6.get("/classes/:classId/course", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access2 = await classAccess(viewerOf(res), classId);
+  if (!access2.read) {
+    res.status(403).json({ error: "You are not in this class." });
+    return;
+  }
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  const [progress, pace, calendar] = await Promise.all([
+    db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(eq(courseProgressTable.classId, classId)).orderBy(asc(courseProgressTable.doneOn)),
+    db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId)),
+    klass ? loadCalendar(klass.schoolId) : Promise.resolve(null)
+  ]);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ progress, pace, calendar, canEdit: access2.edit });
+});
+router6.put("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  const doneOn = isRecord5(req.body) && typeof req.body.doneOn === "string" ? req.body.doneOn : "";
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey) || !DATE_RE.test(doneOn) || Number.isNaN(Date.parse(doneOn))) {
+    res.status(400).json({ error: "Invalid topic or date." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const access2 = await classAccess(viewer, classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can mark topics." });
+    return;
+  }
+  await db.insert(courseProgressTable).values({ classId, topicKey, doneOn, markedBy: viewer.id }).onConflictDoUpdate({ target: [courseProgressTable.classId, courseProgressTable.topicKey], set: { doneOn, markedBy: viewer.id } });
+  res.json({ topicKey, doneOn });
+});
+router6.delete("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey)) {
+    res.status(400).json({ error: "Invalid topic." });
+    return;
+  }
+  const access2 = await classAccess(viewerOf(res), classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can mark topics." });
+    return;
+  }
+  await db.delete(courseProgressTable).where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.topicKey, topicKey)));
+  res.json({ removed: true });
+});
+router6.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const book = String(req.params.book ?? "");
+  const lessonsPerWeek = isRecord5(req.body) ? Number(req.body.lessonsPerWeek) : NaN;
+  if (!isValidUuid(classId) || !BOOK_RE.test(book) || !Number.isInteger(lessonsPerWeek) || lessonsPerWeek < 1 || lessonsPerWeek > 10) {
+    res.status(400).json({ error: "Lessons per week must be 1 to 10." });
+    return;
+  }
+  const access2 = await classAccess(viewerOf(res), classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can change this." });
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(coursePaceTable).values({ classId, book, lessonsPerWeek, updatedAt: now }).onConflictDoUpdate({ target: [coursePaceTable.classId, coursePaceTable.book], set: { lessonsPerWeek, updatedAt: now } });
+  res.json({ book, lessonsPerWeek });
+});
+var validDate = (value) => typeof value === "string" && DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
+async function loadCalendar(schoolId) {
+  const [row] = await db.select({ quarters: schoolCalendarTable.quarters, holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable).where(eq(schoolCalendarTable.schoolId, schoolId)).limit(1);
+  return row ? { quarters: row.quarters, holidays: row.holidays } : null;
+}
+async function schoolAccess(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [member] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!member) return { read: false, edit: false };
+  return { read: true, edit: member.role === "school_director" || member.role === "school_admin" };
+}
+function readCalendar(body) {
+  if (!isRecord5(body) || !Array.isArray(body.quarters) || body.quarters.length !== 4) return null;
+  const quarters = [];
+  for (const item of body.quarters) {
+    if (!isRecord5(item) || !validDate(item.start) || !validDate(item.end) || item.start > item.end) return null;
+    if (quarters.length && quarters[quarters.length - 1].end >= item.start) return null;
+    quarters.push({ start: item.start, end: item.end });
+  }
+  const rawHolidays = Array.isArray(body.holidays) ? body.holidays : [];
+  if (rawHolidays.length > 40) return null;
+  const holidays = [];
+  for (const item of rawHolidays) {
+    if (!isRecord5(item) || !validDate(item.from) || !validDate(item.to) || item.from > item.to) return null;
+    const name = typeof item.name === "string" ? item.name.trim().slice(0, 60) : "";
+    holidays.push({ from: item.from, to: item.to, name });
+  }
+  holidays.sort((a, b) => a.from.localeCompare(b.from));
+  return { quarters, holidays };
+}
+router6.get("/schools/:schoolId/calendar", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const access2 = await schoolAccess(viewerOf(res), schoolId);
+  if (!access2.read) {
+    res.status(403).json({ error: "You are not in this school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ calendar: await loadCalendar(schoolId), canEdit: access2.edit });
+});
+router6.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const access2 = await schoolAccess(viewer, schoolId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the director can change the calendar." });
+    return;
+  }
+  const calendar = readCalendar(req.body);
+  if (!calendar) {
+    res.status(400).json({ error: "Four quarters in order, each with a start and end date." });
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(schoolCalendarTable).values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now }).onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
+  res.json({ calendar });
+});
+var trainerLimiter = createRateLimiter(30, 60 * 60 * 1e3, "Too many attempts.", "trainer", perSession2);
+var isoDay = (date2) => date2.toISOString().slice(0, 10);
+async function pupilClass(userId) {
+  const [row] = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, userId), eq(classMembersTable.role, "student"))).limit(1);
+  return row?.classId ?? null;
+}
+router6.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const body = isRecord5(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const day2 = isoDay(/* @__PURE__ */ new Date());
+  const classId = await pupilClass(viewer.id);
+  const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day: day2, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
+  res.status(row ? 201 : 200).json({ counted: Boolean(row), day: day2 });
+});
+router6.get("/trainer/rating", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const viewer = viewerOf(res);
+  let classId = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? req.query.classId : null;
+  if (viewer.role === "student") classId = await pupilClass(viewer.id);
+  if (!classId) {
+    res.json({ rating: [], doneToday: false });
+    return;
+  }
+  if (viewer.role !== "student") {
+    const access2 = await classAccess(viewer, classId);
+    if (!access2.read) {
+      res.status(403).json({ error: "Not your class." });
+      return;
+    }
+  }
+  const since = isoDay(new Date(Date.now() - 6 * 864e5));
+  const rows = await db.select({ userId: trainerResultsTable.userId, name: usersTable.username, points: sql`sum(${trainerResultsTable.score})::int`, days: sql`count(*)::int` }).from(trainerResultsTable).innerJoin(usersTable, eq(usersTable.id, trainerResultsTable.userId)).where(and(eq(trainerResultsTable.classId, classId), gte(trainerResultsTable.day, since))).groupBy(trainerResultsTable.userId, usersTable.username).orderBy(desc(sql`sum(${trainerResultsTable.score})`)).limit(30);
+  const [today2] = await db.select({ id: trainerResultsTable.id }).from(trainerResultsTable).where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, isoDay(/* @__PURE__ */ new Date())))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today2) });
+});
+var TRAINER_SUBJECTS = /* @__PURE__ */ new Set(["math", "physics", "chemistry", "biology"]);
+var tashkentDay = (offsetDays = 0) => new Date(Date.now() + 5 * 36e5 + offsetDays * 864e5).toISOString().slice(0, 10);
+router6.get("/trainer/tests", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const days = String(req.query.days ?? "").split(",").filter((day2) => /^\d{4}-\d{2}-\d{2}$/.test(day2)).slice(0, 4);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!days.length) {
+    res.json({ tests: [] });
+    return;
+  }
+  const rows = await db.select({ day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.userId, viewer.id), inArray(trainerTestsTable.day, days)));
+  res.json({ tests: rows });
+});
+router6.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const body = isRecord5(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  const day2 = typeof body.day === "string" ? body.day : "";
+  const subject = typeof body.subject === "string" ? body.subject : "";
+  const topicKey = typeof body.topicKey === "string" ? body.topicKey.slice(0, 60) : "";
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total || !TRAINER_SUBJECTS.has(subject)) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
+  if (!allowed.includes(day2)) {
+    res.status(400).json({ error: "The time for this test is over." });
+    return;
+  }
+  const classId = await pupilClass(viewer.id);
+  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day: day2, subject, topicKey, score, total }).onConflictDoUpdate({
+    target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
+    set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
+  });
+  res.status(201).json({ saved: true });
+});
+router6.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access2 = await classAccess(viewer, classId);
+  if (!access2.read) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const since = tashkentDay(-6);
+  const rows = await db.select({ userId: trainerTestsTable.userId, day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.classId, classId), gte(trainerTestsTable.day, since))).orderBy(desc(trainerTestsTable.day));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ tests: rows });
+});
+async function remindTrainer(teacherId, day2, lessons) {
+  try {
+    const book = lessons.filter((lesson) => TRAINER_SUBJECTS.has(lesson.subject));
+    if (!book.length) return;
+    const lastEnd = Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt)));
+    if (Date.now() < lastEnd + 2 * 36e5) return;
+    const title = `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 ${day2}`;
+    const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
+    if (already) return;
+    const parts = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const lesson of book) {
+      const key = `${lesson.classId}:${lesson.subject}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, lesson.classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
+      if (!pupils.length) continue;
+      const done = await db.select({ id: trainerTestsTable.userId }).from(trainerTestsTable).where(and(eq(trainerTestsTable.day, day2), eq(trainerTestsTable.subject, lesson.subject), inArray(trainerTestsTable.userId, pupils.map((row) => row.id))));
+      const missing = pupils.length - done.length;
+      if (missing > 0) parts.push(`${lesson.className}: ${missing} \u0438\u0437 ${pupils.length}`);
+    }
+    await db.insert(userNotificationsTable).values({ userId: teacherId, kind: "grades", title, body: parts.length ? `\u041D\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442: ${parts.join(", ")}. \u041C\u043E\u0433\u0443\u0442 \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 24 \u0447\u0430\u0441\u043E\u0432.` : "\u0412\u0441\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442.", link: "/teacher" });
+  } catch {
+  }
+}
+var course_default = router6;
+
+// src/lib/book-homework.ts
+init_drizzle_orm();
+init_src();
+
+// src/lib/book-topics.json
+var book_topics_default = [{ id: "physics-7", subject: "physics", grade: 7, topics: [{ key: "phys7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0444\u0438\u0437\u0438\u043A\u0430? \u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u044F", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u043F\u043E 2 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u044F\u0432\u043B\u0435\u043D\u0438\u0439 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u043C\u0443 \u0432\u0438\u0434\u0443 \u044F\u0432\u043B\u0435\u043D\u0438\u0439 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0442\u0430\u044F\u043D\u0438\u0435 \u043C\u043E\u0440\u043E\u0436\u0435\u043D\u043E\u0433\u043E?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u043F\u0440\u0438\u043C\u0435\u0440 \u0434\u043B\u044F \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u044F\u0432\u043B\u0435\u043D\u0438\u0439.", "\u041A\u0430\u043A\u0443\u044E \u0440\u043E\u043B\u044C \u0438\u0433\u0440\u0430\u0435\u0442 \u0444\u0438\u0437\u0438\u043A\u0430 \u0432 \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u0438 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0433\u043E \u043C\u0438\u0440\u0430?"] }, { key: "phys7-1.2", code: "1.2", title: "\u0412\u0430\u0436\u043D\u044B\u0435 \u043F\u0440\u0438\u043D\u0446\u0438\u043F\u044B \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E \u043E\u0431 \u043E\u0434\u043D\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u043E\u0431 \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u0435) \u0438 \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 3 \u0435\u0433\u043E \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443\u0447\u0451\u043D\u044B\u043C \u0432\u0430\u0436\u043D\u043E \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0438 \u0431\u044B\u0442\u044C \u0431\u0435\u0441\u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u043D\u044B\u043C\u0438?", "\u041A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0438 \u041C\u0430\u0440\u0438\u0438 \u041A\u044E\u0440\u0438 \u0434\u043E\u0431\u0438\u0442\u044C\u0441\u044F \u0443\u0441\u043F\u0435\u0445\u0430?"] }, { key: "phys7-1.3", code: "1.3", title: "\u041A\u0430\u043A\u0438\u043C\u0438 \u043D\u0430\u0432\u044B\u043A\u0430\u043C\u0438 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E \u043E\u0431\u043B\u0430\u0434\u0430\u0442\u044C \u043F\u0440\u0438 \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u0438 \u0444\u0438\u0437\u0438\u043A\u0438?", homework: "\u041F\u0440\u0438\u0434\u0443\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u043E\u043F\u044B\u0442 \u0434\u043E\u043C\u0430 (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u0441 \u0441\u0430\u0445\u0430\u0440\u043E\u043C \u0432 \u0442\u0451\u043F\u043B\u043E\u0439 \u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0439 \u0432\u043E\u0434\u0435) \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", tasks: ["\u0421\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443: \u0432 \u0433\u043E\u0440\u044F\u0447\u0435\u043C \u0447\u0430\u0435 \u0441\u0430\u0445\u0430\u0440 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u044F\u0435\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435, \u0447\u0435\u043C \u0432 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u043C.", "\u0412\u0441\u0435 \u043B\u0438 \u0447\u0430\u0441\u0442\u0438 \u043C\u0430\u0433\u043D\u0438\u0442\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E \u043F\u0440\u0438\u0442\u044F\u0433\u0438\u0432\u0430\u044E\u0442 \u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0435 \u043E\u043F\u0438\u043B\u043A\u0438?", "\u041C\u044F\u0447 \u043A\u0430\u0442\u0438\u0442\u0441\u044F \u043F\u0440\u044F\u043C\u043E \u0438 \u043C\u0435\u043D\u044F\u0435\u0442 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430. \u0412\u0430\u0448\u0430 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0430?"] }, { key: "phys7-1.4", code: "1.4", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0438 \u043F\u0440\u0438\u0431\u043E\u0440\u044B", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u043D\u043E (\u043A\u043E\u043D\u0442\u0443\u0440\u043E\u043C) \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u0438 \u0441\u0435\u043A\u0443\u043D\u0434\u043E\u043C\u0435\u0440.", tasks: ["\u041A\u0430\u043A\u0438\u043C \u043F\u0440\u0438\u0431\u043E\u0440\u043E\u043C \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0441\u0438\u043B\u0443 \u0438 \u0432 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435: \u0441\u0442\u0430\u043A\u0430\u043D, \u043A\u043E\u043B\u0431\u0430, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0430, \u0448\u0442\u0430\u0442\u0438\u0432, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440 \u2014 \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u043A\u0430\u0436\u0434\u043E\u0435?"] }, { key: "phys7-1.5", code: "1.5", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 2 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u0441\u043E \u0437\u043D\u0430\u043A\u0430\u043C\u0438 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 (\u0431\u044B\u0442\u043E\u0432\u0430\u044F \u0445\u0438\u043C\u0438\u044F, \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043F\u0440\u0438\u0431\u043E\u0440\u044B) \u0438 \u043F\u0435\u0440\u0435\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0437\u043D\u0430\u043A\u0438.", tasks: ["\u0427\u0442\u043E \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0437\u043D\u0430\u043A \u0441 \u043C\u043E\u043B\u043D\u0438\u0435\u0439 \u0438 \u043A\u0430\u043A \u0441\u0435\u0431\u044F \u0432\u0435\u0441\u0442\u0438?", "\u0413\u0434\u0435 \u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043B\u0435\u0433\u043A\u043E\u0432\u043E\u0441\u043F\u043B\u0430\u043C\u0435\u043D\u044F\u044E\u0449\u0438\u0435\u0441\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?"] }, { key: "phys7-1.6", code: "1.6", title: "\u0424\u0438\u0437\u0438\u043A\u0430 \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044F", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u043F\u0440\u0438\u0431\u043E\u0440 \u0434\u043E\u043C\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u043D\u0451\u043C \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0434\u0430 \u0432 \u0431\u0443\u0442\u044B\u043B\u043A\u0435 \u043D\u0435 \u0437\u0430\u043C\u0451\u0440\u0437\u043B\u0430 \u0432 \u043C\u043E\u0440\u043E\u0437\u0438\u043B\u043A\u0435, \u0430 \u043F\u0440\u0438 \u0432\u0441\u0442\u0440\u044F\u0445\u0438\u0432\u0430\u043D\u0438\u0438 \u0441\u0440\u0430\u0437\u0443 \u0441\u0442\u0430\u043B\u0430 \u043B\u044C\u0434\u043E\u043C?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044E, \u043F\u043E\u0434\u0441\u043C\u043E\u0442\u0440\u0435\u043D\u043D\u0443\u044E \u0443 \u043F\u0440\u0438\u0440\u043E\u0434\u044B."] }, { key: "phys7-2.1", code: "2.1", title: "\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442\u0441\u044F \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0448\u0430\u0433\u0430\u043C\u0438 \u0434\u043B\u0438\u043D\u0443 \u043A\u043E\u0440\u0438\u0434\u043E\u0440\u0430 3 \u0440\u0430\u0437\u0430 \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0440\u0435\u0434\u043D\u0435\u0435.", tasks: ["\u041E\u0431\u0438\u0434\u0436\u043E\u043D \u043D\u0430\u0441\u0447\u0438\u0442\u0430\u043B \u043E\u0442 \u0434\u043E\u043C\u0430 \u0434\u043E \u0448\u043A\u043E\u043B\u044B 946 \u0448\u0430\u0433\u043E\u0432, \u0430 \u043E\u0431\u0440\u0430\u0442\u043D\u043E \u2014 943. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0448\u0430\u0433\u043E\u0432 \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C?", "\u0417\u0430\u0447\u0435\u043C \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437?"] }, { key: "phys7-2.2", code: "2.2", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B \u0438 \u041C\u0435\u0436\u0434\u0443\u043D\u0430\u0440\u043E\u0434\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u0435\u0434\u0438\u043D\u0438\u0446 (\u0421\u0418)", homework: "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0446\u0435\u043D\u0443 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u0438 \u043F\u0440\u0435\u0434\u0435\u043B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u0441\u0432\u043E\u0435\u0439 \u043B\u0438\u043D\u0435\u0439\u043A\u0438 \u0438 \u0442\u0435\u0440\u043C\u043E\u043C\u0435\u0442\u0440\u0430.", tasks: ["\u041C\u0435\u0436\u0434\u0443 \u043E\u0442\u043C\u0435\u0442\u043A\u0430\u043C\u0438 \xAB1 cm\xBB \u0438 \xAB2 cm\xBB 10 \u0434\u0435\u043B\u0435\u043D\u0438\u0439. \u041A\u0430\u043A\u043E\u0432\u0430 \u0446\u0435\u043D\u0430 \u0434\u0435\u043B\u0435\u043D\u0438\u044F?", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435: 2,5 km \u0432 \u043C\u0435\u0442\u0440\u044B; 350 mm \u0432 \u043C\u0435\u0442\u0440\u044B.", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043F\u0440\u0435\u0434\u0435\u043B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438\u0431\u043E\u0440\u0430?"] }, { key: "phys7-2.3", code: "2.3", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0434\u043B\u0438\u043D\u0443?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u0441\u0432\u043E\u0435\u0439 \u043F\u0430\u0440\u0442\u044B \u0438 \u0442\u043E\u043B\u0449\u0438\u043D\u0443 \u043B\u0438\u0441\u0442\u0430 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430 (\u0447\u0435\u0440\u0435\u0437 100 \u043B\u0438\u0441\u0442\u043E\u0432).", tasks: ["\u0426\u0435\u043D\u0430 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043B\u0438\u043D\u0435\u0439\u043A\u0438 1 mm. \u041A\u0430\u043A\u043E\u0432\u0430 \u043F\u043E\u0433\u0440\u0435\u0448\u043D\u043E\u0441\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F?", "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u0440\u0438\u0442\u044C \u0442\u043E\u043B\u0449\u0438\u043D\u0443 \u043A\u0430\u0442\u0443\u0448\u0435\u0447\u043D\u043E\u0439 \u043D\u0438\u0442\u0438 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u0440\u0430\u043B\u043B\u0430\u043A\u0441\u0430?"] }, { key: "phys7-2.4", code: "2.4", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043F\u043B\u043E\u0449\u0430\u0434\u044C?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u043E\u043B\u0430 \u0432 m\xB2.", tasks: ["\u0414\u0432\u043E\u0440 20 m \xD7 15 m \u043F\u043E\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u043F\u043B\u0438\u0442\u043A\u043E\u0439 \u043F\u043B\u043E\u0449\u0430\u0434\u044C\u044E 600 cm\xB2. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043B\u0438\u0442\u043E\u043A \u043D\u0443\u0436\u043D\u043E?", "\u0421\u043A\u043E\u043B\u044C\u043A\u043E cm\xB2 \u0432 1 m\xB2?"] }, { key: "phys7-2.5", code: "2.5", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043E\u0431\u044A\u0451\u043C?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439 \u0441\u0432\u043E\u044E \u043A\u043E\u0440\u043E\u0431\u043A\u0443 (\u043E\u0431\u0443\u0432\u044C, \u0447\u0430\u0439) \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0435\u0451 \u043E\u0431\u044A\u0451\u043C \u0432 \u0441\u043C\xB3 \u0438 \u0432 \u043B\u0438\u0442\u0440\u0430\u0445. \u0421\u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0440\u0443\u0439\u0442\u0435 \u0440\u0430\u0441\u0447\u0451\u0442 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", tasks: ["\u0410\u043A\u0432\u0430\u0440\u0438\u0443\u043C 50 \u0441\u043C \xD7 30 \u0441\u043C \xD7 40 \u0441\u043C. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0438\u0442\u0440\u043E\u0432 \u0432\u043E\u0434\u044B \u0432 \u043D\u0435\u0433\u043E \u043F\u043E\u043C\u0435\u0449\u0430\u0435\u0442\u0441\u044F?", "\u041A\u0430\u043C\u0435\u043D\u044C \u043E\u043F\u0443\u0441\u0442\u0438\u043B\u0438 \u0432 \u043C\u0435\u043D\u0437\u0443\u0440\u043A\u0443: \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u0432\u043E\u0434\u044B \u043F\u043E\u0434\u043D\u044F\u043B\u0441\u044F \u0441 120 \u043C\u043B \u0434\u043E 155 \u043C\u043B. \u041A\u0430\u043A\u043E\u0432 \u043E\u0431\u044A\u0451\u043C \u043A\u0430\u043C\u043D\u044F?", "\u0412\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u0441\u044F \u043E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0430, \u0435\u0441\u043B\u0438 \u043A\u0430\u0436\u0434\u043E\u0435 \u0440\u0435\u0431\u0440\u043E \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C \u0432 3 \u0440\u0430\u0437\u0430?"] }, { key: "phys7-2.6", code: "2.6", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043C\u0430\u0441\u0441\u0443?", homework: "\u0412\u0437\u0432\u0435\u0441\u044C\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u043D\u0430 \u043A\u0443\u0445\u043E\u043D\u043D\u044B\u0445 \u0432\u0435\u0441\u0430\u0445, \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043C\u0430\u0441\u0441\u044B \u0432 \u0433\u0440\u0430\u043C\u043C\u0430\u0445 \u0438 \u043A\u0438\u043B\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u0445.", tasks: ["\u0427\u0435\u043C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043C\u0430\u0441\u0441\u0430 \u043E\u0442 \u0432\u0435\u0441\u0430?", "\u041A\u0430\u043A \u043E\u0434\u043D\u0438\u043C \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u0435\u043C \u043D\u0430 \u0447\u0430\u0448\u0435\u0447\u043D\u044B\u0445 \u0432\u0435\u0441\u0430\u0445 \u043D\u0430\u0439\u0442\u0438 \u0444\u0430\u043B\u044C\u0448\u0438\u0432\u0443\u044E (\u0431\u043E\u043B\u0435\u0435 \u043B\u0451\u0433\u043A\u0443\u044E) \u043C\u043E\u043D\u0435\u0442\u0443 \u0438\u0437 \u0442\u0440\u0451\u0445?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0435\u0440\u0435\u0434 \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u0435\u043C \u0432\u0435\u0441\u044B \u043E\u0431\u043D\u0443\u043B\u044F\u044E\u0442?"] }, { key: "phys7-2.7", code: "2.7", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0432\u0440\u0435\u043C\u044F?", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u0438\u0437 \u043D\u0438\u0442\u043A\u0438 \u0438 \u043A\u043B\u044E\u0447\u0430. \u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F 10 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u0439 \u0434\u043B\u044F \u0434\u0432\u0443\u0445 \u0434\u043B\u0438\u043D \u043D\u0438\u0442\u0438 \u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043F\u0435\u0440\u0438\u043E\u0434\u044B.", tasks: ["\u041C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u0434\u0435\u043B\u0430\u043B 20 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u0439 \u0437\u0430 40 \u0441. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u043F\u0435\u0440\u0438\u043E\u0434?", "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u043F\u0435\u0440\u0438\u043E\u0434, \u0435\u0441\u043B\u0438 \u0434\u043B\u0438\u043D\u0443 \u043D\u0438\u0442\u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C \u0432 4 \u0440\u0430\u0437\u0430?", "\u0417\u0430\u0432\u0438\u0441\u0438\u0442 \u043B\u0438 \u043F\u0435\u0440\u0438\u043E\u0434 \u043E\u0442 \u043C\u0430\u0441\u0441\u044B \u0433\u0440\u0443\u0437\u0430?"] }, { key: "phys7-3.1", code: "3.1", title: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0442\u0435\u043B", homework: "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 3 \u043F\u0440\u0438\u043C\u0435\u0440\u0430: \u0442\u0435\u043B\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043B\u0430 \u0438 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0433\u043E.", tasks: ["\u041E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0447\u0435\u0433\u043E \u043F\u0430\u0441\u0441\u0430\u0436\u0438\u0440 \u0435\u0434\u0443\u0449\u0435\u0433\u043E \u0430\u0432\u0442\u043E\u0431\u0443\u0441\u0430 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F, \u0430 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0447\u0435\u0433\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F?", "\u0427\u0435\u043C \u043F\u0443\u0442\u044C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0442\u0440\u0430\u0435\u043A\u0442\u043E\u0440\u0438\u0438?"] }, { key: "phys7-3.2", code: "3.2", title: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u044B \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442\u0435 50 \u043C. \u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0432 m/s \u0438 km/h.", tasks: ["\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u043E\u0435\u0445\u0430\u043B 90 km \u0437\u0430 1,5 \u0447\u0430\u0441\u0430. \u041A\u0430\u043A\u043E\u0432\u0430 \u0435\u0433\u043E \u0441\u0440\u0435\u0434\u043D\u044F\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 20 m/s \u0432 km/h.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445 \u0443 \u0448\u043A\u043E\u043B \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0438\u0432\u0430\u044E\u0442 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0434\u043E 40 km/h?"] }, { key: "phys7-3.3", code: "3.3", title: "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u044B \u0438\u0434\u0451\u0442\u0435 100 \u0448\u0430\u0433\u043E\u0432, \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u0448\u0430\u0433\u0430 \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C.", tasks: ["\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 72 km/h \u0432 m/s.", "\u0411\u0435\u0433\u0443\u043D \u043F\u0440\u043E\u0431\u0435\u0436\u0430\u043B 100 m \u0437\u0430 12,5 s. \u0415\u0433\u043E \u0441\u0440\u0435\u0434\u043D\u044F\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u0435\u0434\u0435\u0442 2 h \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 60 km/h. \u041A\u0430\u043A\u043E\u0439 \u043F\u0443\u0442\u044C \u043E\u043D \u043F\u0440\u043E\u0435\u0434\u0435\u0442?"] }, { key: "phys7-3.4", code: "3.4", title: "\u0413\u0440\u0430\u0444\u0438\u043A\u0438 \u043F\u0443\u0442\u0438 \u0438 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438", homework: "\u041F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0433\u0440\u0430\u0444\u0438\u043A \u043F\u0443\u0442\u0438 \u0434\u043B\u044F \u043F\u0435\u0448\u0435\u0445\u043E\u0434\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0438\u0434\u0451\u0442 \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 1,5 m/s \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 10 s.", tasks: ["\u041F\u043E \u0433\u0440\u0430\u0444\u0438\u043A\u0443 \u0442\u0435\u043B\u043E \u0437\u0430 4 s \u043F\u0440\u043E\u0448\u043B\u043E 20 m. \u041A\u0430\u043A\u043E\u0432\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u0427\u0442\u043E \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u044B\u0439 \u0443\u0447\u0430\u0441\u0442\u043E\u043A \u043D\u0430 \u0433\u0440\u0430\u0444\u0438\u043A\u0435 \u043F\u0443\u0442\u0438?"] }, { key: "phys7-4.1", code: "4.1", title: "\u0421\u0438\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0441\u0438\u043B\u044B \u0438 \u043D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0442\u0440\u0435\u043B\u043A\u0438 \u0441\u0438\u043B.", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u043E\u0433\u0434\u0430 \u0441\u0438\u043B\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0444\u043E\u0440\u043C\u0443 \u0442\u0435\u043B\u0430, \u0438 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u043E\u0433\u0434\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C.", "\u0412 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445 \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0441\u0438\u043B\u0443 \u0438 \u043A\u0430\u043A\u0438\u043C \u043F\u0440\u0438\u0431\u043E\u0440\u043E\u043C?"] }, { key: "phys7-4.2", code: "4.2", title: "\u0427\u0438\u0441\u043B\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0438\u043B\u044B", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0432 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0435 1 cm = 10 N \u0441\u0438\u043B\u044B 30 N \u0438 50 N, \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0438\u0435 \u0432 \u0440\u0430\u0437\u043D\u044B\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B, \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0440\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0443\u044E.", tasks: ["\u041D\u0430 \u0442\u0435\u043B\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u0441\u0438\u043B\u044B 30 N \u0438 20 N \u0432 \u043E\u0434\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u0443. \u0420\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0430\u044F?", "\u0422\u0435 \u0436\u0435 \u0441\u0438\u043B\u044B \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044B \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u043E. \u0420\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0430\u044F?"] }, { key: "phys7-4.3", code: "4.3", title: "\u0421\u0438\u043B\u0430 \u0433\u0440\u0430\u0432\u0438\u0442\u0430\u0446\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0435 g \u0434\u043B\u044F \u0412\u0435\u043D\u0435\u0440\u044B \u0438 \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u044B \u0442\u0430\u043C \u0432\u0435\u0441\u0438\u043B\u0438 \u0431\u044B \u0432 \u043D\u044C\u044E\u0442\u043E\u043D\u0430\u0445.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0441\u0438\u043B\u0430 \u0442\u044F\u0436\u0435\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0430 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043C\u0430\u0441\u0441\u043E\u0439 45 kg?", "\u0413\u0434\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435: \u043D\u0430 \u041B\u0443\u043D\u0435 \u0438\u043B\u0438 \u043D\u0430 \u042E\u043F\u0438\u0442\u0435\u0440\u0435?", "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u043B\u0438 \u043C\u0430\u0441\u0441\u0430 \u043A\u043E\u0441\u043C\u043E\u043D\u0430\u0432\u0442\u0430 \u043D\u0430 \u041B\u0443\u043D\u0435?"] }, { key: "phys7-4.4", code: "4.4", title: "\u0421\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F", homework: "\u041F\u043E\u0442\u044F\u043D\u0438\u0442\u0435 \u043A\u043D\u0438\u0433\u0443 \u043F\u043E \u0441\u0442\u043E\u043B\u0443 \u0438 \u043F\u043E \u043F\u043E\u043B\u0443. \u0413\u0434\u0435 \u0442\u044F\u043D\u0443\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u0435\u0435? \u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435, \u043F\u043E\u0447\u0435\u043C\u0443.", tasks: ["\u041A\u0443\u0434\u0430 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0430 \u0441\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u0438\u043C\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u0438 \u043F\u043E\u0441\u044B\u043F\u0430\u044E\u0442 \u043F\u0435\u0441\u043A\u043E\u043C?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043F\u043E\u043B\u0435\u0437\u043D\u043E\u0433\u043E \u0438 \u0432\u0440\u0435\u0434\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u043D\u0438\u044F."] }, { key: "phys7-4.5", code: "4.5", title: "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0432\u043E\u0437\u0434\u0443\u0445\u0430", homework: "\u0411\u0440\u043E\u0441\u044C\u0442\u0435 \u043E\u0434\u043D\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u0440\u043E\u0432\u043D\u044B\u0439 \u0438 \u0441\u043A\u043E\u043C\u043A\u0430\u043D\u043D\u044B\u0439 \u043B\u0438\u0441\u0442 \u0431\u0443\u043C\u0430\u0433\u0438. \u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043B\u0438\u0441\u0442 \u0431\u0443\u043C\u0430\u0433\u0438 \u043F\u0430\u0434\u0430\u0435\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u0447\u0435\u043C \u0441\u043A\u043E\u043C\u043A\u0430\u043D\u043D\u044B\u0439 \u0442\u0430\u043A\u043E\u0439 \u0436\u0435 \u043B\u0438\u0441\u0442?", "\u0417\u0430\u0447\u0435\u043C \u0430\u0432\u0442\u043E\u043C\u043E\u0431\u0438\u043B\u044F\u043C \u043E\u0431\u0442\u0435\u043A\u0430\u0435\u043C\u0430\u044F \u0444\u043E\u0440\u043C\u0430?"] }, { key: "phys7-4.6", code: "4.6", title: "\u0421\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430, \u0433\u0434\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438, \u0438 \u043E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u0435\u0451 \u0440\u043E\u043B\u044C.", tasks: ["\u0416\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u044C \u043F\u0440\u0443\u0436\u0438\u043D\u044B 200 N/m, \u0443\u0434\u043B\u0438\u043D\u0435\u043D\u0438\u0435 5 cm. \u041A\u0430\u043A\u043E\u0432\u0430 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438?", "\u041F\u0440\u0443\u0436\u0438\u043D\u0443 \u0440\u0430\u0441\u0442\u044F\u043D\u0443\u043B\u0438 \u0441\u0438\u043B\u043E\u0439 6 N, \u043E\u043D\u0430 \u0443\u0434\u043B\u0438\u043D\u0438\u043B\u0430\u0441\u044C \u043D\u0430 3 cm. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 k."] }, { key: "phys7-4.7", code: "4.7", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430. \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0436\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0443\u0436\u0438\u043D\u044B", homework: "\u041E\u0444\u043E\u0440\u043C\u0438\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: F (N), \u0394l (m), k (N/m) \u0434\u043B\u044F \u0442\u0440\u0451\u0445 \u043E\u043F\u044B\u0442\u043E\u0432 \u0438 \u043F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0433\u0440\u0430\u0444\u0438\u043A.", tasks: ["\u0413\u0440\u0443\u0437 1 N \u0440\u0430\u0441\u0442\u044F\u043D\u0443\u043B \u043F\u0440\u0443\u0436\u0438\u043D\u0443 \u043D\u0430 2 cm, \u0433\u0440\u0443\u0437 2 N \u2014 \u043D\u0430 4 cm. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 k.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043E\u043F\u044B\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0442 \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0433\u0440\u0443\u0437\u0430\u043C\u0438?"] }, { key: "phys7-5.1", code: "5.1", title: "\u0427\u0442\u043E \u043C\u044B \u043F\u043E\u043D\u0438\u043C\u0430\u0435\u043C \u043F\u043E\u0434 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u043E\u0439?", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0440\u0430\u0431\u043E\u0442\u0443, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u0432\u044B \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0435\u0442\u0435, \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u044F \u0440\u044E\u043A\u0437\u0430\u043A (\u0435\u0433\u043E \u0432\u0435\u0441 \u2248 50 N) \u043D\u0430 \u0432\u044B\u0441\u043E\u0442\u0443 1 m.", tasks: ["\u042F\u0449\u0438\u043A \u0442\u044F\u043D\u0443\u0442 \u0441\u0438\u043B\u043E\u0439 50 N \u043D\u0430 4 m. \u041A\u0430\u043A\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u044E\u0442?", "\u0427\u0435\u043B\u043E\u0432\u0435\u043A \u0441\u0442\u043E\u0438\u0442 \u0441 \u0441\u0443\u043C\u043A\u043E\u0439 10 minutes. \u041A\u0430\u043A\u043E\u0432\u0430 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430?"] }, { key: "phys7-5.2", code: "5.2", title: "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0430\u0445 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u044D\u043D\u0435\u0440\u0433\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0446\u0435\u043D\u043D\u043E\u0441\u0442\u044C \u0438 \u043F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 100 kcal \u0432 \u0434\u0436\u043E\u0443\u043B\u0438.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u0442\u0435\u043B\u0430 \u043E\u0431\u043B\u0430\u0434\u0430\u044E\u0442 \u044D\u043D\u0435\u0440\u0433\u0438\u0435\u0439: \u043B\u0435\u0442\u044F\u0449\u0438\u0439 \u043C\u044F\u0447, \u0441\u0436\u0430\u0442\u0430\u044F \u043F\u0440\u0443\u0436\u0438\u043D\u0430, \u043A\u043D\u0438\u0433\u0430 \u043D\u0430 \u043F\u043E\u043B\u043A\u0435?", "\u0412 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?"] }, { key: "phys7-5.3", code: "5.3", title: "\u041A\u0430\u043A\u0438\u0435 \u0432\u0438\u0434\u044B \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044E\u0442?", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u043F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0443\u044E \u044D\u043D\u0435\u0440\u0433\u0438\u044E \u043D\u0430 \u0442\u0440\u0435\u0442\u044C\u0435\u043C \u044D\u0442\u0430\u0436\u0435 (h \u2248 9 m).", tasks: ["\u041C\u044F\u0447 1 kg \u043B\u0435\u0442\u0438\u0442 \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 10 m/s. \u0415\u0433\u043E \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", "\u041A\u043D\u0438\u0433\u0430 2 kg \u043D\u0430 \u043F\u043E\u043B\u043A\u0435 \u0432\u044B\u0441\u043E\u0442\u043E\u0439 5 m. \u041F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F (g \u2248 10 N/kg)?"] }, { key: "phys7-5.4", code: "5.4", title: "\u041F\u0435\u0440\u0435\u0434\u0430\u0447\u0430 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041E\u043F\u0438\u0448\u0438\u0442\u0435 3 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u0432\u0438\u0434\u0435\u043B\u0438 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0434\u043E\u043C\u0430.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0434\u044F\u0442 \u043F\u0440\u0438 \u043A\u0430\u0447\u0430\u043D\u0438\u0438 \u043C\u0430\u044F\u0442\u043D\u0438\u043A\u0430?", "\u0412\u043E \u0447\u0442\u043E \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u043F\u0440\u0438 \u0443\u0434\u0430\u0440\u0435 \u043C\u0430\u0448\u0438\u043D?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u043E\u0441\u0442\u0430\u043D\u0430\u0432\u043B\u0438\u0432\u0430\u0435\u0442\u0441\u044F?"] }, { key: "phys7-5.5", code: "5.5", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041F\u0440\u043E\u043A\u0430\u0442\u0438\u0442\u0435 \u0434\u0432\u0435 \u0438\u0433\u0440\u0443\u0448\u0435\u0447\u043D\u044B\u0435 \u043C\u0430\u0448\u0438\u043D\u043A\u0438 \u043D\u0430\u0432\u0441\u0442\u0440\u0435\u0447\u0443 \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0443. \u041E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u043F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u043E \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430 \u0438 \u043F\u043E\u0447\u0435\u043C\u0443.", tasks: ["\u041C\u0430\u0448\u0438\u043D\u0430 1000 kg \u0435\u0434\u0435\u0442 20 m/s. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u0435\u0451 \u0438\u043C\u043F\u0443\u043B\u044C\u0441?", "\u0427\u0442\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043B\u044E\u0431\u043E\u043C \u0441\u0442\u043E\u043B\u043A\u043D\u043E\u0432\u0435\u043D\u0438\u0438 \u2014 \u0438\u043C\u043F\u0443\u043B\u044C\u0441 \u0438\u043B\u0438 \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", "\u0417\u0430\u0447\u0435\u043C \u043C\u0430\u0448\u0438\u043D\u0435 \u0437\u043E\u043D\u0430 \u0434\u0435\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u0438?"] }, { key: "phys7-5.6", code: "5.6", title: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435, \u0437\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u043A\u0443\u043D\u0434 \u0432\u044B \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442\u0435\u0441\u044C \u043D\u0430 \u044D\u0442\u0430\u0436 (h \u2248 3 m), \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C (A = \u0432\u0435\u0441 \xB7 h).", tasks: ["\u0420\u0430\u0431\u043E\u0442\u0430 6000 J \u0441\u043E\u0432\u0435\u0440\u0448\u0435\u043D\u0430 \u0437\u0430 30 s. \u041C\u043E\u0449\u043D\u043E\u0441\u0442\u044C?", "\u041D\u0430\u0441\u043E\u0441 \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C\u044E 500 W \u0440\u0430\u0431\u043E\u0442\u0430\u043B 2 minutes. \u041A\u0430\u043A\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u043E\u043D \u0441\u043E\u0432\u0435\u0440\u0448\u0438\u043B?"] }, { key: "phys7-5.7", code: "5.7", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430. \u0420\u0430\u0431\u043E\u0442\u0430 \u043F\u0440\u0438 \u043F\u043E\u0434\u044A\u0451\u043C\u0435 \u0438 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u0438 \u0442\u0435\u043B\u0430", homework: "\u041E\u0444\u043E\u0440\u043C\u0438\u0442\u0435 \u043E\u0442\u0447\u0451\u0442 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B: \u0446\u0435\u043B\u044C, \u043F\u0440\u0438\u0431\u043E\u0440\u044B, \u0442\u0430\u0431\u043B\u0438\u0446\u0430, \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u044F, \u0432\u044B\u0432\u043E\u0434.", tasks: ["\u0411\u0440\u0443\u0441\u043E\u043A \u0432\u0435\u0441\u043E\u043C 2 N \u043F\u043E\u0434\u043D\u044F\u043B\u0438 \u043D\u0430 0,5 m. \u0420\u0430\u0431\u043E\u0442\u0430?", "\u0422\u043E\u0442 \u0436\u0435 \u0431\u0440\u0443\u0441\u043E\u043A \u043F\u0440\u043E\u0442\u0430\u0449\u0438\u043B\u0438 0,5 m, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B 0,6 N. \u0420\u0430\u0431\u043E\u0442\u0430?"] }, { key: "phys7-6.1", code: "6.1", title: "\u0421\u043E\u043B\u043D\u0446\u0435, \u0417\u0435\u043C\u043B\u044F \u0438 \u041B\u0443\u043D\u0430", homework: "\u041D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0440\u0438\u0441\u043E\u0432\u044B\u0432\u0430\u0439\u0442\u0435 \u041B\u0443\u043D\u0443 \u043A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0447\u0435\u0440 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 \u0444\u0430\u0437\u044B.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0430 \u0417\u0435\u043C\u043B\u0435 \u0441\u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u0434\u0435\u043D\u044C \u0438 \u043D\u043E\u0447\u044C?", "\u041A\u043E\u0433\u0434\u0430 \u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0435 \u0437\u0430\u0442\u043C\u0435\u043D\u0438\u0435?"] }, { key: "phys7-6.2", code: "6.2", title: "\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u043E\u0434\u0435\u043B\u044C \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B \u0438\u0437 \u0431\u0443\u043C\u0430\u0433\u0438 \u0438\u043B\u0438 \u043F\u043B\u0430\u0441\u0442\u0438\u043B\u0438\u043D\u0430 \u0441 \u043F\u043E\u0434\u043F\u0438\u0441\u044F\u043C\u0438.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u043B\u0430\u043D\u0435\u0442\u044B \u043F\u043E \u043F\u043E\u0440\u044F\u0434\u043A\u0443 \u043E\u0442 \u0421\u043E\u043B\u043D\u0446\u0430.", "\u041A\u0430\u043A\u0430\u044F \u043F\u043B\u0430\u043D\u0435\u0442\u0430 \u0441\u0430\u043C\u0430\u044F \u0431\u043E\u043B\u044C\u0448\u0430\u044F \u0438 \u043A\u0430\u043A\u0430\u044F \u0441\u0430\u043C\u0430\u044F \u0431\u043B\u0438\u0437\u043A\u0430\u044F \u043A \u0421\u043E\u043B\u043D\u0446\u0443?"] }, { key: "phys7-6.3", code: "6.3", title: "\u0412\u0441\u0435\u043B\u0435\u043D\u043D\u0430\u044F \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u0430\u043C\u0438 \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u043D\u043E\u0447\u043D\u043E\u043C \u043D\u0435\u0431\u0435 \u0411\u043E\u043B\u044C\u0448\u0443\u044E \u041C\u0435\u0434\u0432\u0435\u0434\u0438\u0446\u0443 \u0438 \u0437\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0435\u0451.", tasks: ["\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0441\u0432\u0435\u0442\u043E\u0432\u043E\u0439 \u0433\u043E\u0434?", "\u041A\u0430\u043A \u043D\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430\u0448\u0430 \u0433\u0430\u043B\u0430\u043A\u0442\u0438\u043A\u0430?"] }, { key: "phys7-6.4", code: "6.4", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0412\u0441\u0435\u043B\u0435\u043D\u043D\u043E\u0439", homework: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0440\u0430\u0441\u0441\u043A\u0430\u0437 \u043E \u043B\u044E\u0431\u043E\u0439 \u043A\u043E\u0441\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043C\u0438\u0441\u0441\u0438\u0438.", tasks: ["\u041A\u0442\u043E \u043F\u0435\u0440\u0432\u044B\u043C \u043F\u043E\u043B\u0435\u0442\u0435\u043B \u0432 \u043A\u043E\u0441\u043C\u043E\u0441 \u0438 \u043A\u043E\u0433\u0434\u0430?", "\u0417\u0430\u0447\u0435\u043C \u0440\u0430\u0434\u0438\u043E\u0442\u0435\u043B\u0435\u0441\u043A\u043E\u043F\u044B, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C \u043E\u043F\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0435?"] }, { key: "phys7-6.5", code: "6.5", title: "\u041A\u0440\u0430\u0442\u043A\u0430\u044F \u0438\u0441\u0442\u043E\u0440\u0438\u044F \u0440\u0430\u0437\u0432\u0438\u0442\u0438\u044F \u043D\u0430\u0443\u043A\u0438 \u0430\u0441\u0442\u0440\u043E\u043D\u043E\u043C\u0438\u0438", homework: "\u041F\u043E\u0441\u0435\u0442\u0438\u0442\u0435 (\u0438\u043B\u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0435) \u043E\u0431\u0441\u0435\u0440\u0432\u0430\u0442\u043E\u0440\u0438\u044E \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u0430 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 5 \u0444\u0430\u043A\u0442\u043E\u0432 \u043E \u043D\u0435\u0439.", tasks: ["\u0427\u0435\u043C \u043C\u043E\u0434\u0435\u043B\u044C \u041A\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043C\u043E\u0434\u0435\u043B\u0438 \u041F\u0442\u043E\u043B\u0435\u043C\u0435\u044F?", "\u0427\u0435\u043C \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u0442 \u041C\u0438\u0440\u0437\u043E \u0423\u043B\u0443\u0433\u0431\u0435\u043A?"] }] }, { id: "chemistry-7", subject: "chemistry", grade: 7, topics: [{ key: "chem7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0445\u0438\u043C\u0438\u044F?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u0438\u043B\u0438 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u0432 \u043D\u0438\u0445 \u0433\u043B\u0430\u0432\u043D\u043E\u0435.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0434\u0430 \u0432 \u0441\u0442\u0430\u043A\u0430\u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0430 \u0446\u0432\u0435\u0442, \u043A\u043E\u0433\u0434\u0430 \u0442\u0443\u0434\u0430 \u043E\u043F\u0443\u0441\u0442\u0438\u043B\u0438 \u0447\u0430\u0439\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442\u0438\u043A?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u043D\u0430\u043D\u0438\u0435 \u0445\u0438\u043C\u0438\u0438 \u0432\u0430\u0436\u043D\u043E \u0432 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438?"] }, { key: "chem7-1.2", code: "1.2", title: "\u041A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F", homework: "\u041E\u0442\u043C\u0435\u0442\u044C\u0442\u0435 \u0432 \u0430\u043D\u043A\u0435\u0442\u0435 \u0438\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430, \u043A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0443 \u0432\u0430\u0441 \u0443\u0436\u0435 \u0435\u0441\u0442\u044C, \u0430 \u043A\u0430\u043A\u0438\u0435 \u0445\u043E\u0442\u0438\u0442\u0435 \u0440\u0430\u0437\u0432\u0438\u0442\u044C.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443\u0447\u0451\u043D\u044B\u043C \u0432\u0430\u0436\u043D\u043E \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0434\u0440\u0443\u0433 \u0441 \u0434\u0440\u0443\u0433\u043E\u043C \u0438 \u0431\u044B\u0442\u044C \u0447\u0435\u0441\u0442\u043D\u044B\u043C\u0438?", "\u0427\u0442\u043E \u0437\u043D\u0430\u0447\u0438\u0442 \u0431\u044B\u0442\u044C \u0441\u043A\u0435\u043F\u0442\u0438\u0447\u043D\u044B\u043C \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C?"] }, { key: "chem7-1.3", code: "1.3", title: "\u041D\u0430\u0443\u0447\u043D\u044B\u0435 \u043C\u0435\u0442\u043E\u0434\u044B \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u044F \u0445\u0438\u043C\u0438\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043B\u0430\u043D \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F: \xAB\u0413\u0434\u0435 \u0431\u044B\u0441\u0442\u0440\u0435\u0435 \u0441\u043E\u0445\u043D\u0435\u0442 \u0431\u0435\u043B\u044C\u0451 \u2014 \u043D\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0438\u043B\u0438 \u0432 \u0442\u0435\u043D\u0438?\xBB", tasks: ["\u0412 \u043E\u043F\u044B\u0442\u0435 \xAB\u0432\u043B\u0438\u044F\u0435\u0442 \u043B\u0438 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0432\u043E\u0434\u044B \u043D\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u0430\u0445\u0430\u0440\u0430\xBB \u043D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435.", "\u0427\u0435\u043C \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u0430\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0430\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0439?"] }, { key: "chem7-1.4", code: "1.4", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041F\u0435\u0440\u0435\u0440\u0438\u0441\u0443\u0439\u0442\u0435 5 \u0437\u043D\u0430\u043A\u043E\u0432 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C \u043F\u0440\u0438 \u043A\u0430\u0436\u0434\u043E\u043C.", tasks: ["\u0418\u0437\u043C\u0430\u0438\u043B\u0443 \u043D\u0443\u0436\u043D\u043E \u043D\u0430\u0433\u0440\u0435\u0442\u044C \u0441\u043F\u0438\u0440\u0442 \u0432 \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0435. \u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0434\u0432\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438.", "\u0427\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u0430 \u043F\u043E\u043F\u0430\u043B\u0430 \u043D\u0430 \u043A\u043E\u0436\u0443?"] }, { key: "chem7-1.5", code: "1.5", title: "\u041E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u043E\u0435 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041E\u0442\u0432\u0435\u0442\u044C\u0442\u0435 \u043D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \xAB\u041F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0435\xBB \u0433\u043B\u0430\u0432\u044B 1 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", tasks: ["\u0421\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443: \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043B\u043E\u0436\u043A\u0430 \u0432 \u0433\u043E\u0440\u044F\u0447\u0435\u043C \u0447\u0430\u0435 \u043D\u0430\u0433\u0440\u0435\u043B\u0430\u0441\u044C \u0441\u0438\u043B\u044C\u043D\u0435\u0435 \u0434\u0435\u0440\u0435\u0432\u044F\u043D\u043D\u043E\u0439.", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438: \u0441\u0442\u0430\u043A\u0430\u043D, \u0442\u0440\u0435\u043D\u043E\u0433\u0443, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0443, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0432\u044B\u043F\u0430\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u0447\u0430\u0448\u043A\u0443."] }, { key: "chem7-2.1", code: "2.1", title: "\u0421\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u043F\u043E 2 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u0442\u0432\u0451\u0440\u0434\u044B\u0445, \u0436\u0438\u0434\u043A\u0438\u0445 \u0438 \u0433\u0430\u0437\u043E\u043E\u0431\u0440\u0430\u0437\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0443.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0440\u0438 \u0430\u0433\u0440\u0435\u0433\u0430\u0442\u043D\u044B\u0445 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0433\u0430\u0437 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u0432\u0435\u0441\u044C \u043E\u0431\u044A\u0451\u043C \u0441\u043E\u0441\u0443\u0434\u0430?", "\u0412 \u043A\u0430\u043A\u043E\u043C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0447\u0430\u0441\u0442\u0438\u0446\u044B \u0440\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u044B \u0442\u0435\u0441\u043D\u0435\u0435 \u0432\u0441\u0435\u0433\u043E?"] }, { key: "chem7-2.2", code: "2.2", title: "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043A\u0443\u0431\u0438\u043A \u043B\u044C\u0434\u0430 \u043D\u0430 \u0442\u0430\u0440\u0435\u043B\u043A\u0443 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F: \u043A\u043E\u0433\u0434\u0430 \u043E\u043D \u0440\u0430\u0441\u0442\u0430\u0435\u0442 \u0438 \u043A\u043E\u0433\u0434\u0430 \u0432\u044B\u0441\u043E\u0445\u043D\u0435\u0442 \u043B\u0443\u0436\u0438\u0446\u0430.", tasks: ["\u041A\u0430\u043A \u043D\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u0435\u0440\u0435\u0445\u043E\u0434 \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u0432 \u0433\u0430\u0437?", "\u041C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u043B\u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u044B \u0432\u043E\u0434\u044B \u043F\u0440\u0438 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u043D\u0438\u0438?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u0435\u0440\u043A\u0430\u043B\u043E \u0432 \u0432\u0430\u043D\u043D\u043E\u0439 \u0437\u0430\u043F\u043E\u0442\u0435\u0432\u0430\u0435\u0442?"] }, { key: "chem7-3.1", code: "3.1", title: "\u0425\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u044B", homework: "\u0412\u044B\u043F\u0438\u0448\u0438\u0442\u0435 10 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0435\u0441\u0442\u044C \u0432 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430, \u0441 \u0438\u0445 \u0441\u0438\u043C\u0432\u043E\u043B\u0430\u043C\u0438.", tasks: ["\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0441\u0438\u043C\u0432\u043E\u043B\u044B: \u0436\u0435\u043B\u0435\u0437\u043E, \u043D\u0430\u0442\u0440\u0438\u0439, \u0441\u0435\u0440\u0430, \u0441\u0435\u0440\u0435\u0431\u0440\u043E, \u0446\u0438\u043D\u043A, \u0430\u0437\u043E\u0442.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0441\u0438\u043C\u0432\u043E\u043B \u0441\u0435\u0440\u0435\u0431\u0440\u0430 Ag?"] }, { key: "chem7-3.2", code: "3.2", title: "\u0410\u0442\u043E\u043C \u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430", homework: "\u0412 3D-\u0441\u0442\u0443\u0434\u0438\u0438 \u0441\u043E\u0431\u0435\u0440\u0438\u0442\u0435 H\u2082O, CO\u2082, NH\u2083 \u0438 CH\u2084. \u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0438\u0445 \u0441\u0445\u0435\u043C\u044B \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", tasks: ["\u041A\u0430\u043A\u043E\u0432\u0430 \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C \u0443\u0433\u043B\u0435\u0440\u043E\u0434\u0430? \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0430\u0442\u043E\u043C\u043E\u0432 \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u043E\u043D \u043F\u0440\u0438\u0441\u043E\u0435\u0434\u0438\u043D\u0438\u0442?", "\u041A\u0430\u043A\u043E\u0432\u0430 \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C \u0430\u0437\u043E\u0442\u0430? \u041A\u0430\u043A\u0430\u044F \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0441 \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u043E\u043C?", "\u0418\u0437 \u043A\u0430\u043A\u0438\u0445 \u0430\u0442\u043E\u043C\u043E\u0432 \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u0432\u043E\u0434\u044B?"] }, { key: "chem7-3.3", code: "3.3", title: "\u041C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438\u0437 \u043C\u0435\u0442\u0430\u043B\u043B\u0430 \u0438 5 \u2014 \u0438\u0437 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432. \u041A\u0430\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043B\u0438, \u0447\u0442\u043E\u0431\u044B \u0438\u0445 \u043E\u0442\u043B\u0438\u0447\u0438\u0442\u044C?", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432.", "\u0418\u0437 \u043A\u0430\u043A\u0438\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u043F\u043E\u0432\u0430\u0440\u0435\u043D\u043D\u0430\u044F \u0441\u043E\u043B\u044C?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u0434\u0435\u043B\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0434\u0438?"] }, { key: "chem7-3.4", code: "3.4", title: "\u041F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0442\u0430\u0431\u043B\u0438\u0446\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 5 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432 \u0438 5 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432, \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 \u043D\u043E\u043C\u0435\u0440\u0430 \u0438 \u0441\u0438\u043C\u0432\u043E\u043B\u044B.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u043D\u043E\u043C\u0435\u0440 \u0443 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430 \u0438 \u0447\u0442\u043E \u043E\u043D \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442?", "\u0413\u0434\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 \u043D\u0430\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u043C\u0435\u0442\u0430\u043B\u043B\u044B, \u0430 \u0433\u0434\u0435 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B?"] }, { key: "chem7-3.5", code: "3.5", title: "\u0421\u043B\u043E\u0436\u043D\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 (\u0441\u043E\u043B\u044C, \u0441\u043E\u0434\u0430, \u0432\u043E\u0434\u0430) \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0444\u043E\u0440\u043C\u0443\u043B\u044B.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F: CaO, NaCl, FeS\u2082, CO.", "\u0427\u0435\u043C \u043F\u0440\u043E\u0441\u0442\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0441\u043B\u043E\u0436\u043D\u043E\u0433\u043E?"] }, { key: "chem7-3.6", code: "3.6", title: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u043C, \u043F\u043E\u0447\u0435\u043C\u0443 \u0441\u043E\u043B\u044C \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u0430, \u0445\u043E\u0442\u044F \u043D\u0430\u0442\u0440\u0438\u0439 \u0438 \u0445\u043B\u043E\u0440 \u043E\u043F\u0430\u0441\u043D\u044B.", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u043E\u0434\u044B \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0438\u0437 5 g \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u0438 40 g \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430?", "\u0415\u0441\u0442\u044C 5 g \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u0438 50 g \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0432\u043E\u0434\u044B \u0438 \u0447\u0442\u043E \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F?"] }, { key: "chem7-3.7", code: "3.7", title: "\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0435 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u0412 3D-\u0441\u0442\u0443\u0434\u0438\u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 6 \u0440\u0435\u0430\u043A\u0446\u0438\u0439 \u0438 \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", tasks: ["\u0423\u0440\u0430\u0432\u043D\u044F\u0439\u0442\u0435: H\u2082 + O\u2082 \u2192 H\u2082O", "\u0427\u0442\u043E \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0433\u043E\u0440\u0435\u043D\u0438\u0438 \u043C\u0435\u0442\u0430\u043D\u0430 CH\u2084?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043C\u0430\u0441\u0441\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0434\u043E \u0438 \u043F\u043E\u0441\u043B\u0435 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u0430?"] }, { key: "chem7-4.1", code: "4.1", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E 5 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430\u043C \u0441\u0430\u0445\u0430\u0440 \u0438 \u0441\u043E\u043B\u044C.", tasks: ["\u041C\u0430\u0441\u0441\u0430 \u0442\u0435\u043B\u0430 54 g, \u043E\u0431\u044A\u0451\u043C 20 cm\xB3. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0433\u0430\u0437\u044B \u0438\u043C\u0435\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0443\u044E \u043F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C, \u0447\u0435\u043C \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u0438 \u0442\u0432\u0451\u0440\u0434\u044B\u0435 \u0442\u0435\u043B\u0430?"] }, { key: "chem7-4.2", code: "4.2", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432 \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0438 3 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430.", tasks: ["\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B \u043F\u043E \u0431\u043B\u0435\u0441\u043A\u0443 \u0438 \u0442\u0435\u043F\u043B\u043E\u043F\u0440\u043E\u0432\u043E\u0434\u043D\u043E\u0441\u0442\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u0434\u0435\u043B\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0434\u0438 \u0438\u043B\u0438 \u0430\u043B\u044E\u043C\u0438\u043D\u0438\u044F?"] }, { key: "chem7-4.3", code: "4.3", title: "\u0412\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u044B\u0435 \u0432 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438, \u0438 \u0438\u0445 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: 5 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0434\u043E\u043C\u0430 \u2014 \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442 \u2014 \u043A\u0430\u043A \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E \u0445\u0440\u0430\u043D\u0438\u0442\u044C.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u0441\u043C\u0435\u0448\u0438\u0432\u0430\u0442\u044C \u043E\u0442\u0431\u0435\u043B\u0438\u0432\u0430\u0442\u0435\u043B\u044C \u0438 \u0441\u0440\u0435\u0434\u0441\u0442\u0432\u043E \u0434\u043B\u044F \u0447\u0438\u0441\u0442\u043A\u0438 \u0441 \u043A\u0438\u0441\u043B\u043E\u0442\u043E\u0439?", "\u0417\u0430\u0447\u0435\u043C \u0441\u043E\u0434\u0443 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u044E\u0442 \u0432 \u0442\u0435\u0441\u0442\u043E?"] }, { key: "chem7-5.1", code: "5.1", title: "\u041A\u0438\u0441\u043B\u043E\u0442\u044B", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0438\u0437 \u0441\u043E\u043A\u0430 \u043A\u0440\u0430\u0441\u043D\u043E\u043A\u043E\u0447\u0430\u043D\u043D\u043E\u0439 \u043A\u0430\u043F\u0443\u0441\u0442\u044B \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A \u0438 \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0441\u043E\u0434\u044B. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0446\u0432\u0435\u0442\u0430.", tasks: ["\u041A\u0430\u043A \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u043B\u0430\u043A\u043C\u0443\u0441\u0430 \u0443\u0437\u043D\u0430\u0442\u044C \u043A\u0438\u0441\u043B\u043E\u0442\u0443?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0438\u0437 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438 \u043D\u0430 \u0432\u043A\u0443\u0441?"] }, { key: "chem7-5.2", code: "5.2", title: "\u041E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u044F", homework: "\u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u043D\u044B\u043C \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u043C \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u043C\u044B\u043B\u0430. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u0441 \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u043C \u0441\u043E\u043A\u043E\u043C.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u0446\u0432\u0435\u0442 \u0434\u0430\u0451\u0442 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D \u0432 \u0449\u0451\u043B\u043E\u0447\u0438?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u043C\u044B\u043B\u0430 \u0441\u043A\u043E\u043B\u044C\u0437\u043A\u0438\u0439?", "\u0427\u0442\u043E \u043E\u0431\u0449\u0435\u0433\u043E \u0443 \u043A\u0438\u0441\u043B\u043E\u0442 \u0438 \u0449\u0435\u043B\u043E\u0447\u0435\u0439 \u043F\u043E \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438?"] }, { key: "chem7-5.3", code: "5.3", title: "\u0418\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u044B", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u043D\u044B\u0439 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043C \u0443\u043A\u0441\u0443\u0441, \u0441\u043E\u0434\u0443, \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A, \u043C\u044B\u043B\u043E.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u0446\u0432\u0435\u0442 \u0431\u0443\u0434\u0435\u0442 \u0443 \u043B\u0430\u043A\u043C\u0443\u0441\u0430 \u0432 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0435 \u0449\u0451\u043B\u043E\u0447\u0438? \u0410 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D\u0430?", "\u041A\u0430\u043A \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0434\u043E\u043C\u0430?"] }, { key: "chem7-5.4", code: "5.4", title: "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0435\u043B\u044C pH", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 3 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0430\u0445 (\u0448\u0430\u043C\u043F\u0443\u043D\u044C, \u043C\u044B\u043B\u043E, \u0441\u043E\u043A) \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 pH \u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435.", tasks: ["\u0420\u0430\u0441\u0442\u0432\u043E\u0440 \u0438\u043C\u0435\u0435\u0442 pH 3. \u041A\u0430\u043A\u0430\u044F \u044D\u0442\u043E \u0441\u0440\u0435\u0434\u0430?", "\u0420\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E pH: \u043C\u044B\u043B\u043E (10), \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A (2), \u0432\u043E\u0434\u0430 (7)."] }, { key: "chem7-5.5", code: "5.5", title: "\u041D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F", homework: "\u0414\u043E\u0431\u0430\u0432\u044C\u0442\u0435 \u0441\u043E\u0434\u0443 \u0432 \u0443\u043A\u0441\u0443\u0441 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0432\u0438\u0434\u0438\u0442\u0435. \u042D\u0442\u043E \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F \u0441 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C CO\u2082.", tasks: ["\u0427\u0442\u043E \u043E\u0431\u0440\u0430\u0437\u0443\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0449\u0451\u043B\u043E\u0447\u044C\u044E?", "\u0414\u043E\u043F\u0438\u0448\u0438\u0442\u0435: HCl + NaOH \u2192 \u2026 + \u2026", "\u041A\u0430\u043A \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430 \u043E\u0442 \u0438\u0437\u0436\u043E\u0433\u0438?"] }, { key: "chem7-6.1", code: "6.1", title: "\u0421\u043C\u0435\u0441\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u0441\u043C\u0435\u0441\u0435\u0439 \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u043D\u0430 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435 \u0438 \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435.", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u043E\u0439 \u0438 \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u043E\u0439 \u0441\u043C\u0435\u0441\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0437\u0434\u0443\u0445 \u2014 \u044D\u0442\u043E \u0441\u043C\u0435\u0441\u044C, \u0430 \u043D\u0435 \u0441\u043B\u043E\u0436\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E?"] }, { key: "chem7-6.2", code: "6.2", title: "\u0420\u0430\u0437\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432, \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0438 \u0441\u043C\u0435\u0441\u0435\u0439", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u0438\u0437 9 \u043F\u0440\u0438\u043C\u0435\u0440\u043E\u0432: \u043F\u043E 3 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0438 \u0441\u043C\u0435\u0441\u0438.", tasks: ["\u0420\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435: \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434, \u0432\u043E\u0434\u0430, \u0432\u043E\u0437\u0434\u0443\u0445, \u0436\u0435\u043B\u0435\u0437\u043E, \u0441\u043E\u043B\u044C, \u043C\u043E\u0440\u0441\u043A\u0430\u044F \u0432\u043E\u0434\u0430.", "\u0427\u0435\u043C \u0441\u043C\u0435\u0441\u044C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0441\u043B\u043E\u0436\u043D\u043E\u0433\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?"] }, { key: "chem7-6.3", code: "6.3", title: "\u0420\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0441\u043C\u0435\u0441\u0435\u0439", homework: "\u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u0441\u043C\u0435\u0441\u044C \u0441\u043E\u043B\u0438 \u0438 \u043F\u0435\u0441\u043A\u0430, \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u043A\u0430\u0436\u0434\u044B\u0439 \u0448\u0430\u0433.", tasks: ["\u041A\u0430\u043A \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043C\u0435\u0441\u044C \u043F\u0435\u0441\u043A\u0430, \u0441\u043E\u043B\u0438 \u0438 \u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0445 \u043E\u043F\u0438\u043B\u043E\u043A?", "\u041A\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0447\u0438\u0441\u0442\u0443\u044E \u0432\u043E\u0434\u0443 \u0438\u0437 \u0441\u043E\u043B\u0451\u043D\u043E\u0439?"] }, { key: "chem7-6.4", code: "6.4", title: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u044B", homework: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 5 % \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0441\u043E\u043B\u0438: 5 g \u0441\u043E\u043B\u0438 \u0438 95 g \u0432\u043E\u0434\u044B. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0430\u0441\u0447\u0451\u0442.", tasks: ["\u0412 90 g \u0432\u043E\u0434\u044B \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043B\u0438 10 g \u0441\u043E\u043B\u0438. \u041C\u0430\u0441\u0441\u043E\u0432\u0430\u044F \u0434\u043E\u043B\u044F \u0441\u043E\u043B\u0438?", "\u0427\u0442\u043E \u0432 \u0441\u043B\u0430\u0434\u043A\u043E\u043C \u0447\u0430\u0435 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0435\u043B\u044C, \u0430 \u0447\u0442\u043E \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E?"] }, { key: "chem7-6.5", code: "6.5", title: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043C\u043E\u0441\u0442\u044C", homework: "\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u043E\u0436\u0435\u043A \u0441\u0430\u0445\u0430\u0440\u0430 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0441\u044F \u0432 \u0441\u0442\u0430\u043A\u0430\u043D\u0435 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0439 \u0438 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u044B.", tasks: ["\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u044B\u0439 \u0440\u0430\u0441\u0442\u0432\u043E\u0440?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u044B\u0431\u0430\u043C \u0432 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u0435 \u0442\u0440\u0443\u0434\u043D\u0435\u0435 \u0434\u044B\u0448\u0430\u0442\u044C?"] }] }, { id: "biology-7", subject: "biology", grade: 7, topics: [{ key: "bio7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u044F?", homework: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u043E\u0431 \u0418\u0431\u043D \u0421\u0438\u043D\u043E \u0438\u043B\u0438 \u043E \u0434\u0440\u0443\u0433\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C-\u0431\u0438\u043E\u043B\u043E\u0433\u0435.", tasks: ["\u0421\u043E\u043E\u0442\u043D\u0435\u0441\u0438\u0442\u0435 \u0443\u0447\u0451\u043D\u044B\u0445 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u044F: \u0418\u0431\u043D \u0421\u0438\u043D\u043E, \u041F\u0430\u0432\u043B\u043E\u0432, \u041F\u0430\u0441\u0442\u0435\u0440, \u0413\u0430\u0440\u0432\u0435\u0439, \u041B\u0435\u0432\u0435\u043D\u0433\u0443\u043A.", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u044F\u0432\u043B\u0435\u043D\u0438\u044F."] }, { key: "bio7-1.2", code: "1.2", title: "\u041A\u0430\u043A\u0438\u043C\u0438 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430\u043C\u0438 \u0434\u043E\u043B\u0436\u0435\u043D \u043E\u0431\u043B\u0430\u0434\u0430\u0442\u044C \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C?", homework: "\u041F\u043E\u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 3 \u0434\u043D\u044F \u0437\u0430 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435\u043C \u0438\u043B\u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u043C \u0438 \u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u043D\u0435\u0432\u043D\u0438\u043A \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0439.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0438 \u041F\u0430\u0441\u0442\u0435\u0440\u0443 \u043E\u043F\u0440\u043E\u0432\u0435\u0440\u0433\u043D\u0443\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u0441\u0430\u043C\u043E\u0437\u0430\u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u0430\u0436\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u043E\u043F\u044B\u0442\u043E\u043C?"] }, { key: "bio7-1.3", code: "1.3", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u043D\u0430\u0432\u044B\u043A\u0438 \u0438 \u043C\u0435\u0442\u043E\u0434\u044B \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F", homework: "\u041F\u0440\u043E\u0440\u0430\u0441\u0442\u0438\u0442\u0435 2 \u0444\u0430\u0441\u043E\u043B\u0438: \u043D\u0430 \u0441\u0432\u0435\u0442\u0443 \u0438 \u0432 \u0448\u043A\u0430\u0444\u0443. \u0427\u0435\u0440\u0435\u0437 \u043D\u0435\u0434\u0435\u043B\u044E \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435.", tasks: ["\u041E\u043F\u044B\u0442: \xAB\u0412\u043B\u0438\u044F\u0435\u0442 \u043B\u0438 \u0441\u0432\u0435\u0442 \u043D\u0430 \u0440\u043E\u0441\u0442 \u0444\u0430\u0441\u043E\u043B\u0438?\xBB \u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435.", "\u0417\u0430\u0447\u0435\u043C \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0433\u0440\u0443\u043F\u043F\u0430?"] }, { key: "bio7-1.4", code: "1.4", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0430\u043C\u044F\u0442\u043A\u0443 \u0438\u0437 5 \u043F\u0440\u0430\u0432\u0438\u043B \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0434\u043B\u044F \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0430 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0435 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438.", "\u0427\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u0440\u0430\u0437\u0431\u0438\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E?"] }, { key: "bio7-1.5", code: "1.5", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043B\u0443\u043F\u0443, \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F \u0438 \u0447\u0430\u0448\u043A\u0443 \u041F\u0435\u0442\u0440\u0438.", tasks: ["\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u043D\u0443\u0436\u043D\u043E \u043F\u043E\u043A\u0440\u043E\u0432\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E?", "\u0427\u0435\u043C \u043B\u0443\u043F\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F\u0430?"] }, { key: "bio7-1.6", code: "1.6", title: "\u041D\u0430\u0443\u043A\u0430 \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0441\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438 \u0432 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0435 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0435\u0451 \u043F\u043E\u043B\u044C\u0437\u0443.", tasks: ["\u0414\u043B\u044F \u043A\u0430\u043A\u0438\u0445 \u0446\u0435\u043B\u0435\u0439 \u043C\u043E\u0436\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C 3D-\u043F\u0435\u0447\u0430\u0442\u044C \u0432 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438 \u0438 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0435?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0435\u0440\u0435\u0441\u0430\u0434\u043A\u0430 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u0440\u0438\u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F?"] }, { key: "bio7-2.1", code: "2.1", title: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0435 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0443 \u043D\u0435\u0433\u043E \u0432\u0441\u0435 7 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u043E\u0433\u043E.", tasks: ["\u041F\u0435\u0440\u0435\u0447\u0438\u0441\u043B\u0438\u0442\u0435 7 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u0421\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u043B\u0438 \u0432\u044B\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u043D\u0435\u043F\u0435\u0440\u0435\u0432\u0430\u0440\u0435\u043D\u043D\u044B\u0445 \u043E\u0441\u0442\u0430\u0442\u043A\u043E\u0432 \u043F\u0438\u0449\u0438 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C (\u044D\u043A\u0441\u043A\u0440\u0435\u0446\u0438\u0435\u0439)? \u041F\u043E\u0447\u0435\u043C\u0443?"] }, { key: "bio7-2.2", code: "2.2", title: "\u041A\u043B\u0435\u0442\u043A\u0430 \u2014 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043D\u043E-\u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0435\u0434\u0438\u043D\u0438\u0446\u0430", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u043A\u043B\u0435\u0442\u043A\u0443 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 5 \u043E\u0440\u0433\u0430\u043D\u043E\u0438\u0434\u043E\u0432.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0447\u0430\u0441\u0442\u044C \u043A\u043B\u0435\u0442\u043A\u0438 \u0445\u0440\u0430\u043D\u0438\u0442 \u0414\u041D\u041A?", "\u0417\u0430\u0447\u0435\u043C \u043A\u043B\u0435\u0442\u043A\u0435 \u043C\u0438\u0442\u043E\u0445\u043E\u043D\u0434\u0440\u0438\u0438?", "\u041A\u0442\u043E \u0432\u043F\u0435\u0440\u0432\u044B\u0435 \u043E\u043F\u0438\u0441\u0430\u043B \u043A\u043B\u0435\u0442\u043A\u0443?"] }, { key: "bio7-2.3", code: "2.3", title: "\u0420\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043E\u043A.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043E\u0442\u043B\u0438\u0447\u0438\u044F \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043A\u0438 \u043E\u0442 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439.", "\u0413\u0434\u0435 \u0432 \u043A\u043B\u0435\u0442\u043A\u0435 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435 \u043D\u0435 \u043F\u0430\u0434\u0430\u0435\u0442 \u0431\u0435\u0437 \u0441\u043A\u0435\u043B\u0435\u0442\u0430?"] }, { key: "bio7-2.4", code: "2.4", title: "\u0424\u0443\u043D\u043A\u0446\u0438\u0438 \u043A\u043B\u0435\u0442\u043E\u043A", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 3 \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0444\u0443\u043D\u043A\u0446\u0438\u044E.", tasks: ["\u041A\u0430\u043A \u0444\u043E\u0440\u043C\u0430 \u044D\u0440\u0438\u0442\u0440\u043E\u0446\u0438\u0442\u0430 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u0435\u043C\u0443 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F?"] }, { key: "bio7-2.5", code: "2.5", title: "\u041E\u0442 \u043A\u043B\u0435\u0442\u043A\u0438 \u043A \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0443", homework: "\u0417\u0430\u043F\u043E\u043B\u043D\u0438\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0435 \u043E\u0440\u0433\u0430\u043D\u044B \u2014 \u0444\u0443\u043D\u043A\u0446\u0438\u044F (6 \u0441\u0438\u0441\u0442\u0435\u043C).", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434 \u043A \u043A\u043B\u0435\u0442\u043A\u0430\u043C?", "\u0420\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043F\u043E \u043F\u043E\u0440\u044F\u0434\u043A\u0443: \u043E\u0440\u0433\u0430\u043D, \u043A\u043B\u0435\u0442\u043A\u0430, \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C, \u0442\u043A\u0430\u043D\u044C, \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432."] }, { key: "bio7-2.6", code: "2.6", title: "\u041E\u043F\u043E\u0440\u043D\u043E-\u0434\u0432\u0438\u0433\u0430\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0443 \u0441\u0435\u0431\u044F 5 \u0441\u0443\u0441\u0442\u0430\u0432\u043E\u0432 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u0438\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u043E\u043D\u0438 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u044E\u0442.", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u0441\u0442\u0435\u0439 \u0443 \u0432\u0437\u0440\u043E\u0441\u043B\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430?", "\u041A\u0430\u043A\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u044B \u0437\u0430\u0449\u0438\u0449\u0430\u044E\u0442 \u0440\u0451\u0431\u0440\u0430?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E\u0433\u043E \u0438 \u043D\u0435\u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E\u0433\u043E \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u043A\u043E\u0441\u0442\u0435\u0439."] }, { key: "bio7-2.7", code: "2.7", title: "\u041A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0438\u0440\u0443\u044E\u0442 \u043C\u044B\u0448\u0446\u044B?", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043B\u0430\u0434\u043E\u043D\u044C \u043D\u0430 \u043F\u043B\u0435\u0447\u043E \u0438 \u0441\u0433\u0438\u0431\u0430\u0439\u0442\u0435 \u0440\u0443\u043A\u0443: \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0435\u0442\u0435 \u0432 \u0431\u0438\u0446\u0435\u043F\u0441\u0435 \u0438 \u0442\u0440\u0438\u0446\u0435\u043F\u0441\u0435.", tasks: ["\u0412 \u043A\u0430\u043A\u043E\u043C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0433\u043B\u0430\u0432\u0430\u044F \u0438 \u0434\u0432\u0443\u0433\u043B\u0430\u0432\u0430\u044F \u043C\u044B\u0448\u0446\u044B \u0431\u0435\u0434\u0440\u0430 \u043F\u0440\u0438 \u0441\u0433\u0438\u0431\u0430\u043D\u0438\u0438 \u043A\u043E\u043B\u0435\u043D\u0430?", "\u042F\u0432\u043B\u044F\u044E\u0442\u0441\u044F \u043B\u0438 \u043E\u043D\u0438 \u0430\u043D\u0442\u0430\u0433\u043E\u043D\u0438\u0441\u0442\u0430\u043C\u0438?"] }, { key: "bio7-2.8", code: "2.8", title: "\u0414\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u0443\u0447\u0451\u043D\u044B\u0445, \u0438\u0437\u0443\u0447\u0430\u044E\u0449\u0438\u0445 \u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u043E\u0431 \u043E\u0434\u043D\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C: \u0433\u043E\u0434\u044B \u0436\u0438\u0437\u043D\u0438, \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u0435, \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", tasks: ["\u0427\u0442\u043E \u043E\u0442\u043A\u0440\u044B\u043B \u0423\u0438\u043B\u044C\u044F\u043C \u0413\u0430\u0440\u0432\u0435\u0439?", "\u0427\u0435\u043C \u0430\u043D\u0430\u0442\u043E\u043C\u0438\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0444\u0438\u0437\u0438\u043E\u043B\u043E\u0433\u0438\u0438?"] }, { key: "bio7-3.1", code: "3.1", title: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432", homework: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0439\u0442\u0435 10 \u0437\u043D\u0430\u043A\u043E\u043C\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043F\u043E \u0446\u0430\u0440\u0441\u0442\u0432\u0430\u043C.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 5 \u0446\u0430\u0440\u0441\u0442\u0432 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u0417\u0430\u0447\u0435\u043C \u043D\u0443\u0436\u043D\u0430 \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F?"] }, { key: "bio7-3.2", code: "3.2", title: "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0432\u0438\u0434?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043B\u0430\u0442\u0438\u043D\u0441\u043A\u0438\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F 5 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u0441\u0435 \u043F\u043E\u0440\u043E\u0434\u044B \u0441\u043E\u0431\u0430\u043A \u2014 \u043E\u0434\u0438\u043D \u0432\u0438\u0434?", "\u0427\u0442\u043E \u0437\u043D\u0430\u0447\u0438\u0442 Homo sapiens?"] }, { key: "bio7-3.3", code: "3.3", title: "\u041F\u043E\u0447\u0435\u043C\u0443 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u0434\u0440\u0443\u0433 \u043E\u0442 \u0434\u0440\u0443\u0433\u0430?", homework: "\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0441\u0435\u0431\u044F \u0438 \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u043E\u0432 \u043F\u043E 5 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C: \u043A\u0430\u043A\u0438\u0435 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435?", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u0438 \u043D\u0435\u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u0438\u0437\u043C\u0435\u043D\u0447\u0438\u0432\u043E\u0441\u0442\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u043E\u0434\u043D\u043E\u0433\u043E \u0441\u043E\u0440\u0442\u0430 \u0432 \u0440\u0430\u0437\u043D\u044B\u0445 \u043F\u043E\u043B\u044F\u0445 \u0440\u0430\u0437\u043D\u043E\u0439 \u0432\u044B\u0441\u043E\u0442\u044B?"] }, { key: "bio7-3.4", code: "3.4", title: "\u041A\u0430\u043A \u043C\u044B \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u043C \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F?", homework: "\u0421\u043E\u0431\u0435\u0440\u0438\u0442\u0435 \u0433\u0435\u0440\u0431\u0430\u0440\u0438\u0439 \u0438\u0437 5 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0439 \u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u0433\u0440\u0443\u043F\u043F\u0443.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F \u0435\u043B\u044C, \u043C\u043E\u0445, \u0440\u043E\u0437\u0430?", "\u0427\u0435\u043C \u0433\u043E\u043B\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u043E\u0442 \u043F\u043E\u043A\u0440\u044B\u0442\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0445?"] }, { key: "bio7-3.5", code: "3.5", title: "\u041A\u0430\u043A \u043C\u044B \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u043C \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445?", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: 5 \u043A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u0437\u0432\u043E\u043D\u043E\u0447\u043D\u044B\u0445 \u2014 \u043F\u0440\u0438\u043C\u0435\u0440 \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043A.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u043C\u0443 \u043A\u043B\u0430\u0441\u0441\u0443 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F: \u043A\u0438\u0442, \u0447\u0435\u0440\u0435\u043F\u0430\u0445\u0430, \u043B\u044F\u0433\u0443\u0448\u043A\u0430, \u043E\u0440\u0451\u043B?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u043C\u043B\u0435\u043A\u043E\u043F\u0438\u0442\u0430\u044E\u0449\u0438\u0445."] }, { key: "bio7-4.1", code: "4.1", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043A\u0443\u0441\u043E\u0447\u0435\u043A \u0445\u043B\u0435\u0431\u0430 \u0432\u043E \u0432\u043B\u0430\u0436\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430 \u043F\u043B\u0435\u0441\u0435\u043D\u044C\u044E (\u043D\u0435 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0442\u044C!).", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 4 \u0433\u0440\u0443\u043F\u043F\u044B \u043C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u041E\u0434\u043D\u0430 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u044F \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u043A\u0430\u0436\u0434\u044B\u0435 20 \u043C\u0438\u043D\u0443\u0442. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0438\u0445 \u0431\u0443\u0434\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 2 \u0447\u0430\u0441\u0430?"] }, { key: "bio7-4.2", code: "4.2", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043F\u0440\u043E\u0446\u0435\u0441\u0441 \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u044F", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u0438\u043D\u0438-\u043A\u043E\u043C\u043F\u043E\u0441\u0442 \u0438\u0437 \u043E\u0447\u0438\u0441\u0442\u043A\u043E\u0432 \u0432 \u0431\u0430\u043D\u043A\u0435 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 2 \u043D\u0435\u0434\u0435\u043B\u0438.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u044B \u0432 \u0445\u043E\u043B\u043E\u0434\u0438\u043B\u044C\u043D\u0438\u043A\u0435 \u043F\u043E\u0440\u0442\u044F\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435?", "\u041A\u0430\u043A\u0443\u044E \u0440\u043E\u043B\u044C \u0438\u0433\u0440\u0430\u044E\u0442 \u0440\u0430\u0437\u043B\u0430\u0433\u0430\u0442\u0435\u043B\u0438 \u0432 \u043F\u0440\u0438\u0440\u043E\u0434\u0435?"] }, { key: "bio7-4.3", code: "4.3", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0441\u0442\u0432\u043E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u043F\u0438\u0442\u0430\u043D\u0438\u044F", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 2 \u0441\u0442\u0430\u043A\u0430\u043D\u0430 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u044B \u0441 \u0441\u0430\u0445\u0430\u0440\u043E\u043C \u0438 \u0434\u0440\u043E\u0436\u0436\u0430\u043C\u0438: \u043E\u0434\u0438\u043D \u0432 \u0442\u0435\u043F\u043B\u043E, \u0434\u0440\u0443\u0433\u043E\u0439 \u0432 \u0445\u043E\u043B\u043E\u0434. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043F\u0435\u043D\u0443.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0442\u0435\u0441\u0442\u043E \u0441 \u0434\u0440\u043E\u0436\u0436\u0430\u043C\u0438 \u0441\u0442\u0430\u0432\u044F\u0442 \u0432 \u0442\u0451\u043F\u043B\u043E\u0435 \u043C\u0435\u0441\u0442\u043E?", "\u041A\u0430\u043A\u0438\u0435 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u044E\u0442 \u043C\u043E\u043B\u043E\u043A\u043E \u0432 \u043A\u0430\u0442\u044B\u043A?"] }, { key: "bio7-4.4", code: "4.4", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u0437\u0430\u0431\u043E\u043B\u0435\u0432\u0430\u043D\u0438\u044F", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043B\u0430\u043A\u0430\u0442 \xAB\u041A\u0430\u043A \u0437\u0430\u0449\u0438\u0442\u0438\u0442\u044C\u0441\u044F \u043E\u0442 \u0438\u043D\u0444\u0435\u043A\u0446\u0438\u0439\xBB \u0434\u043B\u044F \u043C\u043B\u0430\u0434\u0448\u0438\u0445 \u043A\u043B\u0430\u0441\u0441\u043E\u0432.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043B\u0435\u0447\u0438\u0442\u044C \u0433\u0440\u0438\u043F\u043F \u0430\u043D\u0442\u0438\u0431\u0438\u043E\u0442\u0438\u043A\u0430\u043C\u0438?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0441\u043F\u043E\u0441\u043E\u0431\u0430 \u0437\u0430\u0449\u0438\u0442\u044B \u043E\u0442 \u0438\u043D\u0444\u0435\u043A\u0446\u0438\u0439."] }, { key: "bio7-4.5", code: "4.5", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F \u041B\u0443\u0438 \u041F\u0430\u0441\u0442\u0435\u0440\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0435 \u043C\u043E\u043B\u043E\u043A\u0430 \u0441\u043B\u043E\u0432\u043E \xAB\u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u043E\u0432\u0430\u043D\u043D\u043E\u0435\xBB \u0438 \u0443\u0437\u043D\u0430\u0439\u0442\u0435 \u0441\u0440\u043E\u043A \u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432 \u043A\u043E\u043B\u0431\u0435 \u0441 \u0438\u0437\u043E\u0433\u043D\u0443\u0442\u044B\u043C \u0433\u043E\u0440\u043B\u043E\u043C \u0431\u0443\u043B\u044C\u043E\u043D \u043D\u0435 \u0438\u0441\u043F\u043E\u0440\u0442\u0438\u043B\u0441\u044F?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u044F \u0438 \u0437\u0430\u0447\u0435\u043C \u043E\u043D\u0430 \u043D\u0443\u0436\u043D\u0430?"] }, { key: "bio7-5.1", code: "5.1", title: "\u041F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u043D\u043E\u0441\u0442\u044C \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043A \u0441\u0440\u0435\u0434\u0435 \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0435 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 3 \u0435\u0433\u043E \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u0438\u044F.", tasks: ["\u041A\u0430\u043A \u0432\u0435\u0440\u0431\u043B\u044E\u0434 \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D \u043A \u043F\u0443\u0441\u0442\u044B\u043D\u0435?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 4 \u0441\u0440\u0435\u0434\u044B \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F."] }, { key: "bio7-5.2", code: "5.2", title: "\u041F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438 \u0438 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0441\u0435\u0442\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0441\u0435\u0442\u044C \u043F\u0440\u0443\u0434\u0430 \u0438\u0437 6 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", tasks: ["\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0446\u0435\u043F\u044C \u0438\u0437: \u043B\u0438\u0441\u0430, \u0442\u0440\u0430\u0432\u0430, \u0437\u0430\u044F\u0446.", "\u0422\u0440\u0430\u0432\u0430 \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0430 10 000 \u0435\u0434\u0438\u043D\u0438\u0446 \u044D\u043D\u0435\u0440\u0433\u0438\u0438. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0434\u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u043B\u0438\u0441\u0435 \u0432 \u0446\u0435\u043F\u0438 \u0442\u0440\u0430\u0432\u0430 \u2192 \u0437\u0430\u044F\u0446 \u2192 \u043B\u0438\u0441\u0430?"] }, { key: "bio7-5.3", code: "5.3", title: "\u0412\u043B\u0438\u044F\u043D\u0438\u0435 \u0434\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u0430\u043A \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043F\u043E\u043C\u043E\u0433 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0446\u0435\u043F\u044C (\u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A, \u0440\u0430\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435).", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443 \u0445\u0438\u0449\u043D\u0438\u043A\u043E\u0432 \u0432 \u043A\u043E\u043D\u0446\u0435 \u0446\u0435\u043F\u0438 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0441\u0435\u0433\u043E \u044F\u0434\u0430?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0432\u043C\u0435\u0448\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0432 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0446\u0435\u043F\u044C."] }, { key: "bio7-5.4", code: "5.4", title: "\u0412\u043B\u0438\u044F\u043D\u0438\u0435 \u0434\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0443\u044E \u0441\u0440\u0435\u0434\u0443", homework: "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043B\u0430\u0441\u0442\u0438\u043A\u043E\u0432\u044B\u0445 \u043F\u0430\u043A\u0435\u0442\u043E\u0432 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0432\u0430\u0448\u0430 \u0441\u0435\u043C\u044C\u044F \u0437\u0430 \u043D\u0435\u0434\u0435\u043B\u044E, \u0438 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442\u0435 \u0437\u0430\u043C\u0435\u043D\u0443.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u044B\u0441\u044B\u0445\u0430\u0435\u0442 \u0410\u0440\u0430\u043B\u044C\u0441\u043A\u043E\u0435 \u043C\u043E\u0440\u0435?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0432\u0438\u0434\u0430 \u0437\u0430\u0433\u0440\u044F\u0437\u043D\u0435\u043D\u0438\u044F \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044B."] }, { key: "bio7-5.5", code: "5.5", title: "\u041E\u0445\u0440\u0430\u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044B", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u044D\u043A\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u043B\u0430\u043D \u0441\u0435\u043C\u044C\u0438 \u043D\u0430 \u043C\u0435\u0441\u044F\u0446.", tasks: ["\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u0441\u043E\u0437\u0434\u0430\u044E\u0442 \u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A\u0438?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043F\u043E\u043C\u043E\u0433\u0430\u044E\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u0435 \u0434\u043E\u043C\u0430."] }, { key: "bio7-5.6", code: "5.6", title: "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043F\u0440\u0438\u0431\u043E\u0440\u043E\u0432 \u0434\u043E\u043C\u0430 \u043C\u043E\u0436\u043D\u043E \u0432\u044B\u043A\u043B\u044E\u0447\u0430\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u043E\u043D\u0438 \u043D\u0435 \u043D\u0443\u0436\u043D\u044B.", tasks: ["\u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u043D\u0430 \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435 \u0438 \u043D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435: \u0441\u043E\u043B\u043D\u0446\u0435, \u043D\u0435\u0444\u0442\u044C, \u0432\u0435\u0442\u0435\u0440, \u0433\u0430\u0437, \u0432\u043E\u0434\u0430.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u0444\u0442\u044C \u043D\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u043C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u043E\u043C?"] }, { key: "bio7-6.1", code: "6.1", title: "\u0424\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043E\u0434\u043D\u043E \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435 \u043D\u0430 \u0441\u0432\u0435\u0442, \u0434\u0440\u0443\u0433\u043E\u0435 \u0432 \u0442\u0451\u043C\u043D\u044B\u0439 \u0448\u043A\u0430\u0444 \u043D\u0430 5 \u0434\u043D\u0435\u0439. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043D\u0443\u0436\u043D\u044B \u0434\u043B\u044F \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437\u0430?", "\u0427\u0442\u043E \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437\u0435?", "\u0413\u0434\u0435 \u0432 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0438 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437?"] }, { key: "bio7-6.2", code: "6.2", title: "\u0423\u0441\u0432\u043E\u0435\u043D\u0438\u0435 \u0438 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442 \u0432\u043E\u0434\u044B \u0438 \u043C\u0438\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u044B\u0445 \u0441\u043E\u043B\u0435\u0439", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0431\u0435\u043B\u044B\u0439 \u0446\u0432\u0435\u0442\u043E\u043A \u0438\u043B\u0438 \u0441\u0442\u0435\u0431\u0435\u043B\u044C \u0441\u0435\u043B\u044C\u0434\u0435\u0440\u0435\u044F \u0432 \u0432\u043E\u0434\u0443 \u0441 \u043A\u0440\u0430\u0441\u043A\u043E\u0439 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 \u0441\u0443\u0442\u043A\u0438.", tasks: ["\u041F\u043E \u043A\u0430\u043A\u0438\u043C \u0442\u043A\u0430\u043D\u044F\u043C \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u0432\u043E\u0434\u0430, \u0430 \u043F\u043E \u043A\u0430\u043A\u0438\u043C \u2014 \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432 \u0436\u0430\u0440\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u043F\u043E\u043B\u0438\u0432\u0430\u044E\u0442 \u0447\u0430\u0449\u0435?"] }] }, { id: "math-7", subject: "math", grade: 7, topics: [{ key: "math7-1.1", code: "1.1", title: "\u041F\u0440\u043E\u0441\u0442\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438, \u0441\u0442\u0435\u043F\u0435\u043D\u044C", homework: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 360 \u0438 1001 (\u0434\u0432\u0443\u043C\u044F \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u0434\u0435\u0440\u0435\u0432\u043E\u043C \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C).", tasks: ["\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 585 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438.", "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0432\u0438\u0434\u0435 \u0441\u0442\u0435\u043F\u0435\u043D\u0438: 5 \xB7 5 \xB7 5 \xB7 5.", "\u042F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043B\u0438 91 \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C?"] }, { key: "math7-1.2", code: "1.2", title: "\u041D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u0439 \u043E\u0431\u0449\u0438\u0439 \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C (\u041D\u041E\u0414)", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u041D\u041E\u0414(84, 126) \u0438 \u041D\u041E\u0414(45, 75) \u0434\u0432\u0443\u043C\u044F \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C \u0438 \u0430\u043B\u0433\u043E\u0440\u0438\u0442\u043C\u043E\u043C \u0415\u0432\u043A\u043B\u0438\u0434\u0430.", tasks: ["\u0414\u0432\u0435 \u043F\u0440\u043E\u0432\u043E\u043B\u043E\u043A\u0438 72 cm \u0438 96 cm \u0440\u0430\u0437\u0440\u0435\u0437\u0430\u043B\u0438 \u043D\u0430 \u0440\u0430\u0432\u043D\u044B\u0435 \u0447\u0430\u0441\u0442\u0438 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0439 \u0434\u043B\u0438\u043D\u044B. \u041A\u0430\u043A\u043E\u0432\u0430 \u0434\u043B\u0438\u043D\u0430 \u0447\u0430\u0441\u0442\u0438?", "\u041B\u0438\u0441\u0442 360 cm \xD7 280 cm \u0440\u0430\u0437\u0440\u0435\u0437\u0430\u043B\u0438 \u043D\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0435 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u044B \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0433\u043E \u0440\u0430\u0437\u043C\u0435\u0440\u0430. \u0421\u0442\u043E\u0440\u043E\u043D\u0430 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0438 \u0438\u0445 \u0447\u0438\u0441\u043B\u043E?", "\u0421\u0430\u0440\u0434\u043E\u0440 \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 132 \u0431\u0435\u043B\u044B\u0445 \u0438 154 \u0447\u0451\u0440\u043D\u044B\u0445 \u043F\u043B\u0438\u0442\u043A\u0438 \u0448\u043E\u043A\u043E\u043B\u0430\u0434\u0430 \u043F\u043E\u0440\u043E\u0432\u043D\u0443 \u0432 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0447\u0438\u0441\u043B\u043E \u043A\u043E\u0440\u043E\u0431\u043E\u043A. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u0440\u043E\u0431\u043E\u043A \u0438 \u0447\u0442\u043E \u0432 \u043A\u0430\u0436\u0434\u043E\u0439?"] }, { key: "math7-1.3", code: "1.3", title: "\u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u043E\u0431\u0449\u0435\u0435 \u043A\u0440\u0430\u0442\u043D\u043E\u0435 (\u041D\u041E\u041A)", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u041D\u041E\u041A(12, 18, 30) \u0438 \u0441\u043B\u043E\u0436\u0438\u0442\u0435 \u0434\u0440\u043E\u0431\u0438 5/12 + 7/18.", tasks: ["\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u044B A, B \u0438 C \u043F\u0440\u0438\u0445\u043E\u0434\u044F\u0442 \u043A\u0430\u0436\u0434\u044B\u0435 20, 30 \u0438 45 \u043C\u0438\u043D\u0443\u0442. \u041E\u043D\u0438 \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u043B\u0438\u0441\u044C \u0432 08:30. \u041A\u043E\u0433\u0434\u0430 \u0432\u0441\u0442\u0440\u0435\u0442\u044F\u0442\u0441\u044F \u0441\u043D\u043E\u0432\u0430?", "\u0421\u0442\u043E\u043B\u044B 56 cm \xD7 42 cm \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0438 \u0432 \u043E\u0434\u0438\u043D \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0438\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u0441\u0442\u043E\u043B. \u0415\u0433\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430 \u0438 \u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u043E\u0432?", "\u0427\u0438\u0441\u043B\u043E \u044F\u0431\u043B\u043E\u043A n \u043F\u0440\u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0438 \u043D\u0430 3 \u0434\u0430\u0451\u0442 \u043E\u0441\u0442\u0430\u0442\u043E\u043A 2, \u043D\u0430 5 \u2014 \u043E\u0441\u0442\u0430\u0442\u043E\u043A 4. \u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 n?"] }, { key: "math7-1.4", code: "1.4", title: "\u041A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u0438 \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043A\u043E\u0440\u0435\u043D\u044C \u0447\u0438\u0441\u043B\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432 \u043F\u043B\u043E\u0449\u0430\u0434\u044C\u044E 81, 225 \u0438 400 \u0438 \u0440\u0451\u0431\u0440\u0430 \u043A\u0443\u0431\u043E\u0432 \u043E\u0431\u044A\u0451\u043C\u043E\u043C 216 \u0438 343.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u221A144 \u0438 \u221B125.", "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u043E\u0439 \u043A\u043E\u043C\u043D\u0430\u0442\u044B 36 \u043C\xB2. \u041A\u0430\u043A\u043E\u0432\u0430 \u0434\u043B\u0438\u043D\u0430 \u0441\u0442\u0435\u043D\u044B?", "\u041E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0431\u0430\u043A\u0430 8 \u043C\xB3. \u041A\u0430\u043A\u043E\u0432\u043E \u0435\u0433\u043E \u0440\u0435\u0431\u0440\u043E?"] }, { key: "math7-2.1", code: "2.1", title: "\u041F\u043E\u043D\u044F\u0442\u0438\u0435 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0447\u0438\u0441\u043B\u0430 \u0438 \u0447\u0438\u0441\u043B\u043E\u0432\u0430\u044F \u043E\u0441\u044C", homework: "\u041D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u043F\u0438\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0442\u0440\u0435\u043D\u043D\u044E\u044E \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0443 \u0438 \u043E\u0442\u043C\u0435\u0447\u0430\u0439\u0442\u0435 \u0435\u0451 \u043D\u0430 \u0447\u0438\u0441\u043B\u043E\u0432\u043E\u0439 \u043E\u0441\u0438.", tasks: ["\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E: \u221250, 210, 0, \u2212160, \u2212300.", "\u0412\u044B\u0441\u043E\u0442\u044B: \u0425\u0430\u0437\u0440\u0430\u0442\u0438 \u0421\u0443\u043B\u0442\u0430\u043D 4643 m, \u0422\u0443\u0440\u0444\u0430\u043D\u0441\u043A\u0430\u044F \u0432\u043F\u0430\u0434\u0438\u043D\u0430 \u2212154 m, \u0433\u043E\u0440\u0430 \u0424\u0430\u0431\u0435\u0440 105 m, \u0414\u043E\u043B\u0438\u043D\u0430 \u0421\u043C\u0435\u0440\u0442\u0438 \u221286 m. \u041F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E?", "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0446\u0435\u043B\u044B\u0445 a \u0443\u0434\u043E\u0432\u043B\u0435\u0442\u0432\u043E\u0440\u044F\u044E\u0442 \u22129 \u2264 a < 5?"] }, { key: "math7-2.2", code: "2.2", title: "\u0421\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0432\u044B\u0447\u0438\u0442\u0430\u043D\u0438\u0435 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u0435\u043B", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: 3 \u2212 (\u22128) + (\u22124); \u221212 + (\u22129) + (\u22123); 15 \u2212 (\u22127) + (\u22127).", tasks: ["\u0412\u043E\u0434\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u0435\u0442 \u043F\u0440\u0438 0 \xB0C. \u0421 \u0441\u043E\u043B\u044C\u044E \u2014 \u043D\u0430 6 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432 \u043D\u0438\u0436\u0435. \u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u043D\u0438\u044F?", "\u0412\u0435\u0440\u0442\u043E\u043B\u0451\u0442 \u043D\u0430 \u0432\u044B\u0441\u043E\u0442\u0435 120 m \u043D\u0430\u0434 \u043C\u043E\u0440\u0435\u043C, \u043F\u043E\u0434\u043B\u043E\u0434\u043A\u0430 \u043D\u0430 39 m \u043D\u0438\u0436\u0435 \u0443\u0440\u043E\u0432\u043D\u044F \u043C\u043E\u0440\u044F. \u0420\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438?", "\u041D\u0430 \u0441\u0447\u0451\u0442\u0435 300 000 \u0441\u0443\u043C\u043E\u0432, \u043E\u0442\u0435\u0446 \u043F\u043E\u043B\u043E\u0436\u0438\u043B 600 000, \u0437\u0430\u0432\u0442\u0440\u0430 \u0441\u043D\u0438\u043C\u0443\u0442 200 000. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F?"] }, { key: "math7-2.3", code: "2.3", title: "\u0423\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u0435\u043B", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 5 \u043F\u0440\u0438\u043C\u0435\u0440\u043E\u0432 \u043D\u0430 \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0441 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0437\u043D\u0430\u043A \u043F\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u0443.", tasks: ["\u041F\u0438\u043A \u0425\u0430\u0437\u0440\u0435\u0442-\u0421\u0443\u043B\u0442\u0430\u043D 4643 m \u043D\u0430\u0434 \u043C\u043E\u0440\u0435\u043C, \u043F\u0435\u0449\u0435\u0440\u0430 \u0411\u043E\u0439-\u0411\u0443\u043B\u043E\u043A \u2014 1517 m \u043D\u0438\u0436\u0435. \u0412\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u043E\u0435 \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u0435\u0433\u043E \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430?", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: (\u22126) \xB7 (\u22125); (\u221248) : 6; (\u22122) \xB7 3 \xB7 (\u22124)."] }, { key: "math7-2.4", code: "2.4", title: "\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435, \u0438\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u044C \u0438 \u0434\u0438\u0430\u043C\u0435\u0442\u0440 \u0431\u0430\u043D\u043A\u0438 \u043D\u0438\u0442\u043A\u043E\u0439. \u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u2014 \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0431\u043B\u0438\u0437\u043A\u043E \u043A \u03C0?", tasks: ["\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u0438\u043B\u0438 \u0438\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435: 0,25; \u221A9; \u221A7; \u03C0?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0431\u044A\u0451\u043C \u0446\u0438\u043B\u0438\u043D\u0434\u0440\u0430 r = 2 \u0441\u043C, h = 5 \u0441\u043C (\u03C0 \u2248 3,14).", "\u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u043D\u0430 \u0434\u043B\u0438\u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u0438 \u0434\u0438\u0430\u043C\u0435\u0442\u0440\u043E\u043C 10 \u0441\u043C?"] }, { key: "math7-2.5", code: "2.5", title: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u043D\u0430\u0434 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: (\u22121/2 + 1/3 + 1/6) \xB7 (\u22122/5)\xB2; 32,7 + 9,84; (\u22123,45) \xB7 1,06.", tasks: ["\u0423 \u041C\u0430\u0440\u044C\u044F\u043C 0,5 kg \u043C\u0443\u043A\u0438. \u041D\u0443\u0436\u043D\u043E 4\xBC \u0447\u0430\u0448\u043A\u0438 \u043F\u043E 1/8 kg. \u0425\u0432\u0430\u0442\u0438\u0442 \u043B\u0438?", "\u0410\u043B\u0438 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 1/3 \u0438\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u0439, \u0411\u043E\u0442\u0438\u0440\u0443 \u2014 2/7. \u041A\u0430\u043A\u0430\u044F \u0447\u0430\u0441\u0442\u044C \u0443 \u0427\u0430\u0440\u0441\u0430?", "\u0410\u043B\u0438 \u0432\u043B\u043E\u0436\u0438\u043B \u043D\u0430 6 000 000 \u0441\u0443\u043C\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 \u0411\u043E\u0442\u0438\u0440\u0430. \u041E\u0431\u0449\u0430\u044F \u0441\u0443\u043C\u043C\u0430?"] }, { key: "math7-3.1", code: "3.1", title: "\u041E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0434\u043E \u0437\u0430\u0434\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0430\u0437\u0440\u044F\u0434\u0430", homework: "\u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u0435 \u0434\u043E \u0434\u0435\u0441\u044F\u0442\u044B\u0445: 3,004056; 18,471984; \u0434\u043E \u0442\u044B\u0441\u044F\u0447: 1 958 200.", tasks: ["\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u0421\u0430\u043C\u0430\u0440\u043A\u0430\u043D\u0434\u0430 573 200 (\u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u043E \u0434\u043E \u0441\u043E\u0442\u0435\u043D). \u041D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0438 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E?", "\u0412\u043E\u0434\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 27 800 000 m\xB3. \u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u0435 \u0434\u043E \u043C\u0438\u043B\u043B\u0438\u043E\u043D\u043E\u0432.", "\u0414\u043E\u043C 84,5 m\xB2 \u0441\u0442\u043E\u0438\u0442 725 000 000 \u0441\u0443\u043C\u043E\u0432. \u0426\u0435\u043D\u0430 1 m\xB2 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435\u043C \u0434\u043E \u0441\u0443\u043C\u043E\u0432?"] }, { key: "math7-3.2", code: "3.2", title: "\u041E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0434\u043E \u0437\u043D\u0430\u0447\u0430\u0449\u0435\u0439 \u0446\u0438\u0444\u0440\u044B", homework: "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u0421\u0443\u0440\u0445\u0430\u043D\u0434\u0430\u0440\u044C\u0438\u043D\u0441\u043A\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 2 800 000 (3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B). \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0438 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", tasks: ["\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u0425\u043E\u0440\u0435\u0437\u043C\u0441\u043A\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u2248 6050 km\xB2, \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u2248 1 958 200. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C \u0434\u043E 3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440?", "\u041F\u043E\u043B 6,7 m \xD7 3,8 m (2 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B). \u041C\u043E\u0436\u0435\u0442 \u043B\u0438 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u0431\u044B\u0442\u044C 27 m\xB2? \u0410 25 m\xB2?"] }, { key: "math7-3.3", code: "3.3", title: "\u041F\u0440\u0438\u043A\u0438\u0434\u043A\u0430 (\u043E\u0446\u0435\u043D\u043A\u0430)", homework: "\u041F\u0440\u0438\u043A\u0438\u043D\u044C\u0442\u0435 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0443\u043F\u043E\u043A \u0441\u0435\u043C\u044C\u0438 \u043F\u043E \u0447\u0435\u043A\u0443, \u0437\u0430\u0442\u0435\u043C \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0441 \u0442\u043E\u0447\u043D\u043E\u0439 \u0441\u0443\u043C\u043C\u043E\u0439.", tasks: ["\u041B\u0438\u0444\u0442 \u0432\u044B\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 600 kg. \u041C\u0430\u0441\u0441\u044B 8 \u0447\u0435\u043B\u043E\u0432\u0435\u043A: 71,8; 73,4; 75,3; 74,8; 76,4; 73,9; 78,4; 77,4 kg. \u041E\u0446\u0435\u043D\u0438\u0442\u0435 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435\u043C \u0434\u043E 2 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440.", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0442\u043E\u0447\u043D\u0443\u044E \u043C\u0430\u0441\u0441\u0443. \u041C\u043E\u0436\u043D\u043E \u043B\u0438 \u0432\u0441\u0435\u043C \u0435\u0445\u0430\u0442\u044C?", "\u041E\u0446\u0435\u043D\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u043F\u0440\u043E\u0431\u043A\u0438 \u0438\u0437 96 \u043C\u0430\u0448\u0438\u043D \u043F\u043E 4,5 m."] }, { key: "math7-4.1", code: "4.1", title: "\u0412\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0432 \u0430\u043B\u0433\u0435\u0431\u0440\u0443", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 3 \u0444\u043E\u0440\u043C\u0443\u043B\u044B \u0438\u0437 \u0436\u0438\u0437\u043D\u0438 (\u0446\u0435\u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0438, \u0432\u0440\u0435\u043C\u044F \u0432 \u043F\u0443\u0442\u0438, \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u043E\u043C\u043D\u0430\u0442\u044B) \u0441 \u0431\u0443\u043A\u0432\u0430\u043C\u0438.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 3x \u2212 4 \u043F\u0440\u0438 x = 5.", "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435: \u043F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 a \u0438 b.", "\u041E\u0431\u044A\u0451\u043C \u043F\u0440\u0438\u0437\u043C\u044B a = 4 \u0441\u043C, h = 10 \u0441\u043C?"] }, { key: "math7-4.2", code: "4.2", title: "\u0423\u043F\u0440\u043E\u0449\u0435\u043D\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0439", homework: "\u0423\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u0435: 7t + (\u22124a) \u2212 5t + 2a; \u22123p + p + 4p; 4y \u2212 9y + 5y.", tasks: ["\u0423\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u0435: 7a + 2a; 5b \u2212 8b; 3n + 10 \u2212 4n \u2212 11.", "\u0411\u0438\u043B\u0435\u0442 \u0432 \u0441\u0435\u043A\u0446\u0438\u044E A \u0441\u0442\u043E\u0438\u0442 x, \u0432 B \u2014 \u043D\u0430 50 000 \u0431\u043E\u043B\u044C\u0448\u0435, \u0432 C \u2014 \u043D\u0430 30 000 \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0434\u0432\u043E\u0435\u043D\u043D\u043E\u0439 \u0446\u0435\u043D\u044B B. \u041E\u0431\u0449\u0430\u044F \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0442\u0440\u0451\u0445 \u0431\u0438\u043B\u0435\u0442\u043E\u0432?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u044D\u0442\u0443 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u0440\u0438 x = 90 000."] }, { key: "math7-4.3", code: "4.3", title: "\u0420\u0430\u0441\u043A\u0440\u044B\u0442\u0438\u0435 \u0441\u043A\u043E\u0431\u043E\u043A \u0432 \u0430\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u044F\u0445", homework: "\u0420\u0430\u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u043A\u043E\u0431\u043A\u0438: 7t \u2212 [5s + 8(s + 2t)]; 5[a \u2212 (b \u2212 a)] + 7(\u2212a + 2b).", tasks: ["\u0420\u0430\u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u043A\u043E\u0431\u043A\u0438: 4a \u2212 [5a \u2212 (3 + 2a)].", "\u041A\u0430\u0440\u043A\u0430\u0441 \u044F\u0449\u0438\u043A\u0430: 4 \u0434\u043E\u0441\u043A\u0438 \u0434\u043B\u0438\u043D\u043E\u0439 (2x + 3y) cm \u0438 8 \u0434\u043E\u0441\u043E\u043A \u0434\u043B\u0438\u043D\u043E\u0439 (2x + y) cm. \u041E\u0431\u0449\u0430\u044F \u0434\u043B\u0438\u043D\u0430?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u043F\u0440\u0438 x = 30, y = 10."] }, { key: "math7-4.4", code: "4.4", title: "\u0420\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0430\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0439 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438", homework: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435: 7a + 7b + 7c; 3cd + 36ac \u2212 15ad; mx + my + 3mz.", tasks: ["\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438: 6a + 3b; 18ax \u2212 15ay; 12s + 48bs.", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0443\u0434\u043E\u0431\u043D\u043E: 86 \xB7 471 \u2212 76 \xB7 471.", "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 ab + 10a, \u043E\u0434\u043D\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u0430 a. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0443\u044E."] }, { key: "math7-5.1", code: "5.1", title: "\u041F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: 3x \u2212 x + 6 = 10x; 9 \u2212 5y = y \u2212 1; \u0441\u0443\u043C\u043C\u0430 \u043E\u0434\u043D\u043E\u0439 \u0448\u0435\u0441\u0442\u043E\u0439 x \u0438 \u22129 \u0440\u0430\u0432\u043D\u0430 \u221225.", tasks: ["\u0414\u043B\u0438\u043D\u0430 \u043F\u0440\u0443\u0436\u0438\u043D\u044B L = 70 + 5m. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 L \u043F\u0440\u0438 m = 6 \u0438 m \u043F\u0440\u0438 L = 85.", "\u041F\u0435\u0447\u0430\u0442\u044C \u043D\u0430 x \u0444\u0443\u0442\u0431\u043E\u043B\u043A\u0430\u0445 \u0441\u0442\u043E\u0438\u0442 C = 10 000 + 12 000x. \u041D\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0444\u0443\u0442\u0431\u043E\u043B\u043E\u043A \u0445\u0432\u0430\u0442\u0438\u0442 982 000 \u0441\u0443\u043C\u043E\u0432?", "\u041F\u043E\u0435\u0437\u0434: d = 240 \u2212 80t. \u041A\u043E\u0433\u0434\u0430 d = 40? \u041A\u043E\u0433\u0434\u0430 \u043F\u043E\u0435\u0437\u0434 \u043F\u0440\u0438\u0431\u0443\u0434\u0435\u0442?"] }, { key: "math7-5.2", code: "5.2", title: "\u041B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0441\u043E \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0438 \u0434\u0440\u043E\u0431\u044F\u043C\u0438", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: (7x \u2212 2)/2 = (5x \u2212 3)/3; \u2212x + x/4 = 15.", tasks: ["\u0418\u043A\u0440\u043E\u043C \u0440\u0435\u0448\u0430\u043B (x + 1)/2 + (x \u2212 a)/3 = 1 \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B 3(x + 1) + 2(x \u2212 a) = 1. \u0413\u0434\u0435 \u043E\u0448\u0438\u0431\u043A\u0430?", "\u041F\u0440\u0438 \u043A\u0430\u043A\u043E\u043C a \u043A\u043E\u0440\u0435\u043D\u044C \u044D\u0442\u043E\u0433\u043E \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F x = 2?", "\u0420\u0435\u0448\u0438\u0442\u0435: 12 + (2/5)x = 16; (2x + 9)/5 = 5."] }, { key: "math7-5.3", code: "5.3", title: "\u041F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435 \u0434\u0440\u043E\u0431\u043D\u043E-\u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: 3/(2x \u2212 5) = 1/(x + 1); \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435, \u043D\u0435 \u043E\u0431\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u043B\u0438 \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u044C \u0432 \u043D\u043E\u043B\u044C.", tasks: ["\u0425\u0443\u043C\u043E\u044E\u043D \u0440\u0435\u0448\u0438\u043B x/(x \u2212 4) + 1 = 8/(x \u2212 4) \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B x + 1 = 8. \u0412\u0435\u0440\u043D\u043E \u043B\u0438?", "\u041B\u0438\u043D\u0437\u0430: 1/u + 1/v = 1/f. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 v \u043F\u0440\u0438 f = 20, u = 30.", "\u0420\u0435\u0448\u0438\u0442\u0435: 5/(x + 1) = 7/(2x)."] }, { key: "math7-5.4", code: "5.4", title: "\u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u043D\u0430 \u0441\u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0445 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0439", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u043A \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044E 5x + 4(x \u2212 10) = 140 \u0438 \u0440\u0435\u0448\u0438\u0442\u0435 \u0435\u0451.", tasks: ["\u0421\u0443\u043C\u043C\u0430 \u0442\u0440\u0451\u0445 \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0445 \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0445 \u0447\u0438\u0441\u0435\u043B \u0440\u0430\u0432\u043D\u0430 141. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438\u0445.", "\u0422\u0438\u043C\u0443\u0440 \u0432 2 \u0440\u0430\u0437\u0430 \u0441\u0442\u0430\u0440\u0448\u0435 \u0410\u0431\u0440\u043E\u0440\u0430. \u0427\u0435\u0440\u0435\u0437 4 \u0433\u043E\u0434\u0430 \u0441\u0443\u043C\u043C\u0430 \u0438\u0445 \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u043E\u0432 \u0431\u0443\u0434\u0435\u0442 32. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u0410\u0431\u0440\u043E\u0440\u0443?", "50 \u043C\u044B\u0448\u0435\u0439 \u0432\u0438\u0434\u043E\u0432 A (50 000) \u0438 B (60 000) \u0441\u0442\u043E\u044F\u0442 2 690 000 \u0441\u0443\u043C\u043E\u0432. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043C\u044B\u0448\u0435\u0439 A?"] }, { key: "math7-6.1", code: "6.1", title: "\u0422\u043E\u0447\u043A\u0430, \u043F\u0440\u044F\u043C\u0430\u044F \u0438 \u043F\u043B\u043E\u0441\u043A\u043E\u0441\u0442\u044C", homework: "\u041E\u0442\u043C\u0435\u0442\u044C\u0442\u0435 5 \u0442\u043E\u0447\u0435\u043A \u0438 \u043F\u0440\u043E\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0441\u0435 \u043E\u0442\u0440\u0435\u0437\u043A\u0438 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C?", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0442\u0440\u0435\u0437\u043A\u043E\u0432 \u0437\u0430\u0434\u0430\u044E\u0442 4 \u0442\u043E\u0447\u043A\u0438, \u043D\u0438\u043A\u0430\u043A\u0438\u0435 \u0442\u0440\u0438 \u0438\u0437 \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u043D\u0435 \u043B\u0435\u0436\u0430\u0442 \u043D\u0430 \u043E\u0434\u043D\u043E\u0439 \u043F\u0440\u044F\u043C\u043E\u0439?", "\u0427\u0435\u043C \u043B\u0443\u0447 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043E\u0442\u0440\u0435\u0437\u043A\u0430?"] }, { key: "math7-6.2", code: "6.2", title: "\u0423\u0433\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043E\u0441\u0442\u0440\u044B\u0445, 3 \u043F\u0440\u044F\u043C\u044B\u0445 \u0438 3 \u0442\u0443\u043F\u044B\u0445 \u0443\u0433\u043B\u0430 \u0438 \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0438\u0445 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u043C.", tasks: ["\u041E\u0434\u0438\u043D \u0438\u0437 \u0441\u043C\u0435\u0436\u043D\u044B\u0445 \u0443\u0433\u043B\u043E\u0432 65\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043E\u0439.", "\u041A\u0430\u043A\u043E\u0439 \u0443\u0433\u043E\u043B \u043C\u0435\u0436\u0434\u0443 \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0447\u0430\u0441\u043E\u0432 \u0432 2:00?", "\u041E\u0434\u0438\u043D \u0438\u0437 \u0432\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u044B\u0445 \u0443\u0433\u043B\u043E\u0432 40\xB0. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u0432\u0442\u043E\u0440\u043E\u0439?"] }, { key: "math7-6.3", code: "6.3", title: "\u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u0438 \u0441\u0435\u043A\u0443\u0449\u0438\u0435", homework: "\u041D\u0430\u0447\u0435\u0440\u0442\u0438\u0442\u0435 \u0434\u0432\u0435 \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u0438 \u0441\u0435\u043A\u0443\u0449\u0443\u044E, \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0432\u0441\u0435 8 \u0443\u0433\u043B\u043E\u0432.", tasks: ["a \u2225 b, \u043D\u0430\u043A\u0440\u0435\u0441\u0442 \u043B\u0435\u0436\u0430\u0449\u0438\u0439 \u0443\u0433\u043E\u043B \u0440\u0430\u0432\u0435\u043D 70\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0434\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0439 \u0443\u0433\u043E\u043B.", "\u0421\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435 \u0443\u0433\u043B\u044B \u0440\u0430\u0432\u043D\u044B 50\xB0 \u0438 50\xB0. \u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B \u043B\u0438 \u043F\u0440\u044F\u043C\u044B\u0435?"] }, { key: "math7-7.1", code: "7.1", title: "\u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u0412\u044B\u0440\u0435\u0436\u044C\u0442\u0435 \u0431\u0443\u043C\u0430\u0436\u043D\u044B\u0439 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A, \u043E\u0442\u043E\u0440\u0432\u0438\u0442\u0435 \u0443\u0433\u043B\u044B \u0438 \u0441\u043B\u043E\u0436\u0438\u0442\u0435 \u0438\u0445 \u0432\u043C\u0435\u0441\u0442\u0435 \u2014 \u0447\u0442\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F?", tasks: ["\u0414\u0432\u0430 \u0443\u0433\u043B\u0430 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 50\xB0 \u0438 60\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0442\u0440\u0435\u0442\u0438\u0439.", "\u0421\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442 \u043B\u0438 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 3, 4 \u0438 8 cm?", "\u0423\u0433\u043E\u043B \u043F\u0440\u0438 \u0432\u0435\u0440\u0448\u0438\u043D\u0435 \u0440\u0430\u0432\u043D\u043E\u0431\u0435\u0434\u0440\u0435\u043D\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 40\xB0. \u0423\u0433\u043B\u044B \u043F\u0440\u0438 \u043E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u0438?"] }, { key: "math7-7.2", code: "7.2", title: "\u0427\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432-\u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u0432\u0438\u0434.", tasks: ["\u0422\u0440\u0438 \u0443\u0433\u043B\u0430 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 80\xB0, 100\xB0, 90\xB0. \u0427\u0435\u0442\u0432\u0451\u0440\u0442\u044B\u0439?", "\u041E\u0434\u0438\u043D \u0443\u0433\u043E\u043B \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u043E\u0433\u0440\u0430\u043C\u043C\u0430 70\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435."] }, { key: "math7-7.3", code: "7.3", title: "\u041C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u043E\u0440\u043D\u0430\u043C\u0435\u043D\u0442\u0430\u0445 \u0420\u0435\u0433\u0438\u0441\u0442\u0430\u043D\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0435 \u043C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0438 \u0437\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 2 \u0438\u0437 \u043D\u0438\u0445.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0443\u043C\u043C\u0443 \u0443\u0433\u043B\u043E\u0432 \u0448\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430.", "\u041A\u0430\u0436\u0434\u044B\u0439 \u0443\u0433\u043E\u043B \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0433\u043E \u0432\u043E\u0441\u044C\u043C\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430?"] }, { key: "math7-7.4", code: "7.4", title: "\u041F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \u0438 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432", homework: "\u041F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0446\u0438\u0440\u043A\u0443\u043B\u0435\u043C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 4, 5 \u0438 6 cm \u0438 \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0435\u0433\u043E \u0443\u0433\u043B\u044B.", tasks: ["\u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u043F\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C 5, 6 \u0438 7 cm.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 2, 3 \u0438 6 cm?"] }] }];
+
+// src/lib/book-homework.ts
+var COURSE = book_topics_default;
+var SUBJECT_RU = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+function bookFor(subject, grade) {
+  return COURSE.find((book) => book.subject === subject && book.grade === grade) ?? COURSE.find((book) => book.subject === subject);
+}
+function dueAfter(date2) {
+  const day2 = /* @__PURE__ */ new Date(`${date2}T20:00:00+05:00`);
+  day2.setUTCDate(day2.getUTCDate() + 1);
+  const local = new Date(day2.getTime() + 5 * 3600 * 1e3);
+  if (local.getUTCDay() === 0) day2.setUTCDate(day2.getUTCDate() + 1);
+  return day2;
+}
+async function giveBookHomework(date2, lessons, now = Date.now()) {
+  const ended = lessons.filter((lesson) => lesson.teacherId && Date.parse(lesson.endsAt) <= now && bookFor(lesson.subject, lesson.grade));
+  if (!ended.length) return;
+  try {
+    const classIds = [...new Set(ended.map((lesson) => lesson.classId))];
+    const progress = await db.select({ classId: courseProgressTable.classId, topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(inArray(courseProgressTable.classId, classIds));
+    const handled = /* @__PURE__ */ new Set();
+    for (const lesson of ended) {
+      const book = bookFor(lesson.subject, lesson.grade);
+      const key = `${lesson.classId}:${book.id}`;
+      if (handled.has(key)) continue;
+      handled.add(key);
+      const rows = progress.filter((row) => row.classId === lesson.classId);
+      const covered = new Set(rows.map((row) => row.topicKey));
+      const today2 = book.topics.find((topic2) => rows.some((row) => row.topicKey === topic2.key && row.doneOn === date2));
+      const last = book.topics.reduce((index2, topic2, i) => covered.has(topic2.key) ? i : index2, -1);
+      const topic = today2 ?? book.topics[last + 1];
+      if (!topic) continue;
+      if (!today2) {
+        await db.insert(courseProgressTable).values({ classId: lesson.classId, topicKey: topic.key, doneOn: date2, markedBy: lesson.teacherId }).onConflictDoNothing();
+      }
+      const autoKey = `book:${lesson.classId}:${topic.key}`;
+      const [exists2] = await db.select({ id: assignmentsTable.id }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
+      if (exists2) continue;
+      const tasks = topic.tasks.slice(0, 3).map((task, index2) => `${index2 + 1}. ${task}`).join("\n");
+      const [created] = await db.insert(assignmentsTable).values({
+        classId: lesson.classId,
+        createdBy: lesson.teacherId,
+        title: `\xA7${topic.code} ${topic.title}`.slice(0, 160),
+        subject: SUBJECT_RU[lesson.subject] ?? lesson.subject,
+        description: `${topic.homework}${tasks ? `
+
+\u0418\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430:
+${tasks}` : ""}`,
+        topicId: `course:${topic.key}`,
+        topicTitle: `\xA7${topic.code} ${topic.title}`,
+        autoKey,
+        dueAt: dueAfter(date2),
+        status: "assigned"
+      }).onConflictDoNothing().returning({ id: assignmentsTable.id });
+      if (created) await announceHomework(lesson.classId, `\xA7${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
+    }
+  } catch (error) {
+    logger.warn({ err: error }, "book homework was not given");
+  }
+}
+async function announceHomework(classId, title, homework2, subject) {
+  try {
+    const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!pupils.length) return;
+    const people = await withParents(pupils);
+    await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework2}`, "/classes");
+    await notifyUsers(people, `\u{1F4DA} <b>Uy vazifasi / \u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435</b> \xB7 ${escapeHtml(subject)}
+${escapeHtml(title)}
+${escapeHtml(homework2)}`);
+  } catch (error) {
+    logger.warn({ err: error }, "homework notice was not sent");
+  }
+}
+
+// src/routes/timetable.ts
+var router7 = (0, import_express7.Router)();
+var viewerOf2 = (res) => res.locals.authenticatedUser;
+var isRecord6 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var everyRole3 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var MANAGERS = ["school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var TASHKENT_OFFSET_MIN = 5 * 60;
+var TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+var SUBJECT_RE = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
+var MAX_PERIODS = 10;
+var DEFAULT_BELLS = [
+  { start: "08:30", end: "09:15" },
+  { start: "09:25", end: "10:10" },
+  { start: "10:20", end: "11:05" },
+  { start: "11:20", end: "12:05" },
+  { start: "12:15", end: "13:00" },
+  { start: "13:10", end: "13:55" },
+  { start: "14:05", end: "14:50" }
+];
+function tashkentNow(now = /* @__PURE__ */ new Date()) {
+  const local = new Date(now.getTime() + TASHKENT_OFFSET_MIN * 60 * 1e3);
+  const date2 = local.toISOString().slice(0, 10);
+  const weekday = local.getUTCDay() === 0 ? 7 : local.getUTCDay();
+  return { date: date2, weekday, minutes: local.getUTCHours() * 60 + local.getUTCMinutes() };
+}
+function atTashkent(date2, time2) {
+  return (/* @__PURE__ */ new Date(`${date2}T${time2}:00+05:00`)).toISOString();
+}
+function cleanBells(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PERIODS) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord6(item) || typeof item.start !== "string" || typeof item.end !== "string") return null;
+    if (!TIME_RE.test(item.start) || !TIME_RE.test(item.end) || item.start >= item.end) return null;
+    if (out.length && out[out.length - 1].end > item.start) return null;
+    out.push({ start: item.start, end: item.end });
+  }
+  return out;
+}
+async function bellsOf(schoolId) {
+  const [row] = await db.select({ periods: schoolBellsTable.periods }).from(schoolBellsTable).where(eq(schoolBellsTable.schoolId, schoolId)).limit(1);
+  return cleanBells(row?.periods) ?? DEFAULT_BELLS;
+}
+async function schoolRoleOf(userId, schoolId) {
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+  return row?.role ?? null;
+}
+async function canRead(viewer, schoolId) {
+  return isGlobalAdminRole(viewer.role) || Boolean(await schoolRoleOf(viewer.id, schoolId));
+}
+async function canEdit(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const role = await schoolRoleOf(viewer.id, schoolId);
+  return role === "school_director" || role === "school_admin";
+}
+var editLimiter = createRateLimiter(120, 10 * 60 * 1e3, "Too many changes. Try again later.", "timetable");
+async function loadTimetable(schoolId) {
+  const [slots, classes, teachers, bells] = await Promise.all([
+    db.select({ id: timetableSlotsTable.id, classId: timetableSlotsTable.classId, weekday: timetableSlotsTable.weekday, period: timetableSlotsTable.period, subject: timetableSlotsTable.subject, teacherId: timetableSlotsTable.teacherId, room: timetableSlotsTable.room }).from(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId)).orderBy(asc(timetableSlotsTable.weekday), asc(timetableSlotsTable.period)),
+    db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name)),
+    db.select({ id: usersTable.id, name: usersTable.username, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username)),
+    bellsOf(schoolId)
+  ]);
+  return { slots, classes, teachers, bells };
+}
+router7.get("/schools/:schoolId/timetable", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  if (!await canRead(viewer, schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ ...await loadTimetable(schoolId), canEdit: await canEdit(viewer, schoolId) });
+});
+router7.put("/schools/:schoolId/timetable", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  if (!await canEdit(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
+    return;
+  }
+  const body = isRecord6(req.body) ? req.body : {};
+  const bells = body.bells === void 0 ? await bellsOf(schoolId) : cleanBells(body.bells);
+  if (!bells) {
+    res.status(400).json({ error: "Check the bell times." });
+    return;
+  }
+  if (!Array.isArray(body.slots) || body.slots.length > 2e3) {
+    res.status(400).json({ error: "Invalid timetable." });
+    return;
+  }
+  const { classes, teachers } = await loadTimetable(schoolId);
+  const classIds = new Set(classes.map((item) => item.id));
+  const teacherIds = new Set(teachers.map((item) => item.id));
+  const seen = /* @__PURE__ */ new Set();
+  const rows = [];
+  for (const item of body.slots) {
+    if (!isRecord6(item)) {
+      res.status(400).json({ error: "Invalid lesson." });
+      return;
+    }
+    const classId = String(item.classId ?? "");
+    const weekday = Number(item.weekday);
+    const period = Number(item.period);
+    const subject = typeof item.subject === "string" ? item.subject.trim() : "";
+    const teacherId = typeof item.teacherId === "string" && item.teacherId ? item.teacherId : null;
+    const room = typeof item.room === "string" ? item.room.trim().slice(0, 20) || null : null;
+    if (!classIds.has(classId) || !Number.isInteger(weekday) || weekday < 1 || weekday > 6 || !Number.isInteger(period) || period < 1 || period > bells.length || !SUBJECT_RE.test(subject)) {
+      res.status(400).json({ error: "A lesson has a wrong class, day, period or subject." });
+      return;
+    }
+    if (teacherId && !teacherIds.has(teacherId)) {
+      res.status(400).json({ error: "A lesson has a teacher from another school." });
+      return;
+    }
+    const key = `${classId}:${weekday}:${period}`;
+    if (seen.has(key)) {
+      res.status(400).json({ error: "Two lessons in one class at the same time." });
+      return;
+    }
+    seen.add(key);
+    rows.push({ schoolId, classId, weekday, period, subject, teacherId, room });
+  }
+  const busy = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    if (!row.teacherId) continue;
+    const key = `${row.teacherId}:${row.weekday}:${row.period}`;
+    if (busy.has(key)) {
+      res.status(400).json({ error: "One teacher has two lessons at the same time." });
+      return;
+    }
+    busy.set(key, row.classId);
+  }
+  await db.transaction(async (tx) => {
+    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
+    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    await tx.insert(schoolBellsTable).values({ schoolId, periods: bells, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: schoolBellsTable.schoolId, set: { periods: bells, updatedAt: /* @__PURE__ */ new Date() } });
+  });
+  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: rows.length });
+  res.json({ ...await loadTimetable(schoolId), canEdit: true });
+});
+async function fillDemoTimetable(schoolId) {
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  if (!classes.length) return 0;
+  const teachers = await db.select({ id: usersTable.id, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username));
+  const SUBJECTS = ["math", "physics", "chemistry", "biology"];
+  const SUBJECT_RU2 = { math: "\u043C\u0430\u0442\u0435\u043C", physics: "\u0444\u0438\u0437\u0438\u043A", chemistry: "\u0445\u0438\u043C\u0438", biology: "\u0431\u0438\u043E\u043B\u043E\u0433" };
+  const teaches = (teacher, subject) => Array.isArray(teacher.subjects) && teacher.subjects.some((item) => typeof item === "string" && item.toLowerCase().includes(SUBJECT_RU2[subject]));
+  const ownerOf = /* @__PURE__ */ new Map();
+  SUBJECTS.forEach((subject, index2) => {
+    const own = teachers.filter((teacher) => teaches(teacher, subject)).map((teacher) => teacher.id);
+    const fallback = teachers.length ? [teachers[index2 % teachers.length].id] : [];
+    ownerOf.set(subject, own.length ? own : fallback);
+  });
+  const WEEK = [
+    ["math", "physics", "chemistry", "math", "biology"],
+    ["chemistry", "math", "biology", "physics", "math"],
+    ["math", "biology", "physics", "math", "chemistry"],
+    ["physics", "math", "chemistry", "biology", "math"],
+    ["biology", "chemistry", "math", "physics", "math"],
+    ["math", "physics", "biology", "chemistry"]
+  ];
+  const rows = [];
+  const busy = /* @__PURE__ */ new Set();
+  classes.forEach((klass, classIndex) => {
+    WEEK.forEach((day2, dayIndex) => {
+      const weekday = dayIndex + 1;
+      day2.forEach((_, period0) => {
+        const period = period0 + 1;
+        let subject = day2[(period0 + classIndex) % day2.length];
+        let teacherId = null;
+        for (let attempt = 0; attempt < day2.length && !teacherId; attempt += 1) {
+          subject = day2[(period0 + classIndex + attempt) % day2.length];
+          teacherId = (ownerOf.get(subject) ?? []).find((id) => !busy.has(`${id}:${weekday}:${period}`)) ?? null;
+        }
+        if (teacherId) busy.add(`${teacherId}:${weekday}:${period}`);
+        rows.push({ schoolId, classId: klass.id, weekday, period, subject, teacherId, room: String(201 + classIndex) });
+      });
+    });
+  });
+  await db.transaction(async (tx) => {
+    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
+    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    await tx.insert(schoolBellsTable).values({ schoolId, periods: DEFAULT_BELLS }).onConflictDoNothing();
+  });
+  return rows.length;
+}
+router7.post("/schools/:schoolId/timetable/demo", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  if (!await canEdit(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
+    return;
+  }
+  const count = await fillDemoTimetable(schoolId);
+  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: count, demo: true });
+  res.json({ ...await loadTimetable(schoolId), canEdit: true });
+});
+async function slotsFilterFor(viewer) {
+  if (viewer.role === "teacher") return eq(timetableSlotsTable.teacherId, viewer.id);
+  if (viewer.role === "student" || viewer.role === "parent") {
+    const studentIds = viewer.role === "student" ? [viewer.id] : (await db.select({ id: parentLinksTable.studentId }).from(parentLinksTable).where(eq(parentLinksTable.parentId, viewer.id))).map((row) => row.id);
+    if (!studentIds.length) return null;
+    const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(inArray(classMembersTable.userId, studentIds), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!classIds.length) return null;
+    return inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
+  }
+  const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
+  if (!schoolIds.length) return null;
+  return inArray(timetableSlotsTable.schoolId, schoolIds);
+}
+function lessonReader(where) {
+  const teacherNames = /* @__PURE__ */ new Map();
+  const bellCache = /* @__PURE__ */ new Map();
+  return async function lessonsOn(date2, weekday) {
+    if (weekday === 7) return [];
+    const slots = await db.select({
+      id: timetableSlotsTable.id,
+      schoolId: timetableSlotsTable.schoolId,
+      classId: timetableSlotsTable.classId,
+      period: timetableSlotsTable.period,
+      subject: timetableSlotsTable.subject,
+      room: timetableSlotsTable.room,
+      teacherId: timetableSlotsTable.teacherId,
+      className: classesTable.name,
+      grade: classesTable.grade
+    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
+    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id) && !teacherNames.has(id)))];
+    if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
+    const out = [];
+    for (const slot of slots) {
+      if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
+      const bell = bellCache.get(slot.schoolId)[slot.period - 1];
+      if (!bell) continue;
+      out.push({
+        id: slot.id,
+        classId: slot.classId,
+        className: slot.className,
+        grade: slot.grade,
+        period: slot.period,
+        subject: slot.subject,
+        room: slot.room,
+        teacherId: slot.teacherId,
+        teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        start: bell.start,
+        end: bell.end,
+        startsAt: atTashkent(date2, bell.start),
+        endsAt: atTashkent(date2, bell.end)
+      });
+    }
+    out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
+    return out;
+  };
+}
+router7.get("/me/today", requireAuthenticatedRole(...everyRole3), async (_req, res) => {
+  const viewer = viewerOf2(res);
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  const base = { date: now.date, weekday: now.weekday, now: (/* @__PURE__ */ new Date()).toISOString(), week: [] };
+  const where = await slotsFilterFor(viewer);
+  if (!where) {
+    res.json({ ...base, lessons: [], next: [] });
+    return;
+  }
+  base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
+  const lessonsOn = lessonReader(where);
+  const lessons = await lessonsOn(now.date, now.weekday);
+  await giveBookHomework(now.date, lessons);
+  const next = [];
+  for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
+    const day2 = tashkentNow(new Date(Date.now() + offset * 864e5));
+    if (day2.weekday === 7) continue;
+    next.push({ date: day2.date, weekday: day2.weekday, lessons: await lessonsOn(day2.date, day2.weekday) });
+  }
+  let prev = null;
+  for (let offset = 1; !prev && offset <= 3; offset += 1) {
+    const day2 = tashkentNow(new Date(Date.now() - offset * 864e5));
+    if (day2.weekday === 7) continue;
+    prev = { date: day2.date, weekday: day2.weekday, lessons: await lessonsOn(day2.date, day2.weekday) };
+  }
+  if (prev) await giveBookHomework(prev.date, prev.lessons);
+  if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
+  res.json({ ...base, lessons, next, prev });
+});
+router7.get("/me/week", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const viewer = viewerOf2(res);
+  const offset = Math.max(-8, Math.min(8, Number.parseInt(String(req.query.offset ?? "0"), 10) || 0));
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  const monday = /* @__PURE__ */ new Date(`${now.date}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() - (now.weekday - 1) + offset * 7);
+  const days = [];
+  const where = await slotsFilterFor(viewer);
+  const lessonsOn = where ? lessonReader(where) : null;
+  for (let index2 = 0; index2 < 6; index2 += 1) {
+    const day2 = new Date(monday.getTime() + index2 * 864e5);
+    const date2 = day2.toISOString().slice(0, 10);
+    days.push({ date: date2, weekday: index2 + 1, lessons: lessonsOn ? await lessonsOn(date2, index2 + 1) : [] });
+  }
+  res.json({ today: now.date, now: (/* @__PURE__ */ new Date()).toISOString(), offset, days });
+});
+var timetable_default = router7;
+
+// src/lib/bot-commands.ts
+var SITE = "https://eduverse-uz1.vercel.app";
+var SUBJECT = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+var subjectName = (value) => SUBJECT[value] ?? value;
+var day = (iso) => iso.slice(0, 10).split("-").reverse().join(".");
+var MANAGERS2 = ["school_director", "school_admin"];
+var MANAGER_ROLES = ["school_director", "school_admin"];
+function commandsFor(role) {
+  const list = [{ command: "today", description: "\u0423\u0440\u043E\u043A\u0438 \u043D\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F / Bugungi darslar" }];
+  if (role === "student" || role === "parent") list.push({ command: "homework", description: "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F / Uy vazifalari" }, { command: "grades", description: "\u041E\u0446\u0435\u043D\u043A\u0438 / Baholar" });
+  if (role === "teacher") list.push({ command: "check", description: "\u0420\u0430\u0431\u043E\u0442\u044B \u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443 / Tekshirish" });
+  if (MANAGERS2.includes(role)) list.push({ command: "school", description: "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u0432 \u0448\u043A\u043E\u043B\u0435 / Bugun maktabda" });
+  list.push({ command: "help", description: "\u041F\u043E\u043C\u043E\u0449\u044C / Yordam" });
+  return list;
+}
+async function personOfChat(chatId) {
+  const [row] = await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role }).from(telegramNotifyTable).innerJoin(usersTable, eq(usersTable.id, telegramNotifyTable.userId)).where(eq(telegramNotifyTable.chatId, chatId)).limit(1);
+  return row ?? null;
+}
+async function pupilsOf(person) {
+  if (person.role === "student") return [{ id: person.id, name: person.name }];
+  if (person.role !== "parent") return [];
+  return db.select({ id: usersTable.id, name: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(usersTable.id, parentLinksTable.studentId)).where(eq(parentLinksTable.parentId, person.id));
+}
+async function today(person) {
+  const now = tashkentNow();
+  const where = await slotsFilterFor({ id: person.id, role: person.role });
+  if (!where) return "\u0420\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043A\u0430 \u043D\u0435\u0442. / Jadval hali yo\u2018q.";
+  const lessons = await lessonReader(where)(now.date, now.weekday);
+  if (!lessons.length) return `\u{1F4C5} ${day(now.date)}: \u0443\u0440\u043E\u043A\u043E\u0432 \u043D\u0435\u0442. / Bugun dars yo\u2018q.`;
+  const manager = MANAGERS2.includes(person.role);
+  const shown = manager ? lessons.slice(0, 40) : lessons;
+  const nowMs = Date.now();
+  const lines = shown.map((lesson) => {
+    const state = nowMs >= Date.parse(lesson.endsAt) ? "\u2713" : nowMs >= Date.parse(lesson.startsAt) ? "\u25B6" : "\u2022";
+    const who = person.role === "teacher" || manager ? `${escapeHtml(lesson.className)} \xB7 ` : "";
+    const teacher = person.role !== "teacher" && lesson.teacherName ? ` \xB7 ${escapeHtml(lesson.teacherName)}` : "";
+    return `${state} ${lesson.start}\u2013${lesson.end} \xB7 ${who}<b>${escapeHtml(subjectName(lesson.subject))}</b>${lesson.room ? ` \xB7 \u043A\u0430\u0431. ${escapeHtml(lesson.room)}` : ""}${teacher}`;
+  });
+  return `\u{1F4C5} <b>\u0423\u0440\u043E\u043A\u0438 \u043D\u0430 ${day(now.date)}</b>
+${lines.join("\n")}${lessons.length > shown.length ? `
+\u2026\u0438 \u0435\u0449\u0451 ${lessons.length - shown.length}` : ""}
+
+\u25B6 \u0438\u0434\u0451\u0442 \u0441\u0435\u0439\u0447\u0430\u0441 \xB7 \u2713 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F`;
+}
+async function homework(person) {
+  const pupils = await pupilsOf(person);
+  if (!pupils.length) return "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432. / O\u2018quvchi bog\u2018lanmagan.";
+  const out = [];
+  const since = new Date(Date.now() - 7 * 864e5);
+  for (const pupil of pupils) {
+    const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, pupil.id), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!classIds.length) continue;
+    const tasks = await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(and(inArray(assignmentsTable.classId, classIds), gte(assignmentsTable.createdAt, since))).orderBy(desc(assignmentsTable.createdAt)).limit(8);
+    const mine = tasks.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, pupil.id), inArray(assignmentSubmissionsTable.assignmentId, tasks.map((task) => task.id)))) : [];
+    out.push(`\u{1F4DA} <b>${escapeHtml(pupil.name)}</b>`);
+    if (!tasks.length) {
+      out.push("\u0417\u0430 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.");
+      continue;
+    }
+    for (const task of tasks) {
+      const sent = mine.find((row) => row.assignmentId === task.id);
+      const state = sent ? sent.score !== null ? `\u2705 \u043E\u0446\u0435\u043D\u043A\u0430 ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : "\u{1F4E4} \u0441\u0434\u0430\u043D\u043E, \u0436\u0434\u0451\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438" : "\u23F3 \u043D\u0435 \u0441\u0434\u0430\u043D\u043E";
+      const first = task.description.split("\n")[0].slice(0, 160);
+      out.push(`\u2022 <b>${escapeHtml(task.subject)}</b> \xB7 ${escapeHtml(task.title)}${task.dueAt ? ` \xB7 \u0434\u043E ${day(task.dueAt.toISOString())}` : ""}
+  ${escapeHtml(first)}
+  ${state}`);
+    }
+  }
+  return out.join("\n") || "\u0417\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.";
+}
+async function grades(person) {
+  const pupils = await pupilsOf(person);
+  if (!pupils.length) return "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432. / O\u2018quvchi bog\u2018lanmagan.";
+  const out = [];
+  for (const pupil of pupils) {
+    const marks = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(eq(journalMarksTable.studentId, pupil.id)).orderBy(desc(journalMarksTable.date)).limit(12);
+    out.push(`\u{1F4D8} <b>${escapeHtml(pupil.name)}</b>`);
+    if (!marks.length) {
+      out.push("\u041E\u0446\u0435\u043D\u043E\u043A \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.");
+      continue;
+    }
+    for (const row of marks) out.push(`${day(row.date)} \xB7 ${escapeHtml(subjectName(row.subject))}: ${row.absent ? "\u043D\u0431" : `<b>${row.mark}</b>`}`);
+    const numbers = marks.map((row) => row.mark).filter((mark) => typeof mark === "number");
+    if (numbers.length) out.push(`\u0421\u0440\u0435\u0434\u043D\u044F\u044F: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
+  }
+  return out.join("\n");
+}
+async function toCheck(person) {
+  const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, person.id), eq(classMembersTable.role, "teacher")))).map((row) => row.id);
+  if (!classIds.length) return "\u041A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.";
+  const waiting = await db.select({ title: assignmentsTable.title, className: classesTable.name, student: usersTable.username }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentsTable.id, assignmentSubmissionsTable.assignmentId)).innerJoin(classesTable, eq(classesTable.id, assignmentsTable.classId)).innerJoin(usersTable, eq(usersTable.id, assignmentSubmissionsTable.studentId)).where(and(inArray(assignmentsTable.classId, classIds), eq(assignmentSubmissionsTable.status, "submitted"))).limit(30);
+  if (!waiting.length) return "\u2705 \u041F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043D\u0435\u0447\u0435\u0433\u043E. / Tekshiradigan ish yo\u2018q.";
+  return `\u{1F4DD} <b>\u0416\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438: ${waiting.length}</b>
+${waiting.map((row) => `\u2022 ${escapeHtml(row.className)} \xB7 ${escapeHtml(row.student)} \u2014 ${escapeHtml(row.title)}`).join("\n")}
+
+\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C: ${SITE}/teacher`;
+}
+async function school(person) {
+  const now = tashkentNow();
+  const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, person.id), inArray(schoolMembersTable.role, MANAGER_ROLES)))).map((row) => row.id);
+  if (!schoolIds.length) return "\u0428\u043A\u043E\u043B\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430.";
+  const [info] = await db.select({ name: schoolsTable.name, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil }).from(schoolsTable).where(eq(schoolsTable.id, schoolIds[0])).limit(1);
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(inArray(classesTable.schoolId, schoolIds));
+  const classIds = classes.map((row) => row.id);
+  const where = await slotsFilterFor({ id: person.id, role: person.role });
+  const lessons = where ? await lessonReader(where)(now.date, now.weekday) : [];
+  const nowMs = Date.now();
+  const current = lessons.filter((lesson) => nowMs >= Date.parse(lesson.startsAt) && nowMs < Date.parse(lesson.endsAt));
+  const absent = classIds.length ? await db.select({ name: usersTable.username, status: attendanceTable.status, classId: attendanceTable.classId }).from(attendanceTable).innerJoin(usersTable, eq(usersTable.id, attendanceTable.studentId)).where(and(inArray(attendanceTable.classId, classIds), eq(attendanceTable.attendanceDate, now.date), inArray(attendanceTable.status, ["absent", "late"]))) : [];
+  const waiting = classIds.length ? await db.select({ id: assignmentSubmissionsTable.id }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentsTable.id, assignmentSubmissionsTable.assignmentId)).where(and(inArray(assignmentsTable.classId, classIds), eq(assignmentSubmissionsTable.status, "submitted"))) : [];
+  const className = (id) => classes.find((row) => row.id === id)?.name ?? "";
+  const absentNames = [...new Map(absent.filter((row) => row.status === "absent").map((row) => [row.name, `${row.name} (${className(row.classId)})`])).values()];
+  const lateCount = new Set(absent.filter((row) => row.status === "late").map((row) => row.name)).size;
+  const lines = [
+    `\u{1F3EB} <b>${escapeHtml(info?.name ?? "")}</b> \xB7 ${day(now.date)}`,
+    `\u0423\u0440\u043E\u043A\u043E\u0432 \u0441\u0435\u0433\u043E\u0434\u043D\u044F: <b>${lessons.length}</b>${current.length ? ` \xB7 \u0441\u0435\u0439\u0447\u0430\u0441 \u0438\u0434\u0451\u0442: ${current.length}` : ""}`,
+    ...current.slice(0, 10).map((lesson) => `  \u25B6 ${escapeHtml(lesson.className)} \xB7 ${escapeHtml(subjectName(lesson.subject))}${lesson.teacherName ? ` \xB7 ${escapeHtml(lesson.teacherName)}` : ""}`),
+    `\u041E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u044E\u0442: <b>${absentNames.length}</b>${lateCount ? ` \xB7 \u043E\u043F\u043E\u0437\u0434\u0430\u043B\u0438: ${lateCount}` : ""}`,
+    ...absentNames.slice(0, 15).map((name) => `  \u2022 ${escapeHtml(name)}`),
+    `\u0414\u043E\u043C\u0430\u0448\u043A\u0438 \u0436\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438: <b>${waiting.length}</b>`
+  ];
+  if (info?.plan && info.plan !== "free" && info.planUntil) {
+    const left = Math.ceil((info.planUntil.getTime() - nowMs) / 864e5);
+    if (left <= 30) lines.push(left >= 0 ? `\u23F3 \u0422\u0430\u0440\u0438\u0444 ${info.plan === "pro" ? "Pro" : "\u043F\u0438\u043B\u043E\u0442"} \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${left} \u0434\u043D.` : "\u26A0\uFE0F \u0421\u0440\u043E\u043A \u0442\u0430\u0440\u0438\u0444\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.");
+  }
+  lines.push(`
+\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u043E: ${SITE}/school`);
+  return lines.join("\n");
+}
+function help(person) {
+  if (!person) {
+    return [
+      "\u{1F44B} <b>EDUVERSE</b>",
+      "\u0427\u0442\u043E\u0431\u044B \u0431\u043E\u0442 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B \u0432\u0430\u0448\u0438 \u0443\u0440\u043E\u043A\u0438, \u043E\u0446\u0435\u043D\u043A\u0438 \u0438 \u0434\u043E\u043C\u0430\u0448\u043A\u0443, \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0435\u0433\u043E \u043D\u0430 \u0441\u0430\u0439\u0442\u0435:",
+      `${SITE}/profile \u2192 \xAB\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\xBB \u2192 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C Telegram\xBB.`,
+      "",
+      "Botni saytda ulang: Profil \u2192 Bildirishnomalar \u2192 \xABTelegramni ulash\xBB."
+    ].join("\n");
+  }
+  const list = commandsFor(person.role).map((item) => `/${item.command} \u2014 ${item.description}`);
+  return `\u{1F44B} <b>${escapeHtml(person.name)}</b>, \u043A\u043E\u043C\u0430\u043D\u0434\u044B:
+${list.join("\n")}
+
+\u0421\u0430\u0439\u0442: ${SITE}`;
+}
+async function answerCommand(chatId, text2) {
+  const match = /^\/([a-z]+)(?:@\w+)?\s*$/i.exec(text2.trim());
+  if (!match) return null;
+  const command = match[1].toLowerCase();
+  if (!["start", "help", "today", "homework", "grades", "check", "school"].includes(command)) return null;
+  const person = await personOfChat(chatId);
+  if (!person || command === "start" || command === "help") return help(person);
+  if (command === "today") return today(person);
+  if (command === "homework" && (person.role === "student" || person.role === "parent")) return homework(person);
+  if (command === "grades" && (person.role === "student" || person.role === "parent")) return grades(person);
+  if (command === "check" && person.role === "teacher") return toCheck(person);
+  if (command === "school" && MANAGERS2.includes(person.role)) return school(person);
+  return `\u042D\u0442\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u043D\u0435 \u0434\u043B\u044F \u0432\u0430\u0448\u0435\u0439 \u0440\u043E\u043B\u0438.
+
+${help(person)}`;
+}
+
+// src/routes/school-tools.ts
+init_ai_content();
+var router8 = (0, import_express8.Router)();
+var perSession3 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var viewerOf3 = (res) => res.locals.authenticatedUser;
+var isRecord7 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var SCRYPT_CONFIG2 = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 function hashPassword2(password) {
   return new Promise((resolve, reject) => {
@@ -54154,14 +55067,14 @@ async function canManageSchool2(viewer, schoolId) {
   return row?.role === "school_director" || row?.role === "school_admin";
 }
 var resetLimiter = createRateLimiter(60, 15 * 60 * 1e3, "Too many password resets. Try again later.", "password-reset", (req) => `ip:${req.ip ?? "unknown"}`);
-router6.post(
+router8.post(
   "/schools/:schoolId/members/:userId/reset-password",
   requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   resetLimiter,
   async (req, res) => {
     const schoolId = String(req.params.schoolId);
     const userId = String(req.params.userId);
-    const viewer = viewerOf(res);
+    const viewer = viewerOf3(res);
     if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
       res.status(400).json({ error: "Invalid identifier." });
       return;
@@ -54203,10 +55116,10 @@ function normalizePhone(value) {
   return void 0;
 }
 function readRows(body) {
-  const raw = isRecord5(body) && Array.isArray(body.rows) ? body.rows : [];
+  const raw = isRecord7(body) && Array.isArray(body.rows) ? body.rows : [];
   const rows = [];
   for (const item of raw.slice(0, 120)) {
-    if (!isRecord5(item)) continue;
+    if (!isRecord7(item)) continue;
     const role = item.role === "teacher" || item.role === "parent" || item.role === "student" || item.role === "school_admin" || item.role === "school_director" ? item.role : null;
     const name = cleanText(item.name, 80);
     if (!role || !name) continue;
@@ -54295,12 +55208,12 @@ async function importPeople(schoolId, rows, actorId) {
   }
   return { created, skipped };
 }
-router6.post(
+router8.post(
   "/schools/:schoolId/import",
   requireAuthenticatedRole("education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
     const schoolId = String(req.params.schoolId);
-    const viewer = viewerOf(res);
+    const viewer = viewerOf3(res);
     if (!isValidUuid(schoolId)) {
       res.status(400).json({ error: "Invalid school identifier." });
       return;
@@ -54315,14 +55228,14 @@ router6.post(
     res.status(201).json({ created: result.created.map(({ userId: _userId, ...rest }) => rest), skipped: result.skipped });
   }
 );
-var everyRole2 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
-router6.get("/me/telegram", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
-  const viewer = viewerOf(res);
+var everyRole4 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router8.get("/me/telegram", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
   const [row] = await db.select().from(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id)).limit(1);
   res.json({ available: telegramBotConfigured() && Boolean(telegramBotUsername()), connected: Boolean(row?.chatId) });
 });
-router6.post("/me/telegram/link", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
-  const viewer = viewerOf(res);
+router8.post("/me/telegram/link", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
   const username = telegramBotUsername();
   if (!telegramBotConfigured() || !username) {
     res.status(503).json({ error: "Telegram notifications are not configured." });
@@ -54333,16 +55246,36 @@ router6.post("/me/telegram/link", requireAuthenticatedRole(...everyRole2), async
   await db.insert(telegramNotifyTable).values({ userId: viewer.id, nonce, nonceExpiresAt: expiresAt }).onConflictDoUpdate({ target: telegramNotifyTable.userId, set: { nonce, nonceExpiresAt: expiresAt } });
   res.json({ link: `https://t.me/${username}?start=notify_${nonce}` });
 });
-router6.delete("/me/telegram", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
-  const viewer = viewerOf(res);
+router8.delete("/me/telegram", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
   await db.delete(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id));
   res.status(204).end();
 });
-router6.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
-  const message = isRecord5(req.body) && isRecord5(req.body.message) ? req.body.message : null;
+router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
+  const message = isRecord7(req.body) && isRecord7(req.body.message) ? req.body.message : null;
   const text2 = typeof message?.text === "string" ? message.text.trim() : "";
   const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text2);
   if (!match) {
+    const chatOfCommand = isRecord7(message?.chat) ? message.chat : null;
+    if (/^\/[a-z]+(?:@\w+)?$/i.test(text2) && chatOfCommand?.type === "private" && (typeof chatOfCommand.id === "number" || typeof chatOfCommand.id === "string")) {
+      const secret = telegramWebhookSecret();
+      if (!secret || req.get("x-telegram-bot-api-secret-token") !== secret) {
+        res.status(403).json({ error: "Invalid Telegram webhook secret." });
+        return;
+      }
+      try {
+        const reply = await answerCommand(String(chatOfCommand.id), text2);
+        if (reply) {
+          await sendTelegramMessage(String(chatOfCommand.id), reply);
+          res.json({ ok: true });
+          return;
+        }
+      } catch (error) {
+        logger.warn({ err: error }, "bot command failed");
+        res.json({ ok: true });
+        return;
+      }
+    }
     next();
     return;
   }
@@ -54351,7 +55284,7 @@ router6.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     res.status(403).json({ error: "Invalid Telegram webhook secret." });
     return;
   }
-  const chat = isRecord5(message?.chat) ? message.chat : null;
+  const chat = isRecord7(message?.chat) ? message.chat : null;
   if (chat?.type !== "private" || typeof chat.id !== "number" && typeof chat.id !== "string") {
     res.json({ ok: true });
     return;
@@ -54359,22 +55292,24 @@ router6.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
   const chatId = String(chat.id);
   const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
   if (row) {
-    const result = await sendTelegramMessage(chatId, "\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B.");
+    const result = await sendTelegramMessage(chatId, `\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B.
+
+${await answerCommand(chatId, "/help") ?? ""}`);
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
   }
   res.json({ ok: true });
 });
-var planLimiter = createRateLimiter(20, 10 * 60 * 1e3, "Too many lesson plans. Wait a few minutes.", "ai-plan", perSession2);
-router6.post(
+var planLimiter = createRateLimiter(20, 10 * 60 * 1e3, "Too many lesson plans. Wait a few minutes.", "ai-plan", perSession3);
+router8.post(
   "/ai/lesson-plan",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   planLimiter,
   async (req, res) => {
-    const subject = cleanText(isRecord5(req.body) ? req.body.subject : void 0, 60);
-    const topic = cleanText(isRecord5(req.body) ? req.body.topic : void 0, 200);
-    const gradeRaw = Number(isRecord5(req.body) ? req.body.grade : 7);
-    const minutesRaw = Number(isRecord5(req.body) ? req.body.minutes : 45);
-    const language = isRecord5(req.body) && typeof req.body.language === "string" ? req.body.language.slice(0, 20) : "\u0420\u0443\u0441\u0441\u043A\u0438\u0439";
+    const subject = cleanText(isRecord7(req.body) ? req.body.subject : void 0, 60);
+    const topic = cleanText(isRecord7(req.body) ? req.body.topic : void 0, 200);
+    const gradeRaw = Number(isRecord7(req.body) ? req.body.grade : 7);
+    const minutesRaw = Number(isRecord7(req.body) ? req.body.minutes : 45);
+    const language = isRecord7(req.body) && typeof req.body.language === "string" ? req.body.language.slice(0, 20) : "\u0420\u0443\u0441\u0441\u043A\u0438\u0439";
     if (!subject || !topic) {
       res.status(400).json({ error: "Subject and topic are required." });
       return;
@@ -54402,26 +55337,26 @@ function gradePendulum(rows) {
   if (distinct < 3) grade = Math.min(grade, 3);
   return { g: Math.round(g * 100) / 100, errorPercent, grade, rows: valid };
 }
-router6.post("/labs/reports", requireAuthenticatedRole("student"), async (req, res) => {
-  const viewer = viewerOf(res);
-  const lab = isRecord5(req.body) && typeof req.body.lab === "string" ? req.body.lab : "";
+router8.post("/labs/reports", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf3(res);
+  const lab = isRecord7(req.body) && typeof req.body.lab === "string" ? req.body.lab : "";
   if (!LABS.has(lab)) {
     res.status(400).json({ error: "Unknown lab." });
     return;
   }
-  const rawRows = isRecord5(req.body) && Array.isArray(req.body.rows) ? req.body.rows.slice(0, 12) : [];
-  const rows = rawRows.map((row) => isRecord5(row) ? { length: Number(row.length), period: Number(row.period) } : null).filter((row) => row !== null && Number.isFinite(row.length) && Number.isFinite(row.period));
+  const rawRows = isRecord7(req.body) && Array.isArray(req.body.rows) ? req.body.rows.slice(0, 12) : [];
+  const rows = rawRows.map((row) => isRecord7(row) ? { length: Number(row.length), period: Number(row.period) } : null).filter((row) => row !== null && Number.isFinite(row.length) && Number.isFinite(row.period));
   const graded = gradePendulum(rows);
   if (!graded) {
     res.status(400).json({ error: "At least three valid measurements are required." });
     return;
   }
-  const conclusion = cleanText(isRecord5(req.body) ? req.body.conclusion : void 0, 1e3) ?? "";
+  const conclusion = cleanText(isRecord7(req.body) ? req.body.conclusion : void 0, 1e3) ?? "";
   const [report] = await db.insert(labReportsTable).values({ studentId: viewer.id, lab, data: { rows: graded.rows, g: graded.g, conclusion }, result: `g = ${graded.g} m/s\xB2`, errorPercent: graded.errorPercent, grade: graded.grade }).returning();
   res.status(201).json({ report, g: graded.g, errorPercent: graded.errorPercent, grade: graded.grade });
 });
-router6.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (_req, res) => {
-  const viewer = viewerOf(res);
+router8.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (_req, res) => {
+  const viewer = viewerOf3(res);
   let studentIds = [viewer.id];
   if (viewer.role !== "student") {
     const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
@@ -54443,16 +55378,16 @@ router6.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "sch
   res.json({ reports });
 });
 var WEAK_PASSWORDS = /* @__PURE__ */ new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
-var passwordLimiter = createRateLimiter(10, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-change", perSession2);
-router6.get("/me/security", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
-  const viewer = viewerOf(res);
+var passwordLimiter = createRateLimiter(10, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-change", perSession3);
+router8.get("/me/security", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
   const [row] = await db.select({ must: usersTable.mustChangePassword, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
   res.json({ mustChangePassword: Boolean(row?.must), recovery: Boolean(row?.recoveryUntil && row.recoveryUntil.getTime() > Date.now()) });
 });
-router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLimiter, async (req, res) => {
-  const viewer = viewerOf(res);
-  const current = isRecord5(req.body) && typeof req.body.current === "string" ? req.body.current : "";
-  const next = isRecord5(req.body) && typeof req.body.next === "string" ? req.body.next : "";
+router8.post("/me/password", requireAuthenticatedRole(...everyRole4), passwordLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const current = isRecord7(req.body) && typeof req.body.current === "string" ? req.body.current : "";
+  const next = isRecord7(req.body) && typeof req.body.next === "string" ? req.body.next : "";
   if (next.length < 10 || next.length > 128) {
     res.status(400).json({ error: "The new password must be 10 to 128 characters." });
     return;
@@ -54480,16 +55415,16 @@ router6.post("/me/password", requireAuthenticatedRole(...everyRole2), passwordLi
 });
 var AVATAR_MAX = 80 * 1024;
 var AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
-var avatarLimiter = createRateLimiter(20, 15 * 60 * 1e3, "Too many photo changes. Try again later.", "avatar", perSession2);
-router6.get("/me/avatar", requireAuthenticatedRole(...everyRole2), async (_req, res) => {
-  const viewer = viewerOf(res);
+var avatarLimiter = createRateLimiter(20, 15 * 60 * 1e3, "Too many photo changes. Try again later.", "avatar", perSession3);
+router8.get("/me/avatar", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
   const [row] = await db.select({ avatar: usersTable.avatar }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ avatar: row?.avatar ?? null });
 });
-router6.put("/me/avatar", requireAuthenticatedRole(...everyRole2), avatarLimiter, async (req, res) => {
-  const viewer = viewerOf(res);
-  const avatar = isRecord5(req.body) && typeof req.body.avatar === "string" ? req.body.avatar : "";
+router8.put("/me/avatar", requireAuthenticatedRole(...everyRole4), avatarLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const avatar = isRecord7(req.body) && typeof req.body.avatar === "string" ? req.body.avatar : "";
   if (avatar.length > AVATAR_MAX || !AVATAR_RE.test(avatar)) {
     res.status(400).json({ error: "The photo must be a JPEG, PNG or WebP image under 80 KB." });
     return;
@@ -54497,372 +55432,29 @@ router6.put("/me/avatar", requireAuthenticatedRole(...everyRole2), avatarLimiter
   await db.update(usersTable).set({ avatar, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
   res.json({ avatar });
 });
-router6.delete("/me/avatar", requireAuthenticatedRole(...everyRole2), avatarLimiter, async (_req, res) => {
-  const viewer = viewerOf(res);
+router8.delete("/me/avatar", requireAuthenticatedRole(...everyRole4), avatarLimiter, async (_req, res) => {
+  const viewer = viewerOf3(res);
   await db.update(usersTable).set({ avatar: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
   res.json({ avatar: null });
 });
-var school_tools_default = router6;
-
-// src/routes/course.ts
-init_drizzle_orm();
-var import_express7 = __toESM(require_express2(), 1);
-init_src();
-var router7 = (0, import_express7.Router)();
-var viewerOf2 = (res) => res.locals.authenticatedUser;
-var isRecord6 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var perSession3 = (req) => {
-  const token = req.cookies?.["eduverse.sid"];
-  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
-};
-var everyRole3 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
-var BOOK_RE = /^[a-z0-9][a-z0-9-]{1,59}$/;
-var TOPIC_RE = /^[a-z0-9][a-z0-9.\-]{1,39}$/;
-var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-var MAX_STROKES = 400;
-var MAX_POINTS = 1600;
-var MAX_JSON = 300 * 1024;
-function cleanStrokes(value) {
-  if (!Array.isArray(value) || value.length > MAX_STROKES) return null;
-  const out = [];
-  for (const item of value) {
-    if (!isRecord6(item)) return null;
-    const c = typeof item.c === "string" && /^#[0-9a-fA-F]{6}$/.test(item.c) ? item.c : null;
-    const w = typeof item.w === "number" && Number.isFinite(item.w) ? Math.min(0.06, Math.max(5e-4, item.w)) : null;
-    const m = item.m === "marker" ? "marker" : item.m === "pen" ? "pen" : null;
-    if (!c || w === null || !m || !Array.isArray(item.p) || item.p.length < 2 || item.p.length > MAX_POINTS || item.p.length % 2) return null;
-    const p = [];
-    for (const n of item.p) {
-      if (typeof n !== "number" || !Number.isFinite(n)) return null;
-      p.push(Math.round(Math.min(1, Math.max(0, n)) * 1e4) / 1e4);
-    }
-    out.push({ c, w: Math.round(w * 1e5) / 1e5, m, p });
-  }
-  return out;
-}
-var annotationLimiter = createRateLimiter(240, 10 * 60 * 1e3, "Too many saves. Try again in a minute.", "annotations", perSession3);
-router7.get("/me/annotations/:book", requireAuthenticatedRole(...everyRole3), async (req, res) => {
-  const book = String(req.params.book ?? "");
-  if (!BOOK_RE.test(book)) {
-    res.status(400).json({ error: "Invalid book." });
-    return;
-  }
-  const viewer = viewerOf2(res);
-  const rows = await db.select({ page: bookAnnotationsTable.page, count: sql`jsonb_array_length(${bookAnnotationsTable.strokes})` }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book))).orderBy(asc(bookAnnotationsTable.page));
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ pages: rows.filter((row) => Number(row.count) > 0).map((row) => ({ page: row.page, strokes: Number(row.count) })) });
-});
-router7.get("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole3), async (req, res) => {
-  const book = String(req.params.book ?? "");
-  const page = Number(req.params.page);
-  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
-    res.status(400).json({ error: "Invalid page." });
-    return;
-  }
-  const viewer = viewerOf2(res);
-  const [row] = await db.select({ strokes: bookAnnotationsTable.strokes, updatedAt: bookAnnotationsTable.updatedAt }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book), eq(bookAnnotationsTable.page, page))).limit(1);
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ strokes: Array.isArray(row?.strokes) ? row.strokes : [], updatedAt: row?.updatedAt ?? null });
-});
-router7.put("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole3), annotationLimiter, async (req, res) => {
-  const book = String(req.params.book ?? "");
-  const page = Number(req.params.page);
-  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
-    res.status(400).json({ error: "Invalid page." });
-    return;
-  }
-  const strokes = cleanStrokes(isRecord6(req.body) ? req.body.strokes : null);
-  if (!strokes || JSON.stringify(strokes).length > MAX_JSON) {
-    res.status(400).json({ error: "The drawing is too large or invalid." });
-    return;
-  }
-  const viewer = viewerOf2(res);
-  const now = /* @__PURE__ */ new Date();
-  await db.insert(bookAnnotationsTable).values({ userId: viewer.id, book, page, strokes, updatedAt: now }).onConflictDoUpdate({ target: [bookAnnotationsTable.userId, bookAnnotationsTable.book, bookAnnotationsTable.page], set: { strokes, updatedAt: now } });
-  res.json({ saved: true, strokes: strokes.length, updatedAt: now });
-});
-async function classAccess(viewer, classId) {
-  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
-  if (!klass) return { read: false, edit: false };
-  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
-  const [schoolRow] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
-  const [classRow] = await db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1);
-  const edit = canManageClass(viewer.role, schoolRow?.role ?? null, classRow?.role ?? null);
-  return { read: edit || Boolean(classRow), edit };
-}
-var progressLimiter = createRateLimiter(200, 10 * 60 * 1e3, "Too many changes. Try again later.", "course-progress", perSession3);
-router7.get("/classes/:classId/course", requireAuthenticatedRole(...everyRole3), async (req, res) => {
-  const classId = String(req.params.classId ?? "");
-  if (!isValidUuid(classId)) {
-    res.status(400).json({ error: "Invalid class." });
-    return;
-  }
-  const access2 = await classAccess(viewerOf2(res), classId);
-  if (!access2.read) {
-    res.status(403).json({ error: "You are not in this class." });
-    return;
-  }
-  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
-  const [progress, pace, calendar] = await Promise.all([
-    db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(eq(courseProgressTable.classId, classId)).orderBy(asc(courseProgressTable.doneOn)),
-    db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId)),
-    klass ? loadCalendar(klass.schoolId) : Promise.resolve(null)
-  ]);
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ progress, pace, calendar, canEdit: access2.edit });
-});
-router7.put("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
-  const classId = String(req.params.classId ?? "");
-  const topicKey = String(req.params.topicKey ?? "");
-  const doneOn = isRecord6(req.body) && typeof req.body.doneOn === "string" ? req.body.doneOn : "";
-  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey) || !DATE_RE.test(doneOn) || Number.isNaN(Date.parse(doneOn))) {
-    res.status(400).json({ error: "Invalid topic or date." });
-    return;
-  }
-  const viewer = viewerOf2(res);
-  const access2 = await classAccess(viewer, classId);
-  if (!access2.edit) {
-    res.status(403).json({ error: "Only the class teacher can mark topics." });
-    return;
-  }
-  await db.insert(courseProgressTable).values({ classId, topicKey, doneOn, markedBy: viewer.id }).onConflictDoUpdate({ target: [courseProgressTable.classId, courseProgressTable.topicKey], set: { doneOn, markedBy: viewer.id } });
-  res.json({ topicKey, doneOn });
-});
-router7.delete("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
-  const classId = String(req.params.classId ?? "");
-  const topicKey = String(req.params.topicKey ?? "");
-  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey)) {
-    res.status(400).json({ error: "Invalid topic." });
-    return;
-  }
-  const access2 = await classAccess(viewerOf2(res), classId);
-  if (!access2.edit) {
-    res.status(403).json({ error: "Only the class teacher can mark topics." });
-    return;
-  }
-  await db.delete(courseProgressTable).where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.topicKey, topicKey)));
-  res.json({ removed: true });
-});
-router7.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
-  const classId = String(req.params.classId ?? "");
-  const book = String(req.params.book ?? "");
-  const lessonsPerWeek = isRecord6(req.body) ? Number(req.body.lessonsPerWeek) : NaN;
-  if (!isValidUuid(classId) || !BOOK_RE.test(book) || !Number.isInteger(lessonsPerWeek) || lessonsPerWeek < 1 || lessonsPerWeek > 10) {
-    res.status(400).json({ error: "Lessons per week must be 1 to 10." });
-    return;
-  }
-  const access2 = await classAccess(viewerOf2(res), classId);
-  if (!access2.edit) {
-    res.status(403).json({ error: "Only the class teacher can change this." });
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  await db.insert(coursePaceTable).values({ classId, book, lessonsPerWeek, updatedAt: now }).onConflictDoUpdate({ target: [coursePaceTable.classId, coursePaceTable.book], set: { lessonsPerWeek, updatedAt: now } });
-  res.json({ book, lessonsPerWeek });
-});
-var validDate = (value) => typeof value === "string" && DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
-async function loadCalendar(schoolId) {
-  const [row] = await db.select({ quarters: schoolCalendarTable.quarters, holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable).where(eq(schoolCalendarTable.schoolId, schoolId)).limit(1);
-  return row ? { quarters: row.quarters, holidays: row.holidays } : null;
-}
-async function schoolAccess(viewer, schoolId) {
-  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
-  const [member] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
-  if (!member) return { read: false, edit: false };
-  return { read: true, edit: member.role === "school_director" || member.role === "school_admin" };
-}
-function readCalendar(body) {
-  if (!isRecord6(body) || !Array.isArray(body.quarters) || body.quarters.length !== 4) return null;
-  const quarters = [];
-  for (const item of body.quarters) {
-    if (!isRecord6(item) || !validDate(item.start) || !validDate(item.end) || item.start > item.end) return null;
-    if (quarters.length && quarters[quarters.length - 1].end >= item.start) return null;
-    quarters.push({ start: item.start, end: item.end });
-  }
-  const rawHolidays = Array.isArray(body.holidays) ? body.holidays : [];
-  if (rawHolidays.length > 40) return null;
-  const holidays = [];
-  for (const item of rawHolidays) {
-    if (!isRecord6(item) || !validDate(item.from) || !validDate(item.to) || item.from > item.to) return null;
-    const name = typeof item.name === "string" ? item.name.trim().slice(0, 60) : "";
-    holidays.push({ from: item.from, to: item.to, name });
-  }
-  holidays.sort((a, b) => a.from.localeCompare(b.from));
-  return { quarters, holidays };
-}
-router7.get("/schools/:schoolId/calendar", requireAuthenticatedRole(...everyRole3), async (req, res) => {
-  const schoolId = String(req.params.schoolId ?? "");
-  if (!isValidUuid(schoolId)) {
-    res.status(400).json({ error: "Invalid school." });
-    return;
-  }
-  const access2 = await schoolAccess(viewerOf2(res), schoolId);
-  if (!access2.read) {
-    res.status(403).json({ error: "You are not in this school." });
-    return;
-  }
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ calendar: await loadCalendar(schoolId), canEdit: access2.edit });
-});
-router7.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
-  const schoolId = String(req.params.schoolId ?? "");
-  if (!isValidUuid(schoolId)) {
-    res.status(400).json({ error: "Invalid school." });
-    return;
-  }
-  const viewer = viewerOf2(res);
-  const access2 = await schoolAccess(viewer, schoolId);
-  if (!access2.edit) {
-    res.status(403).json({ error: "Only the director can change the calendar." });
-    return;
-  }
-  const calendar = readCalendar(req.body);
-  if (!calendar) {
-    res.status(400).json({ error: "Four quarters in order, each with a start and end date." });
-    return;
-  }
-  const now = /* @__PURE__ */ new Date();
-  await db.insert(schoolCalendarTable).values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now }).onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
-  res.json({ calendar });
-});
-var trainerLimiter = createRateLimiter(30, 60 * 60 * 1e3, "Too many attempts.", "trainer", perSession3);
-var isoDay = (date2) => date2.toISOString().slice(0, 10);
-async function pupilClass(userId) {
-  const [row] = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, userId), eq(classMembersTable.role, "student"))).limit(1);
-  return row?.classId ?? null;
-}
-router7.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
-  const viewer = viewerOf2(res);
-  const body = isRecord6(req.body) ? req.body : {};
-  const total = Number(body.total);
-  const score = Number(body.score);
-  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total) {
-    res.status(400).json({ error: "Invalid result." });
-    return;
-  }
-  const day = isoDay(/* @__PURE__ */ new Date());
-  const classId = await pupilClass(viewer.id);
-  const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
-  res.status(row ? 201 : 200).json({ counted: Boolean(row), day });
-});
-router7.get("/trainer/rating", requireAuthenticatedRole(...everyRole3), async (req, res) => {
-  const viewer = viewerOf2(res);
-  let classId = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? req.query.classId : null;
-  if (viewer.role === "student") classId = await pupilClass(viewer.id);
-  if (!classId) {
-    res.json({ rating: [], doneToday: false });
-    return;
-  }
-  if (viewer.role !== "student") {
-    const access2 = await classAccess(viewer, classId);
-    if (!access2.read) {
-      res.status(403).json({ error: "Not your class." });
-      return;
-    }
-  }
-  const since = isoDay(new Date(Date.now() - 6 * 864e5));
-  const rows = await db.select({ userId: trainerResultsTable.userId, name: usersTable.username, points: sql`sum(${trainerResultsTable.score})::int`, days: sql`count(*)::int` }).from(trainerResultsTable).innerJoin(usersTable, eq(usersTable.id, trainerResultsTable.userId)).where(and(eq(trainerResultsTable.classId, classId), gte(trainerResultsTable.day, since))).groupBy(trainerResultsTable.userId, usersTable.username).orderBy(desc(sql`sum(${trainerResultsTable.score})`)).limit(30);
-  const [today] = await db.select({ id: trainerResultsTable.id }).from(trainerResultsTable).where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, isoDay(/* @__PURE__ */ new Date())))).limit(1);
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
-});
-var TRAINER_SUBJECTS = /* @__PURE__ */ new Set(["math", "physics", "chemistry", "biology"]);
-var tashkentDay = (offsetDays = 0) => new Date(Date.now() + 5 * 36e5 + offsetDays * 864e5).toISOString().slice(0, 10);
-router7.get("/trainer/tests", requireAuthenticatedRole("student"), async (req, res) => {
-  const viewer = viewerOf2(res);
-  const days = String(req.query.days ?? "").split(",").filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(0, 4);
-  res.setHeader("Cache-Control", "private, no-store");
-  if (!days.length) {
-    res.json({ tests: [] });
-    return;
-  }
-  const rows = await db.select({ day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.userId, viewer.id), inArray(trainerTestsTable.day, days)));
-  res.json({ tests: rows });
-});
-router7.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
-  const viewer = viewerOf2(res);
-  const body = isRecord6(req.body) ? req.body : {};
-  const total = Number(body.total);
-  const score = Number(body.score);
-  const day = typeof body.day === "string" ? body.day : "";
-  const subject = typeof body.subject === "string" ? body.subject : "";
-  const topicKey = typeof body.topicKey === "string" ? body.topicKey.slice(0, 60) : "";
-  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total || !TRAINER_SUBJECTS.has(subject)) {
-    res.status(400).json({ error: "Invalid result." });
-    return;
-  }
-  const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
-  if (!allowed.includes(day)) {
-    res.status(400).json({ error: "The time for this test is over." });
-    return;
-  }
-  const classId = await pupilClass(viewer.id);
-  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day, subject, topicKey, score, total }).onConflictDoUpdate({
-    target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
-    set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
-  });
-  res.status(201).json({ saved: true });
-});
-router7.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
-  const viewer = viewerOf2(res);
-  const classId = String(req.params.classId);
-  if (!isValidUuid(classId)) {
-    res.status(400).json({ error: "Invalid class." });
-    return;
-  }
-  const access2 = await classAccess(viewer, classId);
-  if (!access2.read) {
-    res.status(403).json({ error: "Not your class." });
-    return;
-  }
-  const since = tashkentDay(-6);
-  const rows = await db.select({ userId: trainerTestsTable.userId, day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.classId, classId), gte(trainerTestsTable.day, since))).orderBy(desc(trainerTestsTable.day));
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ tests: rows });
-});
-async function remindTrainer(teacherId, day, lessons) {
-  try {
-    const book = lessons.filter((lesson) => TRAINER_SUBJECTS.has(lesson.subject));
-    if (!book.length) return;
-    const lastEnd = Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt)));
-    if (Date.now() < lastEnd + 2 * 36e5) return;
-    const title = `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 ${day}`;
-    const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
-    if (already) return;
-    const parts = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const lesson of book) {
-      const key = `${lesson.classId}:${lesson.subject}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, lesson.classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
-      if (!pupils.length) continue;
-      const done = await db.select({ id: trainerTestsTable.userId }).from(trainerTestsTable).where(and(eq(trainerTestsTable.day, day), eq(trainerTestsTable.subject, lesson.subject), inArray(trainerTestsTable.userId, pupils.map((row) => row.id))));
-      const missing = pupils.length - done.length;
-      if (missing > 0) parts.push(`${lesson.className}: ${missing} \u0438\u0437 ${pupils.length}`);
-    }
-    await db.insert(userNotificationsTable).values({ userId: teacherId, kind: "grades", title, body: parts.length ? `\u041D\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442: ${parts.join(", ")}. \u041C\u043E\u0433\u0443\u0442 \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 24 \u0447\u0430\u0441\u043E\u0432.` : "\u0412\u0441\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442.", link: "/teacher" });
-  } catch {
-  }
-}
-var course_default = router7;
+var school_tools_default = router8;
 
 // src/routes/account.ts
 init_drizzle_orm();
-var import_express8 = __toESM(require_express2(), 1);
+var import_express9 = __toESM(require_express2(), 1);
 init_src();
-var router8 = (0, import_express8.Router)();
-var viewerOf3 = (res) => res.locals.authenticatedUser;
-var isRecord7 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var router9 = (0, import_express9.Router)();
+var viewerOf4 = (res) => res.locals.authenticatedUser;
+var isRecord8 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var perSession4 = (req) => {
   const token = req.cookies?.["eduverse.sid"];
   return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
 };
-var everyRole4 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var everyRole5 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
 var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
 var changeLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many changes. Try again later.", "account-change", perSession4);
-router8.get("/me/account", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/me/account", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
   const sessionId = res.locals.sessionId;
   const [me] = await db.select({ email: usersTable.email, subjects: usersTable.subjects, phone: usersTable.phone, twoFactorEnabled: usersTable.twoFactorEnabled }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
   const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, role: schoolMembersTable.role }).from(schoolMembersTable).innerJoin(schoolsTable, eq(schoolMembersTable.schoolId, schoolsTable.id)).where(eq(schoolMembersTable.userId, viewer.id));
@@ -54874,14 +55466,14 @@ router8.get("/me/account", requireAuthenticatedRole(...everyRole4), async (_req,
     subjects: Array.isArray(me?.subjects) ? me.subjects : [],
     phone: me?.phone ?? null,
     twoFactorEnabled: Boolean(me?.twoFactorEnabled),
-    schools: schools.map((school) => ({ ...school, number: school.name.match(/\d+/)?.[0] ?? null })),
+    schools: schools.map((school2) => ({ ...school2, number: school2.name.match(/\d+/)?.[0] ?? null })),
     classes,
     previousLoginAt: previous?.at ?? null
   });
 });
-router8.put("/me/account", requireAuthenticatedRole(...everyRole4), changeLimiter, async (req, res) => {
-  const viewer = viewerOf3(res);
-  const body = isRecord7(req.body) ? req.body : {};
+router9.put("/me/account", requireAuthenticatedRole(...everyRole5), changeLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const body = isRecord8(req.body) ? req.body : {};
   const changes = { updatedAt: /* @__PURE__ */ new Date() };
   if ("email" in body) {
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -54901,8 +55493,8 @@ router8.put("/me/account", requireAuthenticatedRole(...everyRole4), changeLimite
   await db.update(usersTable).set(changes).where(eq(usersTable.id, viewer.id));
   res.json({ saved: true, email: changes.email, subjects: changes.subjects });
 });
-router8.get("/me/sessions", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/me/sessions", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
   const current = res.locals.sessionId;
   const rows = await db.select({ id: sessionsTable.id, device: sessionsTable.device, ip: sessionsTable.ipMasked, createdAt: sessionsTable.createdAt, lastSeenAt: sessionsTable.lastSeenAt, expiresAt: sessionsTable.expiresAt, revokedAt: sessionsTable.revokedAt }).from(sessionsTable).where(eq(sessionsTable.userId, viewer.id)).orderBy(desc(sessionsTable.createdAt)).limit(30);
   const now = Date.now();
@@ -54919,8 +55511,8 @@ router8.get("/me/sessions", requireAuthenticatedRole(...everyRole4), async (_req
     }))
   });
 });
-router8.delete("/me/sessions/:id", requireAuthenticatedRole(...everyRole4), changeLimiter, async (req, res) => {
-  const viewer = viewerOf3(res);
+router9.delete("/me/sessions/:id", requireAuthenticatedRole(...everyRole5), changeLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
   const id = String(req.params.id ?? "");
   if (!isValidUuid(id)) {
     res.status(400).json({ error: "Invalid session." });
@@ -54929,41 +55521,41 @@ router8.delete("/me/sessions/:id", requireAuthenticatedRole(...everyRole4), chan
   await db.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, viewer.id), isNull(sessionsTable.revokedAt)));
   res.json({ revoked: true, current: id === res.locals.sessionId });
 });
-router8.post("/me/sessions/revoke-others", requireAuthenticatedRole(...everyRole4), changeLimiter, async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.post("/me/sessions/revoke-others", requireAuthenticatedRole(...everyRole5), changeLimiter, async (_req, res) => {
+  const viewer = viewerOf4(res);
   const current = res.locals.sessionId;
   const revoked = await db.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.id, current), isNull(sessionsTable.revokedAt), gt(sessionsTable.expiresAt, /* @__PURE__ */ new Date()))).returning({ id: sessionsTable.id });
   res.json({ revoked: revoked.length });
 });
-router8.get("/me/notification-settings", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/me/notification-settings", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
   const [row] = await db.select({ prefs: usersTable.notifyPrefs }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ prefs: mergePrefs(row?.prefs) });
 });
-router8.put("/me/notification-settings", requireAuthenticatedRole(...everyRole4), changeLimiter, async (req, res) => {
-  const viewer = viewerOf3(res);
+router9.put("/me/notification-settings", requireAuthenticatedRole(...everyRole5), changeLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
   const [row] = await db.select({ prefs: usersTable.notifyPrefs }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
   const prefs = mergePrefs(row?.prefs);
-  const input = isRecord7(req.body) && isRecord7(req.body.prefs) ? req.body.prefs : {};
+  const input = isRecord8(req.body) && isRecord8(req.body.prefs) ? req.body.prefs : {};
   for (const key of NOTIFY_KINDS) if (typeof input[key] === "boolean") prefs[key] = input[key];
   await db.update(usersTable).set({ notifyPrefs: prefs }).where(eq(usersTable.id, viewer.id));
   res.json({ prefs });
 });
-router8.get("/me/notifications", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/me/notifications", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
   const items = await db.select().from(userNotificationsTable).where(eq(userNotificationsTable.userId, viewer.id)).orderBy(desc(userNotificationsTable.createdAt)).limit(30);
   const [count] = await db.select({ n: sql`count(*)` }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, viewer.id), isNull(userNotificationsTable.readAt)));
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ items: items.map(({ userId: _owner, ...item }) => item), unread: Number(count?.n ?? 0) });
 });
-router8.post("/me/notifications/read-all", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.post("/me/notifications/read-all", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
   await db.update(userNotificationsTable).set({ readAt: /* @__PURE__ */ new Date() }).where(and(eq(userNotificationsTable.userId, viewer.id), isNull(userNotificationsTable.readAt)));
   res.json({ read: true });
 });
-router8.get("/me/teaching-stats", requireAuthenticatedRole("teacher", "school_director", "school_admin"), async (_req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/me/teaching-stats", requireAuthenticatedRole("teacher", "school_director", "school_admin"), async (_req, res) => {
+  const viewer = viewerOf4(res);
   const [lessons] = await db.select({ n: sql`count(*)`, last: sql`max(${lessonRoomsTable.createdAt})` }).from(lessonRoomsTable).where(eq(lessonRoomsTable.hostId, viewer.id));
   const myClasses = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
   const classIds = myClasses.map((row) => row.classId);
@@ -55006,8 +55598,8 @@ async function canStaff(viewer, channel, threadUserId) {
   return Boolean(schoolId) && (await staffOf("school", schoolId)).includes(viewer.id);
 }
 var messageView = (row) => ({ id: row.id, body: row.body, fromStaff: row.fromStaff, createdAt: row.createdAt });
-router8.get("/support/thread", requireAuthenticatedRole(...everyRole4), async (req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/support/thread", requireAuthenticatedRole(...everyRole5), async (req, res) => {
+  const viewer = viewerOf4(res);
   const channel = channelOf(req.query.channel) ?? "curator";
   const rows = await db.select().from(supportMessagesTable).where(and(eq(supportMessagesTable.threadUserId, viewer.id), eq(supportMessagesTable.channel, channel))).orderBy(supportMessagesTable.createdAt).limit(200);
   await db.update(supportMessagesTable).set({ readByOwner: true }).where(and(eq(supportMessagesTable.threadUserId, viewer.id), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByOwner, false)));
@@ -55015,10 +55607,10 @@ router8.get("/support/thread", requireAuthenticatedRole(...everyRole4), async (r
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ messages: rows.map(messageView), available: channel === "curator" || Boolean(schoolId) });
 });
-router8.post("/support/thread", requireAuthenticatedRole(...everyRole4), supportLimiter, async (req, res) => {
-  const viewer = viewerOf3(res);
-  const channel = channelOf(isRecord7(req.body) ? req.body.channel : null) ?? "curator";
-  const body = cleanBody(isRecord7(req.body) ? req.body.body : "");
+router9.post("/support/thread", requireAuthenticatedRole(...everyRole5), supportLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const channel = channelOf(isRecord8(req.body) ? req.body.channel : null) ?? "curator";
+  const body = cleanBody(isRecord8(req.body) ? req.body.body : "");
   if (!body) {
     res.status(400).json({ error: "Write a message." });
     return;
@@ -55033,8 +55625,8 @@ router8.post("/support/thread", requireAuthenticatedRole(...everyRole4), support
   await pushNotice(await staffOf(channel, schoolId), "messages", `\u041D\u043E\u0432\u043E\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435: ${me?.name ?? ""}`, body.slice(0, 140), channel === "curator" ? "/admin" : "/school");
   res.status(201).json({ message: messageView(created) });
 });
-router8.get("/support/inbox", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/support/inbox", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
+  const viewer = viewerOf4(res);
   const channel = viewer.role === "platform_superadmin" ? channelOf(req.query.channel) ?? "curator" : "school";
   let scope = sql`true`;
   if (channel === "school") {
@@ -55056,8 +55648,8 @@ router8.get("/support/inbox", requireAuthenticatedRole("platform_superadmin", "s
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ channel, threads: threads.map((row) => ({ ...row, unread: Number(row.unread), preview: (row.preview ?? "").slice(0, 120) })) });
 });
-router8.get("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
-  const viewer = viewerOf3(res);
+router9.get("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
+  const viewer = viewerOf4(res);
   const userId = String(req.params.userId ?? "");
   const channel = viewer.role === "platform_superadmin" ? channelOf(req.query.channel) ?? "curator" : "school";
   if (!isValidUuid(userId) || !await canStaff(viewer, channel, userId)) {
@@ -55069,11 +55661,11 @@ router8.get("/support/inbox/:userId", requireAuthenticatedRole("platform_superad
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ messages: rows.map(messageView) });
 });
-router8.post("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), supportLimiter, async (req, res) => {
-  const viewer = viewerOf3(res);
+router9.post("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), supportLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
   const userId = String(req.params.userId ?? "");
-  const channel = viewer.role === "platform_superadmin" ? channelOf(isRecord7(req.body) ? req.body.channel : null) ?? "curator" : "school";
-  const body = cleanBody(isRecord7(req.body) ? req.body.body : "");
+  const channel = viewer.role === "platform_superadmin" ? channelOf(isRecord8(req.body) ? req.body.channel : null) ?? "curator" : "school";
+  const body = cleanBody(isRecord8(req.body) ? req.body.body : "");
   if (!body) {
     res.status(400).json({ error: "Write a message." });
     return;
@@ -55087,27 +55679,27 @@ router8.post("/support/inbox/:userId", requireAuthenticatedRole("platform_supera
   await pushNotice([userId], "messages", channel === "curator" ? "\u041E\u0442\u0432\u0435\u0442 \u043A\u0443\u0440\u0430\u0442\u043E\u0440\u0430 EDUVERSE" : "\u041E\u0442\u0432\u0435\u0442 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u0448\u043A\u043E\u043B\u044B", body.slice(0, 140), "/support");
   res.status(201).json({ message: messageView(created) });
 });
-var account_default = router8;
+var account_default = router9;
 
 // src/routes/requests.ts
 init_drizzle_orm();
-var import_express9 = __toESM(require_express2(), 1);
+var import_express10 = __toESM(require_express2(), 1);
 init_src();
-var router9 = (0, import_express9.Router)();
-var viewerOf4 = (res) => res.locals.authenticatedUser;
+var router10 = (0, import_express10.Router)();
+var viewerOf5 = (res) => res.locals.authenticatedUser;
 var OWNER_ROLES = ["education_admin", "ministry_admin", "platform_superadmin"];
 var SCHOOL_STAFF = ["school_director", "school_admin", ...OWNER_ROLES];
 var KINDS = ["enroll", "expel", "transfer", "graduate", "restore", "edit"];
 var STATUS_OF = { transfer: "transferred", graduate: "graduated", restore: "active" };
 var BLOCKED_STATUSES = ["expelled", "transferred", "disabled"];
-var isRecord8 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-async function schoolRoleOf(userId, schoolId) {
+var isRecord9 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+async function schoolRoleOf2(userId, schoolId) {
   const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
   return row?.role ?? null;
 }
 async function isSchoolStaff(viewer, schoolId) {
   if (isGlobalAdminRole(viewer.role)) return true;
-  const role = await schoolRoleOf(viewer.id, schoolId);
+  const role = await schoolRoleOf2(viewer.id, schoolId);
   return role === "school_director" || role === "school_admin";
 }
 async function ownerIds() {
@@ -55192,9 +55784,9 @@ async function applyChange(schoolId, kind, targetUserId, payload, reason, actorI
   await writeAudit(schoolId, actorId, kind, person.id, { name: person.name, status, reason, ...payload });
   return { name: person.name, status };
 }
-router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+router10.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
   const schoolId = String(req.params.schoolId);
-  const viewer = viewerOf4(res);
+  const viewer = viewerOf5(res);
   if (!isValidUuid(schoolId)) {
     res.status(400).json({ error: "Invalid school." });
     return;
@@ -55203,7 +55795,7 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
     res.status(403).json({ error: "Only the director or deputy sends requests." });
     return;
   }
-  const body = isRecord8(req.body) ? req.body : {};
+  const body = isRecord9(req.body) ? req.body : {};
   const kind = body.kind;
   if (!KINDS.includes(kind)) {
     res.status(400).json({ error: "Unknown request." });
@@ -55217,16 +55809,16 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
   let targetUserId = null;
   if (kind !== "enroll") {
     targetUserId = typeof body.userId === "string" && isValidUuid(body.userId) ? body.userId : null;
-    if (!targetUserId || !await schoolRoleOf(targetUserId, schoolId)) {
+    if (!targetUserId || !await schoolRoleOf2(targetUserId, schoolId)) {
       res.status(400).json({ error: "This person is not in your school." });
       return;
     }
-    const targetRole = await schoolRoleOf(targetUserId, schoolId);
+    const targetRole = await schoolRoleOf2(targetUserId, schoolId);
     if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) {
       res.status(403).json({ error: "Changes about the director are made by EDUVERSE." });
       return;
     }
-    if (targetRole === "school_admin" && targetUserId !== viewer.id && !isGlobalAdminRole(viewer.role) && await schoolRoleOf(viewer.id, schoolId) !== "school_director") {
+    if (targetRole === "school_admin" && targetUserId !== viewer.id && !isGlobalAdminRole(viewer.role) && await schoolRoleOf2(viewer.id, schoolId) !== "school_director") {
       res.status(403).json({ error: "Only the director changes a deputy." });
       return;
     }
@@ -55240,7 +55832,7 @@ router9.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_S
     res.status(403).json({ error: "Only EDUVERSE adds a director." });
     return;
   }
-  if (kind === "enroll" && !isGlobalAdminRole(viewer.role) && await schoolRoleOf(viewer.id, schoolId) !== "school_director" && change.payload.rows.some((row2) => row2.role === "school_admin")) {
+  if (kind === "enroll" && !isGlobalAdminRole(viewer.role) && await schoolRoleOf2(viewer.id, schoolId) !== "school_director" && change.payload.rows.some((row2) => row2.role === "school_admin")) {
     res.status(403).json({ error: "Only the director adds a deputy." });
     return;
   }
@@ -55295,26 +55887,26 @@ async function listRequests(where, limit = 200) {
     author: row.authorId ? nameOf.get(row.authorId)?.name ?? "" : ""
   }));
 }
-router9.get("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+router10.get("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   if (!isValidUuid(schoolId)) {
     res.status(400).json({ error: "Invalid school." });
     return;
   }
-  if (!await isSchoolStaff(viewerOf4(res), schoolId)) {
+  if (!await isSchoolStaff(viewerOf5(res), schoolId)) {
     res.status(403).json({ error: "Not your school." });
     return;
   }
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ requests: await listRequests(eq(schoolRequestsTable.schoolId, schoolId), 100) });
 });
-router9.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+router10.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   if (!isValidUuid(schoolId)) {
     res.status(400).json({ error: "Invalid school." });
     return;
   }
-  if (!await isSchoolStaff(viewerOf4(res), schoolId)) {
+  if (!await isSchoolStaff(viewerOf5(res), schoolId)) {
     res.status(403).json({ error: "Not your school." });
     return;
   }
@@ -55328,20 +55920,20 @@ router9.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAF
     classes: classIds.map((row) => row.name).sort()
   });
 });
-router9.get("/admin/requests", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+router10.get("/admin/requests", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const status = typeof req.query.status === "string" && ["pending", "approved", "rejected"].includes(req.query.status) ? req.query.status : null;
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ requests: await listRequests(status ? eq(schoolRequestsTable.status, status) : void 0) });
 });
-router9.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+router10.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const id = String(req.params.id);
   const decision = String(req.params.decision);
   if (!isValidUuid(id) || decision !== "approve" && decision !== "reject") {
     res.status(400).json({ error: "Invalid request." });
     return;
   }
-  const viewer = viewerOf4(res);
-  const note = cleanText(isRecord8(req.body) ? req.body.note : "", 300) ?? "";
+  const viewer = viewerOf5(res);
+  const note = cleanText(isRecord9(req.body) ? req.body.note : "", 300) ?? "";
   const [request] = await db.update(schoolRequestsTable).set({ status: decision === "approve" ? "approved" : "rejected", decidedBy: viewer.id, decidedAt: /* @__PURE__ */ new Date(), decisionNote: note }).where(and(eq(schoolRequestsTable.id, id), eq(schoolRequestsTable.status, "pending"))).returning();
   if (!request) {
     res.status(409).json({ error: "This request was already decided." });
@@ -55369,18 +55961,18 @@ ${escapeHtml(note)}` : ""}`);
   }
   res.json({ status: request.status, result });
 });
-router9.patch("/admin/schools/:schoolId/people/:userId", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+router10.patch("/admin/schools/:schoolId/people/:userId", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   const userId = String(req.params.userId);
   if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
     res.status(400).json({ error: "Invalid identifier." });
     return;
   }
-  if (!await schoolRoleOf(userId, schoolId)) {
+  if (!await schoolRoleOf2(userId, schoolId)) {
     res.status(404).json({ error: "This person is not in the school." });
     return;
   }
-  const body = isRecord8(req.body) ? req.body : {};
+  const body = isRecord9(req.body) ? req.body : {};
   const kind = body.kind;
   if (!KINDS.includes(kind) || kind === "enroll") {
     res.status(400).json({ error: "Unknown change." });
@@ -55391,28 +55983,28 @@ router9.patch("/admin/schools/:schoolId/people/:userId", requireAuthenticatedRol
     res.status(400).json({ error: change.error });
     return;
   }
-  const result = await applyChange(schoolId, kind, userId, change.payload, cleanText(body.reason, 300) ?? "", viewerOf4(res).id);
+  const result = await applyChange(schoolId, kind, userId, change.payload, cleanText(body.reason, 300) ?? "", viewerOf5(res).id);
   res.json({ result });
 });
-router9.get("/admin/audit", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+router10.get("/admin/audit", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const schoolId = typeof req.query.schoolId === "string" && isValidUuid(req.query.schoolId) ? req.query.schoolId : null;
   const rows = await db.select({ id: auditLogTable.id, action: auditLogTable.action, details: auditLogTable.details, createdAt: auditLogTable.createdAt, actor: usersTable.username, schoolId: auditLogTable.schoolId }).from(auditLogTable).leftJoin(usersTable, eq(usersTable.id, auditLogTable.actorId)).where(schoolId ? eq(auditLogTable.schoolId, schoolId) : void 0).orderBy(desc(auditLogTable.createdAt)).limit(200);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ entries: rows });
 });
-router9.get("/me/plan", requireAuthenticatedRole("student", "teacher", "parent", ...SCHOOL_STAFF), async (_req, res) => {
-  const viewer = viewerOf4(res);
+router10.get("/me/plan", requireAuthenticatedRole("student", "teacher", "parent", ...SCHOOL_STAFF), async (_req, res) => {
+  const viewer = viewerOf5(res);
   const plan = await userPlan(viewer.id, viewer.role);
   res.setHeader("Cache-Control", "private, no-store");
   res.json(plan);
 });
-router9.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+router10.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   if (!isValidUuid(schoolId)) {
     res.status(400).json({ error: "Invalid school." });
     return;
   }
-  const body = isRecord8(req.body) ? req.body : {};
+  const body = isRecord9(req.body) ? req.body : {};
   const plan = body.plan === "pro" || body.plan === "pilot" || body.plan === "free" ? body.plan : null;
   const untilText = typeof body.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.until) ? body.until : null;
   if (!plan) {
@@ -55429,437 +56021,34 @@ router9.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_R
     res.status(404).json({ error: "School not found." });
     return;
   }
-  await writeAudit(schoolId, viewerOf4(res).id, "plan", null, { plan, until: untilText });
+  await writeAudit(schoolId, viewerOf5(res).id, "plan", null, { plan, until: untilText });
   res.json({ plan, until });
 });
-router9.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
+router10.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
   const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo }).from(schoolsTable);
-  const ids = schools.map((school) => school.id);
+  const ids = schools.map((school2) => school2.id);
   const counts = ids.length ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids)) : [];
   const now = Date.now();
-  const rows = schools.map((school) => {
-    const until = school.planUntil ? school.planUntil.getTime() : null;
+  const rows = schools.map((school2) => {
+    const until = school2.planUntil ? school2.planUntil.getTime() : null;
     const daysLeft = until === null ? null : Math.ceil((until - now) / 864e5);
     return {
-      ...school,
-      planUntil: school.planUntil ? school.planUntil.toISOString() : null,
+      ...school2,
+      planUntil: school2.planUntil ? school2.planUntil.toISOString() : null,
       daysLeft,
-      students: counts.filter((row) => row.schoolId === school.id && row.role === "student").length,
-      teachers: counts.filter((row) => row.schoolId === school.id && row.role === "teacher").length
+      students: counts.filter((row) => row.schoolId === school2.id && row.role === "student").length,
+      teachers: counts.filter((row) => row.schoolId === school2.id && row.role === "teacher").length
     };
   });
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ schools: rows });
 });
-var requests_default = router9;
+var requests_default = router10;
 
 // src/routes/demo.ts
 init_drizzle_orm();
 var import_express11 = __toESM(require_express2(), 1);
 init_src();
-
-// src/routes/timetable.ts
-init_drizzle_orm();
-var import_express10 = __toESM(require_express2(), 1);
-init_src();
-
-// src/lib/book-homework.ts
-init_drizzle_orm();
-init_src();
-
-// src/lib/book-topics.json
-var book_topics_default = [{ id: "physics-7", subject: "physics", grade: 7, topics: [{ key: "phys7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0444\u0438\u0437\u0438\u043A\u0430? \u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u044F", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u043F\u043E 2 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u044F\u0432\u043B\u0435\u043D\u0438\u0439 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u043C\u0443 \u0432\u0438\u0434\u0443 \u044F\u0432\u043B\u0435\u043D\u0438\u0439 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0442\u0430\u044F\u043D\u0438\u0435 \u043C\u043E\u0440\u043E\u0436\u0435\u043D\u043E\u0433\u043E?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u043F\u0440\u0438\u043C\u0435\u0440 \u0434\u043B\u044F \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u044F\u0432\u043B\u0435\u043D\u0438\u0439.", "\u041A\u0430\u043A\u0443\u044E \u0440\u043E\u043B\u044C \u0438\u0433\u0440\u0430\u0435\u0442 \u0444\u0438\u0437\u0438\u043A\u0430 \u0432 \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u0438 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0433\u043E \u043C\u0438\u0440\u0430?"] }, { key: "phys7-1.2", code: "1.2", title: "\u0412\u0430\u0436\u043D\u044B\u0435 \u043F\u0440\u0438\u043D\u0446\u0438\u043F\u044B \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E \u043E\u0431 \u043E\u0434\u043D\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u043E\u0431 \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u0435) \u0438 \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 3 \u0435\u0433\u043E \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443\u0447\u0451\u043D\u044B\u043C \u0432\u0430\u0436\u043D\u043E \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0438 \u0431\u044B\u0442\u044C \u0431\u0435\u0441\u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u043D\u044B\u043C\u0438?", "\u041A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0438 \u041C\u0430\u0440\u0438\u0438 \u041A\u044E\u0440\u0438 \u0434\u043E\u0431\u0438\u0442\u044C\u0441\u044F \u0443\u0441\u043F\u0435\u0445\u0430?"] }, { key: "phys7-1.3", code: "1.3", title: "\u041A\u0430\u043A\u0438\u043C\u0438 \u043D\u0430\u0432\u044B\u043A\u0430\u043C\u0438 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E \u043E\u0431\u043B\u0430\u0434\u0430\u0442\u044C \u043F\u0440\u0438 \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u0438 \u0444\u0438\u0437\u0438\u043A\u0438?", homework: "\u041F\u0440\u0438\u0434\u0443\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u043E\u043F\u044B\u0442 \u0434\u043E\u043C\u0430 (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u0441 \u0441\u0430\u0445\u0430\u0440\u043E\u043C \u0432 \u0442\u0451\u043F\u043B\u043E\u0439 \u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0439 \u0432\u043E\u0434\u0435) \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", tasks: ["\u0421\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443: \u0432 \u0433\u043E\u0440\u044F\u0447\u0435\u043C \u0447\u0430\u0435 \u0441\u0430\u0445\u0430\u0440 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u044F\u0435\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435, \u0447\u0435\u043C \u0432 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u043C.", "\u0412\u0441\u0435 \u043B\u0438 \u0447\u0430\u0441\u0442\u0438 \u043C\u0430\u0433\u043D\u0438\u0442\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E \u043F\u0440\u0438\u0442\u044F\u0433\u0438\u0432\u0430\u044E\u0442 \u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0435 \u043E\u043F\u0438\u043B\u043A\u0438?", "\u041C\u044F\u0447 \u043A\u0430\u0442\u0438\u0442\u0441\u044F \u043F\u0440\u044F\u043C\u043E \u0438 \u043C\u0435\u043D\u044F\u0435\u0442 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430. \u0412\u0430\u0448\u0430 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0430?"] }, { key: "phys7-1.4", code: "1.4", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0438 \u043F\u0440\u0438\u0431\u043E\u0440\u044B", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u043D\u043E (\u043A\u043E\u043D\u0442\u0443\u0440\u043E\u043C) \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u0438 \u0441\u0435\u043A\u0443\u043D\u0434\u043E\u043C\u0435\u0440.", tasks: ["\u041A\u0430\u043A\u0438\u043C \u043F\u0440\u0438\u0431\u043E\u0440\u043E\u043C \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0441\u0438\u043B\u0443 \u0438 \u0432 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435: \u0441\u0442\u0430\u043A\u0430\u043D, \u043A\u043E\u043B\u0431\u0430, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0430, \u0448\u0442\u0430\u0442\u0438\u0432, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440 \u2014 \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u043A\u0430\u0436\u0434\u043E\u0435?"] }, { key: "phys7-1.5", code: "1.5", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 2 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u0441\u043E \u0437\u043D\u0430\u043A\u0430\u043C\u0438 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 (\u0431\u044B\u0442\u043E\u0432\u0430\u044F \u0445\u0438\u043C\u0438\u044F, \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043F\u0440\u0438\u0431\u043E\u0440\u044B) \u0438 \u043F\u0435\u0440\u0435\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0437\u043D\u0430\u043A\u0438.", tasks: ["\u0427\u0442\u043E \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0437\u043D\u0430\u043A \u0441 \u043C\u043E\u043B\u043D\u0438\u0435\u0439 \u0438 \u043A\u0430\u043A \u0441\u0435\u0431\u044F \u0432\u0435\u0441\u0442\u0438?", "\u0413\u0434\u0435 \u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043B\u0435\u0433\u043A\u043E\u0432\u043E\u0441\u043F\u043B\u0430\u043C\u0435\u043D\u044F\u044E\u0449\u0438\u0435\u0441\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?"] }, { key: "phys7-1.6", code: "1.6", title: "\u0424\u0438\u0437\u0438\u043A\u0430 \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044F", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u043F\u0440\u0438\u0431\u043E\u0440 \u0434\u043E\u043C\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u043D\u0451\u043C \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0434\u0430 \u0432 \u0431\u0443\u0442\u044B\u043B\u043A\u0435 \u043D\u0435 \u0437\u0430\u043C\u0451\u0440\u0437\u043B\u0430 \u0432 \u043C\u043E\u0440\u043E\u0437\u0438\u043B\u043A\u0435, \u0430 \u043F\u0440\u0438 \u0432\u0441\u0442\u0440\u044F\u0445\u0438\u0432\u0430\u043D\u0438\u0438 \u0441\u0440\u0430\u0437\u0443 \u0441\u0442\u0430\u043B\u0430 \u043B\u044C\u0434\u043E\u043C?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044E, \u043F\u043E\u0434\u0441\u043C\u043E\u0442\u0440\u0435\u043D\u043D\u0443\u044E \u0443 \u043F\u0440\u0438\u0440\u043E\u0434\u044B."] }, { key: "phys7-2.1", code: "2.1", title: "\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442\u0441\u044F \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0448\u0430\u0433\u0430\u043C\u0438 \u0434\u043B\u0438\u043D\u0443 \u043A\u043E\u0440\u0438\u0434\u043E\u0440\u0430 3 \u0440\u0430\u0437\u0430 \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0440\u0435\u0434\u043D\u0435\u0435.", tasks: ["\u041E\u0431\u0438\u0434\u0436\u043E\u043D \u043D\u0430\u0441\u0447\u0438\u0442\u0430\u043B \u043E\u0442 \u0434\u043E\u043C\u0430 \u0434\u043E \u0448\u043A\u043E\u043B\u044B 946 \u0448\u0430\u0433\u043E\u0432, \u0430 \u043E\u0431\u0440\u0430\u0442\u043D\u043E \u2014 943. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0448\u0430\u0433\u043E\u0432 \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C?", "\u0417\u0430\u0447\u0435\u043C \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437?"] }, { key: "phys7-2.2", code: "2.2", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B \u0438 \u041C\u0435\u0436\u0434\u0443\u043D\u0430\u0440\u043E\u0434\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u0435\u0434\u0438\u043D\u0438\u0446 (\u0421\u0418)", homework: "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0446\u0435\u043D\u0443 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u0438 \u043F\u0440\u0435\u0434\u0435\u043B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u0441\u0432\u043E\u0435\u0439 \u043B\u0438\u043D\u0435\u0439\u043A\u0438 \u0438 \u0442\u0435\u0440\u043C\u043E\u043C\u0435\u0442\u0440\u0430.", tasks: ["\u041C\u0435\u0436\u0434\u0443 \u043E\u0442\u043C\u0435\u0442\u043A\u0430\u043C\u0438 \xAB1 cm\xBB \u0438 \xAB2 cm\xBB 10 \u0434\u0435\u043B\u0435\u043D\u0438\u0439. \u041A\u0430\u043A\u043E\u0432\u0430 \u0446\u0435\u043D\u0430 \u0434\u0435\u043B\u0435\u043D\u0438\u044F?", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435: 2,5 km \u0432 \u043C\u0435\u0442\u0440\u044B; 350 mm \u0432 \u043C\u0435\u0442\u0440\u044B.", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043F\u0440\u0435\u0434\u0435\u043B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438\u0431\u043E\u0440\u0430?"] }, { key: "phys7-2.3", code: "2.3", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0434\u043B\u0438\u043D\u0443?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u0441\u0432\u043E\u0435\u0439 \u043F\u0430\u0440\u0442\u044B \u0438 \u0442\u043E\u043B\u0449\u0438\u043D\u0443 \u043B\u0438\u0441\u0442\u0430 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430 (\u0447\u0435\u0440\u0435\u0437 100 \u043B\u0438\u0441\u0442\u043E\u0432).", tasks: ["\u0426\u0435\u043D\u0430 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043B\u0438\u043D\u0435\u0439\u043A\u0438 1 mm. \u041A\u0430\u043A\u043E\u0432\u0430 \u043F\u043E\u0433\u0440\u0435\u0448\u043D\u043E\u0441\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F?", "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u0440\u0438\u0442\u044C \u0442\u043E\u043B\u0449\u0438\u043D\u0443 \u043A\u0430\u0442\u0443\u0448\u0435\u0447\u043D\u043E\u0439 \u043D\u0438\u0442\u0438 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u0440\u0430\u043B\u043B\u0430\u043A\u0441\u0430?"] }, { key: "phys7-2.4", code: "2.4", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043F\u043B\u043E\u0449\u0430\u0434\u044C?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u043E\u043B\u0430 \u0432 m\xB2.", tasks: ["\u0414\u0432\u043E\u0440 20 m \xD7 15 m \u043F\u043E\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u043F\u043B\u0438\u0442\u043A\u043E\u0439 \u043F\u043B\u043E\u0449\u0430\u0434\u044C\u044E 600 cm\xB2. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043B\u0438\u0442\u043E\u043A \u043D\u0443\u0436\u043D\u043E?", "\u0421\u043A\u043E\u043B\u044C\u043A\u043E cm\xB2 \u0432 1 m\xB2?"] }, { key: "phys7-2.5", code: "2.5", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043E\u0431\u044A\u0451\u043C?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439 \u0441\u0432\u043E\u044E \u043A\u043E\u0440\u043E\u0431\u043A\u0443 (\u043E\u0431\u0443\u0432\u044C, \u0447\u0430\u0439) \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0435\u0451 \u043E\u0431\u044A\u0451\u043C \u0432 \u0441\u043C\xB3 \u0438 \u0432 \u043B\u0438\u0442\u0440\u0430\u0445. \u0421\u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0440\u0443\u0439\u0442\u0435 \u0440\u0430\u0441\u0447\u0451\u0442 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", tasks: ["\u0410\u043A\u0432\u0430\u0440\u0438\u0443\u043C 50 \u0441\u043C \xD7 30 \u0441\u043C \xD7 40 \u0441\u043C. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0438\u0442\u0440\u043E\u0432 \u0432\u043E\u0434\u044B \u0432 \u043D\u0435\u0433\u043E \u043F\u043E\u043C\u0435\u0449\u0430\u0435\u0442\u0441\u044F?", "\u041A\u0430\u043C\u0435\u043D\u044C \u043E\u043F\u0443\u0441\u0442\u0438\u043B\u0438 \u0432 \u043C\u0435\u043D\u0437\u0443\u0440\u043A\u0443: \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u0432\u043E\u0434\u044B \u043F\u043E\u0434\u043D\u044F\u043B\u0441\u044F \u0441 120 \u043C\u043B \u0434\u043E 155 \u043C\u043B. \u041A\u0430\u043A\u043E\u0432 \u043E\u0431\u044A\u0451\u043C \u043A\u0430\u043C\u043D\u044F?", "\u0412\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u0441\u044F \u043E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0430, \u0435\u0441\u043B\u0438 \u043A\u0430\u0436\u0434\u043E\u0435 \u0440\u0435\u0431\u0440\u043E \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C \u0432 3 \u0440\u0430\u0437\u0430?"] }, { key: "phys7-2.6", code: "2.6", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043C\u0430\u0441\u0441\u0443?", homework: "\u0412\u0437\u0432\u0435\u0441\u044C\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u043D\u0430 \u043A\u0443\u0445\u043E\u043D\u043D\u044B\u0445 \u0432\u0435\u0441\u0430\u0445, \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043C\u0430\u0441\u0441\u044B \u0432 \u0433\u0440\u0430\u043C\u043C\u0430\u0445 \u0438 \u043A\u0438\u043B\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u0445.", tasks: ["\u0427\u0435\u043C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043C\u0430\u0441\u0441\u0430 \u043E\u0442 \u0432\u0435\u0441\u0430?", "\u041A\u0430\u043A \u043E\u0434\u043D\u0438\u043C \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u0435\u043C \u043D\u0430 \u0447\u0430\u0448\u0435\u0447\u043D\u044B\u0445 \u0432\u0435\u0441\u0430\u0445 \u043D\u0430\u0439\u0442\u0438 \u0444\u0430\u043B\u044C\u0448\u0438\u0432\u0443\u044E (\u0431\u043E\u043B\u0435\u0435 \u043B\u0451\u0433\u043A\u0443\u044E) \u043C\u043E\u043D\u0435\u0442\u0443 \u0438\u0437 \u0442\u0440\u0451\u0445?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0435\u0440\u0435\u0434 \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u0435\u043C \u0432\u0435\u0441\u044B \u043E\u0431\u043D\u0443\u043B\u044F\u044E\u0442?"] }, { key: "phys7-2.7", code: "2.7", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0432\u0440\u0435\u043C\u044F?", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u0438\u0437 \u043D\u0438\u0442\u043A\u0438 \u0438 \u043A\u043B\u044E\u0447\u0430. \u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F 10 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u0439 \u0434\u043B\u044F \u0434\u0432\u0443\u0445 \u0434\u043B\u0438\u043D \u043D\u0438\u0442\u0438 \u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043F\u0435\u0440\u0438\u043E\u0434\u044B.", tasks: ["\u041C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u0434\u0435\u043B\u0430\u043B 20 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u0439 \u0437\u0430 40 \u0441. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u043F\u0435\u0440\u0438\u043E\u0434?", "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u043F\u0435\u0440\u0438\u043E\u0434, \u0435\u0441\u043B\u0438 \u0434\u043B\u0438\u043D\u0443 \u043D\u0438\u0442\u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C \u0432 4 \u0440\u0430\u0437\u0430?", "\u0417\u0430\u0432\u0438\u0441\u0438\u0442 \u043B\u0438 \u043F\u0435\u0440\u0438\u043E\u0434 \u043E\u0442 \u043C\u0430\u0441\u0441\u044B \u0433\u0440\u0443\u0437\u0430?"] }, { key: "phys7-3.1", code: "3.1", title: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0442\u0435\u043B", homework: "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 3 \u043F\u0440\u0438\u043C\u0435\u0440\u0430: \u0442\u0435\u043B\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043B\u0430 \u0438 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0433\u043E.", tasks: ["\u041E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0447\u0435\u0433\u043E \u043F\u0430\u0441\u0441\u0430\u0436\u0438\u0440 \u0435\u0434\u0443\u0449\u0435\u0433\u043E \u0430\u0432\u0442\u043E\u0431\u0443\u0441\u0430 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F, \u0430 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0447\u0435\u0433\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F?", "\u0427\u0435\u043C \u043F\u0443\u0442\u044C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0442\u0440\u0430\u0435\u043A\u0442\u043E\u0440\u0438\u0438?"] }, { key: "phys7-3.2", code: "3.2", title: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u044B \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442\u0435 50 \u043C. \u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0432 m/s \u0438 km/h.", tasks: ["\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u043E\u0435\u0445\u0430\u043B 90 km \u0437\u0430 1,5 \u0447\u0430\u0441\u0430. \u041A\u0430\u043A\u043E\u0432\u0430 \u0435\u0433\u043E \u0441\u0440\u0435\u0434\u043D\u044F\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 20 m/s \u0432 km/h.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445 \u0443 \u0448\u043A\u043E\u043B \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0438\u0432\u0430\u044E\u0442 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0434\u043E 40 km/h?"] }, { key: "phys7-3.3", code: "3.3", title: "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u044B \u0438\u0434\u0451\u0442\u0435 100 \u0448\u0430\u0433\u043E\u0432, \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u0448\u0430\u0433\u0430 \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C.", tasks: ["\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 72 km/h \u0432 m/s.", "\u0411\u0435\u0433\u0443\u043D \u043F\u0440\u043E\u0431\u0435\u0436\u0430\u043B 100 m \u0437\u0430 12,5 s. \u0415\u0433\u043E \u0441\u0440\u0435\u0434\u043D\u044F\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u0435\u0434\u0435\u0442 2 h \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 60 km/h. \u041A\u0430\u043A\u043E\u0439 \u043F\u0443\u0442\u044C \u043E\u043D \u043F\u0440\u043E\u0435\u0434\u0435\u0442?"] }, { key: "phys7-3.4", code: "3.4", title: "\u0413\u0440\u0430\u0444\u0438\u043A\u0438 \u043F\u0443\u0442\u0438 \u0438 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438", homework: "\u041F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0433\u0440\u0430\u0444\u0438\u043A \u043F\u0443\u0442\u0438 \u0434\u043B\u044F \u043F\u0435\u0448\u0435\u0445\u043E\u0434\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0438\u0434\u0451\u0442 \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 1,5 m/s \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 10 s.", tasks: ["\u041F\u043E \u0433\u0440\u0430\u0444\u0438\u043A\u0443 \u0442\u0435\u043B\u043E \u0437\u0430 4 s \u043F\u0440\u043E\u0448\u043B\u043E 20 m. \u041A\u0430\u043A\u043E\u0432\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u0427\u0442\u043E \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u044B\u0439 \u0443\u0447\u0430\u0441\u0442\u043E\u043A \u043D\u0430 \u0433\u0440\u0430\u0444\u0438\u043A\u0435 \u043F\u0443\u0442\u0438?"] }, { key: "phys7-4.1", code: "4.1", title: "\u0421\u0438\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0441\u0438\u043B\u044B \u0438 \u043D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0442\u0440\u0435\u043B\u043A\u0438 \u0441\u0438\u043B.", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u043E\u0433\u0434\u0430 \u0441\u0438\u043B\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0444\u043E\u0440\u043C\u0443 \u0442\u0435\u043B\u0430, \u0438 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u043E\u0433\u0434\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C.", "\u0412 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445 \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0441\u0438\u043B\u0443 \u0438 \u043A\u0430\u043A\u0438\u043C \u043F\u0440\u0438\u0431\u043E\u0440\u043E\u043C?"] }, { key: "phys7-4.2", code: "4.2", title: "\u0427\u0438\u0441\u043B\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0438\u043B\u044B", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0432 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0435 1 cm = 10 N \u0441\u0438\u043B\u044B 30 N \u0438 50 N, \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0438\u0435 \u0432 \u0440\u0430\u0437\u043D\u044B\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B, \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0440\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0443\u044E.", tasks: ["\u041D\u0430 \u0442\u0435\u043B\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u0441\u0438\u043B\u044B 30 N \u0438 20 N \u0432 \u043E\u0434\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u0443. \u0420\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0430\u044F?", "\u0422\u0435 \u0436\u0435 \u0441\u0438\u043B\u044B \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044B \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u043E. \u0420\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0430\u044F?"] }, { key: "phys7-4.3", code: "4.3", title: "\u0421\u0438\u043B\u0430 \u0433\u0440\u0430\u0432\u0438\u0442\u0430\u0446\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0435 g \u0434\u043B\u044F \u0412\u0435\u043D\u0435\u0440\u044B \u0438 \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u044B \u0442\u0430\u043C \u0432\u0435\u0441\u0438\u043B\u0438 \u0431\u044B \u0432 \u043D\u044C\u044E\u0442\u043E\u043D\u0430\u0445.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0441\u0438\u043B\u0430 \u0442\u044F\u0436\u0435\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0430 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043C\u0430\u0441\u0441\u043E\u0439 45 kg?", "\u0413\u0434\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435: \u043D\u0430 \u041B\u0443\u043D\u0435 \u0438\u043B\u0438 \u043D\u0430 \u042E\u043F\u0438\u0442\u0435\u0440\u0435?", "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u043B\u0438 \u043C\u0430\u0441\u0441\u0430 \u043A\u043E\u0441\u043C\u043E\u043D\u0430\u0432\u0442\u0430 \u043D\u0430 \u041B\u0443\u043D\u0435?"] }, { key: "phys7-4.4", code: "4.4", title: "\u0421\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F", homework: "\u041F\u043E\u0442\u044F\u043D\u0438\u0442\u0435 \u043A\u043D\u0438\u0433\u0443 \u043F\u043E \u0441\u0442\u043E\u043B\u0443 \u0438 \u043F\u043E \u043F\u043E\u043B\u0443. \u0413\u0434\u0435 \u0442\u044F\u043D\u0443\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u0435\u0435? \u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435, \u043F\u043E\u0447\u0435\u043C\u0443.", tasks: ["\u041A\u0443\u0434\u0430 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0430 \u0441\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u0438\u043C\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u0438 \u043F\u043E\u0441\u044B\u043F\u0430\u044E\u0442 \u043F\u0435\u0441\u043A\u043E\u043C?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043F\u043E\u043B\u0435\u0437\u043D\u043E\u0433\u043E \u0438 \u0432\u0440\u0435\u0434\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u043D\u0438\u044F."] }, { key: "phys7-4.5", code: "4.5", title: "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0432\u043E\u0437\u0434\u0443\u0445\u0430", homework: "\u0411\u0440\u043E\u0441\u044C\u0442\u0435 \u043E\u0434\u043D\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u0440\u043E\u0432\u043D\u044B\u0439 \u0438 \u0441\u043A\u043E\u043C\u043A\u0430\u043D\u043D\u044B\u0439 \u043B\u0438\u0441\u0442 \u0431\u0443\u043C\u0430\u0433\u0438. \u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043B\u0438\u0441\u0442 \u0431\u0443\u043C\u0430\u0433\u0438 \u043F\u0430\u0434\u0430\u0435\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u0447\u0435\u043C \u0441\u043A\u043E\u043C\u043A\u0430\u043D\u043D\u044B\u0439 \u0442\u0430\u043A\u043E\u0439 \u0436\u0435 \u043B\u0438\u0441\u0442?", "\u0417\u0430\u0447\u0435\u043C \u0430\u0432\u0442\u043E\u043C\u043E\u0431\u0438\u043B\u044F\u043C \u043E\u0431\u0442\u0435\u043A\u0430\u0435\u043C\u0430\u044F \u0444\u043E\u0440\u043C\u0430?"] }, { key: "phys7-4.6", code: "4.6", title: "\u0421\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430, \u0433\u0434\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438, \u0438 \u043E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u0435\u0451 \u0440\u043E\u043B\u044C.", tasks: ["\u0416\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u044C \u043F\u0440\u0443\u0436\u0438\u043D\u044B 200 N/m, \u0443\u0434\u043B\u0438\u043D\u0435\u043D\u0438\u0435 5 cm. \u041A\u0430\u043A\u043E\u0432\u0430 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438?", "\u041F\u0440\u0443\u0436\u0438\u043D\u0443 \u0440\u0430\u0441\u0442\u044F\u043D\u0443\u043B\u0438 \u0441\u0438\u043B\u043E\u0439 6 N, \u043E\u043D\u0430 \u0443\u0434\u043B\u0438\u043D\u0438\u043B\u0430\u0441\u044C \u043D\u0430 3 cm. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 k."] }, { key: "phys7-4.7", code: "4.7", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430. \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0436\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0443\u0436\u0438\u043D\u044B", homework: "\u041E\u0444\u043E\u0440\u043C\u0438\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: F (N), \u0394l (m), k (N/m) \u0434\u043B\u044F \u0442\u0440\u0451\u0445 \u043E\u043F\u044B\u0442\u043E\u0432 \u0438 \u043F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0433\u0440\u0430\u0444\u0438\u043A.", tasks: ["\u0413\u0440\u0443\u0437 1 N \u0440\u0430\u0441\u0442\u044F\u043D\u0443\u043B \u043F\u0440\u0443\u0436\u0438\u043D\u0443 \u043D\u0430 2 cm, \u0433\u0440\u0443\u0437 2 N \u2014 \u043D\u0430 4 cm. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 k.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043E\u043F\u044B\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0442 \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0433\u0440\u0443\u0437\u0430\u043C\u0438?"] }, { key: "phys7-5.1", code: "5.1", title: "\u0427\u0442\u043E \u043C\u044B \u043F\u043E\u043D\u0438\u043C\u0430\u0435\u043C \u043F\u043E\u0434 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u043E\u0439?", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0440\u0430\u0431\u043E\u0442\u0443, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u0432\u044B \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0435\u0442\u0435, \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u044F \u0440\u044E\u043A\u0437\u0430\u043A (\u0435\u0433\u043E \u0432\u0435\u0441 \u2248 50 N) \u043D\u0430 \u0432\u044B\u0441\u043E\u0442\u0443 1 m.", tasks: ["\u042F\u0449\u0438\u043A \u0442\u044F\u043D\u0443\u0442 \u0441\u0438\u043B\u043E\u0439 50 N \u043D\u0430 4 m. \u041A\u0430\u043A\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u044E\u0442?", "\u0427\u0435\u043B\u043E\u0432\u0435\u043A \u0441\u0442\u043E\u0438\u0442 \u0441 \u0441\u0443\u043C\u043A\u043E\u0439 10 minutes. \u041A\u0430\u043A\u043E\u0432\u0430 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430?"] }, { key: "phys7-5.2", code: "5.2", title: "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0430\u0445 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u044D\u043D\u0435\u0440\u0433\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0446\u0435\u043D\u043D\u043E\u0441\u0442\u044C \u0438 \u043F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 100 kcal \u0432 \u0434\u0436\u043E\u0443\u043B\u0438.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u0442\u0435\u043B\u0430 \u043E\u0431\u043B\u0430\u0434\u0430\u044E\u0442 \u044D\u043D\u0435\u0440\u0433\u0438\u0435\u0439: \u043B\u0435\u0442\u044F\u0449\u0438\u0439 \u043C\u044F\u0447, \u0441\u0436\u0430\u0442\u0430\u044F \u043F\u0440\u0443\u0436\u0438\u043D\u0430, \u043A\u043D\u0438\u0433\u0430 \u043D\u0430 \u043F\u043E\u043B\u043A\u0435?", "\u0412 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?"] }, { key: "phys7-5.3", code: "5.3", title: "\u041A\u0430\u043A\u0438\u0435 \u0432\u0438\u0434\u044B \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044E\u0442?", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u043F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0443\u044E \u044D\u043D\u0435\u0440\u0433\u0438\u044E \u043D\u0430 \u0442\u0440\u0435\u0442\u044C\u0435\u043C \u044D\u0442\u0430\u0436\u0435 (h \u2248 9 m).", tasks: ["\u041C\u044F\u0447 1 kg \u043B\u0435\u0442\u0438\u0442 \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 10 m/s. \u0415\u0433\u043E \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", "\u041A\u043D\u0438\u0433\u0430 2 kg \u043D\u0430 \u043F\u043E\u043B\u043A\u0435 \u0432\u044B\u0441\u043E\u0442\u043E\u0439 5 m. \u041F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F (g \u2248 10 N/kg)?"] }, { key: "phys7-5.4", code: "5.4", title: "\u041F\u0435\u0440\u0435\u0434\u0430\u0447\u0430 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041E\u043F\u0438\u0448\u0438\u0442\u0435 3 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u0432\u0438\u0434\u0435\u043B\u0438 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0434\u043E\u043C\u0430.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0434\u044F\u0442 \u043F\u0440\u0438 \u043A\u0430\u0447\u0430\u043D\u0438\u0438 \u043C\u0430\u044F\u0442\u043D\u0438\u043A\u0430?", "\u0412\u043E \u0447\u0442\u043E \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u043F\u0440\u0438 \u0443\u0434\u0430\u0440\u0435 \u043C\u0430\u0448\u0438\u043D?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u043E\u0441\u0442\u0430\u043D\u0430\u0432\u043B\u0438\u0432\u0430\u0435\u0442\u0441\u044F?"] }, { key: "phys7-5.5", code: "5.5", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041F\u0440\u043E\u043A\u0430\u0442\u0438\u0442\u0435 \u0434\u0432\u0435 \u0438\u0433\u0440\u0443\u0448\u0435\u0447\u043D\u044B\u0435 \u043C\u0430\u0448\u0438\u043D\u043A\u0438 \u043D\u0430\u0432\u0441\u0442\u0440\u0435\u0447\u0443 \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0443. \u041E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u043F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u043E \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430 \u0438 \u043F\u043E\u0447\u0435\u043C\u0443.", tasks: ["\u041C\u0430\u0448\u0438\u043D\u0430 1000 kg \u0435\u0434\u0435\u0442 20 m/s. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u0435\u0451 \u0438\u043C\u043F\u0443\u043B\u044C\u0441?", "\u0427\u0442\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043B\u044E\u0431\u043E\u043C \u0441\u0442\u043E\u043B\u043A\u043D\u043E\u0432\u0435\u043D\u0438\u0438 \u2014 \u0438\u043C\u043F\u0443\u043B\u044C\u0441 \u0438\u043B\u0438 \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", "\u0417\u0430\u0447\u0435\u043C \u043C\u0430\u0448\u0438\u043D\u0435 \u0437\u043E\u043D\u0430 \u0434\u0435\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u0438?"] }, { key: "phys7-5.6", code: "5.6", title: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435, \u0437\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u043A\u0443\u043D\u0434 \u0432\u044B \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442\u0435\u0441\u044C \u043D\u0430 \u044D\u0442\u0430\u0436 (h \u2248 3 m), \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C (A = \u0432\u0435\u0441 \xB7 h).", tasks: ["\u0420\u0430\u0431\u043E\u0442\u0430 6000 J \u0441\u043E\u0432\u0435\u0440\u0448\u0435\u043D\u0430 \u0437\u0430 30 s. \u041C\u043E\u0449\u043D\u043E\u0441\u0442\u044C?", "\u041D\u0430\u0441\u043E\u0441 \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C\u044E 500 W \u0440\u0430\u0431\u043E\u0442\u0430\u043B 2 minutes. \u041A\u0430\u043A\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u043E\u043D \u0441\u043E\u0432\u0435\u0440\u0448\u0438\u043B?"] }, { key: "phys7-5.7", code: "5.7", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430. \u0420\u0430\u0431\u043E\u0442\u0430 \u043F\u0440\u0438 \u043F\u043E\u0434\u044A\u0451\u043C\u0435 \u0438 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u0438 \u0442\u0435\u043B\u0430", homework: "\u041E\u0444\u043E\u0440\u043C\u0438\u0442\u0435 \u043E\u0442\u0447\u0451\u0442 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B: \u0446\u0435\u043B\u044C, \u043F\u0440\u0438\u0431\u043E\u0440\u044B, \u0442\u0430\u0431\u043B\u0438\u0446\u0430, \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u044F, \u0432\u044B\u0432\u043E\u0434.", tasks: ["\u0411\u0440\u0443\u0441\u043E\u043A \u0432\u0435\u0441\u043E\u043C 2 N \u043F\u043E\u0434\u043D\u044F\u043B\u0438 \u043D\u0430 0,5 m. \u0420\u0430\u0431\u043E\u0442\u0430?", "\u0422\u043E\u0442 \u0436\u0435 \u0431\u0440\u0443\u0441\u043E\u043A \u043F\u0440\u043E\u0442\u0430\u0449\u0438\u043B\u0438 0,5 m, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B 0,6 N. \u0420\u0430\u0431\u043E\u0442\u0430?"] }, { key: "phys7-6.1", code: "6.1", title: "\u0421\u043E\u043B\u043D\u0446\u0435, \u0417\u0435\u043C\u043B\u044F \u0438 \u041B\u0443\u043D\u0430", homework: "\u041D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0440\u0438\u0441\u043E\u0432\u044B\u0432\u0430\u0439\u0442\u0435 \u041B\u0443\u043D\u0443 \u043A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0447\u0435\u0440 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 \u0444\u0430\u0437\u044B.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0430 \u0417\u0435\u043C\u043B\u0435 \u0441\u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u0434\u0435\u043D\u044C \u0438 \u043D\u043E\u0447\u044C?", "\u041A\u043E\u0433\u0434\u0430 \u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0435 \u0437\u0430\u0442\u043C\u0435\u043D\u0438\u0435?"] }, { key: "phys7-6.2", code: "6.2", title: "\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u043E\u0434\u0435\u043B\u044C \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B \u0438\u0437 \u0431\u0443\u043C\u0430\u0433\u0438 \u0438\u043B\u0438 \u043F\u043B\u0430\u0441\u0442\u0438\u043B\u0438\u043D\u0430 \u0441 \u043F\u043E\u0434\u043F\u0438\u0441\u044F\u043C\u0438.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u043B\u0430\u043D\u0435\u0442\u044B \u043F\u043E \u043F\u043E\u0440\u044F\u0434\u043A\u0443 \u043E\u0442 \u0421\u043E\u043B\u043D\u0446\u0430.", "\u041A\u0430\u043A\u0430\u044F \u043F\u043B\u0430\u043D\u0435\u0442\u0430 \u0441\u0430\u043C\u0430\u044F \u0431\u043E\u043B\u044C\u0448\u0430\u044F \u0438 \u043A\u0430\u043A\u0430\u044F \u0441\u0430\u043C\u0430\u044F \u0431\u043B\u0438\u0437\u043A\u0430\u044F \u043A \u0421\u043E\u043B\u043D\u0446\u0443?"] }, { key: "phys7-6.3", code: "6.3", title: "\u0412\u0441\u0435\u043B\u0435\u043D\u043D\u0430\u044F \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u0430\u043C\u0438 \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u043D\u043E\u0447\u043D\u043E\u043C \u043D\u0435\u0431\u0435 \u0411\u043E\u043B\u044C\u0448\u0443\u044E \u041C\u0435\u0434\u0432\u0435\u0434\u0438\u0446\u0443 \u0438 \u0437\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0435\u0451.", tasks: ["\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0441\u0432\u0435\u0442\u043E\u0432\u043E\u0439 \u0433\u043E\u0434?", "\u041A\u0430\u043A \u043D\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430\u0448\u0430 \u0433\u0430\u043B\u0430\u043A\u0442\u0438\u043A\u0430?"] }, { key: "phys7-6.4", code: "6.4", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0412\u0441\u0435\u043B\u0435\u043D\u043D\u043E\u0439", homework: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0440\u0430\u0441\u0441\u043A\u0430\u0437 \u043E \u043B\u044E\u0431\u043E\u0439 \u043A\u043E\u0441\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043C\u0438\u0441\u0441\u0438\u0438.", tasks: ["\u041A\u0442\u043E \u043F\u0435\u0440\u0432\u044B\u043C \u043F\u043E\u043B\u0435\u0442\u0435\u043B \u0432 \u043A\u043E\u0441\u043C\u043E\u0441 \u0438 \u043A\u043E\u0433\u0434\u0430?", "\u0417\u0430\u0447\u0435\u043C \u0440\u0430\u0434\u0438\u043E\u0442\u0435\u043B\u0435\u0441\u043A\u043E\u043F\u044B, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C \u043E\u043F\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0435?"] }, { key: "phys7-6.5", code: "6.5", title: "\u041A\u0440\u0430\u0442\u043A\u0430\u044F \u0438\u0441\u0442\u043E\u0440\u0438\u044F \u0440\u0430\u0437\u0432\u0438\u0442\u0438\u044F \u043D\u0430\u0443\u043A\u0438 \u0430\u0441\u0442\u0440\u043E\u043D\u043E\u043C\u0438\u0438", homework: "\u041F\u043E\u0441\u0435\u0442\u0438\u0442\u0435 (\u0438\u043B\u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0435) \u043E\u0431\u0441\u0435\u0440\u0432\u0430\u0442\u043E\u0440\u0438\u044E \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u0430 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 5 \u0444\u0430\u043A\u0442\u043E\u0432 \u043E \u043D\u0435\u0439.", tasks: ["\u0427\u0435\u043C \u043C\u043E\u0434\u0435\u043B\u044C \u041A\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043C\u043E\u0434\u0435\u043B\u0438 \u041F\u0442\u043E\u043B\u0435\u043C\u0435\u044F?", "\u0427\u0435\u043C \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u0442 \u041C\u0438\u0440\u0437\u043E \u0423\u043B\u0443\u0433\u0431\u0435\u043A?"] }] }, { id: "chemistry-7", subject: "chemistry", grade: 7, topics: [{ key: "chem7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0445\u0438\u043C\u0438\u044F?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u0438\u043B\u0438 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u0432 \u043D\u0438\u0445 \u0433\u043B\u0430\u0432\u043D\u043E\u0435.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0434\u0430 \u0432 \u0441\u0442\u0430\u043A\u0430\u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0430 \u0446\u0432\u0435\u0442, \u043A\u043E\u0433\u0434\u0430 \u0442\u0443\u0434\u0430 \u043E\u043F\u0443\u0441\u0442\u0438\u043B\u0438 \u0447\u0430\u0439\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442\u0438\u043A?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u043D\u0430\u043D\u0438\u0435 \u0445\u0438\u043C\u0438\u0438 \u0432\u0430\u0436\u043D\u043E \u0432 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438?"] }, { key: "chem7-1.2", code: "1.2", title: "\u041A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F", homework: "\u041E\u0442\u043C\u0435\u0442\u044C\u0442\u0435 \u0432 \u0430\u043D\u043A\u0435\u0442\u0435 \u0438\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430, \u043A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0443 \u0432\u0430\u0441 \u0443\u0436\u0435 \u0435\u0441\u0442\u044C, \u0430 \u043A\u0430\u043A\u0438\u0435 \u0445\u043E\u0442\u0438\u0442\u0435 \u0440\u0430\u0437\u0432\u0438\u0442\u044C.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443\u0447\u0451\u043D\u044B\u043C \u0432\u0430\u0436\u043D\u043E \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0434\u0440\u0443\u0433 \u0441 \u0434\u0440\u0443\u0433\u043E\u043C \u0438 \u0431\u044B\u0442\u044C \u0447\u0435\u0441\u0442\u043D\u044B\u043C\u0438?", "\u0427\u0442\u043E \u0437\u043D\u0430\u0447\u0438\u0442 \u0431\u044B\u0442\u044C \u0441\u043A\u0435\u043F\u0442\u0438\u0447\u043D\u044B\u043C \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C?"] }, { key: "chem7-1.3", code: "1.3", title: "\u041D\u0430\u0443\u0447\u043D\u044B\u0435 \u043C\u0435\u0442\u043E\u0434\u044B \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u044F \u0445\u0438\u043C\u0438\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043B\u0430\u043D \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F: \xAB\u0413\u0434\u0435 \u0431\u044B\u0441\u0442\u0440\u0435\u0435 \u0441\u043E\u0445\u043D\u0435\u0442 \u0431\u0435\u043B\u044C\u0451 \u2014 \u043D\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0438\u043B\u0438 \u0432 \u0442\u0435\u043D\u0438?\xBB", tasks: ["\u0412 \u043E\u043F\u044B\u0442\u0435 \xAB\u0432\u043B\u0438\u044F\u0435\u0442 \u043B\u0438 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0432\u043E\u0434\u044B \u043D\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u0430\u0445\u0430\u0440\u0430\xBB \u043D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435.", "\u0427\u0435\u043C \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u0430\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0430\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0439?"] }, { key: "chem7-1.4", code: "1.4", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041F\u0435\u0440\u0435\u0440\u0438\u0441\u0443\u0439\u0442\u0435 5 \u0437\u043D\u0430\u043A\u043E\u0432 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C \u043F\u0440\u0438 \u043A\u0430\u0436\u0434\u043E\u043C.", tasks: ["\u0418\u0437\u043C\u0430\u0438\u043B\u0443 \u043D\u0443\u0436\u043D\u043E \u043D\u0430\u0433\u0440\u0435\u0442\u044C \u0441\u043F\u0438\u0440\u0442 \u0432 \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0435. \u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0434\u0432\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438.", "\u0427\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u0430 \u043F\u043E\u043F\u0430\u043B\u0430 \u043D\u0430 \u043A\u043E\u0436\u0443?"] }, { key: "chem7-1.5", code: "1.5", title: "\u041E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u043E\u0435 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041E\u0442\u0432\u0435\u0442\u044C\u0442\u0435 \u043D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \xAB\u041F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0435\xBB \u0433\u043B\u0430\u0432\u044B 1 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", tasks: ["\u0421\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443: \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043B\u043E\u0436\u043A\u0430 \u0432 \u0433\u043E\u0440\u044F\u0447\u0435\u043C \u0447\u0430\u0435 \u043D\u0430\u0433\u0440\u0435\u043B\u0430\u0441\u044C \u0441\u0438\u043B\u044C\u043D\u0435\u0435 \u0434\u0435\u0440\u0435\u0432\u044F\u043D\u043D\u043E\u0439.", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438: \u0441\u0442\u0430\u043A\u0430\u043D, \u0442\u0440\u0435\u043D\u043E\u0433\u0443, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0443, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0432\u044B\u043F\u0430\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u0447\u0430\u0448\u043A\u0443."] }, { key: "chem7-2.1", code: "2.1", title: "\u0421\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u043F\u043E 2 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u0442\u0432\u0451\u0440\u0434\u044B\u0445, \u0436\u0438\u0434\u043A\u0438\u0445 \u0438 \u0433\u0430\u0437\u043E\u043E\u0431\u0440\u0430\u0437\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0443.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0440\u0438 \u0430\u0433\u0440\u0435\u0433\u0430\u0442\u043D\u044B\u0445 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0433\u0430\u0437 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u0432\u0435\u0441\u044C \u043E\u0431\u044A\u0451\u043C \u0441\u043E\u0441\u0443\u0434\u0430?", "\u0412 \u043A\u0430\u043A\u043E\u043C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0447\u0430\u0441\u0442\u0438\u0446\u044B \u0440\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u044B \u0442\u0435\u0441\u043D\u0435\u0435 \u0432\u0441\u0435\u0433\u043E?"] }, { key: "chem7-2.2", code: "2.2", title: "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043A\u0443\u0431\u0438\u043A \u043B\u044C\u0434\u0430 \u043D\u0430 \u0442\u0430\u0440\u0435\u043B\u043A\u0443 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F: \u043A\u043E\u0433\u0434\u0430 \u043E\u043D \u0440\u0430\u0441\u0442\u0430\u0435\u0442 \u0438 \u043A\u043E\u0433\u0434\u0430 \u0432\u044B\u0441\u043E\u0445\u043D\u0435\u0442 \u043B\u0443\u0436\u0438\u0446\u0430.", tasks: ["\u041A\u0430\u043A \u043D\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u0435\u0440\u0435\u0445\u043E\u0434 \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u0432 \u0433\u0430\u0437?", "\u041C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u043B\u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u044B \u0432\u043E\u0434\u044B \u043F\u0440\u0438 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u043D\u0438\u0438?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u0435\u0440\u043A\u0430\u043B\u043E \u0432 \u0432\u0430\u043D\u043D\u043E\u0439 \u0437\u0430\u043F\u043E\u0442\u0435\u0432\u0430\u0435\u0442?"] }, { key: "chem7-3.1", code: "3.1", title: "\u0425\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u044B", homework: "\u0412\u044B\u043F\u0438\u0448\u0438\u0442\u0435 10 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0435\u0441\u0442\u044C \u0432 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430, \u0441 \u0438\u0445 \u0441\u0438\u043C\u0432\u043E\u043B\u0430\u043C\u0438.", tasks: ["\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0441\u0438\u043C\u0432\u043E\u043B\u044B: \u0436\u0435\u043B\u0435\u0437\u043E, \u043D\u0430\u0442\u0440\u0438\u0439, \u0441\u0435\u0440\u0430, \u0441\u0435\u0440\u0435\u0431\u0440\u043E, \u0446\u0438\u043D\u043A, \u0430\u0437\u043E\u0442.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0441\u0438\u043C\u0432\u043E\u043B \u0441\u0435\u0440\u0435\u0431\u0440\u0430 Ag?"] }, { key: "chem7-3.2", code: "3.2", title: "\u0410\u0442\u043E\u043C \u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430", homework: "\u0412 3D-\u0441\u0442\u0443\u0434\u0438\u0438 \u0441\u043E\u0431\u0435\u0440\u0438\u0442\u0435 H\u2082O, CO\u2082, NH\u2083 \u0438 CH\u2084. \u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0438\u0445 \u0441\u0445\u0435\u043C\u044B \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", tasks: ["\u041A\u0430\u043A\u043E\u0432\u0430 \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C \u0443\u0433\u043B\u0435\u0440\u043E\u0434\u0430? \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0430\u0442\u043E\u043C\u043E\u0432 \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u043E\u043D \u043F\u0440\u0438\u0441\u043E\u0435\u0434\u0438\u043D\u0438\u0442?", "\u041A\u0430\u043A\u043E\u0432\u0430 \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C \u0430\u0437\u043E\u0442\u0430? \u041A\u0430\u043A\u0430\u044F \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0441 \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u043E\u043C?", "\u0418\u0437 \u043A\u0430\u043A\u0438\u0445 \u0430\u0442\u043E\u043C\u043E\u0432 \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u0432\u043E\u0434\u044B?"] }, { key: "chem7-3.3", code: "3.3", title: "\u041C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438\u0437 \u043C\u0435\u0442\u0430\u043B\u043B\u0430 \u0438 5 \u2014 \u0438\u0437 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432. \u041A\u0430\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043B\u0438, \u0447\u0442\u043E\u0431\u044B \u0438\u0445 \u043E\u0442\u043B\u0438\u0447\u0438\u0442\u044C?", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432.", "\u0418\u0437 \u043A\u0430\u043A\u0438\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u043F\u043E\u0432\u0430\u0440\u0435\u043D\u043D\u0430\u044F \u0441\u043E\u043B\u044C?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u0434\u0435\u043B\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0434\u0438?"] }, { key: "chem7-3.4", code: "3.4", title: "\u041F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0442\u0430\u0431\u043B\u0438\u0446\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 5 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432 \u0438 5 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432, \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 \u043D\u043E\u043C\u0435\u0440\u0430 \u0438 \u0441\u0438\u043C\u0432\u043E\u043B\u044B.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u043D\u043E\u043C\u0435\u0440 \u0443 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430 \u0438 \u0447\u0442\u043E \u043E\u043D \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442?", "\u0413\u0434\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 \u043D\u0430\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u043C\u0435\u0442\u0430\u043B\u043B\u044B, \u0430 \u0433\u0434\u0435 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B?"] }, { key: "chem7-3.5", code: "3.5", title: "\u0421\u043B\u043E\u0436\u043D\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 (\u0441\u043E\u043B\u044C, \u0441\u043E\u0434\u0430, \u0432\u043E\u0434\u0430) \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0444\u043E\u0440\u043C\u0443\u043B\u044B.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F: CaO, NaCl, FeS\u2082, CO.", "\u0427\u0435\u043C \u043F\u0440\u043E\u0441\u0442\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0441\u043B\u043E\u0436\u043D\u043E\u0433\u043E?"] }, { key: "chem7-3.6", code: "3.6", title: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u043C, \u043F\u043E\u0447\u0435\u043C\u0443 \u0441\u043E\u043B\u044C \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u0430, \u0445\u043E\u0442\u044F \u043D\u0430\u0442\u0440\u0438\u0439 \u0438 \u0445\u043B\u043E\u0440 \u043E\u043F\u0430\u0441\u043D\u044B.", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u043E\u0434\u044B \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0438\u0437 5 g \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u0438 40 g \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430?", "\u0415\u0441\u0442\u044C 5 g \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u0438 50 g \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0432\u043E\u0434\u044B \u0438 \u0447\u0442\u043E \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F?"] }, { key: "chem7-3.7", code: "3.7", title: "\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0435 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u0412 3D-\u0441\u0442\u0443\u0434\u0438\u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 6 \u0440\u0435\u0430\u043A\u0446\u0438\u0439 \u0438 \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", tasks: ["\u0423\u0440\u0430\u0432\u043D\u044F\u0439\u0442\u0435: H\u2082 + O\u2082 \u2192 H\u2082O", "\u0427\u0442\u043E \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0433\u043E\u0440\u0435\u043D\u0438\u0438 \u043C\u0435\u0442\u0430\u043D\u0430 CH\u2084?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043C\u0430\u0441\u0441\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0434\u043E \u0438 \u043F\u043E\u0441\u043B\u0435 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u0430?"] }, { key: "chem7-4.1", code: "4.1", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E 5 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430\u043C \u0441\u0430\u0445\u0430\u0440 \u0438 \u0441\u043E\u043B\u044C.", tasks: ["\u041C\u0430\u0441\u0441\u0430 \u0442\u0435\u043B\u0430 54 g, \u043E\u0431\u044A\u0451\u043C 20 cm\xB3. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0433\u0430\u0437\u044B \u0438\u043C\u0435\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0443\u044E \u043F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C, \u0447\u0435\u043C \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u0438 \u0442\u0432\u0451\u0440\u0434\u044B\u0435 \u0442\u0435\u043B\u0430?"] }, { key: "chem7-4.2", code: "4.2", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432 \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0438 3 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430.", tasks: ["\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B \u043F\u043E \u0431\u043B\u0435\u0441\u043A\u0443 \u0438 \u0442\u0435\u043F\u043B\u043E\u043F\u0440\u043E\u0432\u043E\u0434\u043D\u043E\u0441\u0442\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u0434\u0435\u043B\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0434\u0438 \u0438\u043B\u0438 \u0430\u043B\u044E\u043C\u0438\u043D\u0438\u044F?"] }, { key: "chem7-4.3", code: "4.3", title: "\u0412\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u044B\u0435 \u0432 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438, \u0438 \u0438\u0445 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: 5 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0434\u043E\u043C\u0430 \u2014 \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442 \u2014 \u043A\u0430\u043A \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E \u0445\u0440\u0430\u043D\u0438\u0442\u044C.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u0441\u043C\u0435\u0448\u0438\u0432\u0430\u0442\u044C \u043E\u0442\u0431\u0435\u043B\u0438\u0432\u0430\u0442\u0435\u043B\u044C \u0438 \u0441\u0440\u0435\u0434\u0441\u0442\u0432\u043E \u0434\u043B\u044F \u0447\u0438\u0441\u0442\u043A\u0438 \u0441 \u043A\u0438\u0441\u043B\u043E\u0442\u043E\u0439?", "\u0417\u0430\u0447\u0435\u043C \u0441\u043E\u0434\u0443 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u044E\u0442 \u0432 \u0442\u0435\u0441\u0442\u043E?"] }, { key: "chem7-5.1", code: "5.1", title: "\u041A\u0438\u0441\u043B\u043E\u0442\u044B", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0438\u0437 \u0441\u043E\u043A\u0430 \u043A\u0440\u0430\u0441\u043D\u043E\u043A\u043E\u0447\u0430\u043D\u043D\u043E\u0439 \u043A\u0430\u043F\u0443\u0441\u0442\u044B \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A \u0438 \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0441\u043E\u0434\u044B. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0446\u0432\u0435\u0442\u0430.", tasks: ["\u041A\u0430\u043A \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u043B\u0430\u043A\u043C\u0443\u0441\u0430 \u0443\u0437\u043D\u0430\u0442\u044C \u043A\u0438\u0441\u043B\u043E\u0442\u0443?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0438\u0437 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438 \u043D\u0430 \u0432\u043A\u0443\u0441?"] }, { key: "chem7-5.2", code: "5.2", title: "\u041E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u044F", homework: "\u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u043D\u044B\u043C \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u043C \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u043C\u044B\u043B\u0430. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u0441 \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u043C \u0441\u043E\u043A\u043E\u043C.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u0446\u0432\u0435\u0442 \u0434\u0430\u0451\u0442 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D \u0432 \u0449\u0451\u043B\u043E\u0447\u0438?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u043C\u044B\u043B\u0430 \u0441\u043A\u043E\u043B\u044C\u0437\u043A\u0438\u0439?", "\u0427\u0442\u043E \u043E\u0431\u0449\u0435\u0433\u043E \u0443 \u043A\u0438\u0441\u043B\u043E\u0442 \u0438 \u0449\u0435\u043B\u043E\u0447\u0435\u0439 \u043F\u043E \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438?"] }, { key: "chem7-5.3", code: "5.3", title: "\u0418\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u044B", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u043D\u044B\u0439 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043C \u0443\u043A\u0441\u0443\u0441, \u0441\u043E\u0434\u0443, \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A, \u043C\u044B\u043B\u043E.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u0446\u0432\u0435\u0442 \u0431\u0443\u0434\u0435\u0442 \u0443 \u043B\u0430\u043A\u043C\u0443\u0441\u0430 \u0432 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0435 \u0449\u0451\u043B\u043E\u0447\u0438? \u0410 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D\u0430?", "\u041A\u0430\u043A \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0434\u043E\u043C\u0430?"] }, { key: "chem7-5.4", code: "5.4", title: "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0435\u043B\u044C pH", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 3 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0430\u0445 (\u0448\u0430\u043C\u043F\u0443\u043D\u044C, \u043C\u044B\u043B\u043E, \u0441\u043E\u043A) \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 pH \u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435.", tasks: ["\u0420\u0430\u0441\u0442\u0432\u043E\u0440 \u0438\u043C\u0435\u0435\u0442 pH 3. \u041A\u0430\u043A\u0430\u044F \u044D\u0442\u043E \u0441\u0440\u0435\u0434\u0430?", "\u0420\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E pH: \u043C\u044B\u043B\u043E (10), \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A (2), \u0432\u043E\u0434\u0430 (7)."] }, { key: "chem7-5.5", code: "5.5", title: "\u041D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F", homework: "\u0414\u043E\u0431\u0430\u0432\u044C\u0442\u0435 \u0441\u043E\u0434\u0443 \u0432 \u0443\u043A\u0441\u0443\u0441 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0432\u0438\u0434\u0438\u0442\u0435. \u042D\u0442\u043E \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F \u0441 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C CO\u2082.", tasks: ["\u0427\u0442\u043E \u043E\u0431\u0440\u0430\u0437\u0443\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0449\u0451\u043B\u043E\u0447\u044C\u044E?", "\u0414\u043E\u043F\u0438\u0448\u0438\u0442\u0435: HCl + NaOH \u2192 \u2026 + \u2026", "\u041A\u0430\u043A \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430 \u043E\u0442 \u0438\u0437\u0436\u043E\u0433\u0438?"] }, { key: "chem7-6.1", code: "6.1", title: "\u0421\u043C\u0435\u0441\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u0441\u043C\u0435\u0441\u0435\u0439 \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u043D\u0430 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435 \u0438 \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435.", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u043E\u0439 \u0438 \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u043E\u0439 \u0441\u043C\u0435\u0441\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0437\u0434\u0443\u0445 \u2014 \u044D\u0442\u043E \u0441\u043C\u0435\u0441\u044C, \u0430 \u043D\u0435 \u0441\u043B\u043E\u0436\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E?"] }, { key: "chem7-6.2", code: "6.2", title: "\u0420\u0430\u0437\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432, \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0438 \u0441\u043C\u0435\u0441\u0435\u0439", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u0438\u0437 9 \u043F\u0440\u0438\u043C\u0435\u0440\u043E\u0432: \u043F\u043E 3 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0438 \u0441\u043C\u0435\u0441\u0438.", tasks: ["\u0420\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435: \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434, \u0432\u043E\u0434\u0430, \u0432\u043E\u0437\u0434\u0443\u0445, \u0436\u0435\u043B\u0435\u0437\u043E, \u0441\u043E\u043B\u044C, \u043C\u043E\u0440\u0441\u043A\u0430\u044F \u0432\u043E\u0434\u0430.", "\u0427\u0435\u043C \u0441\u043C\u0435\u0441\u044C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0441\u043B\u043E\u0436\u043D\u043E\u0433\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?"] }, { key: "chem7-6.3", code: "6.3", title: "\u0420\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0441\u043C\u0435\u0441\u0435\u0439", homework: "\u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u0441\u043C\u0435\u0441\u044C \u0441\u043E\u043B\u0438 \u0438 \u043F\u0435\u0441\u043A\u0430, \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u043A\u0430\u0436\u0434\u044B\u0439 \u0448\u0430\u0433.", tasks: ["\u041A\u0430\u043A \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043C\u0435\u0441\u044C \u043F\u0435\u0441\u043A\u0430, \u0441\u043E\u043B\u0438 \u0438 \u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0445 \u043E\u043F\u0438\u043B\u043E\u043A?", "\u041A\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0447\u0438\u0441\u0442\u0443\u044E \u0432\u043E\u0434\u0443 \u0438\u0437 \u0441\u043E\u043B\u0451\u043D\u043E\u0439?"] }, { key: "chem7-6.4", code: "6.4", title: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u044B", homework: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 5 % \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0441\u043E\u043B\u0438: 5 g \u0441\u043E\u043B\u0438 \u0438 95 g \u0432\u043E\u0434\u044B. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0430\u0441\u0447\u0451\u0442.", tasks: ["\u0412 90 g \u0432\u043E\u0434\u044B \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043B\u0438 10 g \u0441\u043E\u043B\u0438. \u041C\u0430\u0441\u0441\u043E\u0432\u0430\u044F \u0434\u043E\u043B\u044F \u0441\u043E\u043B\u0438?", "\u0427\u0442\u043E \u0432 \u0441\u043B\u0430\u0434\u043A\u043E\u043C \u0447\u0430\u0435 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0435\u043B\u044C, \u0430 \u0447\u0442\u043E \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E?"] }, { key: "chem7-6.5", code: "6.5", title: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043C\u043E\u0441\u0442\u044C", homework: "\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u043E\u0436\u0435\u043A \u0441\u0430\u0445\u0430\u0440\u0430 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0441\u044F \u0432 \u0441\u0442\u0430\u043A\u0430\u043D\u0435 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0439 \u0438 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u044B.", tasks: ["\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u044B\u0439 \u0440\u0430\u0441\u0442\u0432\u043E\u0440?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u044B\u0431\u0430\u043C \u0432 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u0435 \u0442\u0440\u0443\u0434\u043D\u0435\u0435 \u0434\u044B\u0448\u0430\u0442\u044C?"] }] }, { id: "biology-7", subject: "biology", grade: 7, topics: [{ key: "bio7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u044F?", homework: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u043E\u0431 \u0418\u0431\u043D \u0421\u0438\u043D\u043E \u0438\u043B\u0438 \u043E \u0434\u0440\u0443\u0433\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C-\u0431\u0438\u043E\u043B\u043E\u0433\u0435.", tasks: ["\u0421\u043E\u043E\u0442\u043D\u0435\u0441\u0438\u0442\u0435 \u0443\u0447\u0451\u043D\u044B\u0445 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u044F: \u0418\u0431\u043D \u0421\u0438\u043D\u043E, \u041F\u0430\u0432\u043B\u043E\u0432, \u041F\u0430\u0441\u0442\u0435\u0440, \u0413\u0430\u0440\u0432\u0435\u0439, \u041B\u0435\u0432\u0435\u043D\u0433\u0443\u043A.", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u044F\u0432\u043B\u0435\u043D\u0438\u044F."] }, { key: "bio7-1.2", code: "1.2", title: "\u041A\u0430\u043A\u0438\u043C\u0438 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430\u043C\u0438 \u0434\u043E\u043B\u0436\u0435\u043D \u043E\u0431\u043B\u0430\u0434\u0430\u0442\u044C \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C?", homework: "\u041F\u043E\u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 3 \u0434\u043D\u044F \u0437\u0430 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435\u043C \u0438\u043B\u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u043C \u0438 \u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u043D\u0435\u0432\u043D\u0438\u043A \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0439.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0438 \u041F\u0430\u0441\u0442\u0435\u0440\u0443 \u043E\u043F\u0440\u043E\u0432\u0435\u0440\u0433\u043D\u0443\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u0441\u0430\u043C\u043E\u0437\u0430\u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u0430\u0436\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u043E\u043F\u044B\u0442\u043E\u043C?"] }, { key: "bio7-1.3", code: "1.3", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u043D\u0430\u0432\u044B\u043A\u0438 \u0438 \u043C\u0435\u0442\u043E\u0434\u044B \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F", homework: "\u041F\u0440\u043E\u0440\u0430\u0441\u0442\u0438\u0442\u0435 2 \u0444\u0430\u0441\u043E\u043B\u0438: \u043D\u0430 \u0441\u0432\u0435\u0442\u0443 \u0438 \u0432 \u0448\u043A\u0430\u0444\u0443. \u0427\u0435\u0440\u0435\u0437 \u043D\u0435\u0434\u0435\u043B\u044E \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435.", tasks: ["\u041E\u043F\u044B\u0442: \xAB\u0412\u043B\u0438\u044F\u0435\u0442 \u043B\u0438 \u0441\u0432\u0435\u0442 \u043D\u0430 \u0440\u043E\u0441\u0442 \u0444\u0430\u0441\u043E\u043B\u0438?\xBB \u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435.", "\u0417\u0430\u0447\u0435\u043C \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0433\u0440\u0443\u043F\u043F\u0430?"] }, { key: "bio7-1.4", code: "1.4", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0430\u043C\u044F\u0442\u043A\u0443 \u0438\u0437 5 \u043F\u0440\u0430\u0432\u0438\u043B \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0434\u043B\u044F \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0430 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0435 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438.", "\u0427\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u0440\u0430\u0437\u0431\u0438\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E?"] }, { key: "bio7-1.5", code: "1.5", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043B\u0443\u043F\u0443, \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F \u0438 \u0447\u0430\u0448\u043A\u0443 \u041F\u0435\u0442\u0440\u0438.", tasks: ["\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u043D\u0443\u0436\u043D\u043E \u043F\u043E\u043A\u0440\u043E\u0432\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E?", "\u0427\u0435\u043C \u043B\u0443\u043F\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F\u0430?"] }, { key: "bio7-1.6", code: "1.6", title: "\u041D\u0430\u0443\u043A\u0430 \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0441\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438 \u0432 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0435 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0435\u0451 \u043F\u043E\u043B\u044C\u0437\u0443.", tasks: ["\u0414\u043B\u044F \u043A\u0430\u043A\u0438\u0445 \u0446\u0435\u043B\u0435\u0439 \u043C\u043E\u0436\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C 3D-\u043F\u0435\u0447\u0430\u0442\u044C \u0432 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438 \u0438 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0435?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0435\u0440\u0435\u0441\u0430\u0434\u043A\u0430 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u0440\u0438\u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F?"] }, { key: "bio7-2.1", code: "2.1", title: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0435 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0443 \u043D\u0435\u0433\u043E \u0432\u0441\u0435 7 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u043E\u0433\u043E.", tasks: ["\u041F\u0435\u0440\u0435\u0447\u0438\u0441\u043B\u0438\u0442\u0435 7 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u0421\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u043B\u0438 \u0432\u044B\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u043D\u0435\u043F\u0435\u0440\u0435\u0432\u0430\u0440\u0435\u043D\u043D\u044B\u0445 \u043E\u0441\u0442\u0430\u0442\u043A\u043E\u0432 \u043F\u0438\u0449\u0438 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C (\u044D\u043A\u0441\u043A\u0440\u0435\u0446\u0438\u0435\u0439)? \u041F\u043E\u0447\u0435\u043C\u0443?"] }, { key: "bio7-2.2", code: "2.2", title: "\u041A\u043B\u0435\u0442\u043A\u0430 \u2014 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043D\u043E-\u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0435\u0434\u0438\u043D\u0438\u0446\u0430", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u043A\u043B\u0435\u0442\u043A\u0443 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 5 \u043E\u0440\u0433\u0430\u043D\u043E\u0438\u0434\u043E\u0432.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0447\u0430\u0441\u0442\u044C \u043A\u043B\u0435\u0442\u043A\u0438 \u0445\u0440\u0430\u043D\u0438\u0442 \u0414\u041D\u041A?", "\u0417\u0430\u0447\u0435\u043C \u043A\u043B\u0435\u0442\u043A\u0435 \u043C\u0438\u0442\u043E\u0445\u043E\u043D\u0434\u0440\u0438\u0438?", "\u041A\u0442\u043E \u0432\u043F\u0435\u0440\u0432\u044B\u0435 \u043E\u043F\u0438\u0441\u0430\u043B \u043A\u043B\u0435\u0442\u043A\u0443?"] }, { key: "bio7-2.3", code: "2.3", title: "\u0420\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043E\u043A.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043E\u0442\u043B\u0438\u0447\u0438\u044F \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043A\u0438 \u043E\u0442 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439.", "\u0413\u0434\u0435 \u0432 \u043A\u043B\u0435\u0442\u043A\u0435 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435 \u043D\u0435 \u043F\u0430\u0434\u0430\u0435\u0442 \u0431\u0435\u0437 \u0441\u043A\u0435\u043B\u0435\u0442\u0430?"] }, { key: "bio7-2.4", code: "2.4", title: "\u0424\u0443\u043D\u043A\u0446\u0438\u0438 \u043A\u043B\u0435\u0442\u043E\u043A", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 3 \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0444\u0443\u043D\u043A\u0446\u0438\u044E.", tasks: ["\u041A\u0430\u043A \u0444\u043E\u0440\u043C\u0430 \u044D\u0440\u0438\u0442\u0440\u043E\u0446\u0438\u0442\u0430 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u0435\u043C\u0443 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F?"] }, { key: "bio7-2.5", code: "2.5", title: "\u041E\u0442 \u043A\u043B\u0435\u0442\u043A\u0438 \u043A \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0443", homework: "\u0417\u0430\u043F\u043E\u043B\u043D\u0438\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0435 \u043E\u0440\u0433\u0430\u043D\u044B \u2014 \u0444\u0443\u043D\u043A\u0446\u0438\u044F (6 \u0441\u0438\u0441\u0442\u0435\u043C).", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434 \u043A \u043A\u043B\u0435\u0442\u043A\u0430\u043C?", "\u0420\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043F\u043E \u043F\u043E\u0440\u044F\u0434\u043A\u0443: \u043E\u0440\u0433\u0430\u043D, \u043A\u043B\u0435\u0442\u043A\u0430, \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C, \u0442\u043A\u0430\u043D\u044C, \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432."] }, { key: "bio7-2.6", code: "2.6", title: "\u041E\u043F\u043E\u0440\u043D\u043E-\u0434\u0432\u0438\u0433\u0430\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0443 \u0441\u0435\u0431\u044F 5 \u0441\u0443\u0441\u0442\u0430\u0432\u043E\u0432 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u0438\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u043E\u043D\u0438 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u044E\u0442.", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u0441\u0442\u0435\u0439 \u0443 \u0432\u0437\u0440\u043E\u0441\u043B\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430?", "\u041A\u0430\u043A\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u044B \u0437\u0430\u0449\u0438\u0449\u0430\u044E\u0442 \u0440\u0451\u0431\u0440\u0430?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E\u0433\u043E \u0438 \u043D\u0435\u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E\u0433\u043E \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u043A\u043E\u0441\u0442\u0435\u0439."] }, { key: "bio7-2.7", code: "2.7", title: "\u041A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0438\u0440\u0443\u044E\u0442 \u043C\u044B\u0448\u0446\u044B?", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043B\u0430\u0434\u043E\u043D\u044C \u043D\u0430 \u043F\u043B\u0435\u0447\u043E \u0438 \u0441\u0433\u0438\u0431\u0430\u0439\u0442\u0435 \u0440\u0443\u043A\u0443: \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0435\u0442\u0435 \u0432 \u0431\u0438\u0446\u0435\u043F\u0441\u0435 \u0438 \u0442\u0440\u0438\u0446\u0435\u043F\u0441\u0435.", tasks: ["\u0412 \u043A\u0430\u043A\u043E\u043C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0433\u043B\u0430\u0432\u0430\u044F \u0438 \u0434\u0432\u0443\u0433\u043B\u0430\u0432\u0430\u044F \u043C\u044B\u0448\u0446\u044B \u0431\u0435\u0434\u0440\u0430 \u043F\u0440\u0438 \u0441\u0433\u0438\u0431\u0430\u043D\u0438\u0438 \u043A\u043E\u043B\u0435\u043D\u0430?", "\u042F\u0432\u043B\u044F\u044E\u0442\u0441\u044F \u043B\u0438 \u043E\u043D\u0438 \u0430\u043D\u0442\u0430\u0433\u043E\u043D\u0438\u0441\u0442\u0430\u043C\u0438?"] }, { key: "bio7-2.8", code: "2.8", title: "\u0414\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u0443\u0447\u0451\u043D\u044B\u0445, \u0438\u0437\u0443\u0447\u0430\u044E\u0449\u0438\u0445 \u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u043E\u0431 \u043E\u0434\u043D\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C: \u0433\u043E\u0434\u044B \u0436\u0438\u0437\u043D\u0438, \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u0435, \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", tasks: ["\u0427\u0442\u043E \u043E\u0442\u043A\u0440\u044B\u043B \u0423\u0438\u043B\u044C\u044F\u043C \u0413\u0430\u0440\u0432\u0435\u0439?", "\u0427\u0435\u043C \u0430\u043D\u0430\u0442\u043E\u043C\u0438\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0444\u0438\u0437\u0438\u043E\u043B\u043E\u0433\u0438\u0438?"] }, { key: "bio7-3.1", code: "3.1", title: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432", homework: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0439\u0442\u0435 10 \u0437\u043D\u0430\u043A\u043E\u043C\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043F\u043E \u0446\u0430\u0440\u0441\u0442\u0432\u0430\u043C.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 5 \u0446\u0430\u0440\u0441\u0442\u0432 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u0417\u0430\u0447\u0435\u043C \u043D\u0443\u0436\u043D\u0430 \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F?"] }, { key: "bio7-3.2", code: "3.2", title: "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0432\u0438\u0434?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043B\u0430\u0442\u0438\u043D\u0441\u043A\u0438\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F 5 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u0441\u0435 \u043F\u043E\u0440\u043E\u0434\u044B \u0441\u043E\u0431\u0430\u043A \u2014 \u043E\u0434\u0438\u043D \u0432\u0438\u0434?", "\u0427\u0442\u043E \u0437\u043D\u0430\u0447\u0438\u0442 Homo sapiens?"] }, { key: "bio7-3.3", code: "3.3", title: "\u041F\u043E\u0447\u0435\u043C\u0443 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u0434\u0440\u0443\u0433 \u043E\u0442 \u0434\u0440\u0443\u0433\u0430?", homework: "\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0441\u0435\u0431\u044F \u0438 \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u043E\u0432 \u043F\u043E 5 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C: \u043A\u0430\u043A\u0438\u0435 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435?", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u0438 \u043D\u0435\u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u0438\u0437\u043C\u0435\u043D\u0447\u0438\u0432\u043E\u0441\u0442\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u043E\u0434\u043D\u043E\u0433\u043E \u0441\u043E\u0440\u0442\u0430 \u0432 \u0440\u0430\u0437\u043D\u044B\u0445 \u043F\u043E\u043B\u044F\u0445 \u0440\u0430\u0437\u043D\u043E\u0439 \u0432\u044B\u0441\u043E\u0442\u044B?"] }, { key: "bio7-3.4", code: "3.4", title: "\u041A\u0430\u043A \u043C\u044B \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u043C \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F?", homework: "\u0421\u043E\u0431\u0435\u0440\u0438\u0442\u0435 \u0433\u0435\u0440\u0431\u0430\u0440\u0438\u0439 \u0438\u0437 5 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0439 \u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u0433\u0440\u0443\u043F\u043F\u0443.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F \u0435\u043B\u044C, \u043C\u043E\u0445, \u0440\u043E\u0437\u0430?", "\u0427\u0435\u043C \u0433\u043E\u043B\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u043E\u0442 \u043F\u043E\u043A\u0440\u044B\u0442\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0445?"] }, { key: "bio7-3.5", code: "3.5", title: "\u041A\u0430\u043A \u043C\u044B \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u043C \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445?", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: 5 \u043A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u0437\u0432\u043E\u043D\u043E\u0447\u043D\u044B\u0445 \u2014 \u043F\u0440\u0438\u043C\u0435\u0440 \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043A.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u043C\u0443 \u043A\u043B\u0430\u0441\u0441\u0443 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F: \u043A\u0438\u0442, \u0447\u0435\u0440\u0435\u043F\u0430\u0445\u0430, \u043B\u044F\u0433\u0443\u0448\u043A\u0430, \u043E\u0440\u0451\u043B?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u043C\u043B\u0435\u043A\u043E\u043F\u0438\u0442\u0430\u044E\u0449\u0438\u0445."] }, { key: "bio7-4.1", code: "4.1", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043A\u0443\u0441\u043E\u0447\u0435\u043A \u0445\u043B\u0435\u0431\u0430 \u0432\u043E \u0432\u043B\u0430\u0436\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430 \u043F\u043B\u0435\u0441\u0435\u043D\u044C\u044E (\u043D\u0435 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0442\u044C!).", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 4 \u0433\u0440\u0443\u043F\u043F\u044B \u043C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u041E\u0434\u043D\u0430 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u044F \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u043A\u0430\u0436\u0434\u044B\u0435 20 \u043C\u0438\u043D\u0443\u0442. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0438\u0445 \u0431\u0443\u0434\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 2 \u0447\u0430\u0441\u0430?"] }, { key: "bio7-4.2", code: "4.2", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043F\u0440\u043E\u0446\u0435\u0441\u0441 \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u044F", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u0438\u043D\u0438-\u043A\u043E\u043C\u043F\u043E\u0441\u0442 \u0438\u0437 \u043E\u0447\u0438\u0441\u0442\u043A\u043E\u0432 \u0432 \u0431\u0430\u043D\u043A\u0435 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 2 \u043D\u0435\u0434\u0435\u043B\u0438.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u044B \u0432 \u0445\u043E\u043B\u043E\u0434\u0438\u043B\u044C\u043D\u0438\u043A\u0435 \u043F\u043E\u0440\u0442\u044F\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435?", "\u041A\u0430\u043A\u0443\u044E \u0440\u043E\u043B\u044C \u0438\u0433\u0440\u0430\u044E\u0442 \u0440\u0430\u0437\u043B\u0430\u0433\u0430\u0442\u0435\u043B\u0438 \u0432 \u043F\u0440\u0438\u0440\u043E\u0434\u0435?"] }, { key: "bio7-4.3", code: "4.3", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0441\u0442\u0432\u043E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u043F\u0438\u0442\u0430\u043D\u0438\u044F", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 2 \u0441\u0442\u0430\u043A\u0430\u043D\u0430 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u044B \u0441 \u0441\u0430\u0445\u0430\u0440\u043E\u043C \u0438 \u0434\u0440\u043E\u0436\u0436\u0430\u043C\u0438: \u043E\u0434\u0438\u043D \u0432 \u0442\u0435\u043F\u043B\u043E, \u0434\u0440\u0443\u0433\u043E\u0439 \u0432 \u0445\u043E\u043B\u043E\u0434. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043F\u0435\u043D\u0443.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0442\u0435\u0441\u0442\u043E \u0441 \u0434\u0440\u043E\u0436\u0436\u0430\u043C\u0438 \u0441\u0442\u0430\u0432\u044F\u0442 \u0432 \u0442\u0451\u043F\u043B\u043E\u0435 \u043C\u0435\u0441\u0442\u043E?", "\u041A\u0430\u043A\u0438\u0435 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u044E\u0442 \u043C\u043E\u043B\u043E\u043A\u043E \u0432 \u043A\u0430\u0442\u044B\u043A?"] }, { key: "bio7-4.4", code: "4.4", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u0437\u0430\u0431\u043E\u043B\u0435\u0432\u0430\u043D\u0438\u044F", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043B\u0430\u043A\u0430\u0442 \xAB\u041A\u0430\u043A \u0437\u0430\u0449\u0438\u0442\u0438\u0442\u044C\u0441\u044F \u043E\u0442 \u0438\u043D\u0444\u0435\u043A\u0446\u0438\u0439\xBB \u0434\u043B\u044F \u043C\u043B\u0430\u0434\u0448\u0438\u0445 \u043A\u043B\u0430\u0441\u0441\u043E\u0432.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043B\u0435\u0447\u0438\u0442\u044C \u0433\u0440\u0438\u043F\u043F \u0430\u043D\u0442\u0438\u0431\u0438\u043E\u0442\u0438\u043A\u0430\u043C\u0438?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0441\u043F\u043E\u0441\u043E\u0431\u0430 \u0437\u0430\u0449\u0438\u0442\u044B \u043E\u0442 \u0438\u043D\u0444\u0435\u043A\u0446\u0438\u0439."] }, { key: "bio7-4.5", code: "4.5", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F \u041B\u0443\u0438 \u041F\u0430\u0441\u0442\u0435\u0440\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0435 \u043C\u043E\u043B\u043E\u043A\u0430 \u0441\u043B\u043E\u0432\u043E \xAB\u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u043E\u0432\u0430\u043D\u043D\u043E\u0435\xBB \u0438 \u0443\u0437\u043D\u0430\u0439\u0442\u0435 \u0441\u0440\u043E\u043A \u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432 \u043A\u043E\u043B\u0431\u0435 \u0441 \u0438\u0437\u043E\u0433\u043D\u0443\u0442\u044B\u043C \u0433\u043E\u0440\u043B\u043E\u043C \u0431\u0443\u043B\u044C\u043E\u043D \u043D\u0435 \u0438\u0441\u043F\u043E\u0440\u0442\u0438\u043B\u0441\u044F?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u044F \u0438 \u0437\u0430\u0447\u0435\u043C \u043E\u043D\u0430 \u043D\u0443\u0436\u043D\u0430?"] }, { key: "bio7-5.1", code: "5.1", title: "\u041F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u043D\u043E\u0441\u0442\u044C \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043A \u0441\u0440\u0435\u0434\u0435 \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0435 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 3 \u0435\u0433\u043E \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u0438\u044F.", tasks: ["\u041A\u0430\u043A \u0432\u0435\u0440\u0431\u043B\u044E\u0434 \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D \u043A \u043F\u0443\u0441\u0442\u044B\u043D\u0435?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 4 \u0441\u0440\u0435\u0434\u044B \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F."] }, { key: "bio7-5.2", code: "5.2", title: "\u041F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438 \u0438 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0441\u0435\u0442\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0441\u0435\u0442\u044C \u043F\u0440\u0443\u0434\u0430 \u0438\u0437 6 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", tasks: ["\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0446\u0435\u043F\u044C \u0438\u0437: \u043B\u0438\u0441\u0430, \u0442\u0440\u0430\u0432\u0430, \u0437\u0430\u044F\u0446.", "\u0422\u0440\u0430\u0432\u0430 \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0430 10 000 \u0435\u0434\u0438\u043D\u0438\u0446 \u044D\u043D\u0435\u0440\u0433\u0438\u0438. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0434\u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u043B\u0438\u0441\u0435 \u0432 \u0446\u0435\u043F\u0438 \u0442\u0440\u0430\u0432\u0430 \u2192 \u0437\u0430\u044F\u0446 \u2192 \u043B\u0438\u0441\u0430?"] }, { key: "bio7-5.3", code: "5.3", title: "\u0412\u043B\u0438\u044F\u043D\u0438\u0435 \u0434\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u0430\u043A \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043F\u043E\u043C\u043E\u0433 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0446\u0435\u043F\u044C (\u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A, \u0440\u0430\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435).", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443 \u0445\u0438\u0449\u043D\u0438\u043A\u043E\u0432 \u0432 \u043A\u043E\u043D\u0446\u0435 \u0446\u0435\u043F\u0438 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0441\u0435\u0433\u043E \u044F\u0434\u0430?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0432\u043C\u0435\u0448\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0432 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0446\u0435\u043F\u044C."] }, { key: "bio7-5.4", code: "5.4", title: "\u0412\u043B\u0438\u044F\u043D\u0438\u0435 \u0434\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0443\u044E \u0441\u0440\u0435\u0434\u0443", homework: "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043B\u0430\u0441\u0442\u0438\u043A\u043E\u0432\u044B\u0445 \u043F\u0430\u043A\u0435\u0442\u043E\u0432 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0432\u0430\u0448\u0430 \u0441\u0435\u043C\u044C\u044F \u0437\u0430 \u043D\u0435\u0434\u0435\u043B\u044E, \u0438 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442\u0435 \u0437\u0430\u043C\u0435\u043D\u0443.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u044B\u0441\u044B\u0445\u0430\u0435\u0442 \u0410\u0440\u0430\u043B\u044C\u0441\u043A\u043E\u0435 \u043C\u043E\u0440\u0435?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0432\u0438\u0434\u0430 \u0437\u0430\u0433\u0440\u044F\u0437\u043D\u0435\u043D\u0438\u044F \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044B."] }, { key: "bio7-5.5", code: "5.5", title: "\u041E\u0445\u0440\u0430\u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044B", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u044D\u043A\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u043B\u0430\u043D \u0441\u0435\u043C\u044C\u0438 \u043D\u0430 \u043C\u0435\u0441\u044F\u0446.", tasks: ["\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u0441\u043E\u0437\u0434\u0430\u044E\u0442 \u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A\u0438?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043F\u043E\u043C\u043E\u0433\u0430\u044E\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u0435 \u0434\u043E\u043C\u0430."] }, { key: "bio7-5.6", code: "5.6", title: "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043F\u0440\u0438\u0431\u043E\u0440\u043E\u0432 \u0434\u043E\u043C\u0430 \u043C\u043E\u0436\u043D\u043E \u0432\u044B\u043A\u043B\u044E\u0447\u0430\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u043E\u043D\u0438 \u043D\u0435 \u043D\u0443\u0436\u043D\u044B.", tasks: ["\u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u043D\u0430 \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435 \u0438 \u043D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435: \u0441\u043E\u043B\u043D\u0446\u0435, \u043D\u0435\u0444\u0442\u044C, \u0432\u0435\u0442\u0435\u0440, \u0433\u0430\u0437, \u0432\u043E\u0434\u0430.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u0444\u0442\u044C \u043D\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u043C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u043E\u043C?"] }, { key: "bio7-6.1", code: "6.1", title: "\u0424\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043E\u0434\u043D\u043E \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435 \u043D\u0430 \u0441\u0432\u0435\u0442, \u0434\u0440\u0443\u0433\u043E\u0435 \u0432 \u0442\u0451\u043C\u043D\u044B\u0439 \u0448\u043A\u0430\u0444 \u043D\u0430 5 \u0434\u043D\u0435\u0439. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043D\u0443\u0436\u043D\u044B \u0434\u043B\u044F \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437\u0430?", "\u0427\u0442\u043E \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437\u0435?", "\u0413\u0434\u0435 \u0432 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0438 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437?"] }, { key: "bio7-6.2", code: "6.2", title: "\u0423\u0441\u0432\u043E\u0435\u043D\u0438\u0435 \u0438 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442 \u0432\u043E\u0434\u044B \u0438 \u043C\u0438\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u044B\u0445 \u0441\u043E\u043B\u0435\u0439", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0431\u0435\u043B\u044B\u0439 \u0446\u0432\u0435\u0442\u043E\u043A \u0438\u043B\u0438 \u0441\u0442\u0435\u0431\u0435\u043B\u044C \u0441\u0435\u043B\u044C\u0434\u0435\u0440\u0435\u044F \u0432 \u0432\u043E\u0434\u0443 \u0441 \u043A\u0440\u0430\u0441\u043A\u043E\u0439 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 \u0441\u0443\u0442\u043A\u0438.", tasks: ["\u041F\u043E \u043A\u0430\u043A\u0438\u043C \u0442\u043A\u0430\u043D\u044F\u043C \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u0432\u043E\u0434\u0430, \u0430 \u043F\u043E \u043A\u0430\u043A\u0438\u043C \u2014 \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432 \u0436\u0430\u0440\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u043F\u043E\u043B\u0438\u0432\u0430\u044E\u0442 \u0447\u0430\u0449\u0435?"] }] }, { id: "math-7", subject: "math", grade: 7, topics: [{ key: "math7-1.1", code: "1.1", title: "\u041F\u0440\u043E\u0441\u0442\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438, \u0441\u0442\u0435\u043F\u0435\u043D\u044C", homework: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 360 \u0438 1001 (\u0434\u0432\u0443\u043C\u044F \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u0434\u0435\u0440\u0435\u0432\u043E\u043C \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C).", tasks: ["\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 585 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438.", "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0432\u0438\u0434\u0435 \u0441\u0442\u0435\u043F\u0435\u043D\u0438: 5 \xB7 5 \xB7 5 \xB7 5.", "\u042F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043B\u0438 91 \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C?"] }, { key: "math7-1.2", code: "1.2", title: "\u041D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u0439 \u043E\u0431\u0449\u0438\u0439 \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C (\u041D\u041E\u0414)", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u041D\u041E\u0414(84, 126) \u0438 \u041D\u041E\u0414(45, 75) \u0434\u0432\u0443\u043C\u044F \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C \u0438 \u0430\u043B\u0433\u043E\u0440\u0438\u0442\u043C\u043E\u043C \u0415\u0432\u043A\u043B\u0438\u0434\u0430.", tasks: ["\u0414\u0432\u0435 \u043F\u0440\u043E\u0432\u043E\u043B\u043E\u043A\u0438 72 cm \u0438 96 cm \u0440\u0430\u0437\u0440\u0435\u0437\u0430\u043B\u0438 \u043D\u0430 \u0440\u0430\u0432\u043D\u044B\u0435 \u0447\u0430\u0441\u0442\u0438 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0439 \u0434\u043B\u0438\u043D\u044B. \u041A\u0430\u043A\u043E\u0432\u0430 \u0434\u043B\u0438\u043D\u0430 \u0447\u0430\u0441\u0442\u0438?", "\u041B\u0438\u0441\u0442 360 cm \xD7 280 cm \u0440\u0430\u0437\u0440\u0435\u0437\u0430\u043B\u0438 \u043D\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0435 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u044B \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0433\u043E \u0440\u0430\u0437\u043C\u0435\u0440\u0430. \u0421\u0442\u043E\u0440\u043E\u043D\u0430 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0438 \u0438\u0445 \u0447\u0438\u0441\u043B\u043E?", "\u0421\u0430\u0440\u0434\u043E\u0440 \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 132 \u0431\u0435\u043B\u044B\u0445 \u0438 154 \u0447\u0451\u0440\u043D\u044B\u0445 \u043F\u043B\u0438\u0442\u043A\u0438 \u0448\u043E\u043A\u043E\u043B\u0430\u0434\u0430 \u043F\u043E\u0440\u043E\u0432\u043D\u0443 \u0432 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0447\u0438\u0441\u043B\u043E \u043A\u043E\u0440\u043E\u0431\u043E\u043A. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u0440\u043E\u0431\u043E\u043A \u0438 \u0447\u0442\u043E \u0432 \u043A\u0430\u0436\u0434\u043E\u0439?"] }, { key: "math7-1.3", code: "1.3", title: "\u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u043E\u0431\u0449\u0435\u0435 \u043A\u0440\u0430\u0442\u043D\u043E\u0435 (\u041D\u041E\u041A)", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u041D\u041E\u041A(12, 18, 30) \u0438 \u0441\u043B\u043E\u0436\u0438\u0442\u0435 \u0434\u0440\u043E\u0431\u0438 5/12 + 7/18.", tasks: ["\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u044B A, B \u0438 C \u043F\u0440\u0438\u0445\u043E\u0434\u044F\u0442 \u043A\u0430\u0436\u0434\u044B\u0435 20, 30 \u0438 45 \u043C\u0438\u043D\u0443\u0442. \u041E\u043D\u0438 \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u043B\u0438\u0441\u044C \u0432 08:30. \u041A\u043E\u0433\u0434\u0430 \u0432\u0441\u0442\u0440\u0435\u0442\u044F\u0442\u0441\u044F \u0441\u043D\u043E\u0432\u0430?", "\u0421\u0442\u043E\u043B\u044B 56 cm \xD7 42 cm \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0438 \u0432 \u043E\u0434\u0438\u043D \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0438\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u0441\u0442\u043E\u043B. \u0415\u0433\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430 \u0438 \u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u043E\u0432?", "\u0427\u0438\u0441\u043B\u043E \u044F\u0431\u043B\u043E\u043A n \u043F\u0440\u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0438 \u043D\u0430 3 \u0434\u0430\u0451\u0442 \u043E\u0441\u0442\u0430\u0442\u043E\u043A 2, \u043D\u0430 5 \u2014 \u043E\u0441\u0442\u0430\u0442\u043E\u043A 4. \u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 n?"] }, { key: "math7-1.4", code: "1.4", title: "\u041A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u0438 \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043A\u043E\u0440\u0435\u043D\u044C \u0447\u0438\u0441\u043B\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432 \u043F\u043B\u043E\u0449\u0430\u0434\u044C\u044E 81, 225 \u0438 400 \u0438 \u0440\u0451\u0431\u0440\u0430 \u043A\u0443\u0431\u043E\u0432 \u043E\u0431\u044A\u0451\u043C\u043E\u043C 216 \u0438 343.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u221A144 \u0438 \u221B125.", "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u043E\u0439 \u043A\u043E\u043C\u043D\u0430\u0442\u044B 36 \u043C\xB2. \u041A\u0430\u043A\u043E\u0432\u0430 \u0434\u043B\u0438\u043D\u0430 \u0441\u0442\u0435\u043D\u044B?", "\u041E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0431\u0430\u043A\u0430 8 \u043C\xB3. \u041A\u0430\u043A\u043E\u0432\u043E \u0435\u0433\u043E \u0440\u0435\u0431\u0440\u043E?"] }, { key: "math7-2.1", code: "2.1", title: "\u041F\u043E\u043D\u044F\u0442\u0438\u0435 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0447\u0438\u0441\u043B\u0430 \u0438 \u0447\u0438\u0441\u043B\u043E\u0432\u0430\u044F \u043E\u0441\u044C", homework: "\u041D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u043F\u0438\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0442\u0440\u0435\u043D\u043D\u044E\u044E \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0443 \u0438 \u043E\u0442\u043C\u0435\u0447\u0430\u0439\u0442\u0435 \u0435\u0451 \u043D\u0430 \u0447\u0438\u0441\u043B\u043E\u0432\u043E\u0439 \u043E\u0441\u0438.", tasks: ["\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E: \u221250, 210, 0, \u2212160, \u2212300.", "\u0412\u044B\u0441\u043E\u0442\u044B: \u0425\u0430\u0437\u0440\u0430\u0442\u0438 \u0421\u0443\u043B\u0442\u0430\u043D 4643 m, \u0422\u0443\u0440\u0444\u0430\u043D\u0441\u043A\u0430\u044F \u0432\u043F\u0430\u0434\u0438\u043D\u0430 \u2212154 m, \u0433\u043E\u0440\u0430 \u0424\u0430\u0431\u0435\u0440 105 m, \u0414\u043E\u043B\u0438\u043D\u0430 \u0421\u043C\u0435\u0440\u0442\u0438 \u221286 m. \u041F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E?", "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0446\u0435\u043B\u044B\u0445 a \u0443\u0434\u043E\u0432\u043B\u0435\u0442\u0432\u043E\u0440\u044F\u044E\u0442 \u22129 \u2264 a < 5?"] }, { key: "math7-2.2", code: "2.2", title: "\u0421\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0432\u044B\u0447\u0438\u0442\u0430\u043D\u0438\u0435 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u0435\u043B", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: 3 \u2212 (\u22128) + (\u22124); \u221212 + (\u22129) + (\u22123); 15 \u2212 (\u22127) + (\u22127).", tasks: ["\u0412\u043E\u0434\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u0435\u0442 \u043F\u0440\u0438 0 \xB0C. \u0421 \u0441\u043E\u043B\u044C\u044E \u2014 \u043D\u0430 6 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432 \u043D\u0438\u0436\u0435. \u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u043D\u0438\u044F?", "\u0412\u0435\u0440\u0442\u043E\u043B\u0451\u0442 \u043D\u0430 \u0432\u044B\u0441\u043E\u0442\u0435 120 m \u043D\u0430\u0434 \u043C\u043E\u0440\u0435\u043C, \u043F\u043E\u0434\u043B\u043E\u0434\u043A\u0430 \u043D\u0430 39 m \u043D\u0438\u0436\u0435 \u0443\u0440\u043E\u0432\u043D\u044F \u043C\u043E\u0440\u044F. \u0420\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438?", "\u041D\u0430 \u0441\u0447\u0451\u0442\u0435 300 000 \u0441\u0443\u043C\u043E\u0432, \u043E\u0442\u0435\u0446 \u043F\u043E\u043B\u043E\u0436\u0438\u043B 600 000, \u0437\u0430\u0432\u0442\u0440\u0430 \u0441\u043D\u0438\u043C\u0443\u0442 200 000. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F?"] }, { key: "math7-2.3", code: "2.3", title: "\u0423\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u0435\u043B", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 5 \u043F\u0440\u0438\u043C\u0435\u0440\u043E\u0432 \u043D\u0430 \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0441 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0437\u043D\u0430\u043A \u043F\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u0443.", tasks: ["\u041F\u0438\u043A \u0425\u0430\u0437\u0440\u0435\u0442-\u0421\u0443\u043B\u0442\u0430\u043D 4643 m \u043D\u0430\u0434 \u043C\u043E\u0440\u0435\u043C, \u043F\u0435\u0449\u0435\u0440\u0430 \u0411\u043E\u0439-\u0411\u0443\u043B\u043E\u043A \u2014 1517 m \u043D\u0438\u0436\u0435. \u0412\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u043E\u0435 \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u0435\u0433\u043E \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430?", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: (\u22126) \xB7 (\u22125); (\u221248) : 6; (\u22122) \xB7 3 \xB7 (\u22124)."] }, { key: "math7-2.4", code: "2.4", title: "\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435, \u0438\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u044C \u0438 \u0434\u0438\u0430\u043C\u0435\u0442\u0440 \u0431\u0430\u043D\u043A\u0438 \u043D\u0438\u0442\u043A\u043E\u0439. \u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u2014 \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0431\u043B\u0438\u0437\u043A\u043E \u043A \u03C0?", tasks: ["\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u0438\u043B\u0438 \u0438\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435: 0,25; \u221A9; \u221A7; \u03C0?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0431\u044A\u0451\u043C \u0446\u0438\u043B\u0438\u043D\u0434\u0440\u0430 r = 2 \u0441\u043C, h = 5 \u0441\u043C (\u03C0 \u2248 3,14).", "\u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u043D\u0430 \u0434\u043B\u0438\u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u0438 \u0434\u0438\u0430\u043C\u0435\u0442\u0440\u043E\u043C 10 \u0441\u043C?"] }, { key: "math7-2.5", code: "2.5", title: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u043D\u0430\u0434 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: (\u22121/2 + 1/3 + 1/6) \xB7 (\u22122/5)\xB2; 32,7 + 9,84; (\u22123,45) \xB7 1,06.", tasks: ["\u0423 \u041C\u0430\u0440\u044C\u044F\u043C 0,5 kg \u043C\u0443\u043A\u0438. \u041D\u0443\u0436\u043D\u043E 4\xBC \u0447\u0430\u0448\u043A\u0438 \u043F\u043E 1/8 kg. \u0425\u0432\u0430\u0442\u0438\u0442 \u043B\u0438?", "\u0410\u043B\u0438 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 1/3 \u0438\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u0439, \u0411\u043E\u0442\u0438\u0440\u0443 \u2014 2/7. \u041A\u0430\u043A\u0430\u044F \u0447\u0430\u0441\u0442\u044C \u0443 \u0427\u0430\u0440\u0441\u0430?", "\u0410\u043B\u0438 \u0432\u043B\u043E\u0436\u0438\u043B \u043D\u0430 6 000 000 \u0441\u0443\u043C\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 \u0411\u043E\u0442\u0438\u0440\u0430. \u041E\u0431\u0449\u0430\u044F \u0441\u0443\u043C\u043C\u0430?"] }, { key: "math7-3.1", code: "3.1", title: "\u041E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0434\u043E \u0437\u0430\u0434\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0430\u0437\u0440\u044F\u0434\u0430", homework: "\u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u0435 \u0434\u043E \u0434\u0435\u0441\u044F\u0442\u044B\u0445: 3,004056; 18,471984; \u0434\u043E \u0442\u044B\u0441\u044F\u0447: 1 958 200.", tasks: ["\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u0421\u0430\u043C\u0430\u0440\u043A\u0430\u043D\u0434\u0430 573 200 (\u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u043E \u0434\u043E \u0441\u043E\u0442\u0435\u043D). \u041D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0438 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E?", "\u0412\u043E\u0434\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 27 800 000 m\xB3. \u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u0435 \u0434\u043E \u043C\u0438\u043B\u043B\u0438\u043E\u043D\u043E\u0432.", "\u0414\u043E\u043C 84,5 m\xB2 \u0441\u0442\u043E\u0438\u0442 725 000 000 \u0441\u0443\u043C\u043E\u0432. \u0426\u0435\u043D\u0430 1 m\xB2 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435\u043C \u0434\u043E \u0441\u0443\u043C\u043E\u0432?"] }, { key: "math7-3.2", code: "3.2", title: "\u041E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0434\u043E \u0437\u043D\u0430\u0447\u0430\u0449\u0435\u0439 \u0446\u0438\u0444\u0440\u044B", homework: "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u0421\u0443\u0440\u0445\u0430\u043D\u0434\u0430\u0440\u044C\u0438\u043D\u0441\u043A\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 2 800 000 (3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B). \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0438 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", tasks: ["\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u0425\u043E\u0440\u0435\u0437\u043C\u0441\u043A\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u2248 6050 km\xB2, \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u2248 1 958 200. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C \u0434\u043E 3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440?", "\u041F\u043E\u043B 6,7 m \xD7 3,8 m (2 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B). \u041C\u043E\u0436\u0435\u0442 \u043B\u0438 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u0431\u044B\u0442\u044C 27 m\xB2? \u0410 25 m\xB2?"] }, { key: "math7-3.3", code: "3.3", title: "\u041F\u0440\u0438\u043A\u0438\u0434\u043A\u0430 (\u043E\u0446\u0435\u043D\u043A\u0430)", homework: "\u041F\u0440\u0438\u043A\u0438\u043D\u044C\u0442\u0435 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0443\u043F\u043E\u043A \u0441\u0435\u043C\u044C\u0438 \u043F\u043E \u0447\u0435\u043A\u0443, \u0437\u0430\u0442\u0435\u043C \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0441 \u0442\u043E\u0447\u043D\u043E\u0439 \u0441\u0443\u043C\u043C\u043E\u0439.", tasks: ["\u041B\u0438\u0444\u0442 \u0432\u044B\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 600 kg. \u041C\u0430\u0441\u0441\u044B 8 \u0447\u0435\u043B\u043E\u0432\u0435\u043A: 71,8; 73,4; 75,3; 74,8; 76,4; 73,9; 78,4; 77,4 kg. \u041E\u0446\u0435\u043D\u0438\u0442\u0435 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435\u043C \u0434\u043E 2 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440.", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0442\u043E\u0447\u043D\u0443\u044E \u043C\u0430\u0441\u0441\u0443. \u041C\u043E\u0436\u043D\u043E \u043B\u0438 \u0432\u0441\u0435\u043C \u0435\u0445\u0430\u0442\u044C?", "\u041E\u0446\u0435\u043D\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u043F\u0440\u043E\u0431\u043A\u0438 \u0438\u0437 96 \u043C\u0430\u0448\u0438\u043D \u043F\u043E 4,5 m."] }, { key: "math7-4.1", code: "4.1", title: "\u0412\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0432 \u0430\u043B\u0433\u0435\u0431\u0440\u0443", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 3 \u0444\u043E\u0440\u043C\u0443\u043B\u044B \u0438\u0437 \u0436\u0438\u0437\u043D\u0438 (\u0446\u0435\u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0438, \u0432\u0440\u0435\u043C\u044F \u0432 \u043F\u0443\u0442\u0438, \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u043E\u043C\u043D\u0430\u0442\u044B) \u0441 \u0431\u0443\u043A\u0432\u0430\u043C\u0438.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 3x \u2212 4 \u043F\u0440\u0438 x = 5.", "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435: \u043F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 a \u0438 b.", "\u041E\u0431\u044A\u0451\u043C \u043F\u0440\u0438\u0437\u043C\u044B a = 4 \u0441\u043C, h = 10 \u0441\u043C?"] }, { key: "math7-4.2", code: "4.2", title: "\u0423\u043F\u0440\u043E\u0449\u0435\u043D\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0439", homework: "\u0423\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u0435: 7t + (\u22124a) \u2212 5t + 2a; \u22123p + p + 4p; 4y \u2212 9y + 5y.", tasks: ["\u0423\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u0435: 7a + 2a; 5b \u2212 8b; 3n + 10 \u2212 4n \u2212 11.", "\u0411\u0438\u043B\u0435\u0442 \u0432 \u0441\u0435\u043A\u0446\u0438\u044E A \u0441\u0442\u043E\u0438\u0442 x, \u0432 B \u2014 \u043D\u0430 50 000 \u0431\u043E\u043B\u044C\u0448\u0435, \u0432 C \u2014 \u043D\u0430 30 000 \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0434\u0432\u043E\u0435\u043D\u043D\u043E\u0439 \u0446\u0435\u043D\u044B B. \u041E\u0431\u0449\u0430\u044F \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0442\u0440\u0451\u0445 \u0431\u0438\u043B\u0435\u0442\u043E\u0432?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u044D\u0442\u0443 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u0440\u0438 x = 90 000."] }, { key: "math7-4.3", code: "4.3", title: "\u0420\u0430\u0441\u043A\u0440\u044B\u0442\u0438\u0435 \u0441\u043A\u043E\u0431\u043E\u043A \u0432 \u0430\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u044F\u0445", homework: "\u0420\u0430\u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u043A\u043E\u0431\u043A\u0438: 7t \u2212 [5s + 8(s + 2t)]; 5[a \u2212 (b \u2212 a)] + 7(\u2212a + 2b).", tasks: ["\u0420\u0430\u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u043A\u043E\u0431\u043A\u0438: 4a \u2212 [5a \u2212 (3 + 2a)].", "\u041A\u0430\u0440\u043A\u0430\u0441 \u044F\u0449\u0438\u043A\u0430: 4 \u0434\u043E\u0441\u043A\u0438 \u0434\u043B\u0438\u043D\u043E\u0439 (2x + 3y) cm \u0438 8 \u0434\u043E\u0441\u043E\u043A \u0434\u043B\u0438\u043D\u043E\u0439 (2x + y) cm. \u041E\u0431\u0449\u0430\u044F \u0434\u043B\u0438\u043D\u0430?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u043F\u0440\u0438 x = 30, y = 10."] }, { key: "math7-4.4", code: "4.4", title: "\u0420\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0430\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0439 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438", homework: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435: 7a + 7b + 7c; 3cd + 36ac \u2212 15ad; mx + my + 3mz.", tasks: ["\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438: 6a + 3b; 18ax \u2212 15ay; 12s + 48bs.", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0443\u0434\u043E\u0431\u043D\u043E: 86 \xB7 471 \u2212 76 \xB7 471.", "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 ab + 10a, \u043E\u0434\u043D\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u0430 a. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0443\u044E."] }, { key: "math7-5.1", code: "5.1", title: "\u041F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: 3x \u2212 x + 6 = 10x; 9 \u2212 5y = y \u2212 1; \u0441\u0443\u043C\u043C\u0430 \u043E\u0434\u043D\u043E\u0439 \u0448\u0435\u0441\u0442\u043E\u0439 x \u0438 \u22129 \u0440\u0430\u0432\u043D\u0430 \u221225.", tasks: ["\u0414\u043B\u0438\u043D\u0430 \u043F\u0440\u0443\u0436\u0438\u043D\u044B L = 70 + 5m. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 L \u043F\u0440\u0438 m = 6 \u0438 m \u043F\u0440\u0438 L = 85.", "\u041F\u0435\u0447\u0430\u0442\u044C \u043D\u0430 x \u0444\u0443\u0442\u0431\u043E\u043B\u043A\u0430\u0445 \u0441\u0442\u043E\u0438\u0442 C = 10 000 + 12 000x. \u041D\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0444\u0443\u0442\u0431\u043E\u043B\u043E\u043A \u0445\u0432\u0430\u0442\u0438\u0442 982 000 \u0441\u0443\u043C\u043E\u0432?", "\u041F\u043E\u0435\u0437\u0434: d = 240 \u2212 80t. \u041A\u043E\u0433\u0434\u0430 d = 40? \u041A\u043E\u0433\u0434\u0430 \u043F\u043E\u0435\u0437\u0434 \u043F\u0440\u0438\u0431\u0443\u0434\u0435\u0442?"] }, { key: "math7-5.2", code: "5.2", title: "\u041B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0441\u043E \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0438 \u0434\u0440\u043E\u0431\u044F\u043C\u0438", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: (7x \u2212 2)/2 = (5x \u2212 3)/3; \u2212x + x/4 = 15.", tasks: ["\u0418\u043A\u0440\u043E\u043C \u0440\u0435\u0448\u0430\u043B (x + 1)/2 + (x \u2212 a)/3 = 1 \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B 3(x + 1) + 2(x \u2212 a) = 1. \u0413\u0434\u0435 \u043E\u0448\u0438\u0431\u043A\u0430?", "\u041F\u0440\u0438 \u043A\u0430\u043A\u043E\u043C a \u043A\u043E\u0440\u0435\u043D\u044C \u044D\u0442\u043E\u0433\u043E \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F x = 2?", "\u0420\u0435\u0448\u0438\u0442\u0435: 12 + (2/5)x = 16; (2x + 9)/5 = 5."] }, { key: "math7-5.3", code: "5.3", title: "\u041F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435 \u0434\u0440\u043E\u0431\u043D\u043E-\u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: 3/(2x \u2212 5) = 1/(x + 1); \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435, \u043D\u0435 \u043E\u0431\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u043B\u0438 \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u044C \u0432 \u043D\u043E\u043B\u044C.", tasks: ["\u0425\u0443\u043C\u043E\u044E\u043D \u0440\u0435\u0448\u0438\u043B x/(x \u2212 4) + 1 = 8/(x \u2212 4) \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B x + 1 = 8. \u0412\u0435\u0440\u043D\u043E \u043B\u0438?", "\u041B\u0438\u043D\u0437\u0430: 1/u + 1/v = 1/f. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 v \u043F\u0440\u0438 f = 20, u = 30.", "\u0420\u0435\u0448\u0438\u0442\u0435: 5/(x + 1) = 7/(2x)."] }, { key: "math7-5.4", code: "5.4", title: "\u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u043D\u0430 \u0441\u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0445 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0439", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u043A \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044E 5x + 4(x \u2212 10) = 140 \u0438 \u0440\u0435\u0448\u0438\u0442\u0435 \u0435\u0451.", tasks: ["\u0421\u0443\u043C\u043C\u0430 \u0442\u0440\u0451\u0445 \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0445 \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0445 \u0447\u0438\u0441\u0435\u043B \u0440\u0430\u0432\u043D\u0430 141. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438\u0445.", "\u0422\u0438\u043C\u0443\u0440 \u0432 2 \u0440\u0430\u0437\u0430 \u0441\u0442\u0430\u0440\u0448\u0435 \u0410\u0431\u0440\u043E\u0440\u0430. \u0427\u0435\u0440\u0435\u0437 4 \u0433\u043E\u0434\u0430 \u0441\u0443\u043C\u043C\u0430 \u0438\u0445 \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u043E\u0432 \u0431\u0443\u0434\u0435\u0442 32. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u0410\u0431\u0440\u043E\u0440\u0443?", "50 \u043C\u044B\u0448\u0435\u0439 \u0432\u0438\u0434\u043E\u0432 A (50 000) \u0438 B (60 000) \u0441\u0442\u043E\u044F\u0442 2 690 000 \u0441\u0443\u043C\u043E\u0432. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043C\u044B\u0448\u0435\u0439 A?"] }, { key: "math7-6.1", code: "6.1", title: "\u0422\u043E\u0447\u043A\u0430, \u043F\u0440\u044F\u043C\u0430\u044F \u0438 \u043F\u043B\u043E\u0441\u043A\u043E\u0441\u0442\u044C", homework: "\u041E\u0442\u043C\u0435\u0442\u044C\u0442\u0435 5 \u0442\u043E\u0447\u0435\u043A \u0438 \u043F\u0440\u043E\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0441\u0435 \u043E\u0442\u0440\u0435\u0437\u043A\u0438 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C?", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0442\u0440\u0435\u0437\u043A\u043E\u0432 \u0437\u0430\u0434\u0430\u044E\u0442 4 \u0442\u043E\u0447\u043A\u0438, \u043D\u0438\u043A\u0430\u043A\u0438\u0435 \u0442\u0440\u0438 \u0438\u0437 \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u043D\u0435 \u043B\u0435\u0436\u0430\u0442 \u043D\u0430 \u043E\u0434\u043D\u043E\u0439 \u043F\u0440\u044F\u043C\u043E\u0439?", "\u0427\u0435\u043C \u043B\u0443\u0447 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043E\u0442\u0440\u0435\u0437\u043A\u0430?"] }, { key: "math7-6.2", code: "6.2", title: "\u0423\u0433\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043E\u0441\u0442\u0440\u044B\u0445, 3 \u043F\u0440\u044F\u043C\u044B\u0445 \u0438 3 \u0442\u0443\u043F\u044B\u0445 \u0443\u0433\u043B\u0430 \u0438 \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0438\u0445 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u043C.", tasks: ["\u041E\u0434\u0438\u043D \u0438\u0437 \u0441\u043C\u0435\u0436\u043D\u044B\u0445 \u0443\u0433\u043B\u043E\u0432 65\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043E\u0439.", "\u041A\u0430\u043A\u043E\u0439 \u0443\u0433\u043E\u043B \u043C\u0435\u0436\u0434\u0443 \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0447\u0430\u0441\u043E\u0432 \u0432 2:00?", "\u041E\u0434\u0438\u043D \u0438\u0437 \u0432\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u044B\u0445 \u0443\u0433\u043B\u043E\u0432 40\xB0. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u0432\u0442\u043E\u0440\u043E\u0439?"] }, { key: "math7-6.3", code: "6.3", title: "\u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u0438 \u0441\u0435\u043A\u0443\u0449\u0438\u0435", homework: "\u041D\u0430\u0447\u0435\u0440\u0442\u0438\u0442\u0435 \u0434\u0432\u0435 \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u0438 \u0441\u0435\u043A\u0443\u0449\u0443\u044E, \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0432\u0441\u0435 8 \u0443\u0433\u043B\u043E\u0432.", tasks: ["a \u2225 b, \u043D\u0430\u043A\u0440\u0435\u0441\u0442 \u043B\u0435\u0436\u0430\u0449\u0438\u0439 \u0443\u0433\u043E\u043B \u0440\u0430\u0432\u0435\u043D 70\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0434\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0439 \u0443\u0433\u043E\u043B.", "\u0421\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435 \u0443\u0433\u043B\u044B \u0440\u0430\u0432\u043D\u044B 50\xB0 \u0438 50\xB0. \u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B \u043B\u0438 \u043F\u0440\u044F\u043C\u044B\u0435?"] }, { key: "math7-7.1", code: "7.1", title: "\u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u0412\u044B\u0440\u0435\u0436\u044C\u0442\u0435 \u0431\u0443\u043C\u0430\u0436\u043D\u044B\u0439 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A, \u043E\u0442\u043E\u0440\u0432\u0438\u0442\u0435 \u0443\u0433\u043B\u044B \u0438 \u0441\u043B\u043E\u0436\u0438\u0442\u0435 \u0438\u0445 \u0432\u043C\u0435\u0441\u0442\u0435 \u2014 \u0447\u0442\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F?", tasks: ["\u0414\u0432\u0430 \u0443\u0433\u043B\u0430 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 50\xB0 \u0438 60\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0442\u0440\u0435\u0442\u0438\u0439.", "\u0421\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442 \u043B\u0438 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 3, 4 \u0438 8 cm?", "\u0423\u0433\u043E\u043B \u043F\u0440\u0438 \u0432\u0435\u0440\u0448\u0438\u043D\u0435 \u0440\u0430\u0432\u043D\u043E\u0431\u0435\u0434\u0440\u0435\u043D\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 40\xB0. \u0423\u0433\u043B\u044B \u043F\u0440\u0438 \u043E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u0438?"] }, { key: "math7-7.2", code: "7.2", title: "\u0427\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432-\u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u0432\u0438\u0434.", tasks: ["\u0422\u0440\u0438 \u0443\u0433\u043B\u0430 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 80\xB0, 100\xB0, 90\xB0. \u0427\u0435\u0442\u0432\u0451\u0440\u0442\u044B\u0439?", "\u041E\u0434\u0438\u043D \u0443\u0433\u043E\u043B \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u043E\u0433\u0440\u0430\u043C\u043C\u0430 70\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435."] }, { key: "math7-7.3", code: "7.3", title: "\u041C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u043E\u0440\u043D\u0430\u043C\u0435\u043D\u0442\u0430\u0445 \u0420\u0435\u0433\u0438\u0441\u0442\u0430\u043D\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0435 \u043C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0438 \u0437\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 2 \u0438\u0437 \u043D\u0438\u0445.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0443\u043C\u043C\u0443 \u0443\u0433\u043B\u043E\u0432 \u0448\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430.", "\u041A\u0430\u0436\u0434\u044B\u0439 \u0443\u0433\u043E\u043B \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0433\u043E \u0432\u043E\u0441\u044C\u043C\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430?"] }, { key: "math7-7.4", code: "7.4", title: "\u041F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \u0438 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432", homework: "\u041F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0446\u0438\u0440\u043A\u0443\u043B\u0435\u043C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 4, 5 \u0438 6 cm \u0438 \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0435\u0433\u043E \u0443\u0433\u043B\u044B.", tasks: ["\u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u043F\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C 5, 6 \u0438 7 cm.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 2, 3 \u0438 6 cm?"] }] }];
-
-// src/lib/book-homework.ts
-var COURSE = book_topics_default;
-var SUBJECT_RU = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
-function bookFor(subject, grade) {
-  return COURSE.find((book) => book.subject === subject && book.grade === grade) ?? COURSE.find((book) => book.subject === subject);
-}
-function dueAfter(date2) {
-  const day = /* @__PURE__ */ new Date(`${date2}T20:00:00+05:00`);
-  day.setUTCDate(day.getUTCDate() + 1);
-  const local = new Date(day.getTime() + 5 * 3600 * 1e3);
-  if (local.getUTCDay() === 0) day.setUTCDate(day.getUTCDate() + 1);
-  return day;
-}
-async function giveBookHomework(date2, lessons, now = Date.now()) {
-  const ended = lessons.filter((lesson) => lesson.teacherId && Date.parse(lesson.endsAt) <= now && bookFor(lesson.subject, lesson.grade));
-  if (!ended.length) return;
-  try {
-    const classIds = [...new Set(ended.map((lesson) => lesson.classId))];
-    const progress = await db.select({ classId: courseProgressTable.classId, topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(inArray(courseProgressTable.classId, classIds));
-    const handled = /* @__PURE__ */ new Set();
-    for (const lesson of ended) {
-      const book = bookFor(lesson.subject, lesson.grade);
-      const key = `${lesson.classId}:${book.id}`;
-      if (handled.has(key)) continue;
-      handled.add(key);
-      const rows = progress.filter((row) => row.classId === lesson.classId);
-      const covered = new Set(rows.map((row) => row.topicKey));
-      const today = book.topics.find((topic2) => rows.some((row) => row.topicKey === topic2.key && row.doneOn === date2));
-      const last = book.topics.reduce((index2, topic2, i) => covered.has(topic2.key) ? i : index2, -1);
-      const topic = today ?? book.topics[last + 1];
-      if (!topic) continue;
-      if (!today) {
-        await db.insert(courseProgressTable).values({ classId: lesson.classId, topicKey: topic.key, doneOn: date2, markedBy: lesson.teacherId }).onConflictDoNothing();
-      }
-      const autoKey = `book:${lesson.classId}:${topic.key}`;
-      const [exists2] = await db.select({ id: assignmentsTable.id }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
-      if (exists2) continue;
-      const tasks = topic.tasks.slice(0, 3).map((task, index2) => `${index2 + 1}. ${task}`).join("\n");
-      const [created] = await db.insert(assignmentsTable).values({
-        classId: lesson.classId,
-        createdBy: lesson.teacherId,
-        title: `\xA7${topic.code} ${topic.title}`.slice(0, 160),
-        subject: SUBJECT_RU[lesson.subject] ?? lesson.subject,
-        description: `${topic.homework}${tasks ? `
-
-\u0418\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430:
-${tasks}` : ""}`,
-        topicId: `course:${topic.key}`,
-        topicTitle: `\xA7${topic.code} ${topic.title}`,
-        autoKey,
-        dueAt: dueAfter(date2),
-        status: "assigned"
-      }).onConflictDoNothing().returning({ id: assignmentsTable.id });
-      if (created) await announceHomework(lesson.classId, `\xA7${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
-    }
-  } catch (error) {
-    logger.warn({ err: error }, "book homework was not given");
-  }
-}
-async function announceHomework(classId, title, homework, subject) {
-  try {
-    const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
-    if (!pupils.length) return;
-    const people = await withParents(pupils);
-    await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework}`, "/classes");
-    await notifyUsers(people, `\u{1F4DA} <b>Uy vazifasi / \u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435</b> \xB7 ${escapeHtml(subject)}
-${escapeHtml(title)}
-${escapeHtml(homework)}`);
-  } catch (error) {
-    logger.warn({ err: error }, "homework notice was not sent");
-  }
-}
-
-// src/routes/timetable.ts
-var router10 = (0, import_express10.Router)();
-var viewerOf5 = (res) => res.locals.authenticatedUser;
-var isRecord9 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-var everyRole5 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
-var MANAGERS = ["school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
-var TASHKENT_OFFSET_MIN = 5 * 60;
-var TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-var SUBJECT_RE = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
-var MAX_PERIODS = 10;
-var DEFAULT_BELLS = [
-  { start: "08:30", end: "09:15" },
-  { start: "09:25", end: "10:10" },
-  { start: "10:20", end: "11:05" },
-  { start: "11:20", end: "12:05" },
-  { start: "12:15", end: "13:00" },
-  { start: "13:10", end: "13:55" },
-  { start: "14:05", end: "14:50" }
-];
-function tashkentNow(now = /* @__PURE__ */ new Date()) {
-  const local = new Date(now.getTime() + TASHKENT_OFFSET_MIN * 60 * 1e3);
-  const date2 = local.toISOString().slice(0, 10);
-  const weekday = local.getUTCDay() === 0 ? 7 : local.getUTCDay();
-  return { date: date2, weekday, minutes: local.getUTCHours() * 60 + local.getUTCMinutes() };
-}
-function atTashkent(date2, time2) {
-  return (/* @__PURE__ */ new Date(`${date2}T${time2}:00+05:00`)).toISOString();
-}
-function cleanBells(value) {
-  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PERIODS) return null;
-  const out = [];
-  for (const item of value) {
-    if (!isRecord9(item) || typeof item.start !== "string" || typeof item.end !== "string") return null;
-    if (!TIME_RE.test(item.start) || !TIME_RE.test(item.end) || item.start >= item.end) return null;
-    if (out.length && out[out.length - 1].end > item.start) return null;
-    out.push({ start: item.start, end: item.end });
-  }
-  return out;
-}
-async function bellsOf(schoolId) {
-  const [row] = await db.select({ periods: schoolBellsTable.periods }).from(schoolBellsTable).where(eq(schoolBellsTable.schoolId, schoolId)).limit(1);
-  return cleanBells(row?.periods) ?? DEFAULT_BELLS;
-}
-async function schoolRoleOf2(userId, schoolId) {
-  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
-  return row?.role ?? null;
-}
-async function canRead(viewer, schoolId) {
-  return isGlobalAdminRole(viewer.role) || Boolean(await schoolRoleOf2(viewer.id, schoolId));
-}
-async function canEdit(viewer, schoolId) {
-  if (isGlobalAdminRole(viewer.role)) return true;
-  const role = await schoolRoleOf2(viewer.id, schoolId);
-  return role === "school_director" || role === "school_admin";
-}
-var editLimiter = createRateLimiter(120, 10 * 60 * 1e3, "Too many changes. Try again later.", "timetable");
-async function loadTimetable(schoolId) {
-  const [slots, classes, teachers, bells] = await Promise.all([
-    db.select({ id: timetableSlotsTable.id, classId: timetableSlotsTable.classId, weekday: timetableSlotsTable.weekday, period: timetableSlotsTable.period, subject: timetableSlotsTable.subject, teacherId: timetableSlotsTable.teacherId, room: timetableSlotsTable.room }).from(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId)).orderBy(asc(timetableSlotsTable.weekday), asc(timetableSlotsTable.period)),
-    db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name)),
-    db.select({ id: usersTable.id, name: usersTable.username, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username)),
-    bellsOf(schoolId)
-  ]);
-  return { slots, classes, teachers, bells };
-}
-router10.get("/schools/:schoolId/timetable", requireAuthenticatedRole(...everyRole5), async (req, res) => {
-  const schoolId = String(req.params.schoolId);
-  if (!isValidUuid(schoolId)) {
-    res.status(400).json({ error: "Invalid school." });
-    return;
-  }
-  const viewer = viewerOf5(res);
-  if (!await canRead(viewer, schoolId)) {
-    res.status(403).json({ error: "Not your school." });
-    return;
-  }
-  res.setHeader("Cache-Control", "private, no-store");
-  res.json({ ...await loadTimetable(schoolId), canEdit: await canEdit(viewer, schoolId) });
-});
-router10.put("/schools/:schoolId/timetable", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
-  const schoolId = String(req.params.schoolId);
-  if (!isValidUuid(schoolId)) {
-    res.status(400).json({ error: "Invalid school." });
-    return;
-  }
-  const viewer = viewerOf5(res);
-  if (!await canEdit(viewer, schoolId)) {
-    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
-    return;
-  }
-  const body = isRecord9(req.body) ? req.body : {};
-  const bells = body.bells === void 0 ? await bellsOf(schoolId) : cleanBells(body.bells);
-  if (!bells) {
-    res.status(400).json({ error: "Check the bell times." });
-    return;
-  }
-  if (!Array.isArray(body.slots) || body.slots.length > 2e3) {
-    res.status(400).json({ error: "Invalid timetable." });
-    return;
-  }
-  const { classes, teachers } = await loadTimetable(schoolId);
-  const classIds = new Set(classes.map((item) => item.id));
-  const teacherIds = new Set(teachers.map((item) => item.id));
-  const seen = /* @__PURE__ */ new Set();
-  const rows = [];
-  for (const item of body.slots) {
-    if (!isRecord9(item)) {
-      res.status(400).json({ error: "Invalid lesson." });
-      return;
-    }
-    const classId = String(item.classId ?? "");
-    const weekday = Number(item.weekday);
-    const period = Number(item.period);
-    const subject = typeof item.subject === "string" ? item.subject.trim() : "";
-    const teacherId = typeof item.teacherId === "string" && item.teacherId ? item.teacherId : null;
-    const room = typeof item.room === "string" ? item.room.trim().slice(0, 20) || null : null;
-    if (!classIds.has(classId) || !Number.isInteger(weekday) || weekday < 1 || weekday > 6 || !Number.isInteger(period) || period < 1 || period > bells.length || !SUBJECT_RE.test(subject)) {
-      res.status(400).json({ error: "A lesson has a wrong class, day, period or subject." });
-      return;
-    }
-    if (teacherId && !teacherIds.has(teacherId)) {
-      res.status(400).json({ error: "A lesson has a teacher from another school." });
-      return;
-    }
-    const key = `${classId}:${weekday}:${period}`;
-    if (seen.has(key)) {
-      res.status(400).json({ error: "Two lessons in one class at the same time." });
-      return;
-    }
-    seen.add(key);
-    rows.push({ schoolId, classId, weekday, period, subject, teacherId, room });
-  }
-  const busy = /* @__PURE__ */ new Map();
-  for (const row of rows) {
-    if (!row.teacherId) continue;
-    const key = `${row.teacherId}:${row.weekday}:${row.period}`;
-    if (busy.has(key)) {
-      res.status(400).json({ error: "One teacher has two lessons at the same time." });
-      return;
-    }
-    busy.set(key, row.classId);
-  }
-  await db.transaction(async (tx) => {
-    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
-    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
-    await tx.insert(schoolBellsTable).values({ schoolId, periods: bells, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: schoolBellsTable.schoolId, set: { periods: bells, updatedAt: /* @__PURE__ */ new Date() } });
-  });
-  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: rows.length });
-  res.json({ ...await loadTimetable(schoolId), canEdit: true });
-});
-async function fillDemoTimetable(schoolId) {
-  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
-  if (!classes.length) return 0;
-  const teachers = await db.select({ id: usersTable.id, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username));
-  const SUBJECTS = ["math", "physics", "chemistry", "biology"];
-  const SUBJECT_RU2 = { math: "\u043C\u0430\u0442\u0435\u043C", physics: "\u0444\u0438\u0437\u0438\u043A", chemistry: "\u0445\u0438\u043C\u0438", biology: "\u0431\u0438\u043E\u043B\u043E\u0433" };
-  const teaches = (teacher, subject) => Array.isArray(teacher.subjects) && teacher.subjects.some((item) => typeof item === "string" && item.toLowerCase().includes(SUBJECT_RU2[subject]));
-  const ownerOf = /* @__PURE__ */ new Map();
-  SUBJECTS.forEach((subject, index2) => {
-    const own = teachers.filter((teacher) => teaches(teacher, subject)).map((teacher) => teacher.id);
-    const fallback = teachers.length ? [teachers[index2 % teachers.length].id] : [];
-    ownerOf.set(subject, own.length ? own : fallback);
-  });
-  const WEEK = [
-    ["math", "physics", "chemistry", "math", "biology"],
-    ["chemistry", "math", "biology", "physics", "math"],
-    ["math", "biology", "physics", "math", "chemistry"],
-    ["physics", "math", "chemistry", "biology", "math"],
-    ["biology", "chemistry", "math", "physics", "math"],
-    ["math", "physics", "biology", "chemistry"]
-  ];
-  const rows = [];
-  const busy = /* @__PURE__ */ new Set();
-  classes.forEach((klass, classIndex) => {
-    WEEK.forEach((day, dayIndex) => {
-      const weekday = dayIndex + 1;
-      day.forEach((_, period0) => {
-        const period = period0 + 1;
-        let subject = day[(period0 + classIndex) % day.length];
-        let teacherId = null;
-        for (let attempt = 0; attempt < day.length && !teacherId; attempt += 1) {
-          subject = day[(period0 + classIndex + attempt) % day.length];
-          teacherId = (ownerOf.get(subject) ?? []).find((id) => !busy.has(`${id}:${weekday}:${period}`)) ?? null;
-        }
-        if (teacherId) busy.add(`${teacherId}:${weekday}:${period}`);
-        rows.push({ schoolId, classId: klass.id, weekday, period, subject, teacherId, room: String(201 + classIndex) });
-      });
-    });
-  });
-  await db.transaction(async (tx) => {
-    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
-    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
-    await tx.insert(schoolBellsTable).values({ schoolId, periods: DEFAULT_BELLS }).onConflictDoNothing();
-  });
-  return rows.length;
-}
-router10.post("/schools/:schoolId/timetable/demo", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
-  const schoolId = String(req.params.schoolId);
-  if (!isValidUuid(schoolId)) {
-    res.status(400).json({ error: "Invalid school." });
-    return;
-  }
-  const viewer = viewerOf5(res);
-  if (!await canEdit(viewer, schoolId)) {
-    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
-    return;
-  }
-  const count = await fillDemoTimetable(schoolId);
-  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: count, demo: true });
-  res.json({ ...await loadTimetable(schoolId), canEdit: true });
-});
-async function slotsFilterFor(viewer) {
-  if (viewer.role === "teacher") return eq(timetableSlotsTable.teacherId, viewer.id);
-  if (viewer.role === "student" || viewer.role === "parent") {
-    const studentIds = viewer.role === "student" ? [viewer.id] : (await db.select({ id: parentLinksTable.studentId }).from(parentLinksTable).where(eq(parentLinksTable.parentId, viewer.id))).map((row) => row.id);
-    if (!studentIds.length) return null;
-    const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(inArray(classMembersTable.userId, studentIds), eq(classMembersTable.role, "student")))).map((row) => row.id);
-    if (!classIds.length) return null;
-    return inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
-  }
-  const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
-  if (!schoolIds.length) return null;
-  return inArray(timetableSlotsTable.schoolId, schoolIds);
-}
-function lessonReader(where) {
-  const teacherNames = /* @__PURE__ */ new Map();
-  const bellCache = /* @__PURE__ */ new Map();
-  return async function lessonsOn(date2, weekday) {
-    if (weekday === 7) return [];
-    const slots = await db.select({
-      id: timetableSlotsTable.id,
-      schoolId: timetableSlotsTable.schoolId,
-      classId: timetableSlotsTable.classId,
-      period: timetableSlotsTable.period,
-      subject: timetableSlotsTable.subject,
-      room: timetableSlotsTable.room,
-      teacherId: timetableSlotsTable.teacherId,
-      className: classesTable.name,
-      grade: classesTable.grade
-    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
-    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id) && !teacherNames.has(id)))];
-    if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
-    const out = [];
-    for (const slot of slots) {
-      if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
-      const bell = bellCache.get(slot.schoolId)[slot.period - 1];
-      if (!bell) continue;
-      out.push({
-        id: slot.id,
-        classId: slot.classId,
-        className: slot.className,
-        grade: slot.grade,
-        period: slot.period,
-        subject: slot.subject,
-        room: slot.room,
-        teacherId: slot.teacherId,
-        teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
-        start: bell.start,
-        end: bell.end,
-        startsAt: atTashkent(date2, bell.start),
-        endsAt: atTashkent(date2, bell.end)
-      });
-    }
-    out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
-    return out;
-  };
-}
-router10.get("/me/today", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
-  const viewer = viewerOf5(res);
-  const now = tashkentNow();
-  res.setHeader("Cache-Control", "private, no-store");
-  const base = { date: now.date, weekday: now.weekday, now: (/* @__PURE__ */ new Date()).toISOString(), week: [] };
-  const where = await slotsFilterFor(viewer);
-  if (!where) {
-    res.json({ ...base, lessons: [], next: [] });
-    return;
-  }
-  base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
-  const lessonsOn = lessonReader(where);
-  const lessons = await lessonsOn(now.date, now.weekday);
-  await giveBookHomework(now.date, lessons);
-  const next = [];
-  for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
-    const day = tashkentNow(new Date(Date.now() + offset * 864e5));
-    if (day.weekday === 7) continue;
-    next.push({ date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) });
-  }
-  let prev = null;
-  for (let offset = 1; !prev && offset <= 3; offset += 1) {
-    const day = tashkentNow(new Date(Date.now() - offset * 864e5));
-    if (day.weekday === 7) continue;
-    prev = { date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) };
-  }
-  if (prev) await giveBookHomework(prev.date, prev.lessons);
-  if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
-  res.json({ ...base, lessons, next, prev });
-});
-router10.get("/me/week", requireAuthenticatedRole(...everyRole5), async (req, res) => {
-  const viewer = viewerOf5(res);
-  const offset = Math.max(-8, Math.min(8, Number.parseInt(String(req.query.offset ?? "0"), 10) || 0));
-  const now = tashkentNow();
-  res.setHeader("Cache-Control", "private, no-store");
-  const monday = /* @__PURE__ */ new Date(`${now.date}T12:00:00Z`);
-  monday.setUTCDate(monday.getUTCDate() - (now.weekday - 1) + offset * 7);
-  const days = [];
-  const where = await slotsFilterFor(viewer);
-  const lessonsOn = where ? lessonReader(where) : null;
-  for (let index2 = 0; index2 < 6; index2 += 1) {
-    const day = new Date(monday.getTime() + index2 * 864e5);
-    const date2 = day.toISOString().slice(0, 10);
-    days.push({ date: date2, weekday: index2 + 1, lessons: lessonsOn ? await lessonsOn(date2, index2 + 1) : [] });
-  }
-  res.json({ today: now.date, now: (/* @__PURE__ */ new Date()).toISOString(), offset, days });
-});
-var timetable_default = router10;
-
-// src/routes/demo.ts
 var router11 = (0, import_express11.Router)();
 var OWNER_ROLES2 = ["education_admin", "ministry_admin", "platform_superadmin"];
 var viewerOf6 = (res) => res.locals.authenticatedUser;
@@ -55876,8 +56065,8 @@ var isoDay2 = (offset) => new Date(Date.now() - offset * 864e5).toISOString().sl
 router11.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
   const viewer = viewerOf6(res);
   const until = new Date(Date.now() + 90 * 864e5);
-  const [school] = await db.insert(schoolsTable).values({ name: `\u0414\u0435\u043C\u043E-\u0448\u043A\u043E\u043B\u0430 EDUVERSE \xB7 ${(/* @__PURE__ */ new Date()).toLocaleDateString("ru-RU")}`, region: "\u0422\u0430\u0448\u043A\u0435\u043D\u0442", district: "\u042E\u043D\u0443\u0441\u0430\u0431\u0430\u0434", address: "\u0414\u0435\u043C\u043E", plan: "pilot", planUntil: until, isDemo: true }).returning({ id: schoolsTable.id, name: schoolsTable.name });
-  const schoolId = school.id;
+  const [school2] = await db.insert(schoolsTable).values({ name: `\u0414\u0435\u043C\u043E-\u0448\u043A\u043E\u043B\u0430 EDUVERSE \xB7 ${(/* @__PURE__ */ new Date()).toLocaleDateString("ru-RU")}`, region: "\u0422\u0430\u0448\u043A\u0435\u043D\u0442", district: "\u042E\u043D\u0443\u0441\u0430\u0431\u0430\u0434", address: "\u0414\u0435\u043C\u043E", plan: "pilot", planUntil: until, isDemo: true }).returning({ id: schoolsTable.id, name: schoolsTable.name });
+  const schoolId = school2.id;
   const rows = [
     { role: "school_director", name: "\u0420\u0430\u0445\u0438\u043C\u043E\u0432\u0430 \u041D\u0438\u0433\u043E\u0440\u0430 \u0410\u043B\u0438\u0448\u0435\u0440\u043E\u0432\u043D\u0430", phone: "+998901112233" },
     { role: "school_admin", name: "\u041A\u0430\u0440\u0438\u043C\u043E\u0432 \u0410\u043A\u043C\u0430\u043B \u0422\u043E\u0445\u0438\u0440\u043E\u0432\u0438\u0447", phone: "+998901112244" },
@@ -55902,10 +56091,10 @@ router11.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), a
   }
   const pupils = created.filter((person) => person.role === "student");
   const statuses = ["present", "present", "present", "present", "late", "present", "absent", "present", "present", "excused"];
-  for (let day = 1; day <= 5; day += 1) {
+  for (let day2 = 1; day2 <= 5; day2 += 1) {
     for (let index2 = 0; index2 < pupils.length; index2 += 1) {
       const pupil = pupils[index2];
-      await db.insert(attendanceTable).values({ classId: pupil.className === "7-\u0410" ? classA : classB, studentId: pupil.userId, markedBy: physicsTeacher, attendanceDate: isoDay2(day), subject: "\u0424\u0438\u0437\u0438\u043A\u0430", status: statuses[(index2 + day) % statuses.length] }).onConflictDoNothing();
+      await db.insert(attendanceTable).values({ classId: pupil.className === "7-\u0410" ? classA : classB, studentId: pupil.userId, markedBy: physicsTeacher, attendanceDate: isoDay2(day2), subject: "\u0424\u0438\u0437\u0438\u043A\u0430", status: statuses[(index2 + day2) % statuses.length] }).onConflictDoNothing();
     }
   }
   const marks = [5, 4, 5, 3, 4, 5, 4, 5, 4, 5];
@@ -55919,15 +56108,15 @@ router11.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), a
       }
     }
   }
-  for (let day = 0; day < 4; day += 1) {
+  for (let day2 = 0; day2 < 4; day2 += 1) {
     for (let index2 = 0; index2 < pupils.length; index2 += 2) {
       const pupil = pupils[index2];
-      await db.insert(trainerResultsTable).values({ userId: pupil.userId, classId: pupil.className === "7-\u0410" ? classA : classB, day: isoDay2(day), score: (index2 + day) % 6, total: 5 }).onConflictDoNothing();
+      await db.insert(trainerResultsTable).values({ userId: pupil.userId, classId: pupil.className === "7-\u0410" ? classA : classB, day: isoDay2(day2), score: (index2 + day2) % 6, total: 5 }).onConflictDoNothing();
     }
   }
   await fillDemoTimetable(schoolId);
   await writeAudit(schoolId, viewer.id, "demo-create", null, { people: created.length });
-  res.status(201).json({ school, created: created.map(({ userId: _id, ...rest }) => rest) });
+  res.status(201).json({ school: school2, created: created.map(({ userId: _id, ...rest }) => rest) });
 });
 router11.get("/admin/demo-schools", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
   const rows = await db.select({ id: schoolsTable.id, name: schoolsTable.name, createdAt: schoolsTable.createdAt }).from(schoolsTable).where(eq(schoolsTable.isDemo, true));
@@ -55940,12 +56129,12 @@ router11.delete("/admin/demo-school/:schoolId", requireAuthenticatedRole(...OWNE
     res.status(400).json({ error: "Invalid school." });
     return;
   }
-  const [school] = await db.select({ isDemo: schoolsTable.isDemo }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
-  if (!school) {
+  const [school2] = await db.select({ isDemo: schoolsTable.isDemo }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school2) {
     res.status(404).json({ error: "School not found." });
     return;
   }
-  if (!school.isDemo) {
+  if (!school2.isDemo) {
     res.status(403).json({ error: "Only a demo school can be deleted this way." });
     return;
   }
@@ -55976,12 +56165,12 @@ async function access(viewer, classId) {
   const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
   if (!klass) return null;
   if (isGlobalAdminRole(viewer.role)) return { schoolId: klass.schoolId, manager: true };
-  const [[school], [member]] = await Promise.all([
+  const [[school2], [member]] = await Promise.all([
     db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1),
     db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1)
   ]);
-  if (!canManageClass(viewer.role, school?.role, member?.role)) return null;
-  const manager = school?.role === "school_director" || school?.role === "school_admin";
+  if (!canManageClass(viewer.role, school2?.role, member?.role)) return null;
+  const manager = school2?.role === "school_director" || school2?.role === "school_admin";
   return { schoolId: klass.schoolId, manager };
 }
 async function subjectsFor(viewer, classId, manager) {
@@ -55990,13 +56179,13 @@ async function subjectsFor(viewer, classId, manager) {
   const subjects = [...new Set(mine.map((slot) => slot.subject))];
   return { slots, subjects: subjects.length || slots.length ? subjects : ["math", "physics", "chemistry", "biology"] };
 }
-function lessonDates(weekdays, today, weeks = 6) {
+function lessonDates(weekdays, today2, weeks = 6) {
   const out = [];
-  const end = /* @__PURE__ */ new Date(`${today}T12:00:00Z`);
+  const end = /* @__PURE__ */ new Date(`${today2}T12:00:00Z`);
   for (let back = weeks * 7; back >= 0; back -= 1) {
-    const day = new Date(end.getTime() - back * 864e5);
-    const weekday = day.getUTCDay() === 0 ? 7 : day.getUTCDay();
-    if (weekdays.has(weekday)) out.push(day.toISOString().slice(0, 10));
+    const day2 = new Date(end.getTime() - back * 864e5);
+    const weekday = day2.getUTCDay() === 0 ? 7 : day2.getUTCDay();
+    if (weekdays.has(weekday)) out.push(day2.toISOString().slice(0, 10));
   }
   return out;
 }
@@ -56015,21 +56204,21 @@ router12.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), asyn
   const { slots, subjects } = await subjectsFor(viewer, classId, allowed.manager);
   const wanted = String(req.query.subject ?? "");
   const subject = subjects.includes(wanted) ? wanted : subjects[0] ?? "";
-  const today = tashkentNow().date;
+  const today2 = tashkentNow().date;
   const students = await db.select({ id: usersTable.id, name: usersTable.username, status: usersTable.status }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
   const weekdays = new Set(slots.filter((slot) => slot.subject === subject).map((slot) => slot.weekday));
-  const dates = weekdays.size ? lessonDates(weekdays, today) : [];
-  const from = dates[0] ?? today;
+  const dates = weekdays.size ? lessonDates(weekdays, today2) : [];
+  const from = dates[0] ?? today2;
   const [marks, absences] = subject ? await Promise.all([
     db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, subject))),
-    db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today)))
+    db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today2)))
   ]) : [[], []];
   const allDates = [.../* @__PURE__ */ new Set([...dates, ...marks.map((mark) => mark.date)])].sort();
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
     subject,
     subjects,
-    today,
+    today: today2,
     dates: allDates,
     students: students.filter((student) => !student.status || student.status === "active").map(({ id, name }) => ({ id, name })),
     marks,
@@ -56083,10 +56272,10 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
   }
   if (mark !== null || absent) {
     const SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
-    const day = date2.split("-").reverse().join(".");
-    const text2 = absent ? `\u26A0\uFE0F Jurnalda \xABnb\xBB / \u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB: ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}` : `\u{1F4D8} Jurnalga baho / \u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: <b>${mark}</b> \xB7 ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}`;
+    const day2 = date2.split("-").reverse().join(".");
+    const text2 = absent ? `\u26A0\uFE0F Jurnalda \xABnb\xBB / \u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB: ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day2}` : `\u{1F4D8} Jurnalga baho / \u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: <b>${mark}</b> \xB7 ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day2}`;
     void notifyFamily(studentId, text2, true);
-    void pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME[subject] ?? subject}` : `\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
+    void pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME[subject] ?? subject}` : `\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day2}`, "/grades");
   }
   res.json({ ok: true });
 });

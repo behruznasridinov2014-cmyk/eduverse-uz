@@ -17,6 +17,7 @@ import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "
 import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
+import { answerCommand } from "../lib/bot-commands";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
 import { logger } from "../lib/logger";
 import { writeAudit } from "../lib/audit";
@@ -322,6 +323,27 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text);
   if (!match) {
+    // Plain commands (/today, /homework, /school …): answered here; anything else goes on.
+    const chatOfCommand = isRecord(message?.chat) ? message.chat : null;
+    if (/^\/[a-z]+(?:@\w+)?$/i.test(text) && chatOfCommand?.type === "private" && (typeof chatOfCommand.id === "number" || typeof chatOfCommand.id === "string")) {
+      const secret = telegramWebhookSecret();
+      if (!secret || req.get("x-telegram-bot-api-secret-token") !== secret) {
+        res.status(403).json({ error: "Invalid Telegram webhook secret." });
+        return;
+      }
+      try {
+        const reply = await answerCommand(String(chatOfCommand.id), text);
+        if (reply) {
+          await sendTelegramMessage(String(chatOfCommand.id), reply);
+          res.json({ ok: true });
+          return;
+        }
+      } catch (error) {
+        logger.warn({ err: error }, "bot command failed");
+        res.json({ ok: true });
+        return;
+      }
+    }
     next();
     return;
   }
@@ -342,7 +364,9 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     .where(and(eq(telegramNotifyTable.nonce, match[1]!), gt(telegramNotifyTable.nonceExpiresAt, new Date())))
     .returning({ userId: telegramNotifyTable.userId });
   if (row) {
-    const result = await sendTelegramMessage(chatId, "✅ EDUVERSE: bildirishnomalar ulandi. / Уведомления подключены.");
+    const result = await sendTelegramMessage(chatId, `✅ EDUVERSE: bildirishnomalar ulandi. / Уведомления подключены.
+
+${(await answerCommand(chatId, "/help")) ?? ""}`);
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
   }
   res.json({ ok: true });

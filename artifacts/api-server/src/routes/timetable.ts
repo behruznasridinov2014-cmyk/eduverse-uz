@@ -241,7 +241,7 @@ router.post("/schools/:schoolId/timetable/demo", requireAuthenticatedRole(...MAN
 });
 
 /** Which timetable slots a person sees: a teacher their own, a pupil / parent the class, the director the school. */
-async function slotsFilterFor(viewer: Viewer): Promise<SQL | null> {
+export async function slotsFilterFor(viewer: Viewer): Promise<SQL | null> {
   if (viewer.role === "teacher") return eq(timetableSlotsTable.teacherId, viewer.id);
   if (viewer.role === "student" || viewer.role === "parent") {
     const studentIds = viewer.role === "student"
@@ -260,7 +260,7 @@ async function slotsFilterFor(viewer: Viewer): Promise<SQL | null> {
 }
 
 /** Lessons on one date for a slot filter, with times, class, room and teacher. */
-function lessonReader(where: SQL) {
+export function lessonReader(where: SQL) {
   const teacherNames = new Map<string, string>();
   const bellCache = new Map<string, Bell[]>();
   return async function lessonsOn(date: string, weekday: number) {
