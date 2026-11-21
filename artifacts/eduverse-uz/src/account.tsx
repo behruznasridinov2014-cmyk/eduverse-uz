@@ -15,6 +15,7 @@ import { GlassSwitch, GlassTabs, useSwipeTabs } from './glass-nav';
 import { friendlyError } from './errors';
 import { TEACHER_SUBJECTS, subjectLabel } from './ui/config';
 import { useDismiss } from './ui/dismiss';
+import { LoadingBlock } from './ui/loading';
 
 const tx = (language: Language, uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
 const locale = (language: Language) => (language === 'English' ? 'en-GB' : 'ru-RU');
@@ -224,7 +225,7 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
     }
     void change({ push: value });
   }
-  if (!prefs) return <section className="panel"><p className="muted">…</p></section>;
+  if (!prefs) return <section className="panel"><LoadingBlock language={language} kind="inline" /></section>;
   const rows: Array<[keyof Prefs, string, string]> = [
     ['grades', tx(language, 'Yangi baholar', 'Новые оценки', 'New grades'), tx(language, 'O‘qituvchi vazifani tekshirganda', 'Когда учитель проверил задание', 'When a task is graded')],
     ['homework', tx(language, 'Yangi uy vazifalari', 'Новые домашние задания', 'New homework'), tx(language, 'Sinfga topshiriq berilganda', 'Когда классу задали задание', 'When the class gets a task')],
@@ -253,7 +254,7 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
 function StatsSection({ language }: { language: Language }) {
   const [stats, setStats] = useState<Stats | null>(null);
   useEffect(() => { void customFetch<Stats>('/api/me/teaching-stats', { method: 'GET' }).then(setStats).catch(() => {}); }, []);
-  if (!stats) return <section className="panel"><p className="muted">…</p></section>;
+  if (!stats) return <section className="panel"><LoadingBlock language={language} kind="inline" /></section>;
   const cards: Array<[string, string | number]> = [
     [tx(language, 'O‘tkazilgan onlayn darslar', 'Проведено онлайн-уроков', 'Online lessons held'), stats.lessons],
     [tx(language, 'O‘quvchilar', 'Учеников', 'Students'), stats.students],

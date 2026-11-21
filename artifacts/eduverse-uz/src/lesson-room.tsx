@@ -49,7 +49,7 @@ import {
 } from 'lucide-react';
 import { TopicModels } from './topic-library';
 import { LessonBoard, type BoardStroke } from './lesson-board';
-import { CourseScene3D } from './course';
+import { CourseScene3D, TopicBookPages } from './course';
 import { COURSE, courseTopicByKey } from './course-data';
 import { useLessonPlanTopics } from './today';
 import { loadServerIceServers, useLessonMesh } from './lesson-mesh';
@@ -514,20 +514,33 @@ function RoomView({
   }, [peerStates]);
 
   /* ---- Leaving by navigation or tab close ----
-   * The participant row is closed so others stop calling this peer, but the
-   * room itself stays open: the lobby offers to return until the host ends it.
+   * A pupil: the participant row is closed so others stop calling this peer; the room stays open.
+   * The teacher: closing the tab, leaving the page or going to another section ends the lesson,
+   * so pupils are not left waiting in an empty lesson. The browser asks before the tab closes.
    */
+  const hostRef = useRef(isHost);
+  hostRef.current = isHost;
   useEffect(() => {
+    let done = false;
     const leaveQuietly = () => {
+      if (done) return;
+      done = true;
       try {
-        void fetch(`/api/rooms/${room.id}/leave`, { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' } });
+        void fetch(`/api/rooms/${room.id}/${hostRef.current ? 'end' : 'leave'}`, { method: 'POST', keepalive: true, credentials: 'include', headers: { 'content-type': 'application/json' } });
       } catch {
         /* closing anyway */
       }
     };
+    const askFirst = (event: BeforeUnloadEvent) => {
+      if (!hostRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
     window.addEventListener('pagehide', leaveQuietly);
+    window.addEventListener('beforeunload', askFirst);
     return () => {
       window.removeEventListener('pagehide', leaveQuietly);
+      window.removeEventListener('beforeunload', askFirst);
       leaveQuietly();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -819,18 +832,20 @@ function RoomView({
               <section className="panel lesson-course">
                 <div className="eyebrow">{course.book.title} · §{course.topic.code}</div>
                 <h2>{course.topic.title}</h2>
+                <TopicBookPages book={course.book} topic={course.topic} language={language} step={1} />
+                <h3>2 · {language === 'Русский' ? 'Объяснение' : language === 'English' ? 'Explain' : 'Tushuntirish'}</h3>
                 <p className="lesson-course-essence">{course.topic.essence}</p>
+                <h3>3 · {language === 'Русский' ? 'Покажите в 3D' : language === 'English' ? 'Show it in 3D' : '3D da ko‘rsating'}</h3>
                 <p className="muted">{course.topic.sceneHint}</p>
                 <CourseScene3D scene={course.topic.scene} language={language} />
+                {course.topic.tasks.length > 0 && <>
+                  <h3>4 · {language === 'Русский' ? 'Проверка: запомнили?' : language === 'English' ? 'Check: did it stick?' : 'Tekshiruv: esda qoldimi?'}</h3>
+                  <ol className="lesson-course-tasks">{course.topic.tasks.map((task, index) => <li key={index}>{task.q}{isHost && <small className="muted"> — {task.a}</small>}</li>)}</ol>
+                </>}
               </section>
             );
           })()}
 
-          {(isHost || boardOpen) && (
-            boardOpen
-              ? <LessonBoard strokes={strokes} canDraw={canDraw} isHost={isHost} penHolder={penHolder && penHolder !== user.id ? penHolder : null} language={language} onStroke={sendStroke} onClear={clearBoard} />
-              : <button type="button" className="btn lesson-board-open" onClick={() => setBoardOpen(true)}>{copy.openBoard}</button>
-          )}
 
           {(topic || (isHost && !courseKey)) && (
             <section className="panel lesson-topic-panel">
@@ -910,9 +925,6 @@ function RoomView({
                       <Camera size={12} className={participant.cameraOn ? 'on' : 'off'} />
                       <Mic size={12} className={participant.micOn ? 'on' : 'off'} />
                       {participant.sharingScreen && <MonitorUp size={12} className="on" />}
-                      {isHost && participant.userId !== user.id && (
-                        <button type="button" className={`pen-toggle ${penHolder === participant.userId ? 'on' : ''}`} title={copy.givePen} onClick={() => givePen(penHolder === participant.userId ? null : participant.userId)}>✎</button>
-                      )}
                       <span className={`lesson-person-link ${connected ? 'on' : 'off'}`} title={connected ? copy.connected : copy.connecting} />
                     </span>
                   </div>

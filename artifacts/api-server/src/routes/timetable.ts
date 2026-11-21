@@ -15,6 +15,7 @@ import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { writeAudit } from "../lib/audit";
 import { remindTrainer } from "./course";
+import { giveBookHomework } from "../lib/book-homework";
 
 /**
  * Weekly timetable and "today's lessons".
@@ -239,39 +240,30 @@ router.post("/schools/:schoolId/timetable/demo", requireAuthenticatedRole(...MAN
   res.json({ ...(await loadTimetable(schoolId)), canEdit: true });
 });
 
-/** The viewer's lessons for today (Tashkent), in time order. */
-router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res) => {
-  const viewer = viewerOf(res);
-  const now = tashkentNow();
-  res.setHeader("Cache-Control", "private, no-store");
-  const base = { date: now.date, weekday: now.weekday, now: new Date().toISOString(), week: [] as Array<{ classId: string; subject: string }> };
-
-  // Which slots this person should see.
-  let where: SQL | undefined;
-  if (viewer.role === "teacher") {
-    where = eq(timetableSlotsTable.teacherId, viewer.id);
-  } else if (viewer.role === "student" || viewer.role === "parent") {
+/** Which timetable slots a person sees: a teacher their own, a pupil / parent the class, the director the school. */
+async function slotsFilterFor(viewer: Viewer): Promise<SQL | null> {
+  if (viewer.role === "teacher") return eq(timetableSlotsTable.teacherId, viewer.id);
+  if (viewer.role === "student" || viewer.role === "parent") {
     const studentIds = viewer.role === "student"
       ? [viewer.id]
       : (await db.select({ id: parentLinksTable.studentId }).from(parentLinksTable).where(eq(parentLinksTable.parentId, viewer.id))).map((row) => row.id);
-    if (!studentIds.length) { res.json({ ...base, lessons: [], next: [] }); return; }
+    if (!studentIds.length) return null;
     const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable)
       .where(and(inArray(classMembersTable.userId, studentIds), eq(classMembersTable.role, "student")))).map((row) => row.id);
-    if (!classIds.length) { res.json({ ...base, lessons: [], next: [] }); return; }
-    where = inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
-  } else {
-    const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable)
-      .where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
-    if (!schoolIds.length) { res.json({ ...base, lessons: [], next: [] }); return; }
-    where = inArray(timetableSlotsTable.schoolId, schoolIds);
+    if (!classIds.length) return null;
+    return inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
   }
+  const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable)
+    .where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
+  if (!schoolIds.length) return null;
+  return inArray(timetableSlotsTable.schoolId, schoolIds);
+}
 
-  // Class and subject pairs of the whole week (the trainer asks only these).
-  const weekRows = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
-  base.week = weekRows;
+/** Lessons on one date for a slot filter, with times, class, room and teacher. */
+function lessonReader(where: SQL) {
   const teacherNames = new Map<string, string>();
   const bellCache = new Map<string, Bell[]>();
-  async function lessonsOn(date: string, weekday: number) {
+  return async function lessonsOn(date: string, weekday: number) {
     if (weekday === 7) return [];
     const slots = await db
       .select({
@@ -292,14 +284,30 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
       if (!bell) continue;
       out.push({
         id: slot.id, classId: slot.classId, className: slot.className, grade: slot.grade, period: slot.period,
-        subject: slot.subject, room: slot.room, teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        subject: slot.subject, room: slot.room, teacherId: slot.teacherId, teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
         start: bell.start, end: bell.end, startsAt: atTashkent(date, bell.start), endsAt: atTashkent(date, bell.end),
       });
     }
     out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
     return out;
-  }
+  };
+}
+
+/** The viewer's lessons for today (Tashkent), in time order. */
+router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = viewerOf(res);
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  const base = { date: now.date, weekday: now.weekday, now: new Date().toISOString(), week: [] as Array<{ classId: string; subject: string }> };
+  const where = await slotsFilterFor(viewer);
+  if (!where) { res.json({ ...base, lessons: [], next: [] }); return; }
+
+  // Class and subject pairs of the whole week (the trainer asks only these).
+  base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
+  const lessonsOn = lessonReader(where);
   const lessons = await lessonsOn(now.date, now.weekday);
+  // A finished textbook lesson gives its homework from the book (the teacher writes nothing).
+  await giveBookHomework(now.date, lessons);
   // The next two school days (Sunday skipped): for "tomorrow" and the online lesson topics.
   const next: Array<{ date: string; weekday: number; lessons: Awaited<ReturnType<typeof lessonsOn>> }> = [];
   for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
@@ -314,9 +322,29 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
     if (day.weekday === 7) continue;
     prev = { date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) };
   }
+  if (prev) await giveBookHomework(prev.date, prev.lessons);
   if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
   res.json({ ...base, lessons, next, prev });
-  return;
+});
+
+/** The viewer's week (Monday to Saturday) of lessons. ?offset=1 is next week, -1 the week before. */
+router.get("/me/week", requireAuthenticatedRole(...everyRole), async (req, res) => {
+  const viewer = viewerOf(res);
+  const offset = Math.max(-8, Math.min(8, Number.parseInt(String(req.query.offset ?? "0"), 10) || 0));
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  // Monday of the wanted week (Sunday belongs to the week that ends on it).
+  const monday = new Date(`${now.date}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() - (now.weekday - 1) + offset * 7);
+  const days: Array<{ date: string; weekday: number; lessons: Array<Record<string, unknown>> }> = [];
+  const where = await slotsFilterFor(viewer);
+  const lessonsOn = where ? lessonReader(where) : null;
+  for (let index = 0; index < 6; index += 1) {
+    const day = new Date(monday.getTime() + index * 86400000);
+    const date = day.toISOString().slice(0, 10);
+    days.push({ date, weekday: index + 1, lessons: lessonsOn ? await lessonsOn(date, index + 1) : [] });
+  }
+  res.json({ today: now.date, now: new Date().toISOString(), offset, days });
 });
 
 export default router;

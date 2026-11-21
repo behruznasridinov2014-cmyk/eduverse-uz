@@ -487,3 +487,23 @@ export const schoolBellsTable = pgTable("school_bells", {
   periods: jsonb("periods").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("school_bells_school_unique").on(table.schoolId)]);
+
+/**
+ * The class journal (like a paper school journal): one mark per pupil, subject and lesson date.
+ * A mark is 2…5 (the school scale for grades 5–11); "absent" is «нб». Kept by the subject teacher.
+ */
+export const journalMarksTable = pgTable("journal_marks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  subject: text("subject").notNull(),
+  /** Lesson date, YYYY-MM-DD (Tashkent). */
+  date: text("date").notNull(),
+  mark: integer("mark"),
+  absent: boolean("absent").notNull().default(false),
+  markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("journal_marks_cell_unique").on(table.classId, table.studentId, table.subject, table.date),
+  index("journal_marks_class_subject_idx").on(table.classId, table.subject),
+]);

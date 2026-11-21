@@ -181,7 +181,7 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
   return (
     <section className="panel journal">
       <div className="section-head">
-        <h2><TableProperties size={16} /> {t(language, 'Baholar jurnali', 'Журнал оценок', 'Grade journal')}</h2>
+        <h2><TableProperties size={16} /> {t(language, 'Uy vazifalari baholari', 'Оценки за домашние задания', 'Homework marks')}</h2>
         <div className="row">
           {school.classes.length > 1 && (
             <Select className="input" value={classId} onChange={(event) => setClassId(event.target.value)}>

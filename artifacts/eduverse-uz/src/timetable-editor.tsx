@@ -6,6 +6,7 @@ import { Select } from './ui/select';
 import { friendlyError } from './errors';
 import { lessonSubjectName } from './today';
 import { TEACHER_SUBJECTS } from './ui/config';
+import { LoadingBlock } from './ui/loading';
 
 /*
  * Weekly timetable of a school, kept by the director or deputy.
@@ -130,7 +131,7 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
     } catch (requestError) { setError(friendlyError(requestError, language)); } finally { setBusy(false); }
   }
 
-  if (!data) return <section className="panel"><h2><CalendarDays size={16} /> {t(language, 'Dars jadvali', 'Расписание уроков', 'Timetable')}</h2>{error ? <div className="notice" role="alert">{error}</div> : <p className="muted">…</p>}</section>;
+  if (!data) return <section className="panel"><h2><CalendarDays size={16} /> {t(language, 'Dars jadvali', 'Расписание уроков', 'Timetable')}</h2>{error ? <div className="notice" role="alert">{error}</div> : <LoadingBlock language={language} kind="inline" />}</section>;
   const editable = data.canEdit;
   const periods = bells.length;
   return (
@@ -142,7 +143,7 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
           <button type="button" className="btn small" onClick={load} aria-label={t(language, 'Yangilash', 'Обновить', 'Reload')}><RefreshCw size={13} /></button>
         </div>
       </div>
-      <p className="muted">{t(language, 'Har bir katakda fan va o‘qituvchi. Saqlangandan keyin har kim «Umumiy ko‘rinish»da bugungi darslarini ko‘radi.', 'В каждой клетке — предмет и учитель. После сохранения каждый видит свои уроки на сегодня на главной странице.', 'Each cell has a subject and a teacher. After saving, everyone sees today’s lessons on the overview.')}</p>
+      <p className="muted">{t(language, 'Har bir katakda fan, o‘qituvchi va xona. Saqlangandan keyin har kim o‘z jadvalini ko‘radi.', 'В каждой клетке — предмет, учитель и кабинет. После сохранения каждый видит своё расписание.', 'Each cell has a subject, a teacher and a room. After saving, everyone sees their own timetable.')}</p>
       {data.classes.length === 0 ? <div className="notice">{t(language, 'Avval sinflarni qo‘shing.', 'Сначала добавьте классы.', 'Add classes first.')}</div> : (
         <div className="tt-scroll">
           <table className="tt-grid">
@@ -171,10 +172,11 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
                           <div className="tt-cell">
                             <Select value={slot?.subject ?? ''} options={subjectOptions} aria-label={t(language, 'Fan', 'Предмет', 'Subject')} onChange={(_event, value) => setCell(weekday, period, value ? { subject: value } : null)} />
                             {slot && <Select value={slot.teacherId ?? ''} options={teacherOptions} aria-label={t(language, 'O‘qituvchi', 'Учитель', 'Teacher')} onChange={(_event, value) => setCell(weekday, period, { teacherId: value || null })} />}
+                            {slot && <input className="input tt-room" value={slot.room ?? ''} maxLength={20} placeholder={t(language, 'Xona', 'Кабинет', 'Room')} aria-label={t(language, 'Xona', 'Кабинет', 'Room')} onChange={(event) => setCell(weekday, period, { room: event.target.value || null })} />}
                             {conflict && <small className="tt-clash-note">{t(language, 'Bu vaqtda boshqa sinfda', 'В это время уже в другом классе', 'Busy in another class')}</small>}
                           </div>
                         ) : slot ? (
-                          <div className="tt-cell-view"><b>{lessonSubjectName(slot.subject, language)}</b><small>{data.teachers.find((item) => item.id === slot.teacherId)?.name ?? ''}</small></div>
+                          <div className="tt-cell-view"><b>{lessonSubjectName(slot.subject, language)}</b><small>{data.teachers.find((item) => item.id === slot.teacherId)?.name ?? ''}</small>{slot.room && <small>{t(language, `${slot.room}-xona`, `каб. ${slot.room}`, `room ${slot.room}`)}</small>}</div>
                         ) : <span className="muted">—</span>}
                       </td>
                     );

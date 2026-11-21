@@ -214,8 +214,20 @@ export function IconTrainer(props: IconProps) {
 }
 
 /** Icon for each navigation key used in App.tsx (ROLE_NAV labels). */
+export function IconSchedule(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="4.6" width="18" height="16.4" rx="3.2" fill="currentColor" opacity={SOFT} />
+      <path d="M8 2.8v3.6M16 2.8v3.6M3.4 9.6h17.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <rect x="6.6" y="12.4" width="3.4" height="3" rx="1" fill="currentColor" />
+      <rect x="13.4" y="12.4" width="3.4" height="3" rx="1" fill="currentColor" opacity="0.6" />
+    </Svg>
+  );
+}
+
 export const NAV_ICON: Record<string, (props: IconProps) => ReactElement> = {
   Overview: IconHome,
+  Schedule: IconSchedule,
   'Lesson room': IconLesson,
   'Topics & 3D': IconTopic,
   'Chemistry lab': IconStudio,

@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
+import { LoadingBlock } from './ui/loading';
 
 /* -------------------------------------------------------------------------- */
 
@@ -403,7 +404,7 @@ export function TopicLibraryPage({
             <span className="tag">{topics.length}</span>
           </div>
           {loading ? (
-            <p className="muted" role="status">…</p>
+            <LoadingBlock language={language} kind="inline" />
           ) : topics.length === 0 ? (
             <p className="muted">{copy.emptyText}</p>
           ) : (

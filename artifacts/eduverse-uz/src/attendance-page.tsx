@@ -47,6 +47,7 @@ const subjectLabel = (language: Language, value: string) => {
   return !item ? value : language === 'Русский' ? item.ru : language === 'English' ? item.en : item.uz;
 };
 import { friendlyError } from './errors';
+import { LoadingBlock } from './ui/loading';
 
 type MarkStatus = Exclude<AttendanceStatus, 'unmarked'>;
 
@@ -371,7 +372,7 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
 
       <section className="panel reveal-up">
         {loading ? (
-          <p className="muted" role="status">…</p>
+          <LoadingBlock language={language} kind="inline" />
         ) : records.length === 0 ? (
           <p className="muted">{copy.noStudents}</p>
         ) : (

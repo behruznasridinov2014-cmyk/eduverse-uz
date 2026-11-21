@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, CalendarCheck2, Clock3, DoorOpen, MonitorPlay, Sp
 import { COURSE, SUBJECT_LABEL, type CourseBook, type CourseTopic } from './course-data';
 import type { Language } from './school-data';
 import { subjectLabel } from './ui/config';
+import { LoadingBlock } from './ui/loading';
 
 /*
  * "Today": the lessons of the signed-in person for today (Tashkent time), live status and
@@ -209,7 +210,7 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
   const isFamily = role === 'parent';
   const isStudent = role === 'student';
   if (failed && !data) return null;
-  if (!data) return <section className="today-block"><div className="today-skeleton" /></section>;
+  if (!data) return <section className="today-block"><LoadingBlock language={language} /></section>;
   if (isManager) return <SchoolToday data={data} now={now} language={language} />;
   const lessons = data.lessons;
   const left = lessons.filter((lesson) => statusOf(lesson, now) !== 'done').length;
@@ -294,7 +295,7 @@ function SchoolToday({ data, now, language }: { data: TodayResponse; now: number
           <CalendarCheck2 size={22} />
           <div>
             <b>{data.weekday === 7 ? t(language, 'Bugun dam olish kuni', 'Сегодня выходной', 'Today is a day off') : t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today')}</b>
-            <span className="muted">{t(language, 'Dars jadvali «Maktab boshqaruvi» bo‘limida.', 'Расписание — в разделе «Управление школой».', 'The timetable is in “School”.')}</span>
+            <span className="muted">{t(language, 'Dars jadvali «Jadval» bo‘limida.', 'Расписание — во вкладке «Расписание».', 'The timetable is in “Timetable”.')}</span>
           </div>
         </div>
       ) : (
@@ -359,7 +360,7 @@ function ClassTodayDetail({ row, date, now, language }: { row: { classId: string
         </div>
         <div>
           <small className="muted">{t(language, `O‘quvchilar · ${lessonSubjectName(lesson.subject, language)} darsi`, `Ученики · урок «${lessonSubjectName(lesson.subject, language)}»`, `Students · ${lessonSubjectName(lesson.subject, language)} lesson`)}</small>
-          {records === null ? <p className="muted">…</p> : (
+          {records === null ? <LoadingBlock language={language} kind="inline" /> : (
             <>
               <p className="school-today-came">{marked
                 ? t(language, `Keldi: ${came} / ${records.length}`, `Пришли ${came} из ${records.length}`, `Present ${came} of ${records.length}`)

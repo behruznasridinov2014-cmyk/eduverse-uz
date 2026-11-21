@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Select } from './ui/select';
 import { createAssignment } from '@workspace/api-client-react';
-import { ClipboardList, Send } from 'lucide-react';
+import { ClipboardList, Send, Sparkles } from 'lucide-react';
 import { COURSE } from './course-data';
 import type { Language, SchoolData } from './school-data';
 import { friendlyError } from './errors';
@@ -92,9 +92,33 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
     }
   }
 
+  const lessonsWithBook = (today.data?.lessons ?? []).filter((lesson) => bookForLesson(lesson));
   return (
     <section className="panel worksheet">
       <h2><ClipboardList size={16} /> {t(language, 'Bugungi mavzu bo‘yicha uy vazifasi', 'Домашнее задание по сегодняшней теме', 'Homework on today’s topic')}</h2>
+      <div className="notice auto-homework-note"><Sparkles size={16} /><span>{t(language,
+        'Uy vazifasini EDUVERSE o‘zi beradi: dars tugashi bilan darslikdagi vazifa sinfga yuboriladi. Siz faqat tekshirasiz.',
+        'Домашнее задание выдаёт сам EDUVERSE: как только урок заканчивается, задание из учебника уходит классу. Вам остаётся только проверить.',
+        'EDUVERSE gives the homework itself: when the lesson ends, the textbook task goes to the class. You only check it.')}</span></div>
+      {lessonsWithBook.length > 0 && today.data && (
+        <ul className="auto-homework-list">
+          {lessonsWithBook.map((lesson) => {
+            const topic = topicForLesson(lesson, courses[lesson.classId], today.data!.date);
+            const sent = Date.parse(lesson.endsAt) <= today.now;
+            return (
+              <li key={lesson.id} className={sent ? 'is-sent' : ''}>
+                <div className="auto-homework-top">
+                  <b>{lesson.start}–{lesson.end} · {lesson.className} · {lessonSubjectName(lesson.subject, language)}</b>
+                  <span className={`tag ${sent ? 'green' : 'gold'}`}>{sent ? t(language, 'Sinfga yuborildi', 'Отправлено классу', 'Sent to the class') : t(language, `${lesson.end} da yuboriladi`, `Уйдёт классу в ${lesson.end}`, `Goes out at ${lesson.end}`)}</span>
+                </div>
+                {topic && <><small className="muted">§{topic.code} {topic.title}</small><p>{topic.homework}</p></>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <details className="worksheet-extra">
+        <summary>{t(language, 'Darslikdan qo‘shimcha topshiriq qo‘shish (ixtiyoriy)', 'Добавить задания из учебника (по желанию)', 'Add extra textbook tasks (optional)')}</summary>
       <p className="muted">{slots
         ? t(language, 'Topshiriqlarni belgilang va «Uyga berish» ni bosing.', 'Отметьте задания галочкой и нажмите «Задать на дом».', 'Tick the tasks and press “Assign”.')
         : t(language, 'Istalgan mavzudan tayyor topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring.', 'Отметьте готовые задания из темы и отправьте классу как домашку.', 'Tick ready tasks from any topic and send them as homework.')}</p>
@@ -140,6 +164,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
           </div>
         </div>
       )}
+      </details>
       {message && <div className="notice success">{message}</div>}
       {error && <div className="notice">{error}</div>}
     </section>

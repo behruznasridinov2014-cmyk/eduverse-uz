@@ -871,31 +871,11 @@ export function ServerTeachingPanel({
                         <b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}
                       </p>
                       <HomeworkAiCheck assignmentId={reviewAssignment.id} studentId={submission.studentId} language={language} />
-                      <div className="grid grid-2" style={{ gap: 8 }}>
-                        <div className="control">
-                          <label htmlFor={`review-status-${submission.studentId}`}>{t(language, 'Status', 'Статус', 'Holat')}</label>
-                          <Select
-                            id={`review-status-${submission.studentId}`}
-                            value={draft.status}
-                            onChange={(event) => updateDraft(submission.studentId, { status: event.target.value })}
-                          >
-                            {REVIEW_STATUSES.map((status) => (
-                              <option value={status} key={status}>{formatStatus(status)}</option>
-                            ))}
-                          </Select>
-                        </div>
-                        <div className="control">
-                          <label htmlFor={`review-score-${submission.studentId}`}>{t(language, 'Score (0–100)', 'Оценка (0–100)', 'Ball (0–100)')}</label>
-                          <input
-                            id={`review-score-${submission.studentId}`}
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={draft.score}
-                            onChange={(event) => updateDraft(submission.studentId, { score: event.target.value })}
-                          />
-                        </div>
-                      </div>
+                      <ReviewVerdict
+                        draft={draft}
+                        language={language}
+                        onChange={(patch) => updateDraft(submission.studentId, patch)}
+                      />
                       <div className="control" style={{ marginTop: 8 }}>
                         <label htmlFor={`review-feedback-${submission.studentId}`}>{t(language, 'Feedback', 'Комментарий', 'Izoh')}</label>
                         <textarea
@@ -924,7 +904,7 @@ export function ServerTeachingPanel({
                         type="button"
                         className="btn primary small"
                         style={{ marginTop: 8 }}
-                        disabled={reviewBusyId === submission.studentId}
+                        disabled={reviewBusyId === submission.studentId || draft.score.trim() === ''}
                         onClick={() => void saveReview(submission.studentId)}
                       >
                         <CheckCircle2 size={13} />
@@ -1766,5 +1746,48 @@ export function ServerTopicAssignPanel({
         </a>
       </div>
     </Panel>
+  );
+}
+
+
+/**
+ * Checking one homework: «Checked» → how it was done (all right / partly, with mistakes / wrong)
+ * → the mark 2…5 (picked for the teacher, can be changed). There is no mark below 2.
+ */
+const VERDICTS: Array<{ id: string; mark: number; status: string; label: [string, string, string]; note: [string, string, string]; tone: string }> = [
+  { id: 'right', mark: 5, status: 'checked', label: ['All correct', 'Всё правильно', 'Hammasi to‘g‘ri'], note: ['Well done, everything is correct.', 'Молодец, всё сделано правильно.', 'Barakalla, hammasi to‘g‘ri.'], tone: 'green' },
+  { id: 'partly', mark: 4, status: 'checked', label: ['Partly, some mistakes', 'Частично, есть ошибки', 'Qisman, xatolar bor'], note: ['Good, but there are mistakes. Look at them again.', 'Хорошо, но есть ошибки. Посмотри их ещё раз.', 'Yaxshi, lekin xatolar bor. Ularni qayta ko‘rib chiq.'], tone: 'gold' },
+  { id: 'wrong', mark: 2, status: 'needs_revision', label: ['Wrong', 'Неправильно', 'Noto‘g‘ri'], note: ['Wrong. Read the topic again and redo the task.', 'Неправильно. Перечитай тему и переделай задание.', 'Noto‘g‘ri. Mavzuni qayta o‘qib, vazifani qayta bajar.'], tone: 'red' },
+];
+function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; language: Language; onChange: (patch: Partial<ReviewDraft>) => void }) {
+  const mark = draft.score.trim() === '' ? null : Math.max(2, Math.min(5, Math.round(Number(draft.score) / 20)));
+  const [opened, setOpened] = useState(mark !== null);
+  const verdict = mark === null ? null : mark >= 5 ? 'right' : draft.status === 'needs_revision' ? 'wrong' : 'partly';
+  if (!opened) {
+    return (
+      <button type="button" className="btn primary review-checked-btn" onClick={() => setOpened(true)}>
+        <CheckCircle2 size={16} /> {t(language, 'Checked', 'Проверил', 'Tekshirdim')}
+      </button>
+    );
+  }
+  return (
+    <div className="review-verdict">
+      <span className="muted">{t(language, 'How is it done?', 'Как сделано?', 'Qanday bajarilgan?')}</span>
+      <div className="review-verdict-options">
+        {VERDICTS.map((item) => (
+          <button type="button" key={item.id} className={`review-verdict-btn tone-${item.tone} ${verdict === item.id ? 'on' : ''}`}
+            onClick={() => onChange({ status: item.status, score: String(item.mark * 20), feedback: draft.feedback.trim() && !VERDICTS.some((v) => draft.feedback === t(language, ...v.note)) ? draft.feedback : t(language, ...item.note) })}>
+            {t(language, ...item.label)}
+          </button>
+        ))}
+      </div>
+      <span className="muted">{t(language, 'Mark', 'Оценка', 'Baho')}</span>
+      <div className="review-marks" role="group">
+        {[2, 3, 4, 5].map((value) => (
+          <button type="button" key={value} className={`grade-pick m${value} ${mark === value ? 'on' : ''}`}
+            onClick={() => onChange({ score: String(value * 20), status: value === 2 && verdict === 'wrong' ? 'needs_revision' : 'checked' })}>{value}</button>
+        ))}
+      </div>
+    </div>
   );
 }

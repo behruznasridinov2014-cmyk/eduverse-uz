@@ -1385,6 +1385,11 @@ router.patch(
         res.status(400).json({ error: "Score must be an integer from 0 to 100." });
         return;
       }
+      // The school scale is 2…5 (score 40…100): a mark below 2 cannot be given.
+      if (score !== null && score < 40) {
+        res.status(400).json({ error: "The lowest mark is 2." });
+        return;
+      }
       changes.score = score;
     }
     if (hasField(req.body, "feedback")) {

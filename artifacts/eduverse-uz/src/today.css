@@ -249,3 +249,92 @@ html[data-theme="night"] .course-self-score.good { background: rgba(120, 190, 15
 .kpi b, .kpi span { overflow-wrap: anywhere; }
 .cabinet { grid-template-columns: minmax(0, 1fr); }
 .cabinet > * { min-width: 0; }
+
+/* ---- Class journal (journal.tsx) ---- */
+.class-journal-table th, .class-journal-table td { text-align: center; white-space: nowrap; }
+.class-journal-table .journal-name { text-align: left; position: sticky; left: 0; z-index: 1; background: var(--surface, #fffcf6); min-width: 190px; }
+html[data-theme="night"] .class-journal-table .journal-name { background: #18213a; }
+.class-journal-table th.is-today, .class-journal-table td.is-today { background: rgba(184, 149, 90, 0.12); }
+.class-journal-table .journal-cell-btn { min-width: 40px; min-height: 36px; }
+.journal-empty { color: var(--text-3); font-size: 18px; }
+.journal-nb { display: inline-grid; place-items: center; min-width: 30px; height: 26px; border-radius: 6px; font-weight: 700; color: #b23a3a; background: rgba(214, 70, 70, 0.12); }
+.grade-mark.m5 { color: #1f7a45 !important; background: rgba(46, 160, 90, 0.14) !important; }
+.grade-mark.m4 { color: #2c6aa0 !important; background: rgba(60, 130, 200, 0.14) !important; }
+.grade-mark.m3 { color: #9a6b12 !important; background: rgba(220, 160, 40, 0.16) !important; }
+.grade-mark.m2 { color: #b23a3a !important; background: rgba(214, 70, 70, 0.14) !important; }
+.journal-marks { display: inline-flex; gap: 4px; flex-wrap: nowrap; }
+.grade-pick { min-width: 36px; min-height: 36px; }
+.grade-pick.nb { color: #b23a3a; font-weight: 700; }
+
+/* ---- Homework check: verdict and mark ---- */
+.review-checked-btn { margin: 8px 0; min-height: 44px; }
+.review-verdict { display: grid; gap: 8px; margin: 10px 0; padding: 12px; border-radius: 14px; background: var(--surface-2, #f6f1e7); }
+html[data-theme="night"] .review-verdict { background: rgba(255, 255, 255, 0.05); }
+.review-verdict-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.review-verdict-btn { min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--line-2, #e2dccf); background: var(--surface, #fff); font: inherit; font-weight: 600; cursor: pointer; color: inherit; transition: transform .15s ease, background .2s ease; }
+.review-verdict-btn:active { transform: scale(.97); }
+.review-verdict-btn.tone-green.on { background: rgba(46, 160, 90, 0.16); border-color: #3aa368; color: #1f7a45; }
+.review-verdict-btn.tone-gold.on { background: rgba(220, 160, 40, 0.18); border-color: #d6a23a; color: #8a5f10; }
+.review-verdict-btn.tone-red.on { background: rgba(214, 70, 70, 0.14); border-color: #d05555; color: #b23a3a; }
+.review-marks { display: flex; gap: 8px; }
+.review-marks .grade-pick { min-width: 48px; min-height: 44px; font-size: 18px; }
+.grade-pick.m5.on { background: rgba(46, 160, 90, 0.18); border-color: #3aa368; }
+.grade-pick.m4.on { background: rgba(60, 130, 200, 0.16); border-color: #3c82c8; }
+.grade-pick.m3.on { background: rgba(220, 160, 40, 0.2); border-color: #d6a23a; }
+.grade-pick.m2.on { background: rgba(214, 70, 70, 0.16); border-color: #d05555; }
+
+/* ---- Automatic homework from the textbook ---- */
+.auto-homework-note { margin: 8px 0 12px; }
+.auto-homework-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.auto-homework-list li { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line-2, #e2dccf); background: var(--surface, #fff); }
+.auto-homework-list li.is-sent { border-color: rgba(58, 163, 104, 0.45); }
+.auto-homework-list p { margin: 6px 0 0; }
+.auto-homework-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; }
+.worksheet-extra { margin-top: 6px; }
+.worksheet-extra > summary { cursor: pointer; font-weight: 600; padding: 10px 0; }
+html[data-theme="night"] .auto-homework-list li { background: rgba(255, 255, 255, 0.04); }
+
+/* ---- Timetable tab (schedule.tsx) ---- */
+.schedule-weekbar { display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; flex-wrap: wrap; }
+.schedule-weekbar .btn { min-height: 44px; min-width: 44px; justify-content: center; }
+.schedule-weekbar-title { display: grid; gap: 2px; min-width: 180px; text-align: center; }
+.schedule-week { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.schedule-day { border-radius: 18px; border: 1px solid var(--line-2, #e2dccf); background: var(--surface, #fffcf6); padding: 14px; animation: ev-fade-in .35s ease both; }
+.schedule-day.is-today { border-color: var(--ev-primary, #b8955a); box-shadow: 0 0 0 3px rgba(184, 149, 90, 0.18); }
+.schedule-day.is-past { opacity: .78; }
+.schedule-day > header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+.schedule-day > header b { font-size: 17px; }
+.schedule-free { margin: 6px 0; }
+.schedule-lessons { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.schedule-lesson { display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px; padding: 10px; border-radius: 12px; background: var(--surface-2, #f6f1e7); }
+.schedule-lesson.is-current { background: rgba(46, 160, 90, 0.12); outline: 1.5px solid rgba(46, 160, 90, 0.5); }
+.schedule-lesson.is-done { opacity: .75; }
+.schedule-lesson-time { display: grid; gap: 2px; font-weight: 600; font-size: 13px; align-content: start; }
+.schedule-lesson-time small { font-weight: 400; color: var(--text-3); }
+.schedule-lesson-main { display: grid; gap: 4px; min-width: 0; }
+.schedule-lesson-main > b { font-size: 15px; }
+.schedule-lesson-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-2, #5b5446); }
+.schedule-lesson-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.schedule-topic { display: inline-flex; gap: 5px; align-items: baseline; font-size: 13px; color: #7a5c26; }
+.schedule-topic svg { flex: none; transform: translateY(2px); }
+.schedule-now { justify-self: start; }
+.schedule-lesson-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.schedule-lesson-actions .btn { min-height: 40px; }
+html[data-theme="night"] .schedule-day { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.1); }
+html[data-theme="night"] .schedule-lesson { background: rgba(255, 255, 255, 0.05); }
+html[data-theme="night"] .schedule-topic { color: var(--accent-night, #e2c58f); }
+.tt-room { min-height: 32px; font-size: 13px; padding: 0 10px; border-radius: 10px; }
+.lesson-howto { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.lesson-howto li { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 14px; background: var(--surface-2, #f6f1e7); font-size: 14px; }
+.lesson-howto-num { flex: none; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ev-primary, #b8955a); color: #fff; font-weight: 700; font-size: 13px; }
+html[data-theme="night"] .lesson-howto li { background: rgba(255, 255, 255, 0.05); }
+@media (max-width: 560px) { .schedule-lesson { grid-template-columns: 1fr; } }
+
+/* ---- 3D studio: textbook topics ---- */
+.studio-book { display: grid; gap: 12px; }
+.studio-book-pick { display: grid; gap: 12px; }
+.studio-book-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.studio-book-search { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px; }
+.studio-book-search input { flex: 1; min-height: 44px; }
+.studio-book-topics { display: flex; flex-wrap: wrap; gap: 6px; max-height: 210px; overflow: auto; }
+.studio-book-topics .studio-tab { min-height: 40px; }

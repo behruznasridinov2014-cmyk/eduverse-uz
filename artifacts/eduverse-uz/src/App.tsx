@@ -25,7 +25,8 @@ import { SchoolSetupWizard } from './setup-wizard';
 import { TrainerPage } from './trainer';
 import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
-import { LabReports } from './lab-work';
+import { ClassJournal } from './journal';
+import { SchedulePage } from './schedule';
 import { TodayLessons } from './today';
 import { TimetableEditor } from './timetable-editor';
 import { LabPage, LessonDayPage, TodayCoursePage } from './today-pages';
@@ -60,7 +61,7 @@ type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?
 const NAV_LABELS:Record<Lang,Record<string,string>>={
   Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
   Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
-  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
+  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Schedule:'Timetable',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -144,6 +145,7 @@ function App(){
     '/grades':['student'],
     '/trainer':['student','teacher'],
     '/lesson':['student','teacher'],
+    '/schedule':['student','teacher','parent','school_director','school_admin'],
     '/support':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
   };
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
@@ -200,11 +202,12 @@ function App(){
         :auth.user&&proLocked(location)?<ProLock language={lang}/>
         :location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
         :location==='/'||location==='/dashboard'?<RoleOverviewPage user={auth.user!} school={school} language={lang} onOpen={navigate}/>
-        :location==='/teacher'&&auth.user?<TeacherPage school={school} user={auth.user} language={lang} goBoard={()=>navigate('/board')} onOpen={navigate}/>
+        :location==='/teacher'&&auth.user?<TeacherPage school={school} user={auth.user} language={lang} onOpen={navigate}/>
         :location==='/parent'&&auth.user?<ParentPage language={lang}/>
         :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
-        :location==='/homework/scan'||location==='/schedule'?<Redirect to={location==='/schedule'?'/dashboard':'/classes'}/>
+        :location==='/schedule'&&auth.user?<SchedulePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
+        :location==='/homework/scan'?<Redirect to="/classes"/>
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>{try{localStorage.removeItem(`eduverse:pdf-range:/books/${id}.pdf`)}catch{/* private mode */}navigate('/read/'+id)}}/>
         :book?<ReaderPage language={lang} book={book} page={progressValue(book.id)} setPage={p=>setProgress({...progress,[book.id]:p})} saved={saved} setSaved={setSaved} note={notes[book.id]??''} setNote={v=>setNotes({...notes,[book.id]:v})} />
         :location==='/board'?<Redirect to="/lesson"/>
@@ -232,6 +235,7 @@ function App(){
 type NavItem={label:string;href:string;icon:typeof Home;tone:string};
 const NAV_ITEMS:NavItem[]=[
   {label:'Overview',href:'/dashboard',icon:LayoutDashboard,tone:'slate'},
+  {label:'Schedule',href:'/schedule',icon:CalendarCheck2,tone:'blue'},
   {label:'Lesson room',href:'/lesson',icon:MonitorPlay,tone:'blue'},
   {label:'Topics & 3D',href:'/course',icon:Atom,tone:'violet'},
   {label:'Attendance',href:'/attendance',icon:CalendarCheck2,tone:'green'},
@@ -241,18 +245,17 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Chemistry lab',href:'/lab',icon:FlaskConical,tone:'pink'},
   {label:'My grades',href:'/grades',icon:BookMarked,tone:'gold'},
   {label:'Trainer',href:'/trainer',icon:FlaskConical,tone:'gold'},
-  {label:'Interactive board',href:'/board',icon:PenTool,tone:'pink'},
   {label:'Textbook library',href:'/library',icon:BookMarked,tone:'teal'},
   {label:'Family view',href:'/parent',icon:UserRound,tone:'orange'},
   {label:'School insights',href:'/school',icon:School,tone:'blue'},
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
-  teacher:['Overview','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Textbook library'],
-  parent:['Overview','Family view','Textbook library'],
-  school_director:['Overview','School insights','Classes','Attendance'],
-  school_admin:['Overview','School insights','Classes','Attendance'],
+  student:['Overview','Schedule','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
+  teacher:['Overview','Schedule','Lesson room','Topics & 3D','Chemistry lab','Attendance','Teacher workspace','Textbook library'],
+  parent:['Overview','Schedule','Family view','Textbook library'],
+  school_director:['Overview','Schedule','School insights','Classes','Attendance'],
+  school_admin:['Overview','Schedule','School insights','Classes','Attendance'],
   education_admin:['Overview','Administration'],
   ministry_admin:['Overview','Administration'],
   platform_superadmin:['Overview','Administration'],
@@ -262,16 +265,16 @@ const MOBILE_NAV:Record<User['role'],string[]>={
   student:['Overview','Topics & 3D','Trainer','Homework','Chemistry lab'],
   teacher:['Overview','Lesson room','Topics & 3D','Attendance','Teacher workspace'],
   parent:['Overview','Family view','Textbook library'],
-  school_director:['Overview','School insights','Classes','Attendance'],
-  school_admin:['Overview','School insights','Classes','Attendance'],
+  school_director:['Overview','Schedule','School insights','Classes','Attendance'],
+  school_admin:['Overview','Schedule','School insights','Classes','Attendance'],
   education_admin:['Overview','Administration'],
   ministry_admin:['Overview','Administration'],
   platform_superadmin:['Overview','Administration'],
 };
 const NAV_SHORT:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam','My grades':'Baholar',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
-  Русский:{Support:'Чат','My grades':'Оценки',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
-  English:{Support:'Support','My grades':'Grades',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
+  Uzbek:{Schedule:'Jadval',Support:'Yordam','My grades':'Baholar',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
+  Русский:{Schedule:'Расписание',Support:'Чат','My grades':'Оценки',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
+  English:{Schedule:'Timetable',Support:'Support','My grades':'Grades',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
 };
 function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
 function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
@@ -473,7 +476,7 @@ function ClassesPage({school,user,language,onOpen}:{school:SchoolData;user:User;
  </>;
 }
 type TeacherTab='tasks'|'journal'|'class';
-function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;user:User;language:Lang;goBoard:()=>void;onOpen:(path:string)=>void}){
+function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;language:Lang;onOpen:(path:string)=>void}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  const [savedTab,setTab]=useSavedState<TeacherTab>('teacher-tab','tasks');
  const tab:TeacherTab=(['tasks','journal','class'] as TeacherTab[]).includes(savedTab)?savedTab:'tasks';
@@ -485,13 +488,13 @@ function TeacherPage({school,user,language,goBoard,onOpen}:{school:SchoolData;us
  const swipe=useSwipeTabs<TeacherTab>(tabs.map(([key])=>key),tab,setTab);
  const ready=school.status==='ready'&&school.hasServerClasses;
  return <>
-  <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle={text('Everything for the class, step by step.','Всё для класса — по разделам.','Sinf uchun hammasi — bo‘limlarda.')}><button className="btn" onClick={goBoard}><PenTool/> {text('Board','Доска','Doska')}</button></PageHeading>
+  <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle={text('Everything for the class, step by step.','Всё для класса — по разделам.','Sinf uchun hammasi — bo‘limlarda.')}></PageHeading>
   <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {!ready
    ?<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>
    :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
     {tab==='tasks'&&<><WorksheetBuilder school={school} language={language}/><ServerTeachingPanel school={school} language={language}/></>}
-    {tab==='journal'&&<><GradeJournal school={school} language={language}/><LabReports language={language}/></>}
+    {tab==='journal'&&<><ClassJournal school={school} language={language}/><GradeJournal school={school} language={language}/></>}
     {tab==='class'&&<><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/></>}
    </div>}
  </>;
@@ -505,7 +508,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
   {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<TimetableEditor schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
+   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
    :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 

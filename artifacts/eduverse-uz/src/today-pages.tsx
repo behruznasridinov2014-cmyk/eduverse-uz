@@ -8,12 +8,13 @@ import {
   LESSON_TABS, LessonDayHeader, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
   lessonSubjectName, useLessonCourses, useToday, type TodayLesson,
 } from './today';
+import { LoadingBlock } from './ui/loading';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
 
 function Loading() {
-  return <div className="today-skeleton tall" aria-busy="true" />;
+  return <LoadingBlock />;
 }
 
 /** Remembers which lesson the 3D studio should open on. */

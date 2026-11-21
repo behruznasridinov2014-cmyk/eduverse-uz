@@ -14,6 +14,7 @@ import { MoleculeById, ReactionView } from './chem-lab';
 import { Circuit, Pendulum } from './physics-lab';
 import { CollisionLab } from './collision-lab';
 import { MathLab } from './studio-labs';
+import { LoadingBlock } from './ui/loading';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -130,7 +131,7 @@ function SceneView({ scene, language }: { scene: CourseScene; language: Language
   switch (scene.kind) {
     case 'own': {
       const Scene = OWN[scene.scene];
-      return <SceneText language={language}><Suspense fallback={<div className="panel chem-stage scene-loading" />}><Scene key={`${scene.scene}:${scene.mode ?? ''}`} mode={scene.mode} /></Suspense></SceneText>;
+      return <SceneText language={language}><Suspense fallback={<LoadingBlock language={language} kind="3d" />}><Scene key={`${scene.scene}:${scene.mode ?? ''}`} mode={scene.mode} /></Suspense></SceneText>;
     }
     case 'molecule': return <MoleculeById id={scene.id} language={language} />;
     case 'reaction': return <ReactionView a={scene.a} b={scene.b} language={language} />;
@@ -147,9 +148,46 @@ function keyPoints(topic: CourseTopic): string[] {
   return topic.essence.split(/(?<=[.!?])\s+(?=[A-ZА-ЯЁЎҚҒҲ0-9«])/u).map((item) => item.trim()).filter((item) => item.length > 12);
 }
 
-function topicEndPage(book: CourseBook, topic: CourseTopic, start: number): number {
+export function topicEndPage(book: CourseBook, topic: CourseTopic, start: number): number {
   const later = book.topics.map((item) => item.page + book.pdfOffset).filter((page) => page > start).sort((a, b) => a - b)[0];
   return Math.min(book.pdfPages, later ? Math.max(start, later - 1) : start + 3);
+}
+
+const PdfViewerLazy = lazy(() => import('./pdf-viewer').then((m) => ({ default: m.PdfViewer })));
+
+/**
+ * Step 1 of a lesson: the textbook pages of the topic, right on the page (no switching tabs).
+ * The PDF loads only when opened, so the lesson page stays fast on a tablet.
+ */
+export function TopicBookPages({ book, topic, language, step }: { book: CourseBook; topic: CourseTopic; language: Language; step?: number }) {
+  const [open, setOpen] = useState(false);
+  const start = pdfPageOf(book, topic);
+  const label = `${step ? `${step} · ` : ''}${t(language, 'Darslikni oching', 'Откройте учебник', 'Open the textbook')}`;
+  if (!start) {
+    return (
+      <section className="panel course-book" id="step-book">
+        <h3><BookOpen size={17} /> {label}</h3>
+        <p className="muted">{t(language, `Darslik, ${topic.page}-bet. Bu bet hali yuklanmagan — qog‘oz darslikdan oching.`, `Учебник, стр. ${topic.page}. Эта страница ещё не загружена — откройте бумажный учебник.`, `Textbook, p. ${topic.page}. This page is not uploaded yet — use the paper book.`)}</p>
+      </section>
+    );
+  }
+  const end = topicEndPage(book, topic, start);
+  return (
+    <section className="panel course-book" id="step-book">
+      <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <h3><BookOpen size={17} /> {label}</h3>
+        <button type="button" className={`btn ${open ? '' : 'primary'}`} onClick={() => setOpen((value) => !value)}>
+          <BookOpen size={15} /> {open ? t(language, 'Yopish', 'Закрыть', 'Close') : t(language, `${topic.page}-betni ochish`, `Открыть стр. ${topic.page}`, `Open p. ${topic.page}`)}
+        </button>
+      </div>
+      <p className="muted">{t(language, 'Sinf bilan birga o‘qing: rasmlar va asosiy qoidani ko‘rsating.', 'Прочитайте с классом: покажите рисунки и главное правило.', 'Read with the class: show the pictures and the main rule.')}</p>
+      {open && (
+        <Suspense fallback={<LoadingBlock language={language} kind="book" />}>
+          <PdfViewerLazy url={`/books/${book.bookId}.pdf`} title={book.title} language={language} range={{ from: start, to: end }} />
+        </Suspense>
+      )}
+    </section>
+  );
 }
 
 const studiedKey = (userId: string) => `eduverse:studied:${userId}`;
@@ -448,7 +486,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           {isTeacher && course?.canEdit && (
             <section className="panel course-mark">
               <GraduationCap size={18} />
-              <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Dars tugagach, «Darsda o‘tdik» ni bosing.', 'После урока нажмите «Прошли на уроке».', 'After the lesson, press “Covered in class”.')}</span>
+              <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Dars tugashi bilan mavzu o‘zi belgilanadi. Kerak bo‘lsa, qo‘lda belgilang.', 'Когда урок по расписанию заканчивается, тема отмечается сама. При необходимости отметьте вручную.', 'When the lesson ends, the topic is marked by itself. Mark it by hand if needed.')}</span>
               {!lesson && <input className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
               {marks.has(topic.key)
                 ? <button type="button" className="btn small" disabled={busy} onClick={() => void mark(topic, false)}>{t(language, 'Belgini olib tashlash', 'Снять отметку', 'Remove mark')}</button>
@@ -460,9 +498,11 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           {lesson && (
             <nav className="lesson-steps" aria-label={t(language, 'Dars bosqichlari', 'Шаги урока', 'Lesson steps')}>
               {[
-                ['step-topic', t(language, 'Mavzu', 'Тема', 'Topic')],
-                ['step-check', t(language, 'Test', 'Тест', 'Test')],
+                ['step-book', t(language, 'Kitob', 'Книга', 'Book')],
+                ['step-topic', t(language, 'Tushuntirish', 'Объяснение', 'Explain')],
                 ['step-3d', '3D'],
+                ['step-check', t(language, 'Tekshiruv', 'Проверка', 'Check')],
+                ['step-homework', t(language, 'Uyga', 'Домашка', 'Homework')],
               ].map(([id, label], index) => (
                 <a key={id} href={`#${id}`} onClick={(event) => { event.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
                   <b>{index + 1}</b> {label}
@@ -471,8 +511,10 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
             </nav>
           )}
 
+          {lesson && <TopicBookPages book={book} topic={topic} language={language} step={1} />}
+
           <section className="panel course-essence" id="step-topic">
-            <h3><Lightbulb size={17} /> {lesson ? `1 · ${t(language, 'Mavzu: esda qoldiring', 'Тема: запомните', 'The topic: remember')}` : t(language, 'Mohiyati', 'Суть темы', 'The essence')}</h3>
+            <h3><Lightbulb size={17} /> {lesson ? `2 · ${t(language, 'Tushuntiring: asosiysi', 'Объясните: главное', 'Explain: the key points')}` : t(language, 'Mohiyati', 'Суть темы', 'The essence')}</h3>
             {topic.hook && <p className="course-hook">{topic.hook}</p>}
             {lesson && keyPoints(topic).length > 1
               ? <ol className="course-points">{keyPoints(topic).map((point, index) => <li key={index}>{point}</li>)}</ol>
@@ -481,8 +523,28 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           </section>
 
 
+          <section className={`course-3d ${lesson ? 'with-facts' : ''}`} id="step-3d">
+            <div className="course-3d-head">
+              <h3><Box size={17} /> {lesson ? `3 · ${t(language, '3D da ko‘rsating', 'Покажите в 3D', 'Show it in 3D')}` : t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
+              {!lesson && <p className="muted">{topic.sceneHint}</p>}
+            </div>
+            <div className="course-3d-body">
+              <CourseScene3D scene={topic.scene} language={language} />
+              {lesson && (
+                <aside className="panel course-facts">
+                  <b><Lightbulb size={15} /> {t(language, 'Nimani ko‘ramiz', 'Что на модели', 'What the model shows')}</b>
+                  <p>{topic.sceneHint}</p>
+                  {topic.facts.length > 0 && <>
+                    <b><Sparkles size={15} /> {t(language, 'Qiziqarli faktlar', 'Интересные факты', 'Fun facts')}</b>
+                    <ul>{topic.facts.map((fact, index) => <li key={index}>{fact}</li>)}</ul>
+                  </>}
+                </aside>
+              )}
+            </div>
+          </section>
+
           <section className="panel course-check" id="step-check">
-            <h3><NotebookPen size={17} /> {lesson ? `2 · ${t(language, 'O‘zingizni tekshiring', 'Проверьте себя', 'Check yourself')}` : t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
+            <h3><NotebookPen size={17} /> {lesson ? `4 · ${t(language, 'Tekshiruv: esda qoldimi?', 'Проверка: запомнили?', 'Check: did it stick?')}` : t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
             {lesson && <p className="muted">{t(language, 'Avval o‘zingiz javob bering, keyin javobni oching va belgilang.', 'Сначала ответьте сами, потом откройте ответ и отметьте, верно ли.', 'Answer first, then open the answer and mark it.')}</p>}
             <ol className="course-tasks">
               {topic.tasks.map((task, index) => (
@@ -519,30 +581,15 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
             })()}
           </section>
 
-          <section className={`course-3d ${lesson ? 'with-facts' : ''}`} id="step-3d">
-            <div className="course-3d-head">
-              <h3><Box size={17} /> {lesson ? `3 · ${t(language, '3D da ko‘ring', 'Посмотрите в 3D', 'See it in 3D')}` : t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
-              {!lesson && <p className="muted">{topic.sceneHint}</p>}
-            </div>
-            <div className="course-3d-body">
-              <CourseScene3D scene={topic.scene} language={language} />
-              {lesson && (
-                <aside className="panel course-facts">
-                  <b><Lightbulb size={15} /> {t(language, 'Nimani ko‘ramiz', 'Что на модели', 'What the model shows')}</b>
-                  <p>{topic.sceneHint}</p>
-                  {topic.facts.length > 0 && <>
-                    <b><Sparkles size={15} /> {t(language, 'Qiziqarli faktlar', 'Интересные факты', 'Fun facts')}</b>
-                    <ul>{topic.facts.map((fact, index) => <li key={index}>{fact}</li>)}</ul>
-                  </>}
-                </aside>
-              )}
-            </div>
-          </section>
 
           {lesson ? (
-            <p className="muted course-homework-later"><NotebookPen size={14} /> {isTeacher
-              ? t(language, 'Uy vazifasini dars tugagach «Vazifalar» bo‘limida bering.', 'Домашнее задание дайте после урока — в разделе «Задания».', 'Give homework after the lesson, in “Homework”.')
-              : t(language, 'Uy vazifasi dars tugagach «Vazifalar» bo‘limida chiqadi.', 'Домашнее задание появится после урока — во вкладке «Задания».', 'Homework appears after the lesson, in “Homework”.')}</p>
+            <section className="panel course-homework" id="step-homework">
+              <h3><NotebookPen size={17} /> 5 · {t(language, 'Uy vazifasi — darslikdan', 'Домашнее задание — из учебника', 'Homework — from the textbook')}</h3>
+              <p>{topic.homework}</p>
+              <p className="muted">{isTeacher
+                ? t(language, 'Dars tugashi bilan bu vazifa sinfga o‘zi yuboriladi. Siz hech narsa yozmaysiz — faqat tekshirasiz.', 'Как только урок закончится, это задание само уйдёт классу. Писать ничего не нужно — только проверить.', 'When the lesson ends, this homework is sent to the class by itself. You only check it.')
+                : t(language, 'Dars tugagach bu vazifa «Vazifalar»da chiqadi.', 'После урока это задание появится во вкладке «Задания».', 'After the lesson it appears in “Homework”.')}</p>
+            </section>
           ) : (
             <section className="panel course-homework">
               <h3>{t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h3>

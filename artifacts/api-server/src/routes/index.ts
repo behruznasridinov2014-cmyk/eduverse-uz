@@ -10,6 +10,7 @@ import accountRouter from "./account";
 import requestsRouter from "./requests";
 import demoRouter from "./demo";
 import timetableRouter from "./timetable";
+import journalRouter from "./journal";
 import { ensureSchema } from "../lib/schema-sync";
 import { logger } from "../lib/logger";
 
@@ -31,6 +32,7 @@ router.use(accountRouter);
 router.use(requestsRouter);
 router.use(demoRouter);
 router.use(timetableRouter);
+router.use(journalRouter);
 router.use(authRouter);
 router.use(learningRouter);
 router.use(lessonRoomsRouter);

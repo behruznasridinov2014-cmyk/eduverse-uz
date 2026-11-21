@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { Select } from './ui/select';
 import { FlaskConical, Minus, Plus, RotateCcw, Sparkles, Atom } from 'lucide-react';
 import type { User } from '@workspace/api-client-react';
@@ -6,6 +6,8 @@ import { PhysicsLab } from './physics-lab';
 import { MathLab, WebModelsLab } from './studio-labs';
 import type { Language } from './school-data';
 import { StudioGallery } from './course';
+import { LoadingBlock } from './ui/loading';
+const StudioBookTopics = lazy(() => import('./studio-book'));
 
 /**
  * 3D chemistry lab.
@@ -312,9 +314,10 @@ function shade(hex: string): string {
 
 export function ChemLabPage({ language, user }: { language: Language; user: User }) {
   const tx = (text: Txt) => text[language];
-  type Subject = 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
-  const [subject, setSubject] = useState<Subject>('chem');
+  type Subject = 'book' | 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
+  const [subject, setSubject] = useState<Subject>(user.role === 'teacher' ? 'book' : 'chem');
   const SUBJECTS: Array<[Subject, Txt, string]> = [
+    ['book', L('Darslik mavzulari', 'Темы учебников', 'Textbook topics'), '📖'],
     ['chem', L('Kimyo', 'Химия', 'Chemistry'), '⚗'],
     ['phys', L('Fizika', 'Физика', 'Physics'), '⚛'],
     ['math', L('Matematika', 'Математика', 'Maths'), '△'],
@@ -376,8 +379,8 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         </div>}
       </div>
 
-      {subject !== 'any' && (subject !== 'chem' || mode === 'build') && <StudioGallery key={subject} subject={subject} language={language} />}
-      {subject === 'phys' ? <PhysicsLab language={language} user={user} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
+      {subject !== 'any' && subject !== 'book' && (subject !== 'chem' || mode === 'build') && <StudioGallery key={subject} subject={subject} language={language} />}
+      {subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense> : subject === 'phys' ? <PhysicsLab language={language} user={user} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
             <MoleculeView molecule={shown} />
