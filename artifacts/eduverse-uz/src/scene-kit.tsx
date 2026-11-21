@@ -14,6 +14,8 @@ const REST = { x: 14, y: -16 };
 export function Stage3D({ children, height = 320, className = '', rest = REST }: { children: ReactNode; height?: number; className?: string; rest?: { x: number; y: number } }) {
   const [angle, setAngle] = useState(rest);
   const [dragging, setDragging] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [spin, setSpin] = useState(false);
   const start = useRef<{ px: number; py: number; ax: number; ay: number; id: number } | null>(null);
   const onDown = (event: React.PointerEvent<HTMLDivElement>) => {
     const target = event.target as Element;
@@ -21,37 +23,65 @@ export function Stage3D({ children, height = 320, className = '', rest = REST }:
     start.current = { px: event.clientX, py: event.clientY, ax: angle.x, ay: angle.y, id: event.pointerId };
     try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* released */ }
     setDragging(true);
+    setSpin(false);
   };
   const onMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const s = start.current;
     if (!s || s.id !== event.pointerId) return;
     setAngle({
       x: Math.max(-10, Math.min(55, s.ax - (event.clientY - s.py) * 0.35)),
-      y: Math.max(-60, Math.min(60, s.ay + (event.clientX - s.px) * 0.35)),
+      y: s.ay + (event.clientX - s.px) * 0.35,
     });
   };
   const onUp = () => { start.current = null; setDragging(false); };
-  // spring back to the resting view after a while, so the scene never stays skewed
+  // Pinch on a trackpad (ctrl + wheel) zooms; a plain wheel keeps scrolling the page.
+  const onWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    setZoom((value) => Math.max(0.6, Math.min(2.2, value - event.deltaY * 0.01)));
+  };
+  // Slow turn around the vertical axis, like a model on a turntable.
   useEffect(() => {
-    if (dragging) return;
-    const timer = window.setTimeout(() => setAngle(rest), 2600);
+    if (!spin) return;
+    let frame = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      setAngle((current) => ({ x: current.x, y: current.y + dt * 24 }));
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  }, [spin]);
+  // Spring back to the resting view after a while, so the scene never stays skewed.
+  useEffect(() => {
+    if (dragging || spin) return;
+    const timer = window.setTimeout(() => setAngle((current) => ({ x: rest.x, y: rest.y + Math.round((current.y - rest.y) / 360) * 360 })), 4000);
     return () => window.clearTimeout(timer);
-  }, [dragging, angle, rest]);
+  }, [dragging, spin, angle, rest]);
+  const reset = () => { setSpin(false); setZoom(1); setAngle(rest); };
   return (
     <div
-      className={`stage3d ${dragging ? 'is-dragging' : ''} ${className}`}
+      className={`stage3d ${dragging || spin ? 'is-dragging' : ''} ${className}`}
       style={{ height }}
       onPointerDown={onDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
-      onDoubleClick={() => setAngle(rest)}
+      onWheel={onWheel}
+      onDoubleClick={reset}
     >
-      <div className="stage3d-world" style={{ transform: `rotateX(${angle.x}deg) rotateY(${angle.y}deg)` }}>
+      <div className="stage3d-world" style={{ transform: `scale(${zoom}) rotateX(${angle.x}deg) rotateY(${angle.y}deg)` }}>
         <div className="stage3d-floor" />
         {children}
       </div>
-      <span className="stage3d-hint">↻</span>
+      <div className="stage3d-tools" data-interactive>
+        <button type="button" className={spin ? 'on' : ''} onClick={() => setSpin((value) => !value)} aria-label="Auto rotate" title="↻">↻</button>
+        <button type="button" onClick={() => setZoom((value) => Math.max(0.6, Math.round((value - 0.2) * 10) / 10))} aria-label="Zoom out" title="−">−</button>
+        <button type="button" onClick={() => setZoom((value) => Math.min(2.2, Math.round((value + 0.2) * 10) / 10))} aria-label="Zoom in" title="+">+</button>
+        <button type="button" onClick={reset} aria-label="Reset" title="⟲">⟲</button>
+      </div>
     </div>
   );
 }

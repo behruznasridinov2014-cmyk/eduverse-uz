@@ -5,7 +5,9 @@ import type { User } from '@workspace/api-client-react';
 import { PhysicsLab } from './physics-lab';
 import { MathLab, WebModelsLab } from './studio-labs';
 import type { Language } from './school-data';
-import { StudioGallery } from './course';
+import { CourseScene3D, GALLERY } from './course';
+import { Circuit, Pendulum } from './physics-lab';
+import { CollisionLab } from './collision-lab';
 import { LoadingBlock } from './ui/loading';
 const StudioBookTopics = lazy(() => import('./studio-book'));
 
@@ -315,17 +317,19 @@ function shade(hex: string): string {
 export function ChemLabPage({ language, user }: { language: Language; user: User }) {
   const tx = (text: Txt) => text[language];
   type Subject = 'book' | 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
-  const [subject, setSubject] = useState<Subject>(user.role === 'teacher' ? 'book' : 'chem');
+  const [subject, setSubject] = useState<Subject>('chem');
   const SUBJECTS: Array<[Subject, Txt, string]> = [
-    ['book', L('Darslik mavzulari', 'Темы учебников', 'Textbook topics'), '📖'],
     ['chem', L('Kimyo', 'Химия', 'Chemistry'), '⚗'],
     ['phys', L('Fizika', 'Физика', 'Physics'), '⚛'],
     ['math', L('Matematika', 'Математика', 'Maths'), '△'],
     ['bio', L('Biologiya', 'Биология', 'Biology'), '❦'],
     ['geo', L('Geografiya', 'География', 'Geography'), '◍'],
     ['any', L('Istalgan mavzu', 'Любая тема', 'Any topic'), '✦'],
+    ['book', L('Darslik mavzulari', 'Темы учебников', 'Textbook topics'), '📖'],
   ];
   const [mode, setMode] = useState<'build' | 'react'>('build');
+  const [pick, setPick] = useState<string | null>(null);
+  useEffect(() => setPick(null), [subject]);
   const [counts, setCounts] = useState<Record<string, number>>({ H: 2, O: 1 });
   const [selected, setSelected] = useState<Molecule>(MOLECULES.find((m) => m.id === 'h2o')!);
   const [mixA, setMixA] = useState('h2');
@@ -373,14 +377,29 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
             'Химия, физика, математика, биология, география — крутите, меняйте и проверяйте всё в 3D.',
             'Chemistry, physics, maths, biology, geography — rotate, change and test everything in 3D.'))}</p>
         </div>
-        {subject === 'chem' && <div className="row chem-tabs">
-          <button type="button" className={`btn ${mode === 'build' ? 'primary' : ''}`} onClick={() => setMode('build')}><Atom /> {tx(L('Molekula yig‘ish', 'Собрать молекулу', 'Build a molecule'))}</button>
-          <button type="button" className={`btn ${mode === 'react' ? 'primary' : ''}`} onClick={() => setMode('react')}><FlaskConical /> {tx(L('Reaksiya', 'Реакция', 'Reaction'))}</button>
-        </div>}
       </div>
 
-      {subject !== 'any' && subject !== 'book' && (subject !== 'chem' || mode === 'build') && <StudioGallery key={subject} subject={subject} language={language} />}
-      {subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense> : subject === 'phys' ? <PhysicsLab language={language} user={user} /> : subject === 'math' ? <MathLab language={language} /> : subject === 'bio' || subject === 'geo' || subject === 'any' ? <WebModelsLab language={language} group={subject} /> : mode === 'build' ? (
+      {subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense>
+      : subject === 'any' ? <WebModelsLab language={language} group="any" />
+      : !pick ? (
+        <div className="studio-chooser">
+          {studioItems(subject).map((item) => (
+            <button type="button" key={item.id} className="studio-card" onClick={() => { setPick(item.id); if (item.id === 'build' || item.id === 'react') setMode(item.id); }}>
+              <span className="studio-card-icon">{item.icon}</span>
+              <b>{tx(item.label)}</b>
+              <small className="muted">{tx(item.hint)}</small>
+            </button>
+          ))}
+        </div>
+      ) : <>
+        <button type="button" className="btn small studio-back" onClick={() => setPick(null)}>← {tx(L('Barcha modellar', 'Ко всем моделям', 'All models'))}</button>
+        {pick.startsWith('g:') ? (() => { const item = GALLERY[subject as keyof typeof GALLERY]?.[Number(pick.slice(2))]; return item ? <><div className="studio-title">{tx(L(...item[2]))}</div><CourseScene3D key={pick} scene={{ kind: 'own', scene: item[0], mode: item[1] }} language={language} /></> : null; })()
+        : pick === 'pendulum' ? <Pendulum language={language} />
+        : pick === 'circuit' ? <Circuit language={language} />
+        : pick === 'collision' ? <CollisionLab language={language} />
+        : pick === 'solids' ? <MathLab language={language} />
+        : pick === 'web' ? <WebModelsLab language={language} group={subject === 'geo' ? 'geo' : 'bio'} />
+        : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
             <MoleculeView molecule={shown} />
@@ -488,6 +507,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
           </div>
         </div>
       )}
+      </>}
 
     </section>
   );
@@ -559,4 +579,28 @@ export function ReactionView({ a, b, language }: { a: string; b: string; languag
       )}
     </div>
   );
+}
+
+
+type StudioItem = { id: string; label: Txt; hint: Txt; icon: string };
+/** What can be opened in a subject of the 3D studio: our own models first, then the labs. */
+function studioItems(subject: string): StudioItem[] {
+  const own = (GALLERY[subject as keyof typeof GALLERY] ?? []).map((item, index): StudioItem => ({
+    id: `g:${index}`, label: L(...item[2]), hint: L('3D model: aylantiring va o‘zgartiring', '3D-модель: крутите и меняйте', '3D model: turn and change it'), icon: '◈',
+  }));
+  const labs: Record<string, StudioItem[]> = {
+    chem: [
+      { id: 'build', label: L('Molekula yig‘ish', 'Собрать молекулу', 'Build a molecule'), hint: L('Atomlardan modda yasang', 'Соберите вещество из атомов', 'Make a substance from atoms'), icon: '⚛' },
+      { id: 'react', label: L('Reaksiya', 'Реакция', 'Reaction'), hint: L('Ikki moddani aralashtiring', 'Смешайте два вещества', 'Mix two substances'), icon: '⚗' },
+    ],
+    phys: [
+      { id: 'collision', label: L('Mashinalar to‘qnashuvi', 'Столкновение машин', 'Car crash'), hint: L('Massa, tezlik, impuls', 'Масса, скорость, импульс', 'Mass, speed, momentum'), icon: '🚗' },
+      { id: 'pendulum', label: L('Mayatnik', 'Маятник', 'Pendulum'), hint: L('Davr va energiya', 'Период и энергия', 'Period and energy'), icon: '⏱' },
+      { id: 'circuit', label: L('Elektr zanjiri', 'Электрическая цепь', 'Electric circuit'), hint: L('Om qonuni', 'Закон Ома', 'Ohm’s law'), icon: '⚡' },
+    ],
+    math: [{ id: 'solids', label: L('Geometrik jismlar', 'Геометрические тела', 'Solids'), hint: L('Kub, prizma, silindr…', 'Куб, призма, цилиндр…', 'Cube, prism, cylinder…'), icon: '⬢' }],
+    bio: [{ id: 'web', label: L('Tayyor 3D modellar', 'Готовые 3D-модели', 'Ready 3D models'), hint: L('Yurak, skelet va boshqalar', 'Сердце, скелет и другие', 'Heart, skeleton and more'), icon: '🔎' }],
+    geo: [{ id: 'web', label: L('Tayyor 3D modellar', 'Готовые 3D-модели', 'Ready 3D models'), hint: L('Yer, vulqon va boshqalar', 'Земля, вулкан и другие', 'Earth, volcano and more'), icon: '🔎' }],
+  };
+  return [...own, ...(labs[subject] ?? [])];
 }

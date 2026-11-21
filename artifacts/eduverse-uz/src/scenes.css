@@ -104,3 +104,23 @@ html[data-theme="night"] .units-board b, html[data-theme="night"] .classify-pair
 html[data-theme="night"] .course-hook { color: var(--accent-night, #D7A968) !important; }
 @media (prefers-reduced-motion: reduce) { .stage3d-world, .area-grid i, .hazard-card { transition: none !important; animation: none !important; } }
 .scene-text{display:contents}
+
+/* ---- Full screen: the stage grows instead of zooming the page (clicks and dragging stay exact) ---- */
+.scene-shell.scene-full { padding: 60px 18px 18px; }
+.scene-full .scene-shell-body { width: min(1700px, 100%); }
+.scene-full .chem-grid { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); align-items: start; }
+.scene-full .chem-grid > .stack { max-height: calc(100vh - 90px); overflow: auto; }
+.scene-full .stage3d { height: calc(100vh - 110px) !important; }
+.scene-full .stage3d-world { scale: var(--full-scale, 1.4); }
+.scene-full .chem-canvas, .scene-full .scene-canvas { height: calc(100vh - 140px) !important; }
+.scene-full .chem-stage { min-height: calc(100vh - 110px); }
+.scene-full .panel { color: var(--text); }
+@media (max-width: 860px) { .scene-full .chem-grid { grid-template-columns: 1fr; } .scene-full .stage3d { height: 62vh !important; } .scene-full .chem-grid > .stack { max-height: none; } }
+
+/* ---- Stage tools: turn, zoom, reset ---- */
+.stage3d-hint { display: none; }
+.stage3d-tools { position: absolute; left: 10px; bottom: 10px; z-index: 6; display: flex; gap: 6px; }
+.stage3d-tools button { width: 38px; height: 38px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.5); background: rgba(16, 34, 58, 0.55); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: transform .15s ease, background .2s ease; }
+.stage3d-tools button:hover { background: rgba(16, 34, 58, 0.75); }
+.stage3d-tools button:active { transform: scale(.92); }
+.stage3d-tools button.on { background: var(--ev-primary, #b8955a); border-color: transparent; }

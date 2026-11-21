@@ -65,7 +65,8 @@ export function ProfileSections({ user, language, initialTab }: { user: User; la
     ...(teaches ? [['stats', tx(language, 'Statistika', 'Статистика', 'Stats'), <BookOpenCheck key="t" size={19} />]] : []),
     ['help', tx(language, 'Yordam', 'Помощь', 'Help'), <LifeBuoy key="h" size={19} />],
   ] as Array<[Section, string, ReactNode]>), [language, teaches]);
-  const [tab, setTab] = useState<Section>(() => (new URLSearchParams(window.location.search).get('tab') as Section) || initialTab || 'personal');
+  // Back from Google (?google=linked) → open the section where Google is shown.
+  const [tab, setTab] = useState<Section>(() => { const query = new URLSearchParams(window.location.search); return (query.get('tab') as Section) || (query.get('google') ? 'security' : undefined) || initialTab || 'personal'; });
   const swipe = useSwipeTabs<Section>(sections.map(([key]) => key), tab, setTab);
   return (
     <>

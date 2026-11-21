@@ -53,6 +53,11 @@ export function GoogleLinkPanel({ language }: { language: AppLanguage }) {
   const [status, reload] = useGoogleStatus();
   const [busy, setBusy] = useState(false);
   const reason = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('google');
+  useEffect(() => {
+    if (!reason) return;
+    const timer = window.setTimeout(() => { try { window.history.replaceState(null, '', window.location.pathname); } catch { /* old browser */ } }, 4000);
+    return () => window.clearTimeout(timer);
+  }, [reason]);
   if (!status?.enabled) return null;
   async function unlink() {
     const password = window.prompt(t(language, 'Uzish uchun joriy parolni kiriting:', 'Чтобы отвязать Google, введите текущий пароль:', 'Enter your current password to unlink Google:'));
@@ -75,11 +80,11 @@ export function GoogleLinkPanel({ language }: { language: AppLanguage }) {
         'Привяжите свой Google-аккаунт: вход одной кнопкой, а если аккаунт украдут — вернёте его через Google, и все чужие устройства отключатся. Пароль от Google EDUVERSE не видит.',
         'Link your Google account and sign in with one button. EDUVERSE never sees your Google password.')}</p>
       {reason === 'recovered' && <div className="notice success">{t(language, 'Hisob qaytarildi: barcha qurilmalardan chiqildi. Endi yangi parol qo‘ying.', 'Аккаунт возвращён: все устройства отключены. Теперь поставьте новый пароль.', 'Account recovered: all devices signed out. Now set a new password.')}</div>}
-      {reason === 'linked' && <div className="notice success">{t(language, 'Google bog‘landi.', 'Google-аккаунт привязан.', 'Google linked.')}</div>}
+      {reason === 'linked' && status.linkedEmail && <div className="notice success">✓ {t(language, 'Google bog‘landi. Endi Google tugmasi bilan kirishingiz mumkin.', 'Google-аккаунт привязан. Теперь можно входить кнопкой Google.', 'Google linked. You can now sign in with Google.')}</div>}
       {reason === 'taken' && <div className="notice">{t(language, 'Bu Google boshqa hisobga bog‘langan.', 'Этот Google-аккаунт уже привязан к другому пользователю.', 'This Google account is linked to someone else.')}</div>}
       {status.linkedEmail ? (
         <div className="row" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span className="tag green">{status.linkedEmail}</span>
+          <span className="tag green">✓ {t(language, 'Ulangan', 'Подключено', 'Connected')}: {status.linkedEmail}</span>
           <button type="button" className="btn small" disabled={busy} onClick={() => void unlink()}>{t(language, 'Uzish', 'Отвязать', 'Unlink')}</button>
         </div>
       ) : (

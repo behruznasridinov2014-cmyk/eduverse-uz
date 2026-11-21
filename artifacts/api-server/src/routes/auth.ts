@@ -1687,6 +1687,8 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
     const [taken] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
     if (taken && taken.id !== viewer.id) { res.redirect(302, "/profile?google=taken"); return; }
     await db.update(usersTable).set({ googleSub: claims.sub, googleEmail: claims.email ?? null, updatedAt: new Date() }).where(eq(usersTable.id, viewer.id));
+    // The profile e-mail is filled from Google when it is still empty.
+    if (claims.email) await db.update(usersTable).set({ email: claims.email }).where(and(eq(usersTable.id, viewer.id), isNull(usersTable.email)));
     res.redirect(302, "/profile?google=linked");
     return;
   }

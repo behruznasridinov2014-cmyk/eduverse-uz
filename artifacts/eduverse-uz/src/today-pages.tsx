@@ -5,7 +5,7 @@ import type { Language, SchoolData } from './school-data';
 import { CoursePage, CourseScene3D } from './course';
 import { AttendancePage } from './attendance-page';
 import {
-  LESSON_TABS, LessonDayHeader, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
+  LESSON_TABS, LessonDayHeader, nextBookLesson, openLessonPreview, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
   lessonSubjectName, useLessonCourses, useToday, type TodayLesson,
 } from './today';
 import { LoadingBlock } from './ui/loading';
@@ -56,6 +56,7 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
             : t(language, 'Bugungi darslar tugadi', 'На сегодня уроки закончились', 'Today’s lessons are over')}</h2>
           <p>{t(language, 'Mavzu dars kuni, dars vaqtida ochiladi. Quyida keyingi darslar rejasi.', 'Тема открывается в день урока, во время урока. Ниже план следующих уроков.', 'A topic opens on the lesson day, during the lesson. Below is the plan of the next lessons.')}</p>
         </div>
+        {data && nextBookLesson(data) && <div className="lesson-day-actions" style={{ justifyContent: 'center' }}><button type="button" className="btn primary" onClick={() => openLessonPreview(nextBookLesson(data)!, onOpen)}><CalendarCheck2 size={15} /> {t(language, 'Dars qanday ko‘rinishini ko‘rish', 'Посмотреть, как будет выглядеть урок', 'See how the lesson will look')}</button></div>}
         {data && <UpcomingDays data={data} courses={courses} language={language} />}
       </section>
     );
@@ -194,5 +195,38 @@ export function LabPage({ user, language, children }: { user: User; language: La
         `During lessons only the 3D of the lesson topic is open. The free 3D studio opens after lessons, at ${end}.`)}</span></div>
       <LabTodayScene language={language} locked />
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Preview of a lesson that is not going on now                        */
+/* ------------------------------------------------------------------ */
+
+export function LessonPreviewPage({ user, school, language, onOpen }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
+  const [lesson] = useState<TodayLesson | null>(() => { try { const raw = sessionStorage.getItem('eduverse:preview-lesson'); return raw ? JSON.parse(raw) as TodayLesson : null; } catch { return null; } });
+  if (!lesson) {
+    return (
+      <div className="empty-state">
+        <h2>{t(language, 'Dars tanlanmagan', 'Урок не выбран', 'No lesson chosen')}</h2>
+        <button type="button" className="btn primary" onClick={() => onOpen('/schedule')}><ArrowLeft size={15} /> {t(language, 'Jadvalga', 'К расписанию', 'To the timetable')}</button>
+      </div>
+    );
+  }
+  const date = lesson.startsAt.slice(0, 10);
+  return (
+    <section className="lesson-day lesson-preview">
+      <button type="button" className="btn small lesson-day-back" onClick={() => onOpen('/schedule')}><ArrowLeft size={14} /> {t(language, 'Jadval', 'Расписание', 'Timetable')}</button>
+      <div className="notice lesson-preview-note"><CalendarCheck2 size={16} /><span>{t(language,
+        `Oldindan ko‘rish: ${date.split('-').reverse().join('.')} ${lesson.start} dagi dars shunday ko‘rinadi. Davomat va uy vazifasi dars vaqtida ishlaydi.`,
+        `Предпросмотр: так будет выглядеть урок ${date.split('-').reverse().join('.')} в ${lesson.start}. Давомат и домашка заработают во время урока.`,
+        `Preview: this is how the lesson on ${date} at ${lesson.start} will look. Attendance and homework work during the lesson.`)}</span></div>
+      <header className="lesson-day-head is-upcoming">
+        <div>
+          <span className="eyebrow">{t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)} · {lesson.start}–{lesson.end}{lesson.room ? ` · ${t(language, 'xona', 'каб.', 'room')} ${lesson.room}` : ''}</span>
+          <h1>{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)} · {lessonSubjectName(lesson.subject, language)}</h1>
+        </div>
+      </header>
+      <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} />
+    </section>
   );
 }

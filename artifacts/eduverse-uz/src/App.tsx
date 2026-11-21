@@ -31,7 +31,7 @@ import { SchedulePage } from './schedule';
 import { UpdateBanner } from './update-check';
 import { TodayLessons } from './today';
 import { TimetableEditor } from './timetable-editor';
-import { LabPage, LessonDayPage, TodayCoursePage } from './today-pages';
+import { LabPage, LessonDayPage, LessonPreviewPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell } from './account';
@@ -147,13 +147,14 @@ function App(){
     '/grades':['student'],
     '/trainer':['student','teacher'],
     '/lesson':['student','teacher'],
+    '/preview':['student','teacher'],
     '/schedule':['student','teacher','parent','school_director','school_admin'],
     '/support':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
   };
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
   const forbidden=Boolean(protectedRoute&&auth.user&&!protectedRoute[1].includes(auth.user.role));
   const current=visible.find(item=>active(item.href));
-  const pageTitle=location==='/profile'?authCopy(lang).profile:location.startsWith('/today/')?(lang==='Русский'?'Урок':lang==='English'?'Lesson':'Dars'):location==='/trainer'&&!current?(lang==='Русский'?'Тренажёр дня':lang==='English'?'Daily trainer':'Kunlik trenajyor'):book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
+  const pageTitle=location==='/profile'?authCopy(lang).profile:(location.startsWith('/today/')||location==='/preview')?(lang==='Русский'?'Урок':lang==='English'?'Lesson':'Dars'):location==='/trainer'&&!current?(lang==='Русский'?'Тренажёр дня':lang==='English'?'Daily trainer':'Kunlik trenajyor'):book?book.title:current?navLabel(lang,current.label):'EDUVERSE';
   const membership=school.memberships[0];
   const notice=auth.accountNotice;
   return <div className={`app-shell ${mobileOpen ? 'sidebar-open' : ''}`} data-lang-changing={langChanging?'':undefined}>
@@ -209,6 +210,7 @@ function App(){
         :location==='/parent'&&auth.user?<ParentPage language={lang}/>
         :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
+        :location==='/preview'&&auth.user?<LessonPreviewPage user={auth.user} school={school} language={lang} onOpen={navigate}/>
         :location==='/schedule'&&auth.user?<SchedulePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
         :location==='/homework/scan'?<Redirect to="/classes"/>
         :location==='/library'?<LibraryPage ui={lang} progress={progress} saved={saved} onOpen={id=>{try{localStorage.removeItem(`eduverse:pdf-range:/books/${id}.pdf`)}catch{/* private mode */}navigate('/read/'+id)}}/>

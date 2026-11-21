@@ -267,6 +267,11 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
           })}
         </div>
       )}
+      {(lessons.length === 0 || finished) && (role === 'teacher' || isStudent) && nextBookLesson(data) && (
+        <button type="button" className="btn today-preview-btn" onClick={() => openLessonPreview(nextBookLesson(data)!, onOpen)}>
+          <Sparkles size={15} /> {t(language, 'Dars qanday ko‘rinishini ko‘rish', 'Посмотреть, как будет выглядеть урок', 'See how a lesson will look')}
+        </button>
+      )}
       {(lessons.length === 0 || finished) && <UpcomingDays data={data} language={language} showClass={!(isStudent || isFamily)} />}
     </section>
   );
@@ -432,3 +437,19 @@ export function useLessonPlanTopics(language: Language): Array<{ label: string; 
     return any ? groups : null;
   }, [data, courses, language]);
 }
+
+/* ---- Lesson preview (the page itself is in today-pages.tsx) ---- */
+const PREVIEW_KEY = 'eduverse:preview-lesson';
+
+/** Opens a lesson of another day (or a finished one) as a preview: how the lesson page will look. */
+export function openLessonPreview(lesson: TodayLesson, onOpen: (path: string) => void) {
+  try { sessionStorage.setItem(PREVIEW_KEY, JSON.stringify(lesson)); } catch { /* private mode */ }
+  onOpen('/preview');
+}
+
+/** The first textbook lesson of the coming days, for "see how a lesson looks". */
+export function nextBookLesson(data: { next?: Array<{ lessons: TodayLesson[] }>; lessons: TodayLesson[] } | null | undefined): TodayLesson | undefined {
+  if (!data) return undefined;
+  return [...(data.next ?? []).flatMap((day) => day.lessons), ...data.lessons].find((lesson) => bookForLesson(lesson));
+}
+

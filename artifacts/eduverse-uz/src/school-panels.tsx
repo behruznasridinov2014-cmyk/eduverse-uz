@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
+import { statusOf, useToday } from './today';
 import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
@@ -233,6 +234,7 @@ export function ServerClassesPanel({
   language: Language;
   onOpen: (path: string) => void;
 }) {
+  const today = useToday();
   const [selectedId, setSelectedId] = useState('');
   const [workspace, setWorkspace] = useState<ClassWorkspace>(EMPTY_WORKSPACE);
   const [revision, setRevision] = useState(0);
@@ -520,7 +522,7 @@ export function ServerClassesPanel({
                 {studentMembers.length === 0 && <li className="muted">{t(language, 'No students yet.', 'Учеников пока нет.', 'Hali o‘quvchi yo‘q.')}</li>}
               </ol>
             )}
-            {user.role === 'teacher' && canManageClass && (
+            {user.role === 'teacher' && canManageClass && (today.data?.lessons ?? []).some((lesson) => lesson.classId === activeClass?.id && statusOf(lesson, today.now) === 'current') && (
               <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/attendance')}>
                 {t(language, 'Mark attendance', 'Отметить давомат', 'Davomatni belgilash')}
                 <ArrowRight size={15} />
@@ -562,6 +564,7 @@ export function ServerTeachingPanel({
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -714,9 +717,10 @@ export function ServerTeachingPanel({
         ...(draft.signature ? { signature: draft.signature } : {}),
       };
       await reviewSubmission(reviewAssignmentId, studentId, payload);
-      setNotice(t(language, 'Review saved.', 'Проверка сохранена.', 'Tekshiruv saqlandi.'));
-      const refreshed = await listSubmissions(reviewAssignmentId);
-      setSubmissions(refreshed.submissions);
+      setSavedIds((current) => [...current.filter((id) => id !== studentId), studentId]);
+      // The list and counters refresh in the background: the button is free at once.
+      void listSubmissions(reviewAssignmentId).then((refreshed) => setSubmissions(refreshed.submissions)).catch(() => {});
+      void school.refresh();
     } catch (requestError) {
       setError(describeSchoolError(requestError));
     } finally {
@@ -829,9 +833,10 @@ export function ServerTeachingPanel({
         </Panel>
         )}
 
-        <Panel>
+        <Panel className="review-queue-panel">
+          <span id="review-queue" />
           <SectionHead
-            title={t(language, 'Review queue', 'Очередь проверки', 'Tekshiruv navbati')}
+            title={t(language, 'Review queue', 'Проверка работ', 'Tekshiruv')}
             detail={
               reviewAssignment
                 ? `${reviewAssignment.title} · ${formatStatus(reviewAssignment.status)}`
@@ -909,8 +914,9 @@ export function ServerTeachingPanel({
                         onClick={() => void saveReview(submission.studentId)}
                       >
                         <CheckCircle2 size={13} />
-                        {t(language, 'Save review', 'Сохранить проверку', 'Tekshiruvni saqlash')}
+                        {reviewBusyId === submission.studentId ? t(language, 'Saving…', 'Сохраняем…', 'Saqlanmoqda…') : t(language, 'Save review', 'Сохранить проверку', 'Tekshiruvni saqlash')}
                       </button>
+                      {savedIds.includes(submission.studentId) && reviewBusyId !== submission.studentId && <span className="review-saved"><CheckCircle2 size={14} /> {t(language, 'Saved. The pupil sees the mark.', 'Сохранено. Ученик видит оценку.', 'Saqlandi. O‘quvchi bahoni ko‘radi.')}</span>}
                     </article>
                   );
                 })}
@@ -931,82 +937,28 @@ export function ServerTeachingPanel({
 
       <Panel style={{ marginTop: 16 }}>
         <SectionHead
-          title={t(language, 'Class assignments', 'Задания класса', 'Sinf topshiriqlari')}
-          detail={activeClass ? `${activeClass.schoolName ?? ''} · ${activeClass.name}` : undefined}
-          tag={<span className="tag green">{classAssignments.length}</span>}
+          title={t(language, 'Work to check', 'Работы на проверку', 'Tekshiriladigan ishlar')}
+          detail={t(language, 'Only the tasks where pupils handed in work and it is not checked yet.', 'Только задания, где ученики сдали работу и она ещё не проверена.', 'Faqat o‘quvchilar ish topshirgan va hali tekshirilmagan vazifalar.')}
         />
-        {classAssignments.length === 0 ? (
-          <div className="callout">
-            {t(language, 'No assignments in this class yet. Use the form above to publish the first one.', 'В этом классе пока нет заданий. Опубликуйте первое через форму выше.', 'Bu sinfda hali topshiriq yo‘q. Yuqoridagi shakl orqali birinchisini joylang.')}
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t(language, 'Assignment', 'Задание', 'Topshiriq')}</th>
-                  <th>{t(language, 'Due', 'Срок', 'Muddat')}</th>
-                  <th>{t(language, 'Status', 'Статус', 'Holat')}</th>
-                  <th>{t(language, 'Submissions', 'Работы', 'Javoblar')}</th>
-                  <th>{t(language, 'Actions', 'Действия', 'Amallar')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classAssignments.map((assignment) => (
-                  <tr key={assignment.id}>
-                    <td>
-                      <b>{assignment.title}</b>
-                      <div className="list-meta">{assignment.subject}</div>
-                    </td>
-                    <td>{formatDue(assignment.dueAt)}</td>
-                    <td>
-                      <Select
-                        className="top-select"
-                        aria-label={`${t(language, 'Status for', 'Статус для', 'Holati')} ${assignment.title}`}
-                        value={assignment.status}
-                        disabled={busyAssignmentId === assignment.id}
-                        onChange={(event) => void changeStatus(assignment, event.target.value)}
-                      >
-                        {ASSIGNMENT_STATUSES.map((status) => (
-                          <option value={status} key={status}>{formatStatus(status)}</option>
-                        ))}
-                      </Select>
-                    </td>
-                    <td>
-                      {assignment.submissionCount ?? 0}
-                      {assignment.reviewCount ? ` · ${assignment.reviewCount} ${t(language, 'reviewed', 'проверено', 'tekshirilgan')}` : ''}
-                    </td>
-                    <td>
-                      <div className="row" style={{ gap: 6 }}>
-                        <button
-                          type="button"
-                          className={`btn small ${reviewAssignmentId === assignment.id ? 'subtle' : ''}`}
-                          onClick={() =>
-                            setReviewAssignmentId((current) =>
-                              current === assignment.id ? null : assignment.id,
-                            )
-                          }
-                        >
-                          <ClipboardCheck size={13} />
-                          {t(language, 'Review', 'Проверить', 'Tekshirish')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn small danger"
-                          aria-label={`${t(language, 'Delete', 'Удалить', 'O‘chirish')} ${assignment.title}`}
-                          disabled={busyAssignmentId === assignment.id}
-                          onClick={() => void removeAssignment(assignment)}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {(() => {
+          const pending = school.assignments
+            .map((item) => ({ item, waiting: Math.max(0, (item.submissionCount ?? 0) - (item.reviewCount ?? 0)), className: school.classes.find((klass) => klass.id === item.classId)?.name ?? '' }))
+            .filter((row) => row.waiting > 0);
+          if (!pending.length) return <div className="callout">{t(language, 'Nothing to check. New work appears here by itself.', 'Проверять нечего. Новые работы появятся здесь сами.', 'Tekshiradigan ish yo‘q. Yangi ishlar shu yerda o‘zi chiqadi.')}</div>;
+          return (
+            <ul className="check-list">
+              {pending.map(({ item, waiting, className }) => (
+                <li key={item.id} className={reviewAssignmentId === item.id ? 'on' : ''}>
+                  <div><b>{item.title}</b><small className="muted">{className} · {item.subject}</small></div>
+                  <span className="tag gold">{t(language, `${waiting} waiting`, `ждут: ${waiting}`, `${waiting} ta kutmoqda`)}</span>
+                  <button type="button" className="btn small primary" onClick={() => { setSelectedClassId(item.classId); setReviewAssignmentId(item.id); window.setTimeout(() => document.getElementById('review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>
+                    <ClipboardCheck size={13} /> {t(language, 'Check', 'Проверить', 'Tekshirish')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
       </Panel>
     </>
   );

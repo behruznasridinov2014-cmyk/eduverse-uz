@@ -52,35 +52,29 @@ const OWN: Record<OwnSceneId, ComponentType<SceneProps>> = {
  */
 function SceneShell({ language, children }: { language: Language; children: ReactNode }) {
   const shell = useRef<HTMLDivElement | null>(null);
-  const body = useRef<HTMLDivElement | null>(null);
   // "native": the browser's real full screen; "overlay": the scene covers the window
   // (iPhone Safari and embedded views cannot put one block full screen).
+  // In full screen the stage itself grows (no page zoom), so dragging and clicks stay exact.
   const [mode, setMode] = useState<'off' | 'native' | 'overlay'>('off');
-  const [zoom, setZoom] = useState(1);
-  const fit = useCallback(() => {
-    if (!body.current) return;
-    const box = body.current.getBoundingClientRect();
-    const width = box.width / (zoom || 1);
-    const height = box.height / (zoom || 1);
-    setZoom(Math.max(1, Math.min(2.6, Math.min((window.innerWidth - 40) / Math.max(1, width), (window.innerHeight - 90) / Math.max(1, height)))));
-  }, [zoom]);
+  const [scale, setScale] = useState(1);
   useEffect(() => {
     const onChange = () => {
-      if (document.fullscreenElement === shell.current) { setMode('native'); window.setTimeout(fit, 60); }
+      if (document.fullscreenElement === shell.current) setMode('native');
       else setMode((current) => (current === 'native' ? 'off' : current));
     };
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
-  }, [fit]);
+  }, []);
   useEffect(() => {
-    if (mode === 'off') { setZoom(1); return; }
-    if (mode !== 'overlay') return;
-    window.setTimeout(fit, 60);
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMode('off'); };
+    if (mode === 'off') return;
+    const fit = () => setScale(Math.max(1, Math.min(2.2, (window.innerHeight - 170) / 340, (window.innerWidth - 380) / 520)));
+    fit();
+    window.addEventListener('resize', fit);
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape' && mode === 'overlay') setMode('off'); };
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
-  }, [mode, fit]);
+    if (mode === 'overlay') document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('resize', fit); document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [mode]);
   const toggle = () => {
     if (mode === 'native') { void document.exitFullscreen().catch(() => setMode('off')); return; }
     if (mode === 'overlay') { setMode('off'); return; }
@@ -99,15 +93,16 @@ function SceneShell({ language, children }: { language: Language; children: Reac
       {full ? <Minimize2 size={14} /> : <Maximize2 size={14} />} {full ? t(language, 'Chiqish', 'Выйти', 'Exit') : t(language, 'Sinfga ko‘rsatish', 'На весь экран', 'Full screen')}
     </button>
   );
+  const fullStyle = { ['--full-scale' as string]: String(scale) } as React.CSSProperties;
   if (mode === 'overlay' && typeof document !== 'undefined') {
     // Rendered at the root of the page: animated parents cannot clip a fixed layer there.
     return (
       <>
         <div ref={shell} className="scene-shell scene-placeholder" />
         {createPortal(
-          <div className="scene-shell scene-full scene-overlay" role="dialog" aria-modal="true">
+          <div className="scene-shell scene-full scene-overlay" role="dialog" aria-modal="true" style={fullStyle}>
             {button}
-            <div ref={body} className="scene-shell-body" style={{ zoom }}>{children}</div>
+            <div className="scene-shell-body">{children}</div>
           </div>,
           document.body,
         )}
@@ -115,9 +110,9 @@ function SceneShell({ language, children }: { language: Language; children: Reac
     );
   }
   return (
-    <div ref={shell} className={`scene-shell ${full ? 'scene-full' : ''}`}>
+    <div ref={shell} className={`scene-shell ${full ? 'scene-full' : ''}`} style={full ? fullStyle : undefined}>
       {button}
-      <div ref={body} className="scene-shell-body" style={full ? { zoom } : undefined}>{children}</div>
+      <div className="scene-shell-body">{children}</div>
     </div>
   );
 }
@@ -628,7 +623,7 @@ function Empty({ text }: { text: string }) {
 /* -------------------------------------------------------------------------- */
 
 type GalleryItem = [OwnSceneId, string | undefined, [string, string, string]];
-const GALLERY: Record<'chem' | 'phys' | 'math' | 'bio' | 'geo', GalleryItem[]> = {
+export const GALLERY: Record<'chem' | 'phys' | 'math' | 'bio' | 'geo', GalleryItem[]> = {
   chem: [
     ['particles', 'states', ['Moddaning holatlari', 'Состояния вещества', 'States of matter']],
     ['particles', 'atoms', ['Atom va molekula', 'Атомы и молекулы', 'Atoms and molecules']],

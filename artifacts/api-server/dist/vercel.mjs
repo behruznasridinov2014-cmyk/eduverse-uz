@@ -45743,6 +45743,7 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
       return;
     }
     await db.update(usersTable).set({ googleSub: claims.sub, googleEmail: claims.email ?? null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+    if (claims.email) await db.update(usersTable).set({ email: claims.email }).where(and(eq(usersTable.id, viewer.id), isNull(usersTable.email)));
     res.redirect(302, "/profile?google=linked");
     return;
   }

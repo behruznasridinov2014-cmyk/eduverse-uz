@@ -366,3 +366,24 @@ html[data-theme="night"] .people-stat { background: rgba(255, 255, 255, 0.04); }
 .plans-list.tone-green { border-left: 4px solid #3aa368; }
 html[data-theme="night"] .plans-kpi, html[data-theme="night"] .plans-list li { background: rgba(255, 255, 255, 0.05); }
 @media (max-width: 560px) { .plans-list li { grid-template-columns: 1fr; } }
+
+/* ---- Teacher: work to check ---- */
+.check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.check-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, #f6f1e7); }
+.check-list li.on { outline: 2px solid var(--ev-primary, #b8955a); }
+.check-list li > div { display: grid; gap: 2px; min-width: 0; }
+.review-saved { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 0 10px; color: #1f7a45; font-weight: 600; animation: ev-fade-in .3s ease both; }
+html[data-theme="night"] .check-list li { background: rgba(255, 255, 255, 0.05); }
+@media (max-width: 560px) { .check-list li { grid-template-columns: 1fr; } }
+.today-preview-btn { margin-top: 12px; }
+
+/* ---- 3D studio: choose a model first ---- */
+.studio-chooser { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 8px; }
+.studio-card { display: grid; gap: 6px; justify-items: start; text-align: left; padding: 16px; min-height: 120px; border-radius: 18px; border: 1px solid var(--line-2, #e2dccf); background: var(--surface, #fffcf6); cursor: pointer; font: inherit; color: inherit; transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease; animation: ev-fade-in .3s ease both; }
+.studio-card:hover { transform: translateY(-2px); border-color: var(--ev-primary, #b8955a); box-shadow: 0 14px 30px -18px rgba(80, 60, 30, 0.45); }
+.studio-card:active { transform: scale(.98); }
+.studio-card-icon { display: inline-grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; font-size: 22px; background: rgba(184, 149, 90, 0.16); color: #7a5c26; }
+.studio-card b { font-size: 16px; }
+.studio-back { margin: 6px 0 10px; }
+html[data-theme="night"] .studio-card { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.1); }
+html[data-theme="night"] .studio-card-icon { color: #e2c58f; }
