@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { assignmentsTable, classMembersTable, courseProgressTable, db } from "@workspace/db";
+import { assignmentsTable, classMembersTable, courseProgressTable, db, noticeMarksTable, timetableSlotsTable } from "@workspace/db";
+import { lessonReader } from "../routes/timetable";
 import { pushNotice, withParents } from "./inbox";
 import { escapeHtml, notifyUsers, subjectText, tl } from "./notify";
 import BOOKS from "./book-topics.json";
@@ -74,23 +75,56 @@ export async function giveBookHomework(date: string, lessons: EndedLesson[], now
         dueAt: dueAfter(date),
         status: "assigned",
       }).onConflictDoNothing().returning({ id: assignmentsTable.id });
-      if (created) await announceHomework(lesson.classId, `§${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
+      if (created) await bellHomework(lesson.classId, `§${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
     }
+    // Telegram gets ONE message per class a day, after the class's last lesson: all homework of the day.
+    for (const classId of classIds) await sendDaySummary(classId, date, now);
   } catch (error) {
     logger.warn({ err: error }, "book homework was not given");
   }
 }
 
-/** Pupils of the class and their parents hear about the new homework (bell + Telegram). */
-async function announceHomework(classId: string, title: string, homework: string, subject: string): Promise<void> {
+async function pupilsAndParents(classId: string): Promise<string[]> {
+  const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable)
+    .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+  return pupils.length ? withParents(pupils) : [];
+}
+
+/** The bell on the site shows each new homework (quiet, no Telegram). */
+async function bellHomework(classId: string, title: string, homework: string, subject: string): Promise<void> {
   try {
-    const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable)
-      .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
-    if (!pupils.length) return;
-    const people = await withParents(pupils);
-    await pushNotice(people, "homework", `Домашнее задание: ${subject}`, `${title} — ${homework}`, "/classes");
-    await notifyUsers(people, (lang) => `📚 <b>${tl(lang, "Yangi uy vazifasi", "Новое домашнее задание", "New homework")}</b> · ${subjectText(lang, subject)}\n📖 ${escapeHtml(title)}\n\n${escapeHtml(homework)}\n\n${tl(lang, "Daftar rasmini saytda yuboring", "Фото тетради отправьте на сайте", "Send a notebook photo on the site")}: https://eduverse-uz1.vercel.app/classes`);
+    const people = await pupilsAndParents(classId);
+    if (people.length) await pushNotice(people, "homework", `Домашнее задание: ${subject}`, `${title} — ${homework}`, "/classes");
   } catch (error) {
     logger.warn({ err: error }, "homework notice was not sent");
+  }
+}
+
+/** One Telegram message per class and day, once the last lesson of the class is over. */
+async function sendDaySummary(classId: string, date: string, now: number): Promise<void> {
+  try {
+    const weekday = new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
+    const classLessons = await lessonReader(eq(timetableSlotsTable.classId, classId))(date, weekday);
+    if (!classLessons.length || classLessons.some((lesson) => Date.parse(lesson.endsAt) > now)) return;
+    const done = await db.select({ topicKey: courseProgressTable.topicKey }).from(courseProgressTable)
+      .where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.doneOn, date)));
+    if (!done.length) return;
+    const tasks = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description })
+      .from(assignmentsTable)
+      .where(and(eq(assignmentsTable.classId, classId), inArray(assignmentsTable.autoKey, done.map((row) => `book:${classId}:${row.topicKey}`))));
+    if (!tasks.length) return;
+    const [mark] = await db.insert(noticeMarksTable).values({ key: `hw-day:${classId}:${date}` }).onConflictDoNothing().returning({ key: noticeMarksTable.key });
+    if (!mark) return; // already sent today
+    const people = await pupilsAndParents(classId);
+    const day = date.split("-").reverse().join(".");
+    await notifyUsers(people, (lang) => [
+      `📚 <b>${tl(lang, "Bugungi uy vazifasi", "Домашнее задание на завтра", "Today’s homework")}</b> · ${day}`,
+      "",
+      ...tasks.map((task) => `• <b>${subjectText(lang, task.subject)}</b> — ${escapeHtml(task.title)}\n  ${escapeHtml(task.description.split("\n")[0]!.slice(0, 200))}`),
+      "",
+      `${tl(lang, "Daftar rasmini saytda yuboring", "Фото тетради — на сайте", "Send notebook photos on the site")}: https://eduverse-uz1.vercel.app/classes`,
+    ].join("\n"));
+  } catch (error) {
+    logger.warn({ err: error }, "homework summary was not sent");
   }
 }

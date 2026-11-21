@@ -120,6 +120,9 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   const [pupil] = await db.select({ id: classMembersTable.id }).from(classMembersTable)
     .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
   if (!pupil) { res.status(404).json({ error: "This pupil is not in the class." }); return; }
+  const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable)
+    .where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date))).limit(1);
+  const changed = !previous || previous.mark !== mark || previous.absent !== absent;
   if (mark === null && !absent) {
     await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date)));
   } else {
@@ -127,7 +130,7 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
       .onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: new Date() } });
   }
   // The pupil and the parents hear about a new mark or an absence.
-  if (mark !== null || absent) {
+  if ((mark !== null || absent) && changed) {
     const SUBJECT_NAME: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
     const day = date.split("-").reverse().join(".");
     void notifyFamily(studentId, (lang, name) => absent

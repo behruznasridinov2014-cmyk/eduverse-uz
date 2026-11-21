@@ -352,12 +352,14 @@ router.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimite
   const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
   if (!allowed.includes(day)) { res.status(400).json({ error: "The time for this test is over." }); return; }
   const classId = await pupilClass(viewer.id);
-  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day, subject, topicKey, score, total })
+  const [saved] = await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day, subject, topicKey, score, total })
     .onConflictDoUpdate({
       target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
       set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: new Date() },
-    });
-  void announceTrainer(viewer.id, score, total, subject);
+    })
+    .returning({ attempts: trainerTestsTable.attempts });
+  // Only the first try of the day is announced: retries do not flood the family's Telegram.
+  if (saved?.attempts === 1) void announceTrainer(viewer.id, score, total, subject);
   res.status(201).json({ saved: true });
 });
 

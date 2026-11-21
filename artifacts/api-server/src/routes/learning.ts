@@ -956,6 +956,12 @@ router.put(
       return;
     }
 
+    // What was saved before: a family is told only when the status really changes.
+    const before = new Map((await db
+      .select({ studentId: attendanceTable.studentId, status: attendanceTable.status })
+      .from(attendanceTable)
+      .where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date), eq(attendanceTable.subject, subject), inArray(attendanceTable.studentId, finalEntries.map((entry) => entry.studentId)))))
+      .map((row) => [row.studentId, row.status]));
     await db.transaction(async (tx) => {
       for (const entry of finalEntries) {
         await tx
@@ -977,7 +983,7 @@ router.put(
     });
 
     // Parents hear about an absence or a late arrival right away.
-    const flagged = finalEntries.filter((entry) => entry.status === "absent" || entry.status === "late");
+    const flagged = finalEntries.filter((entry) => (entry.status === "absent" || entry.status === "late") && before.get(entry.studentId) !== entry.status);
     if (flagged.length) {
       const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
       const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));

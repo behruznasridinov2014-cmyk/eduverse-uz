@@ -42790,7 +42790,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable, journalMarksTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable, journalMarksTable, noticeMarksTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43226,6 +43226,10 @@ var init_learning = __esm({
       uniqueIndex("journal_marks_cell_unique").on(table.classId, table.studentId, table.subject, table.date),
       index("journal_marks_class_subject_idx").on(table.classId, table.subject)
     ]);
+    noticeMarksTable = pgTable("notice_marks", {
+      key: text("key").primaryKey(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
   }
 });
 
@@ -43257,6 +43261,7 @@ __export(schema_exports, {
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  noticeMarksTable: () => noticeMarksTable,
   parentLinksTable: () => parentLinksTable,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
@@ -43321,6 +43326,7 @@ __export(src_exports, {
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  noticeMarksTable: () => noticeMarksTable,
   parentLinksTable: () => parentLinksTable,
   pool: () => pool,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
@@ -51678,6 +51684,7 @@ router3.put(
       res.status(400).json({ error: "No students in this class matched the records." });
       return;
     }
+    const before = new Map((await db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2), eq(attendanceTable.subject, subject), inArray(attendanceTable.studentId, finalEntries.map((entry) => entry.studentId))))).map((row) => [row.studentId, row.status]));
     await db.transaction(async (tx) => {
       for (const entry of finalEntries) {
         await tx.insert(attendanceTable).values({
@@ -51694,7 +51701,7 @@ router3.put(
         });
       }
     });
-    const flagged = finalEntries.filter((entry) => entry.status === "absent" || entry.status === "late");
+    const flagged = finalEntries.filter((entry) => (entry.status === "absent" || entry.status === "late") && before.get(entry.studentId) !== entry.status);
     if (flagged.length) {
       const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
       const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
@@ -54416,11 +54423,11 @@ router6.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimit
     return;
   }
   const classId = await pupilClass(viewer.id);
-  await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day: day2, subject, topicKey, score, total }).onConflictDoUpdate({
+  const [saved] = await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day: day2, subject, topicKey, score, total }).onConflictDoUpdate({
     target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
     set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
-  });
-  void announceTrainer(viewer.id, score, total, subject);
+  }).returning({ attempts: trainerTestsTable.attempts });
+  if (saved?.attempts === 1) void announceTrainer(viewer.id, score, total, subject);
   res.status(201).json({ saved: true });
 });
 router6.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
@@ -54538,26 +54545,48 @@ ${tasks}` : ""}`,
         dueAt: dueAfter(date2),
         status: "assigned"
       }).onConflictDoNothing().returning({ id: assignmentsTable.id });
-      if (created) await announceHomework(lesson.classId, `\xA7${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
+      if (created) await bellHomework(lesson.classId, `\xA7${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
     }
+    for (const classId of classIds) await sendDaySummary(classId, date2, now);
   } catch (error) {
     logger.warn({ err: error }, "book homework was not given");
   }
 }
-async function announceHomework(classId, title, homework2, subject) {
+async function pupilsAndParents(classId) {
+  const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+  return pupils.length ? withParents(pupils) : [];
+}
+async function bellHomework(classId, title, homework2, subject) {
   try {
-    const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
-    if (!pupils.length) return;
-    const people = await withParents(pupils);
-    await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework2}`, "/classes");
-    await notifyUsers(people, (lang) => `\u{1F4DA} <b>${tl(lang, "Yangi uy vazifasi", "\u041D\u043E\u0432\u043E\u0435 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435", "New homework")}</b> \xB7 ${subjectText(lang, subject)}
-\u{1F4D6} ${escapeHtml(title)}
-
-${escapeHtml(homework2)}
-
-${tl(lang, "Daftar rasmini saytda yuboring", "\u0424\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u043E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u043D\u0430 \u0441\u0430\u0439\u0442\u0435", "Send a notebook photo on the site")}: https://eduverse-uz1.vercel.app/classes`);
+    const people = await pupilsAndParents(classId);
+    if (people.length) await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework2}`, "/classes");
   } catch (error) {
     logger.warn({ err: error }, "homework notice was not sent");
+  }
+}
+async function sendDaySummary(classId, date2, now) {
+  try {
+    const weekday = (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).getUTCDay() || 7;
+    const classLessons = await lessonReader(eq(timetableSlotsTable.classId, classId))(date2, weekday);
+    if (!classLessons.length || classLessons.some((lesson) => Date.parse(lesson.endsAt) > now)) return;
+    const done = await db.select({ topicKey: courseProgressTable.topicKey }).from(courseProgressTable).where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.doneOn, date2)));
+    if (!done.length) return;
+    const tasks = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, classId), inArray(assignmentsTable.autoKey, done.map((row) => `book:${classId}:${row.topicKey}`))));
+    if (!tasks.length) return;
+    const [mark] = await db.insert(noticeMarksTable).values({ key: `hw-day:${classId}:${date2}` }).onConflictDoNothing().returning({ key: noticeMarksTable.key });
+    if (!mark) return;
+    const people = await pupilsAndParents(classId);
+    const day2 = date2.split("-").reverse().join(".");
+    await notifyUsers(people, (lang) => [
+      `\u{1F4DA} <b>${tl(lang, "Bugungi uy vazifasi", "\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435 \u043D\u0430 \u0437\u0430\u0432\u0442\u0440\u0430", "Today\u2019s homework")}</b> \xB7 ${day2}`,
+      "",
+      ...tasks.map((task) => `\u2022 <b>${subjectText(lang, task.subject)}</b> \u2014 ${escapeHtml(task.title)}
+  ${escapeHtml(task.description.split("\n")[0].slice(0, 200))}`),
+      "",
+      `${tl(lang, "Daftar rasmini saytda yuboring", "\u0424\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u2014 \u043D\u0430 \u0441\u0430\u0439\u0442\u0435", "Send notebook photos on the site")}: https://eduverse-uz1.vercel.app/classes`
+    ].join("\n"));
+  } catch (error) {
+    logger.warn({ err: error }, "homework summary was not sent");
   }
 }
 
@@ -56384,12 +56413,14 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
     res.status(404).json({ error: "This pupil is not in the class." });
     return;
   }
+  const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date2))).limit(1);
+  const changed = !previous || previous.mark !== mark || previous.absent !== absent;
   if (mark === null && !absent) {
     await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date2)));
   } else {
     await db.insert(journalMarksTable).values({ classId, studentId, subject, date: date2, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
   }
-  if (mark !== null || absent) {
+  if ((mark !== null || absent) && changed) {
     const SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
     const day2 = date2.split("-").reverse().join(".");
     void notifyFamily(studentId, (lang, name) => absent ? `\u26A0\uFE0F <b>${tl(lang, "Jurnalda \xABnb\xBB (kelmadi)", "\u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB (\u043D\u0435 \u0431\u044B\u043B \u043D\u0430 \u0443\u0440\u043E\u043A\u0435)", "Absent (\xABab\xBB) in the journal")}</b>

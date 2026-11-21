@@ -509,3 +509,9 @@ export const journalMarksTable = pgTable("journal_marks", {
   uniqueIndex("journal_marks_cell_unique").on(table.classId, table.studentId, table.subject, table.date),
   index("journal_marks_class_subject_idx").on(table.classId, table.subject),
 ]);
+
+/** "Already sent" marks for once-a-day messages (e.g. the evening homework summary of a class). */
+export const noticeMarksTable = pgTable("notice_marks", {
+  key: text("key").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
