@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
-import { BadgeCheck, Lock } from 'lucide-react';
+import { AlarmClock, BadgeCheck, Lock, School, Users } from 'lucide-react';
+import { LoadingBlock } from './ui/loading';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
 
@@ -88,5 +89,65 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
       {message && <div className="notice success">{message}</div>}
       {error && <div className="notice">{error}</div>}
     </section>
+  );
+}
+
+type PlanRow = { id: string; name: string; region: string; plan: 'free' | 'pilot' | 'pro'; planUntil: string | null; daysLeft: number | null; isDemo: boolean; students: number; teachers: number };
+
+/**
+ * The owner's overview: who is close to paying. Trials and paid periods that end within 30 days
+ * come first, then ended ones (a good moment to call), then schools on the free journal.
+ */
+export function PlansOverview({ language, onOpenSchool }: { language: Language; onOpenSchool?: (school: { id: string; name: string }) => void }) {
+  const t = (uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
+  const [rows, setRows] = useState<PlanRow[] | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    void customFetch<{ schools: PlanRow[] }>('/api/admin/plans', { method: 'GET' })
+      .then((data) => setRows(data.schools.filter((row) => !row.isDemo)))
+      .catch((requestError) => setError(friendlyError(requestError, language)));
+  }, [language]);
+  if (error) return <div className="notice" role="alert">{error}</div>;
+  if (!rows) return <LoadingBlock language={language} />;
+  const soon = rows.filter((row) => row.plan !== 'free' && row.daysLeft !== null && row.daysLeft >= 0 && row.daysLeft <= 30).sort((a, b) => (a.daysLeft ?? 0) - (b.daysLeft ?? 0));
+  const ended = rows.filter((row) => row.plan !== 'free' && row.daysLeft !== null && row.daysLeft < 0);
+  const free = rows.filter((row) => row.plan === 'free');
+  const paying = rows.filter((row) => row.plan === 'pro' && (row.daysLeft === null || row.daysLeft > 30));
+  const pupils = rows.reduce((sum, row) => sum + row.students, 0);
+  const planName = (plan: string) => plan === 'pro' ? 'Pro' : plan === 'pilot' ? t('Sinov', 'Пилот', 'Pilot') : t('Bepul', 'Бесплатно', 'Free');
+  const date = (value: string | null) => value ? value.slice(0, 10).split('-').reverse().join('.') : '';
+  const List = ({ title, items, tone, empty, note }: { title: string; items: PlanRow[]; tone: string; empty: string; note: (row: PlanRow) => string }) => (
+    <section className={`panel plans-list tone-${tone}`}>
+      <h3>{title} <span className="tag">{items.length}</span></h3>
+      {items.length === 0 ? <p className="muted">{empty}</p> : (
+        <ul>
+          {items.map((row) => (
+            <li key={row.id}>
+              <div><b>{row.name}</b><small className="muted">{row.region} · {t(`${row.students} o‘quvchi`, `${row.students} учеников`, `${row.students} pupils`)} · {planName(row.plan)}</small></div>
+              <span className={`tag ${tone === 'red' ? 'red' : tone === 'gold' ? 'gold' : tone === 'green' ? 'green' : ''}`}>{note(row)}</span>
+              {onOpenSchool && <button type="button" className="btn small" onClick={() => onOpenSchool({ id: row.id, name: row.name })}>{t('Ochish', 'Открыть', 'Open')}</button>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+  return (
+    <div className="plans-overview">
+      <div className="plans-kpis">
+        <div className="plans-kpi"><School size={18} /><b>{rows.length}</b><span>{t('Maktablar', 'Школ', 'Schools')}</span></div>
+        <div className="plans-kpi"><Users size={18} /><b>{pupils}</b><span>{t('O‘quvchilar', 'Учеников', 'Pupils')}</span></div>
+        <div className="plans-kpi"><BadgeCheck size={18} /><b>{rows.filter((row) => row.plan === 'pro').length}</b><span>Pro</span></div>
+        <div className="plans-kpi"><AlarmClock size={18} /><b>{soon.length}</b><span>{t('Tez orada to‘lov', 'Скоро оплата', 'Payment soon')}</span></div>
+      </div>
+      <List title={t('Tez orada to‘lov (30 kun ichida)', 'Скоро оплата (в течение 30 дней)', 'Payment soon (within 30 days)')} items={soon} tone="gold"
+        empty={t('Hozircha hech kim yo‘q.', 'Пока никого.', 'Nobody yet.')} note={(row) => t(`${row.daysLeft} kun qoldi · ${date(row.planUntil)}`, `осталось ${row.daysLeft} дн. · до ${date(row.planUntil)}`, `${row.daysLeft} days left · ${date(row.planUntil)}`)} />
+      <List title={t('Muddat tugagan — qo‘ng‘iroq qiling', 'Срок закончился — пора позвонить', 'Period ended — time to call')} items={ended} tone="red"
+        empty={t('Yo‘q.', 'Нет.', 'None.')} note={(row) => t(`${date(row.planUntil)} da tugadi`, `закончился ${date(row.planUntil)}`, `ended ${date(row.planUntil)}`)} />
+      <List title={t('Bepul jurnal — Pro taklif qiling', 'Бесплатный журнал — можно предложить Pro', 'Free journal — offer Pro')} items={free} tone="blue"
+        empty={t('Yo‘q.', 'Нет.', 'None.')} note={() => t('Bepul', 'Бесплатно', 'Free')} />
+      <List title={t('To‘laydi (Pro)', 'Платят (Pro)', 'Paying (Pro)')} items={paying} tone="green"
+        empty={t('Hozircha yo‘q.', 'Пока нет.', 'None yet.')} note={(row) => row.planUntil ? t(`${date(row.planUntil)} gacha`, `до ${date(row.planUntil)}`, `until ${date(row.planUntil)}`) : t('Muddatsiz', 'Без срока', 'No end date')} />
+    </div>
   );
 }

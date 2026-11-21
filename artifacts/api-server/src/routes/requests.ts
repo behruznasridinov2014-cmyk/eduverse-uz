@@ -364,4 +364,27 @@ router.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_RO
   res.json({ plan, until });
 });
 
+/** The owner's overview of plans: which schools end their trial / paid period soon, who is on free. */
+router.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo }).from(schoolsTable);
+  const ids = schools.map((school) => school.id);
+  const counts = ids.length
+    ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids))
+    : [];
+  const now = Date.now();
+  const rows = schools.map((school) => {
+    const until = school.planUntil ? school.planUntil.getTime() : null;
+    const daysLeft = until === null ? null : Math.ceil((until - now) / 86400000);
+    return {
+      ...school,
+      planUntil: school.planUntil ? school.planUntil.toISOString() : null,
+      daysLeft,
+      students: counts.filter((row) => row.schoolId === school.id && row.role === "student").length,
+      teachers: counts.filter((row) => row.schoolId === school.id && row.role === "teacher").length,
+    };
+  });
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ schools: rows });
+});
+
 export default router;

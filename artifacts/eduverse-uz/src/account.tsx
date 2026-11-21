@@ -56,7 +56,8 @@ function usePrefs() {
 type Section = 'personal' | 'security' | 'notifications' | 'stats' | 'help';
 
 export function ProfileSections({ user, language, initialTab }: { user: User; language: Language; initialTab?: Section }) {
-  const teaches = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
+  // Only a teacher has subjects: the director and the deputy manage the school.
+  const teaches = user.role === 'teacher';
   const sections = useMemo(() => ([
     ['personal', tx(language, 'Ma’lumotlar', 'Профиль', 'Profile'), <GraduationCap key="p" size={19} />],
     ['security', tx(language, 'Xavfsizlik', 'Безопасность', 'Security'), <ShieldCheck key="s" size={19} />],
@@ -118,8 +119,8 @@ function PersonalSection({ user, language, teaches }: { user: User; language: La
         </div>
       </section>
       <section className="panel">
-        <h2><Mail size={16} /> {tx(language, 'Aloqa va fanlar', 'Контакты и предметы', 'Contacts and subjects')}</h2>
-        <div className="control"><label htmlFor="profile-email">Email</label><input id="profile-email" className="input" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="teacher@school.uz" /></div>
+        <h2><Mail size={16} /> {teaches ? tx(language, 'Aloqa va fanlar', 'Контакты и предметы', 'Contacts and subjects') : tx(language, 'Aloqa', 'Контакты', 'Contacts')}</h2>
+        <div className="control"><label htmlFor="profile-email">Email</label><input id="profile-email" className="input" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@school.uz" /></div>
         {teaches && (
           <div className="control">
             <label htmlFor="profile-subject">{tx(language, 'Dars beradigan fanlar', 'Предметы преподавания', 'Subjects you teach')}</label>

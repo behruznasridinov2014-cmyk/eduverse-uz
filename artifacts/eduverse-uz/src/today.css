@@ -338,3 +338,31 @@ html[data-theme="night"] .lesson-howto li { background: rgba(255, 255, 255, 0.05
 .studio-book-search input { flex: 1; min-height: 44px; }
 .studio-book-topics { display: flex; flex-wrap: wrap; gap: 6px; max-height: 210px; overflow: auto; }
 .studio-book-topics .studio-tab { min-height: 40px; }
+.review-dialog { width: min(720px, 100%); max-height: calc(100vh - 40px); overflow: auto; }
+
+/* ---- People of the school: counts ---- */
+.people-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 10px 0; }
+.people-stat { display: grid; gap: 2px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line-2, #e2dccf); background: var(--surface, #fff); text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.people-stat b { font-size: 24px; line-height: 1.1; }
+.people-stat span { font-size: 13px; color: var(--text-2, #5b5446); }
+.people-stat.on { border-color: var(--ev-primary, #b8955a); box-shadow: 0 0 0 3px rgba(184, 149, 90, 0.18); }
+.people-classes { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.people-classes .tag { cursor: pointer; border: 0; font: inherit; }
+html[data-theme="night"] .people-stat { background: rgba(255, 255, 255, 0.04); }
+
+/* ---- Owner: plans overview ---- */
+.plans-overview { display: grid; gap: 14px; }
+.plans-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.plans-kpi { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; padding: 14px; border-radius: 16px; background: var(--surface, #fff); border: 1px solid var(--line-2, #e2dccf); }
+.plans-kpi b { font-size: 24px; }
+.plans-kpi span { grid-column: 1 / -1; font-size: 13px; color: var(--text-2, #5b5446); }
+.plans-list h3 { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; }
+.plans-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.plans-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, #f6f1e7); }
+.plans-list li > div { display: grid; gap: 2px; min-width: 0; }
+.plans-list.tone-gold { border-left: 4px solid #d6a23a; }
+.plans-list.tone-red { border-left: 4px solid #d05555; }
+.plans-list.tone-blue { border-left: 4px solid #3c82c8; }
+.plans-list.tone-green { border-left: 4px solid #3aa368; }
+html[data-theme="night"] .plans-kpi, html[data-theme="night"] .plans-list li { background: rgba(255, 255, 255, 0.05); }
+@media (max-width: 560px) { .plans-list li { grid-template-columns: 1fr; } }

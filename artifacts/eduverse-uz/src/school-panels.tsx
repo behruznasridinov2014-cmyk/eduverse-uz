@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { Select } from './ui/select';
+import { LoadingBlock } from './ui/loading';
 import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
@@ -1281,7 +1282,7 @@ export function ServerSchoolOverview({
 /* Administration                                                              */
 /* -------------------------------------------------------------------------- */
 
-export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; selectedId?: string }) {
+export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part = 'all' }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; selectedId?: string; part?: 'all' | 'list' | 'create' }) {
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1336,13 +1337,10 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { la
   return (
     <Panel className="school-admin-panel">
       <SectionHead
-        title={t(language, 'Schools', 'Школы', 'Maktablar')}
-        detail={t(
-          language,
-          'Create schools and manage who belongs to them.',
-          'Создавайте школы и управляйте их составом.',
-          'Global administratorlar maktab yozuvlarini yaratishi va ko‘rishi mumkin.',
-        )}
+        title={part === 'create' ? t(language, 'Create a school', 'Создать школу', 'Maktab yaratish') : t(language, 'Schools', 'Школы', 'Maktablar')}
+        detail={part === 'create'
+          ? t(language, 'Then open it in “Schools” and add people.', 'Потом откройте её во вкладке «Школы» и добавьте людей.', 'Keyin «Maktablar» bo‘limida ochib, odamlarni qo‘shing.')
+          : t(language, 'Press “Set up” to open a school.', 'Нажмите «Настроить», чтобы открыть школу.', 'Maktabni ochish uchun «Sozlash» ni bosing.')}
         tag={
           <div className="row">
             <span className="tag green">{schools.length}</span>
@@ -1352,8 +1350,8 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { la
       />
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-      {loading ? (
-        <p className="muted" role="status">{t(language, 'Loading schools…', 'Загружаем школы…', 'Maktablar yuklanmoqda…')}</p>
+      {part !== 'create' && (loading ? (
+        <LoadingBlock language={language} kind="inline" />
       ) : schools.length === 0 ? (
         <div className="callout">
           {t(language, 'No schools yet.', 'Школ пока нет.', 'Hali maktablar yo‘q.')}
@@ -1385,8 +1383,8 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { la
             </tbody>
           </table>
         </div>
-      )}
-      <form className="stack school-admin-create" onSubmit={handleCreate}>
+      ))}
+      {part !== 'list' && <form className="stack school-admin-create" onSubmit={handleCreate}>
         <h3>{t(language, 'Create a school record', 'Создать школу', 'Maktab yozuvini yaratish')}</h3>
         <div className="grid grid-2" style={{ gap: 8 }}>
           <div className="control">
@@ -1432,7 +1430,7 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId }: { la
             ? t(language, 'Creating…', 'Создаём…', 'Yaratilmoqda…')
             : t(language, 'Create school', 'Создать школу', 'Maktab yaratish')}
         </button>
-      </form>
+      </form>}
     </Panel>
   );
 }
@@ -1788,6 +1786,78 @@ function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; lang
             onClick={() => onChange({ score: String(value * 20), status: value === 2 && verdict === 'wrong' ? 'needs_revision' : 'checked' })}>{value}</button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * One pupil's homework opened from the journal: notebook photos and their words first,
+ * then «Checked» → verdict → mark 2…5. The teacher cannot grade without seeing the work.
+ */
+export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentId, studentName, language, onClose, onSaved }: {
+  assignmentId: string; assignmentTitle: string; studentId: string; studentName: string; language: Language; onClose: () => void; onSaved: () => void;
+}) {
+  const [submission, setSubmission] = useState<SubmissionWithStudent | null | undefined>(undefined);
+  const [draft, setDraft] = useState<ReviewDraft>({ status: 'checked', score: '', feedback: '', signature: null });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    listSubmissions(assignmentId)
+      .then((response) => {
+        if (!alive) return;
+        const found = response.submissions.find((item) => item.studentId === studentId) ?? null;
+        setSubmission(found);
+        if (found) setDraft({ status: found.status, score: found.score === null || found.score === undefined ? '' : String(found.score), feedback: found.feedback, signature: null });
+      })
+      .catch((requestError: unknown) => { if (alive) { setSubmission(null); setError(describeSchoolError(requestError)); } });
+    return () => { alive = false; };
+  }, [assignmentId, studentId]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  async function save() {
+    if (draft.score.trim() === '') return;
+    setBusy(true); setError('');
+    try {
+      await reviewSubmission(assignmentId, studentId, { status: draft.status as ReviewSubmissionRequest['status'], score: Number(draft.score), feedback: draft.feedback });
+      onSaved();
+      onClose();
+    } catch (requestError) {
+      setError(describeSchoolError(requestError));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="modal review-dialog" role="dialog" aria-modal="true" aria-label={studentName}>
+        <div className="row-between" style={{ marginBottom: 10 }}>
+          <div><b>{studentName}</b><div className="muted">{assignmentTitle}</div></div>
+          <button type="button" className="btn small" onClick={onClose} aria-label={t(language, 'Close', 'Закрыть', 'Yopish')}>×</button>
+        </div>
+        {submission === undefined && <LoadingBlock language={language} kind="inline" />}
+        {submission === null && !error && <div className="callout">{t(language, 'The pupil has not handed in this work.', 'Ученик ещё не сдал эту работу.', 'O‘quvchi bu ishni hali topshirmagan.')}</div>}
+        {submission && (
+          <>
+            {(submission.attachmentCount ?? 0) > 0
+              ? <SubmissionPhotos assignmentId={assignmentId} studentId={studentId} count={submission.attachmentCount ?? 0} language={language} refreshKey={submission.updatedAt} />
+              : <p className="muted">{t(language, 'No photos attached.', 'Фото не прикреплено.', 'Rasm biriktirilmagan.')}</p>}
+            {submission.content && <p className="school-assignment-copy"><b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}</p>}
+            <ReviewVerdict draft={draft} language={language} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
+            <div className="control">
+              <label htmlFor="dialog-feedback">{t(language, 'Comment', 'Комментарий', 'Izoh')}</label>
+              <textarea id="dialog-feedback" value={draft.feedback} maxLength={4000} onChange={(event) => setDraft((current) => ({ ...current, feedback: event.target.value }))} />
+            </div>
+            <button type="button" className="btn primary" style={{ marginTop: 10 }} disabled={busy || draft.score.trim() === ''} onClick={() => void save()}>
+              <CheckCircle2 size={15} /> {t(language, 'Save', 'Сохранить', 'Saqlash')}
+            </button>
+          </>
+        )}
+        {error && <InlineError>{error}</InlineError>}
+      </section>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { customFetch, type User } from '@workspace/api-client-react';
 import { Bot, CalendarCheck2, Megaphone, RefreshCw, Send, TableProperties, Trash2 } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { friendlyError } from './errors';
+import { SubmissionReviewDialog } from './school-panels';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -192,9 +193,9 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
         </div>
       </div>
       <p className="muted journal-legend">{t(language,
-        'Baho qo‘yish uchun katakni bosing va 2, 3, 4 yoki 5 ni tanlang. Ustun — bitta vazifa. «tekshirish» — ish yuborilgan, «—» — yuborilmagan. «Trenajyor» — o‘quvchining oxirgi kunlik testi.',
-        'Чтобы поставить оценку, нажмите на клетку и выберите 2, 3, 4 или 5. Столбец — одно задание. «проверить» — работа сдана, «—» — не сдана. «Тренажёр» — последний тест ученика за день.',
-        'To grade, tap a cell and pick 2, 3, 4 or 5. A column is one assignment. “review” — handed in, “—” — not handed in. “Trainer” — the pupil’s latest daily test.')}</p>
+        '«tekshirish» ni bosing: daftar rasmi ochiladi, keyin «Tekshirdim» va baho. Ustun — bitta vazifa, «—» — yuborilmagan. «Trenajyor» — oxirgi kunlik test.',
+        'Нажмите «проверить»: откроются фото тетради, затем «Проверил» и оценка. Столбец — одно задание, «—» — не сдано. «Тренажёр» — последний тест ученика за день.',
+        'Tap “review”: the notebook photos open, then “Checked” and the mark. A column is one assignment, “—” — not handed in. “Trainer” — the latest daily test.')}</p>
       {error && <div className="notice" role="alert">{error}</div>}
       {journal && journal.rows.length === 0 && <p className="muted">{t(language, 'Sinfda hali o‘quvchi yo‘q.', 'В классе пока нет учеников.', 'No students in this class yet.')}</p>}
       {journal && journal.rows.length > 0 && (
@@ -218,12 +219,15 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
                     const key = `${row.studentId}:${assignmentId}`;
                     return (
                       <td key={index} className="journal-cell">
-                        {editing === key ? (
+                        {editing === key && cell.state !== 'missing' ? (
+                          <SubmissionReviewDialog assignmentId={assignmentId} assignmentTitle={journal.assignments[index]?.title ?? ''} studentId={row.studentId} studentName={row.studentName} language={language} onClose={() => setEditing(null)} onSaved={() => void load()} />
+                        ) : null}
+                        {editing === key && cell.state === 'missing' ? (
                           <span className="journal-marks">
                             {[2, 3, 4, 5].map((mark) => <button type="button" key={mark} className={`grade-pick ${cell.grade === mark ? 'on' : ''}`} disabled={saving} onClick={() => void grade(assignmentId, row.studentId, mark)}>{mark}</button>)}
                             <button type="button" className="grade-pick cancel" onClick={() => setEditing(null)} aria-label={t(language, 'Bekor', 'Отмена', 'Cancel')}>×</button>
                           </span>
-                        ) : (
+                        ) : editing === key ? null : (
                           <button type="button" className="journal-cell-btn" onClick={() => setEditing(key)} title={t(language, 'Baho qo‘yish', 'Поставить оценку', 'Grade')}>
                             {cell.state === 'graded' ? <span className="grade-mark">{cell.grade}</span> : cell.state === 'review' ? <span className="tag gold">{t(language, 'tekshirish', 'проверить', 'review')}</span> : <span className="muted">—</span>}
                           </button>

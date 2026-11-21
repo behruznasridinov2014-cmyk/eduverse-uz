@@ -168,12 +168,28 @@ export function SchoolPeoplePanel({ schoolId, language, mode, onChanged }: { sch
       <p className="muted">{mode === 'owner'
         ? t(language, 'Siz to‘g‘ridan-to‘g‘ri o‘zgartirasiz. Hech narsa o‘chirilmaydi: baholar va davomat saqlanadi.', 'Вы меняете сразу. Ничего не удаляется: оценки и посещаемость сохраняются.', 'You change it directly. Nothing is deleted.')
         : t(language, 'O‘zgartirish darhol kiritiladi va jurnalda saqlanadi. Hech narsa o‘chirilmaydi.', 'Изменение вносится сразу и сохраняется в журнале. Ничего не удаляется: оценки и посещаемость сохраняются.', 'The change is made at once and kept in the log. Nothing is deleted.')}</p>
+      <div className="people-summary">
+        {(['student', 'teacher', 'parent', 'school_admin'] as const).map((role) => {
+          const count = people.filter((person) => person.role === role && person.status === 'active').length;
+          const names: Record<string, [string, string, string]> = { student: ['O‘quvchilar', 'Ученики', 'Pupils'], teacher: ['O‘qituvchilar', 'Учителя', 'Teachers'], parent: ['Ota-onalar', 'Родители', 'Parents'], school_admin: ['Zavuchlar', 'Завучи', 'Deputies'] };
+          return (
+            <button type="button" key={role} className={`people-stat ${roleFilter === role ? 'on' : ''}`} onClick={() => setRoleFilter(role)}>
+              <b>{count}</b><span>{label(language, names[role]!, role)}</span>
+            </button>
+          );
+        })}
+        <button type="button" className={`people-stat ${roleFilter === 'all' ? 'on' : ''}`} onClick={() => setRoleFilter('all')}><b>{people.filter((person) => person.status === 'active').length}</b><span>{t(language, 'Hammasi', 'Все', 'Everyone')}</span></button>
+      </div>
+      {roleFilter === 'student' && classes.length > 0 && (
+        <div className="people-classes">
+          {classes.map((name) => {
+            const count = people.filter((person) => person.role === 'student' && person.status === 'active' && person.classes.includes(name)).length;
+            return <button type="button" key={name} className={`tag ${query === name ? 'gold' : ''}`} onClick={() => setQuery(query === name ? '' : name)}>{name}: {count}</button>;
+          })}
+        </div>
+      )}
       <div className="people-filters">
         <input className="input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'F.I.Sh., login, sinf yoki telefon', 'ФИО, логин, класс или телефон', 'Name, login, class or phone')} />
-        <Select className="input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-          <option value="all">{t(language, 'Hammasi', 'Все роли', 'All roles')}</option>
-          {Object.entries(ROLE_TEXT).map(([key, value]) => <option key={key} value={key}>{label(language, value, key)}</option>)}
-        </Select>
         <Select className="input" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="all">{t(language, 'Har qanday holat', 'Любой статус', 'Any status')}</option>
           {Object.entries(STATUS_TEXT).map(([key, value]) => <option key={key} value={key}>{label(language, value, key)}</option>)}

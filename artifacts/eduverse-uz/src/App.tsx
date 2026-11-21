@@ -23,10 +23,12 @@ import { GradesPage } from './grades';
 import { WorksheetBuilder } from './worksheet';
 import { SchoolSetupWizard } from './setup-wizard';
 import { TrainerPage } from './trainer';
-import { ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
-import { AuditPanel, OwnerRequestsPanel, SchoolPeoplePanel, SchoolRequestsArea } from './school-requests';
+import { PlansOverview, ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
+import { AuditPanel, EnrollRequestPanel, MyRequestsPanel, OwnerRequestsPanel, SchoolPeoplePanel } from './school-requests';
+import { LoadingBlock } from './ui/loading';
 import { ClassJournal } from './journal';
 import { SchedulePage } from './schedule';
+import { UpdateBanner } from './update-check';
 import { TodayLessons } from './today';
 import { TimetableEditor } from './timetable-editor';
 import { LabPage, LessonDayPage, TodayCoursePage } from './today-pages';
@@ -59,9 +61,9 @@ type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab boshqaruvi',Administration:'Platforma boshqaruvi','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
-  Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Управление школой',Administration:'Управление платформой','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
-  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Schedule:'Timetable',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School management',Administration:'Administration'}
+  Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab',Administration:'Boshqaruv','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
+  Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Школа',Administration:'Управление','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
+  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Schedule:'Timetable',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School',Administration:'Administration'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -188,6 +190,7 @@ function App(){
           {auth.user&&<Link href="/profile" className="top-avatar" aria-label={auth.user.username} title={auth.user.username}><UserAvatar userId={auth.user.id} name={auth.user.username}/></Link>}
         </div>
       </header>
+      <UpdateBanner language={lang}/>
       {notice?.kind==='switched'&&<div className="account-banner" role="alert">
         <Info size={18}/>
         <div>
@@ -382,6 +385,7 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     </button>)}
    </div>
   </>}
+  {['platform_superadmin','education_admin','ministry_admin'].includes(user.role)&&<PlansOverview language={language} onOpenSchool={()=>onOpen('/admin')}/>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
   {user.role==='student'&&<AttendanceSummary language={language}/>}
   {steps&&<>
@@ -391,7 +395,7 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   {school.status==='ready'&&!school.hasMembership&&<div className="notice"><Info size={16}/><span>{language==='Uzbek'?'Hisobingiz hali maktabga biriktirilmagan. Maktab administratoriga murojaat qiling.':language==='Русский'?'Аккаунт ещё не привязан к школе. Обратитесь к администратору школы.':'Your account is not linked to a school yet. Contact the school administrator.'}</span></div>}
  </section>
 }
-function PageHeading({eyebrow,title,subtitle,children}:{eyebrow:string;title:string;subtitle:string;children?:ReactNode}){return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p className="page-subtitle">{subtitle}</p></div>{children&&<div className="row">{children}</div>}</div>}
+function PageHeading({eyebrow,title,subtitle,children}:{eyebrow:string;title:string;subtitle:string;children?:ReactNode}){return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{subtitle&&<p className="page-subtitle">{subtitle}</p>}</div>{children&&<div className="row">{children}</div>}</div>}
 function Panel({children,className='',style}:{children:ReactNode;className?:string;style?:CSSProperties}){return <section className={`panel ${className}`} style={style}>{children}</section>}
 function Metric({label,value,note,icon:Icon}:{label:string;value:string;note:string;icon:typeof Home}){return <Panel><div className="metric"><div><div className="metric-label">{label}</div><div className="metric-value">{value}</div><div className="metric-note">{note}</div></div><div className="metric-icon"><Icon/></div></div></Panel>}
 function LibraryPage({ui,progress,saved,onOpen}:{ui:Lang;progress:Record<string,number>;saved:string[];onOpen:(id:string)=>void}){
@@ -488,7 +492,7 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
  const swipe=useSwipeTabs<TeacherTab>(tabs.map(([key])=>key),tab,setTab);
  const ready=school.status==='ready'&&school.hasServerClasses;
  return <>
-  <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle={text('Everything for the class, step by step.','Всё для класса — по разделам.','Sinf uchun hammasi — bo‘limlarda.')}></PageHeading>
+  <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""></PageHeading>
   <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {!ready
    ?<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>
@@ -504,31 +508,71 @@ function ParentPage({language}:{language:Lang}){
  return <><PageHeading eyebrow={text('Family view','Кабинет семьи','Oila kabineti')} title={text('Your child’s learning','Учёба вашего ребёнка','Farzandingiz ta’limi')} subtitle={text('Grades, attendance and homework in one place.','Оценки, посещаемость и домашние задания в одном месте.','Baholar, davomat va uy vazifalari bir joyda.')}/>
   <ParentCabinet language={language}/></>;
 }
+type SchoolTab='overview'|'enroll'|'people'|'classes'|'calendar';
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- return <><PageHeading eyebrow={text('School workspace','Школьный кабинет','Maktab kabineti')} title={text('School insights','Управление школой','Maktab boshqaruvi')} subtitle={text('Live records of your school: classes, people, attendance and homework.','Живые данные вашей школы: классы, люди, посещаемость и домашние задания.','Maktabingiz ma’lumotlari: sinflar, odamlar, davomat va uy vazifalari.')}/>
-  {school.status==='ready'&&school.hasMembership
-   ?<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>{school.memberships[0]&&<DirectorDashboard schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolRequestsArea schoolId={school.memberships[0].schoolId} language={language}/>}{school.memberships[0]&&<SchoolCalendarPanel schoolId={school.memberships[0].schoolId} language={language}/>}<ServerSchoolOverview school={school} user={user} language={language}/></div>
-   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='loading'?text('Loading school records…','Загружаем данные школы…','Maktab ma’lumotlari yuklanmoqda…'):school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
+ const [savedTab,setTab]=useSavedState<SchoolTab>('school-tab','overview');
+ const tabs:Array<[SchoolTab,string,ReactNode]>=[
+  ['overview',text('Overview','Обзор','Umumiy'),<LayoutDashboard size={20}/>],
+  ['enroll',text('Admit pupils','Приём учеников','O‘quvchi qabul'),<Plus size={20}/>],
+  ['people',text('People','Люди школы','Odamlar'),<Users size={20}/>],
+  ['classes',text('Classes','Классы','Sinflar'),<IconClasses size={20}/>],
+  ['calendar',text('Calendar','Календарь','Taqvim'),<CalendarCheck2 size={20}/>],
+ ];
+ const tab:SchoolTab=tabs.some(([key])=>key===savedTab)?savedTab:'overview';
+ const swipe=useSwipeTabs<SchoolTab>(tabs.map(([key])=>key),tab,setTab);
+ const schoolId=school.memberships[0]?.schoolId;
+ const [revision,setRevision]=useState(0);
+ return <><PageHeading eyebrow={school.memberships[0]?.schoolName??text('School','Школа','Maktab')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('School','Школа','Maktab')} activeKey={tab} onSelect={key=>swipe.select(key as SchoolTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  {school.status==='ready'&&school.hasMembership&&schoolId
+   ?<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
+     {tab==='overview'&&<DirectorDashboard schoolId={schoolId} language={language}/>}
+     {tab==='enroll'&&<><EnrollRequestPanel schoolId={schoolId} language={language} onSent={()=>setRevision(v=>v+1)}/><MyRequestsPanel schoolId={schoolId} language={language} revision={revision}/></>}
+     {tab==='people'&&<SchoolPeoplePanel schoolId={schoolId} language={language} mode="request" onChanged={()=>setRevision(v=>v+1)}/>}
+     {tab==='classes'&&<ServerSchoolOverview school={school} user={user} language={language}/>}
+     {tab==='calendar'&&<SchoolCalendarPanel schoolId={schoolId} language={language}/>}
+    </div>
+   :school.status==='loading'?<LoadingBlock language={language}/>
+   :<div className="notice" style={{marginTop:16}}><Info/><span>{school.status==='unavailable'?text('School records cannot be reached right now.','Данные школы сейчас недоступны.','Maktab ma’lumotlari hozir mavjud emas.'):text('This account is not linked to a school yet. Ask the platform administrator to add you.','Аккаунт ещё не привязан к школе. Попросите администратора платформы добавить вас.','Hisob hali maktabga biriktirilmagan. Platforma administratoridan so‘rang.')}</span></div>}</>;
 }
 
+type AdminTab='overview'|'schools'|'create'|'requests';
 function AdminPage({role,language}:{role:User['role'];language:Lang}){
  const [setup,setSetup]=useState<{id:string;name:string}|null>(null);
  const [schoolsRevision,setSchoolsRevision]=useState(0);
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- const title=role==='platform_superadmin'?text('Platform administration','Управление платформой','Platforma boshqaruvi'):role==='ministry_admin'?text('National education oversight','Национальный контроль образования','Milliy ta’lim nazorati'):text('Regional education administration','Региональное управление образованием','Hududiy ta’lim boshqaruvi');
- return <><PageHeading eyebrow={getRoleLabel('English',role)} title={title} subtitle={text('Schools registered on the platform. Create a school record and manage who belongs to it.','Школы, зарегистрированные на платформе. Создавайте школы и управляйте их составом.','Platformadagi maktablar. Maktab yarating va uning a’zolarini boshqaring.')}/>
-  <OwnerRequestsPanel language={language}/>
-  <div style={{marginTop:16}}><ServerAdminSchoolsPanel key={schoolsRevision} language={language} selectedId={setup?.id} onSelect={setSetup}/></div>
-  {setup&&<div style={{marginTop:16,display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
-   <div className="row-between"><b>{setup.name}</b><button className="btn small" onClick={()=>setSetup(null)}>{text('Close','Закрыть','Yopish')}</button></div>
-   <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>
-   <SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/>
-   <details className="panel"><summary><b>{text('Or paste the school’s Excel','Или вставьте Excel школы целиком','Yoki maktab Excelini qo‘ying')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
-   <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
-   <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
-  </div>}</>;
+ const [savedTab,setTab]=useSavedState<AdminTab>('admin-tab','overview');
+ const tabs:Array<[AdminTab,string,ReactNode]>=[
+  ['overview',text('Overview','Обзор','Umumiy'),<LayoutDashboard size={20}/>],
+  ['schools',text('Schools','Школы','Maktablar'),<School size={20}/>],
+  ['create',text('New school','Создать школу','Yangi maktab'),<Plus size={20}/>],
+  ['requests',text('Requests','Заявки','Arizalar'),<ClipboardCheck size={20}/>],
+ ];
+ const tab:AdminTab=tabs.some(([key])=>key===savedTab)?savedTab:'overview';
+ const swipe=useSwipeTabs<AdminTab>(tabs.map(([key])=>key),tab,setTab);
+ const openSchool=(school:{id:string;name:string})=>{setSetup(school);setTab('schools')};
+ void role;
+ return <><PageHeading eyebrow="EDUVERSE" title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel="EDUVERSE" activeKey={tab} onSelect={key=>swipe.select(key as AdminTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
+   {tab==='overview'&&<PlansOverview language={language} onOpenSchool={openSchool}/>}
+   {tab==='requests'&&<OwnerRequestsPanel language={language}/>}
+   {tab==='create'&&<ServerAdminSchoolsPanel key={`create-${schoolsRevision}`} language={language} part="create"/>}
+   {tab==='schools'&&<>
+    <ServerAdminSchoolsPanel key={schoolsRevision} language={language} part="list" selectedId={setup?.id} onSelect={setSetup}/>
+    {setup&&<div style={{display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
+     <div className="row-between"><b>{setup.name}</b><button className="btn small" onClick={()=>{setSetup(null);setSchoolsRevision(v=>v+1)}}>{text('Close','Закрыть','Yopish')}</button></div>
+     <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>
+     <SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/>
+     <details className="panel"><summary><b>{text('Or paste the school’s Excel','Или вставьте Excel школы целиком','Yoki maktab Excelini qo‘ying')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
+     <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
+     <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
+    </div>}
+   </>}
+  </div></>;
 }
+
 function NotFound({language,goHome}:{language:Lang;goHome:()=>void}){return <div className="empty-state"><span className="empty-icon"><Search/></span><h2>{language==='Uzbek'?'Sahifa topilmadi':language==='Русский'?'Страница не найдена':'Page not found'}</h2><p>{language==='Uzbek'?'Menyudan bo‘limni tanlang.':language==='Русский'?'Выберите раздел в меню.':'Choose a section from the menu.'}</p><button className="btn primary" onClick={goHome}><Home size={16}/>{language==='Uzbek'?'Bosh sahifa':language==='Русский'?'На главную':'Home'}</button></div>}
 
 export default App;

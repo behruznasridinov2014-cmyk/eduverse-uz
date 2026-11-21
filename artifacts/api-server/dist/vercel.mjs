@@ -55428,6 +55428,25 @@ router9.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_R
   await writeAudit(schoolId, viewerOf4(res).id, "plan", null, { plan, until: untilText });
   res.json({ plan, until });
 });
+router9.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo }).from(schoolsTable);
+  const ids = schools.map((school) => school.id);
+  const counts = ids.length ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids)) : [];
+  const now = Date.now();
+  const rows = schools.map((school) => {
+    const until = school.planUntil ? school.planUntil.getTime() : null;
+    const daysLeft = until === null ? null : Math.ceil((until - now) / 864e5);
+    return {
+      ...school,
+      planUntil: school.planUntil ? school.planUntil.toISOString() : null,
+      daysLeft,
+      students: counts.filter((row) => row.schoolId === school.id && row.role === "student").length,
+      teachers: counts.filter((row) => row.schoolId === school.id && row.role === "teacher").length
+    };
+  });
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ schools: rows });
+});
 var requests_default = router9;
 
 // src/routes/demo.ts
