@@ -14,6 +14,8 @@ import {
 import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { canManageClass, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { tashkentNow } from "./timetable";
+import { escapeHtml, notifyFamily } from "../lib/notify";
+import { pushNotice, withParents } from "../lib/inbox";
 
 /*
  * The class journal, like the electronic school journal: one column per lesson date of a subject
@@ -123,6 +125,16 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   } else {
     await db.insert(journalMarksTable).values({ classId, studentId, subject, date, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: new Date() })
       .onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: new Date() } });
+  }
+  // The pupil and the parents hear about a new mark or an absence.
+  if (mark !== null || absent) {
+    const SUBJECT_NAME: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
+    const day = date.split("-").reverse().join(".");
+    const text = absent
+      ? `⚠️ Jurnalda «nb» / В журнале «нб»: ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}`
+      : `📘 Jurnalga baho / Оценка в журнал: <b>${mark}</b> · ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}`;
+    void notifyFamily(studentId, text, true);
+    void pushNotice(await withParents([studentId]), "grades", absent ? `«нб» в журнале: ${SUBJECT_NAME[subject] ?? subject}` : `Оценка в журнал: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
   }
   res.json({ ok: true });
 });

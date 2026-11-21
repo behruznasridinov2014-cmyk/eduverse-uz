@@ -52340,6 +52340,9 @@ router4.post(
     if (host.role === "teacher") {
       const students = await studentsOfClasses(classId ? [classId] : await teacherClassIds(host.id));
       await pushNotice(students, "lessons", `\u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A: ${room?.title ?? ""}`, `\u041A\u043E\u0434: ${room?.code ?? ""}`, "/lesson");
+      await notifyUsers(await withParents(students), `\u{1F3A5} <b>Onlayn dars boshlandi / \u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A</b>
+${escapeHtml(room?.title ?? "")}
+https://eduverse-uz1.vercel.app/lesson`);
     }
     res.status(201).json({ room });
   }
@@ -55505,7 +55508,7 @@ async function giveBookHomework(date2, lessons, now = Date.now()) {
       const [exists2] = await db.select({ id: assignmentsTable.id }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
       if (exists2) continue;
       const tasks = topic.tasks.slice(0, 3).map((task, index2) => `${index2 + 1}. ${task}`).join("\n");
-      await db.insert(assignmentsTable).values({
+      const [created] = await db.insert(assignmentsTable).values({
         classId: lesson.classId,
         createdBy: lesson.teacherId,
         title: `\xA7${topic.code} ${topic.title}`.slice(0, 160),
@@ -55519,10 +55522,24 @@ ${tasks}` : ""}`,
         autoKey,
         dueAt: dueAfter(date2),
         status: "assigned"
-      }).onConflictDoNothing();
+      }).onConflictDoNothing().returning({ id: assignmentsTable.id });
+      if (created) await announceHomework(lesson.classId, `\xA7${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
     }
   } catch (error) {
     logger.warn({ err: error }, "book homework was not given");
+  }
+}
+async function announceHomework(classId, title, homework, subject) {
+  try {
+    const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!pupils.length) return;
+    const people = await withParents(pupils);
+    await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework}`, "/classes");
+    await notifyUsers(people, `\u{1F4DA} <b>Uy vazifasi / \u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435</b> \xB7 ${escapeHtml(subject)}
+${escapeHtml(title)}
+${escapeHtml(homework)}`);
+  } catch (error) {
+    logger.warn({ err: error }, "homework notice was not sent");
   }
 }
 
@@ -56063,6 +56080,13 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
     await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date2)));
   } else {
     await db.insert(journalMarksTable).values({ classId, studentId, subject, date: date2, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
+  }
+  if (mark !== null || absent) {
+    const SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+    const day = date2.split("-").reverse().join(".");
+    const text2 = absent ? `\u26A0\uFE0F Jurnalda \xABnb\xBB / \u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB: ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}` : `\u{1F4D8} Jurnalga baho / \u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: <b>${mark}</b> \xB7 ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}`;
+    void notifyFamily(studentId, text2, true);
+    void pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME[subject] ?? subject}` : `\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
   }
   res.json({ ok: true });
 });

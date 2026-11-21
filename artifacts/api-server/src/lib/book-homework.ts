@@ -1,5 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { assignmentsTable, courseProgressTable, db } from "@workspace/db";
+import { assignmentsTable, classMembersTable, courseProgressTable, db } from "@workspace/db";
+import { pushNotice, withParents } from "./inbox";
+import { escapeHtml, notifyUsers } from "./notify";
 import BOOKS from "./book-topics.json";
 import { logger } from "./logger";
 
@@ -60,7 +62,7 @@ export async function giveBookHomework(date: string, lessons: EndedLesson[], now
         .where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
       if (exists) continue;
       const tasks = topic.tasks.slice(0, 3).map((task, index) => `${index + 1}. ${task}`).join("\n");
-      await db.insert(assignmentsTable).values({
+      const [created] = await db.insert(assignmentsTable).values({
         classId: lesson.classId,
         createdBy: lesson.teacherId!,
         title: `§${topic.code} ${topic.title}`.slice(0, 160),
@@ -71,9 +73,26 @@ export async function giveBookHomework(date: string, lessons: EndedLesson[], now
         autoKey,
         dueAt: dueAfter(date),
         status: "assigned",
-      }).onConflictDoNothing();
+      }).onConflictDoNothing().returning({ id: assignmentsTable.id });
+      if (created) await announceHomework(lesson.classId, `§${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
     }
   } catch (error) {
     logger.warn({ err: error }, "book homework was not given");
+  }
+}
+
+/** Pupils of the class and their parents hear about the new homework (bell + Telegram). */
+async function announceHomework(classId: string, title: string, homework: string, subject: string): Promise<void> {
+  try {
+    const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable)
+      .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!pupils.length) return;
+    const people = await withParents(pupils);
+    await pushNotice(people, "homework", `Домашнее задание: ${subject}`, `${title} — ${homework}`, "/classes");
+    await notifyUsers(people, `📚 <b>Uy vazifasi / Домашнее задание</b> · ${escapeHtml(subject)}
+${escapeHtml(title)}
+${escapeHtml(homework)}`);
+  } catch (error) {
+    logger.warn({ err: error }, "homework notice was not sent");
   }
 }
