@@ -43,7 +43,7 @@ export type TelegramDeliveryResult =
 export async function sendTelegramMessage(
   chatId: string | number,
   text: string,
-  options: { token?: string; fetcher?: typeof fetch } = {},
+  options: { token?: string; fetcher?: typeof fetch; replyMarkup?: unknown } = {},
 ): Promise<TelegramDeliveryResult> {
   const token = options.token ?? botToken();
   if (!token) {
@@ -61,6 +61,7 @@ export async function sendTelegramMessage(
         text,
         parse_mode: "HTML",
         disable_web_page_preview: true,
+        ...(options.replyMarkup ? { reply_markup: options.replyMarkup } : {}),
       }),
       signal: AbortSignal.timeout(5_000),
     });
@@ -106,4 +107,13 @@ export function buildBindLink(nonce: string): string | null {
   const username = telegramBotUsername();
   if (!username) return null;
   return `https://t.me/${username}?start=bind_${nonce}`;
+}
+
+/** Closes the "loading" clock on an inline button press. */
+export async function answerTelegramCallback(callbackId: string, text = ""): Promise<void> {
+  const token = botToken();
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/bot${token}/answerCallbackQuery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callback_query_id: callbackId, text }), signal: AbortSignal.timeout(5_000) });
+  } catch { /* the button just stops spinning later */ }
 }

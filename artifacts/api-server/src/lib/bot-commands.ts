@@ -28,25 +28,42 @@ import { lessonReader, slotsFilterFor, tashkentNow } from "../routes/timetable";
  */
 
 const SITE = "https://eduverse-uz1.vercel.app";
-const SUBJECT: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
-const subjectName = (value: string) => SUBJECT[value] ?? value;
+export type BotLang = "uz" | "ru" | "en";
+const T = (lang: BotLang, uz: string, ru: string, en: string) => (lang === "ru" ? ru : lang === "en" ? en : uz);
+const SUBJECT: Record<string, [string, string, string]> = {
+  physics: ["Fizika", "Физика", "Physics"], chemistry: ["Kimyo", "Химия", "Chemistry"],
+  biology: ["Biologiya", "Биология", "Biology"], math: ["Matematika", "Математика", "Maths"],
+};
+// The language of the answer being built (one request at a time per instance is enough here).
+let L: BotLang = "ru";
+const subjectName = (value: string) => { const names = SUBJECT[value]; return names ? T(L, ...names) : value; };
+/** Telegram's own app language → the bot language, until the person picks one with /lang. */
+export function langFromTelegram(code: unknown): BotLang {
+  const value = typeof code === "string" ? code.toLowerCase() : "";
+  return value.startsWith("uz") ? "uz" : value.startsWith("en") ? "en" : "ru";
+}
+export const LANG_KEYBOARD = { inline_keyboard: [[
+  { text: "🇺🇿 O‘zbekcha", callback_data: "lang:uz" },
+  { text: "🇷🇺 Русский", callback_data: "lang:ru" },
+  { text: "🇬🇧 English", callback_data: "lang:en" },
+]] };
 const day = (iso: string) => iso.slice(0, 10).split("-").reverse().join(".");
 const MANAGERS: string[] = ["school_director", "school_admin"];
 const MANAGER_ROLES = ["school_director", "school_admin"] as const;
 
-type Person = { id: string; name: string; role: AccountRole };
+type Person = { id: string; name: string; role: AccountRole; lang: string | null };
 
-export function commandsFor(role: string): Array<{ command: string; description: string }> {
-  const list = [{ command: "today", description: "Уроки на сегодня / Bugungi darslar" }];
-  if (role === "student" || role === "parent") list.push({ command: "homework", description: "Домашние задания / Uy vazifalari" }, { command: "grades", description: "Оценки / Baholar" });
-  if (role === "teacher") list.push({ command: "check", description: "Работы на проверку / Tekshirish" });
-  if (MANAGERS.includes(role)) list.push({ command: "school", description: "Сегодня в школе / Bugun maktabda" });
-  list.push({ command: "help", description: "Помощь / Yordam" });
+export function commandsFor(role: string, lang: BotLang = L): Array<{ command: string; description: string }> {
+  const list = [{ command: "today", description: T(lang, "Bugungi darslar", "Уроки на сегодня", "Today’s lessons") }];
+  if (role === "student" || role === "parent") list.push({ command: "homework", description: T(lang, "Uy vazifalari", "Домашние задания", "Homework") }, { command: "grades", description: T(lang, "Baholar", "Оценки", "Marks") });
+  if (role === "teacher") list.push({ command: "check", description: T(lang, "Tekshiriladigan ishlar", "Работы на проверку", "Work to check") });
+  if (MANAGERS.includes(role)) list.push({ command: "school", description: T(lang, "Bugun maktabda", "Сегодня в школе", "Today at school") });
+  list.push({ command: "lang", description: T(lang, "Tilni o‘zgartirish", "Сменить язык", "Change language") }, { command: "help", description: T(lang, "Yordam", "Помощь", "Help") });
   return list;
 }
 
 async function personOfChat(chatId: string): Promise<Person | null> {
-  const [row] = await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role })
+  const [row] = await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role, lang: telegramNotifyTable.lang })
     .from(telegramNotifyTable).innerJoin(usersTable, eq(usersTable.id, telegramNotifyTable.userId))
     .where(eq(telegramNotifyTable.chatId, chatId)).limit(1);
   return row ?? null;
@@ -63,9 +80,9 @@ async function pupilsOf(person: Person): Promise<Array<{ id: string; name: strin
 async function today(person: Person): Promise<string> {
   const now = tashkentNow();
   const where = await slotsFilterFor({ id: person.id, role: person.role });
-  if (!where) return "Расписания пока нет. / Jadval hali yo‘q.";
+  if (!where) return T(L, "Jadval hali yo‘q.", "Расписания пока нет.", "There is no timetable yet.");
   const lessons = await lessonReader(where)(now.date, now.weekday);
-  if (!lessons.length) return `📅 ${day(now.date)}: уроков нет. / Bugun dars yo‘q.`;
+  if (!lessons.length) return `📅 ${day(now.date)}: ${T(L, "bugun dars yo‘q.", "уроков нет.", "no lessons today.")}`;
   const manager = MANAGERS.includes(person.role);
   const shown = manager ? lessons.slice(0, 40) : lessons;
   const nowMs = Date.now();
@@ -73,14 +90,14 @@ async function today(person: Person): Promise<string> {
     const state = nowMs >= Date.parse(lesson.endsAt) ? "✓" : nowMs >= Date.parse(lesson.startsAt) ? "▶" : "•";
     const who = person.role === "teacher" || manager ? `${escapeHtml(lesson.className)} · ` : "";
     const teacher = person.role !== "teacher" && lesson.teacherName ? ` · ${escapeHtml(lesson.teacherName)}` : "";
-    return `${state} ${lesson.start}–${lesson.end} · ${who}<b>${escapeHtml(subjectName(lesson.subject))}</b>${lesson.room ? ` · каб. ${escapeHtml(lesson.room)}` : ""}${teacher}`;
+    return `${state} ${lesson.start}–${lesson.end} · ${who}<b>${escapeHtml(subjectName(lesson.subject))}</b>${lesson.room ? ` · ${T(L, "xona", "каб.", "room")} ${escapeHtml(lesson.room)}` : ""}${teacher}`;
   });
-  return `📅 <b>Уроки на ${day(now.date)}</b>\n${lines.join("\n")}${lessons.length > shown.length ? `\n…и ещё ${lessons.length - shown.length}` : ""}\n\n▶ идёт сейчас · ✓ закончился`;
+  return `📅 <b>${T(L, "Darslar", "Уроки на", "Lessons")} ${day(now.date)}</b>\n${lines.join("\n")}${lessons.length > shown.length ? `\n… +${lessons.length - shown.length}` : ""}\n\n▶ ${T(L, "hozir", "идёт сейчас", "now")} · ✓ ${T(L, "tugadi", "закончился", "over")}`;
 }
 
 async function homework(person: Person): Promise<string> {
   const pupils = await pupilsOf(person);
-  if (!pupils.length) return "Нет привязанных учеников. / O‘quvchi bog‘lanmagan.";
+  if (!pupils.length) return T(L, "O‘quvchi bog‘lanmagan.", "Нет привязанных учеников.", "No pupils linked.");
   const out: string[] = [];
   const since = new Date(Date.now() - 7 * 86400000);
   for (const pupil of pupils) {
@@ -93,29 +110,29 @@ async function homework(person: Person): Promise<string> {
     const mine = tasks.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score })
       .from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, pupil.id), inArray(assignmentSubmissionsTable.assignmentId, tasks.map((task) => task.id)))) : [];
     out.push(`📚 <b>${escapeHtml(pupil.name)}</b>`);
-    if (!tasks.length) { out.push("За неделю заданий нет."); continue; }
+    if (!tasks.length) { out.push(T(L, "Bu hafta vazifa yo‘q.", "За неделю заданий нет.", "No homework this week.")); continue; }
     for (const task of tasks) {
       const sent = mine.find((row) => row.assignmentId === task.id);
-      const state = sent ? (sent.score !== null ? `✅ оценка ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : "📤 сдано, ждёт проверки") : "⏳ не сдано";
+      const state = sent ? (sent.score !== null ? `✅ ${T(L, "baho", "оценка", "mark")} ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : `📤 ${T(L, "topshirildi, tekshiruv kutilmoqda", "сдано, ждёт проверки", "handed in, waiting")}`) : `⏳ ${T(L, "topshirilmagan", "не сдано", "not handed in")}`;
       const first = task.description.split("\n")[0]!.slice(0, 160);
-      out.push(`• <b>${escapeHtml(task.subject)}</b> · ${escapeHtml(task.title)}${task.dueAt ? ` · до ${day(task.dueAt.toISOString())}` : ""}\n  ${escapeHtml(first)}\n  ${state}`);
+      out.push(`• <b>${escapeHtml(task.subject)}</b> · ${escapeHtml(task.title)}${task.dueAt ? ` · ${T(L, "muddat", "до", "due")} ${day(task.dueAt.toISOString())}` : ""}\n  ${escapeHtml(first)}\n  ${state}`);
     }
   }
-  return out.join("\n") || "Заданий нет.";
+  return out.join("\n") || T(L, "Vazifa yo‘q.", "Заданий нет.", "No homework.");
 }
 
 async function grades(person: Person): Promise<string> {
   const pupils = await pupilsOf(person);
-  if (!pupils.length) return "Нет привязанных учеников. / O‘quvchi bog‘lanmagan.";
+  if (!pupils.length) return T(L, "O‘quvchi bog‘lanmagan.", "Нет привязанных учеников.", "No pupils linked.");
   const out: string[] = [];
   for (const pupil of pupils) {
     const marks = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent })
       .from(journalMarksTable).where(eq(journalMarksTable.studentId, pupil.id)).orderBy(desc(journalMarksTable.date)).limit(12);
     out.push(`📘 <b>${escapeHtml(pupil.name)}</b>`);
-    if (!marks.length) { out.push("Оценок пока нет."); continue; }
-    for (const row of marks) out.push(`${day(row.date)} · ${escapeHtml(subjectName(row.subject))}: ${row.absent ? "нб" : `<b>${row.mark}</b>`}`);
+    if (!marks.length) { out.push(T(L, "Hali baho yo‘q.", "Оценок пока нет.", "No marks yet.")); continue; }
+    for (const row of marks) out.push(`${day(row.date)} · ${escapeHtml(subjectName(row.subject))}: ${row.absent ? T(L, "nb", "нб", "ab") : `<b>${row.mark}</b>`}`);
     const numbers = marks.map((row) => row.mark).filter((mark): mark is number => typeof mark === "number");
-    if (numbers.length) out.push(`Средняя: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
+    if (numbers.length) out.push(`${T(L, "O‘rtacha", "Средняя", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
   }
   return out.join("\n");
 }
@@ -123,7 +140,7 @@ async function grades(person: Person): Promise<string> {
 async function toCheck(person: Person): Promise<string> {
   const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable)
     .where(and(eq(classMembersTable.userId, person.id), eq(classMembersTable.role, "teacher")))).map((row) => row.id);
-  if (!classIds.length) return "Классов пока нет.";
+  if (!classIds.length) return T(L, "Hali sinf yo‘q.", "Классов пока нет.", "No classes yet.");
   const waiting = await db.select({ title: assignmentsTable.title, className: classesTable.name, student: usersTable.username })
     .from(assignmentSubmissionsTable)
     .innerJoin(assignmentsTable, eq(assignmentsTable.id, assignmentSubmissionsTable.assignmentId))
@@ -131,15 +148,15 @@ async function toCheck(person: Person): Promise<string> {
     .innerJoin(usersTable, eq(usersTable.id, assignmentSubmissionsTable.studentId))
     .where(and(inArray(assignmentsTable.classId, classIds), eq(assignmentSubmissionsTable.status, "submitted")))
     .limit(30);
-  if (!waiting.length) return "✅ Проверять нечего. / Tekshiradigan ish yo‘q.";
-  return `📝 <b>Ждут проверки: ${waiting.length}</b>\n${waiting.map((row) => `• ${escapeHtml(row.className)} · ${escapeHtml(row.student)} — ${escapeHtml(row.title)}`).join("\n")}\n\nПроверить: ${SITE}/teacher`;
+  if (!waiting.length) return `✅ ${T(L, "Tekshiradigan ish yo‘q.", "Проверять нечего.", "Nothing to check.")}`;
+  return `📝 <b>${T(L, "Tekshiruv kutmoqda", "Ждут проверки", "Waiting to be checked")}: ${waiting.length}</b>\n${waiting.map((row) => `• ${escapeHtml(row.className)} · ${escapeHtml(row.student)} — ${escapeHtml(row.title)}`).join("\n")}\n\n${T(L, "Tekshirish", "Проверить", "Check")}: ${SITE}/teacher`;
 }
 
 async function school(person: Person): Promise<string> {
   const now = tashkentNow();
   const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable)
     .where(and(eq(schoolMembersTable.userId, person.id), inArray(schoolMembersTable.role, MANAGER_ROLES)))).map((row) => row.id);
-  if (!schoolIds.length) return "Школа не найдена.";
+  if (!schoolIds.length) return T(L, "Maktab topilmadi.", "Школа не найдена.", "School not found.");
   const [info] = await db.select({ name: schoolsTable.name, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil }).from(schoolsTable).where(eq(schoolsTable.id, schoolIds[0]!)).limit(1);
   const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(inArray(classesTable.schoolId, schoolIds));
   const classIds = classes.map((row) => row.id);
@@ -158,17 +175,17 @@ async function school(person: Person): Promise<string> {
   const lateCount = new Set(absent.filter((row) => row.status === "late").map((row) => row.name)).size;
   const lines = [
     `🏫 <b>${escapeHtml(info?.name ?? "")}</b> · ${day(now.date)}`,
-    `Уроков сегодня: <b>${lessons.length}</b>${current.length ? ` · сейчас идёт: ${current.length}` : ""}`,
+    `${T(L, "Bugun darslar", "Уроков сегодня", "Lessons today")}: <b>${lessons.length}</b>${current.length ? ` · ${T(L, "hozir", "сейчас идёт", "now")}: ${current.length}` : ""}`,
     ...current.slice(0, 10).map((lesson) => `  ▶ ${escapeHtml(lesson.className)} · ${escapeHtml(subjectName(lesson.subject))}${lesson.teacherName ? ` · ${escapeHtml(lesson.teacherName)}` : ""}`),
-    `Отсутствуют: <b>${absentNames.length}</b>${lateCount ? ` · опоздали: ${lateCount}` : ""}`,
+    `${T(L, "Kelmaganlar", "Отсутствуют", "Absent")}: <b>${absentNames.length}</b>${lateCount ? ` · ${T(L, "kechikdi", "опоздали", "late")}: ${lateCount}` : ""}`,
     ...absentNames.slice(0, 15).map((name) => `  • ${escapeHtml(name)}`),
-    `Домашки ждут проверки: <b>${waiting.length}</b>`,
+    `${T(L, "Tekshirilmagan uy vazifalari", "Домашки ждут проверки", "Homework to check")}: <b>${waiting.length}</b>`,
   ];
   if (info?.plan && info.plan !== "free" && info.planUntil) {
     const left = Math.ceil((info.planUntil.getTime() - nowMs) / 86400000);
-    if (left <= 30) lines.push(left >= 0 ? `⏳ Тариф ${info.plan === "pro" ? "Pro" : "пилот"} закончится через ${left} дн.` : "⚠️ Срок тарифа закончился.");
+    if (left <= 30) lines.push(left >= 0 ? `⏳ ${T(L, `Tarif ${left} kundan keyin tugaydi.`, `Тариф закончится через ${left} дн.`, `The plan ends in ${left} days.`)}` : `⚠️ ${T(L, "Tarif muddati tugadi.", "Срок тарифа закончился.", "The plan has ended.")}`);
   }
-  lines.push(`\nПодробно: ${SITE}/school`);
+  lines.push(`\n${T(L, "Batafsil", "Подробно", "Details")}: ${SITE}/school`);
   return lines.join("\n");
 }
 
@@ -176,28 +193,43 @@ function help(person: Person | null): string {
   if (!person) {
     return [
       "👋 <b>EDUVERSE</b>",
-      "Чтобы бот показывал ваши уроки, оценки и домашку, подключите его на сайте:",
-      `${SITE}/profile → «Уведомления» → «Подключить Telegram».`,
+      T(L, "Bot darslar, baholar va uy vazifalarini ko‘rsatishi uchun uni saytda ulang:", "Чтобы бот показывал ваши уроки, оценки и домашку, подключите его на сайте:", "To see your lessons, marks and homework here, link the bot on the site:"),
+      `${SITE}/profile → ${T(L, "«Bildirishnomalar» → «Telegramni ulash»", "«Уведомления» → «Подключить Telegram»", "“Notifications” → “Connect Telegram”")}.`,
       "",
-      "Botni saytda ulang: Profil → Bildirishnomalar → «Telegramni ulash».",
+      `🌐 /lang — ${T(L, "tilni o‘zgartirish", "сменить язык", "change language")}`,
     ].join("\n");
   }
   const list = commandsFor(person.role).map((item) => `/${item.command} — ${item.description}`);
-  return `👋 <b>${escapeHtml(person.name)}</b>, команды:\n${list.join("\n")}\n\nСайт: ${SITE}`;
+  return `👋 <b>${escapeHtml(person.name)}</b>\n${list.join("\n")}\n\n${T(L, "Sayt", "Сайт", "Site")}: ${SITE}`;
 }
 
+export type BotReply = { text: string; keyboard?: unknown };
+
 /** Answers a bot command; null when the message is not one of our commands. */
-export async function answerCommand(chatId: string, text: string): Promise<string | null> {
+export async function answerCommand(chatId: string, text: string, telegramLang?: unknown): Promise<BotReply | null> {
   const match = /^\/([a-z]+)(?:@\w+)?\s*$/i.exec(text.trim());
   if (!match) return null;
   const command = match[1]!.toLowerCase();
-  if (!["start", "help", "today", "homework", "grades", "check", "school"].includes(command)) return null;
+  if (!["start", "help", "today", "homework", "grades", "check", "school", "lang", "language", "til", "uz", "ru", "en"].includes(command)) return null;
   const person = await personOfChat(chatId);
-  if (!person || command === "start" || command === "help") return help(person);
-  if (command === "today") return today(person);
-  if (command === "homework" && (person.role === "student" || person.role === "parent")) return homework(person);
-  if (command === "grades" && (person.role === "student" || person.role === "parent")) return grades(person);
-  if (command === "check" && person.role === "teacher") return toCheck(person);
-  if (command === "school" && MANAGERS.includes(person.role)) return school(person);
-  return `Эта команда не для вашей роли.\n\n${help(person)}`;
+  L = person?.lang === "uz" || person?.lang === "ru" || person?.lang === "en" ? person.lang : langFromTelegram(telegramLang);
+  if (command === "uz" || command === "ru" || command === "en") return chooseLang(chatId, command);
+  if (command === "lang" || command === "language" || command === "til") {
+    return { text: "🌐 Tilni tanlang · Выберите язык · Choose a language", keyboard: LANG_KEYBOARD };
+  }
+  if (!person || command === "start" || command === "help") return { text: help(person) };
+  if (command === "today") return { text: await today(person) };
+  if (command === "homework" && (person.role === "student" || person.role === "parent")) return { text: await homework(person) };
+  if (command === "grades" && (person.role === "student" || person.role === "parent")) return { text: await grades(person) };
+  if (command === "check" && person.role === "teacher") return { text: await toCheck(person) };
+  if (command === "school" && MANAGERS.includes(person.role)) return { text: await school(person) };
+  return { text: `${T(L, "Bu buyruq sizning rolingiz uchun emas.", "Эта команда не для вашей роли.", "This command is not for your role.")}\n\n${help(person)}` };
+}
+
+/** Saves the chosen language and answers with the command list in it. */
+export async function chooseLang(chatId: string, lang: BotLang): Promise<BotReply> {
+  await db.update(telegramNotifyTable).set({ lang }).where(eq(telegramNotifyTable.chatId, chatId));
+  L = lang;
+  const person = await personOfChat(chatId);
+  return { text: `✅ ${T(lang, "Til: o‘zbekcha", "Язык: русский", "Language: English")}\n\n${help(person)}` };
 }

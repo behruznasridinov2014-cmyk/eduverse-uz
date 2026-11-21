@@ -17,7 +17,8 @@ import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "
 import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
-import { answerCommand } from "../lib/bot-commands";
+import { answerCommand, chooseLang, LANG_KEYBOARD, type BotLang } from "../lib/bot-commands";
+import { answerTelegramCallback } from "../lib/telegram";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
 import { logger } from "../lib/logger";
 import { writeAudit } from "../lib/audit";
@@ -319,6 +320,27 @@ router.delete("/me/telegram", requireAuthenticatedRole(...everyRole), async (_re
  * webhook handler shares the same URL; other messages fall through to it.
  */
 router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
+  // A press on a language button under a bot message.
+  const callback = isRecord(req.body) && isRecord(req.body.callback_query) ? req.body.callback_query : null;
+  if (callback && typeof callback.data === "string" && /^lang:(uz|ru|en)$/.test(callback.data)) {
+    const secret = telegramWebhookSecret();
+    if (!secret || req.get("x-telegram-bot-api-secret-token") !== secret) {
+      res.status(403).json({ error: "Invalid Telegram webhook secret." });
+      return;
+    }
+    const from = isRecord(callback.from) ? callback.from : null;
+    if (from && (typeof from.id === "number" || typeof from.id === "string")) {
+      try {
+        const reply = await chooseLang(String(from.id), callback.data.slice(5) as BotLang);
+        if (typeof callback.id === "string") await answerTelegramCallback(callback.id, "✓");
+        await sendTelegramMessage(String(from.id), reply.text);
+      } catch (error) {
+        logger.warn({ err: error }, "bot language change failed");
+      }
+    }
+    res.json({ ok: true });
+    return;
+  }
   const message = isRecord(req.body) && isRecord(req.body.message) ? req.body.message : null;
   const text = typeof message?.text === "string" ? message.text.trim() : "";
   const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text);
@@ -332,9 +354,10 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
         return;
       }
       try {
-        const reply = await answerCommand(String(chatOfCommand.id), text);
+        const sender = isRecord(message?.from) ? message.from : null;
+        const reply = await answerCommand(String(chatOfCommand.id), text, sender?.language_code);
         if (reply) {
-          await sendTelegramMessage(String(chatOfCommand.id), reply);
+          await sendTelegramMessage(String(chatOfCommand.id), reply.text, { replyMarkup: reply.keyboard });
           res.json({ ok: true });
           return;
         }
@@ -364,9 +387,9 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     .where(and(eq(telegramNotifyTable.nonce, match[1]!), gt(telegramNotifyTable.nonceExpiresAt, new Date())))
     .returning({ userId: telegramNotifyTable.userId });
   if (row) {
-    const result = await sendTelegramMessage(chatId, `✅ EDUVERSE: bildirishnomalar ulandi. / Уведомления подключены.
-
-${(await answerCommand(chatId, "/help")) ?? ""}`);
+    const sender = isRecord(message?.from) ? message.from : null;
+    const welcome = await answerCommand(chatId, "/help", sender?.language_code);
+    const result = await sendTelegramMessage(chatId, `✅ EDUVERSE: bildirishnomalar ulandi. / Уведомления подключены. / Notifications are on.\n\n${welcome?.text ?? ""}\n\n🌐 /lang`, { replyMarkup: LANG_KEYBOARD });
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
   }
   res.json({ ok: true });

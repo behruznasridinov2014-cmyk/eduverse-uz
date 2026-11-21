@@ -43051,6 +43051,8 @@ var init_learning = __esm({
       chatId: text("chat_id"),
       nonce: text("nonce"),
       nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+      /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
+      lang: text("lang"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
     labReportsTable = pgTable("lab_reports", {
@@ -44281,7 +44283,8 @@ async function sendTelegramMessage(chatId, text2, options = {}) {
         chat_id: chatId,
         text: text2,
         parse_mode: "HTML",
-        disable_web_page_preview: true
+        disable_web_page_preview: true,
+        ...options.replyMarkup ? { reply_markup: options.replyMarkup } : {}
       }),
       signal: AbortSignal.timeout(5e3)
     });
@@ -44322,6 +44325,14 @@ function buildBindLink(nonce) {
   const username = telegramBotUsername();
   if (!username) return null;
   return `https://t.me/${username}?start=bind_${nonce}`;
+}
+async function answerTelegramCallback(callbackId, text2 = "") {
+  const token = botToken();
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/bot${token}/answerCallbackQuery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callback_query_id: callbackId, text: text2 }), signal: AbortSignal.timeout(5e3) });
+  } catch {
+  }
 }
 
 // src/lib/telegram-outbox.ts
@@ -54830,21 +54841,40 @@ var timetable_default = router7;
 
 // src/lib/bot-commands.ts
 var SITE = "https://eduverse-uz1.vercel.app";
-var SUBJECT = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
-var subjectName = (value) => SUBJECT[value] ?? value;
+var T = (lang, uz, ru, en) => lang === "ru" ? ru : lang === "en" ? en : uz;
+var SUBJECT = {
+  physics: ["Fizika", "\u0424\u0438\u0437\u0438\u043A\u0430", "Physics"],
+  chemistry: ["Kimyo", "\u0425\u0438\u043C\u0438\u044F", "Chemistry"],
+  biology: ["Biologiya", "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", "Biology"],
+  math: ["Matematika", "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", "Maths"]
+};
+var L = "ru";
+var subjectName = (value) => {
+  const names = SUBJECT[value];
+  return names ? T(L, ...names) : value;
+};
+function langFromTelegram(code) {
+  const value = typeof code === "string" ? code.toLowerCase() : "";
+  return value.startsWith("uz") ? "uz" : value.startsWith("en") ? "en" : "ru";
+}
+var LANG_KEYBOARD = { inline_keyboard: [[
+  { text: "\u{1F1FA}\u{1F1FF} O\u2018zbekcha", callback_data: "lang:uz" },
+  { text: "\u{1F1F7}\u{1F1FA} \u0420\u0443\u0441\u0441\u043A\u0438\u0439", callback_data: "lang:ru" },
+  { text: "\u{1F1EC}\u{1F1E7} English", callback_data: "lang:en" }
+]] };
 var day = (iso) => iso.slice(0, 10).split("-").reverse().join(".");
 var MANAGERS2 = ["school_director", "school_admin"];
 var MANAGER_ROLES = ["school_director", "school_admin"];
-function commandsFor(role) {
-  const list = [{ command: "today", description: "\u0423\u0440\u043E\u043A\u0438 \u043D\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F / Bugungi darslar" }];
-  if (role === "student" || role === "parent") list.push({ command: "homework", description: "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F / Uy vazifalari" }, { command: "grades", description: "\u041E\u0446\u0435\u043D\u043A\u0438 / Baholar" });
-  if (role === "teacher") list.push({ command: "check", description: "\u0420\u0430\u0431\u043E\u0442\u044B \u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443 / Tekshirish" });
-  if (MANAGERS2.includes(role)) list.push({ command: "school", description: "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u0432 \u0448\u043A\u043E\u043B\u0435 / Bugun maktabda" });
-  list.push({ command: "help", description: "\u041F\u043E\u043C\u043E\u0449\u044C / Yordam" });
+function commandsFor(role, lang = L) {
+  const list = [{ command: "today", description: T(lang, "Bugungi darslar", "\u0423\u0440\u043E\u043A\u0438 \u043D\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F", "Today\u2019s lessons") }];
+  if (role === "student" || role === "parent") list.push({ command: "homework", description: T(lang, "Uy vazifalari", "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F", "Homework") }, { command: "grades", description: T(lang, "Baholar", "\u041E\u0446\u0435\u043D\u043A\u0438", "Marks") });
+  if (role === "teacher") list.push({ command: "check", description: T(lang, "Tekshiriladigan ishlar", "\u0420\u0430\u0431\u043E\u0442\u044B \u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443", "Work to check") });
+  if (MANAGERS2.includes(role)) list.push({ command: "school", description: T(lang, "Bugun maktabda", "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u0432 \u0448\u043A\u043E\u043B\u0435", "Today at school") });
+  list.push({ command: "lang", description: T(lang, "Tilni o\u2018zgartirish", "\u0421\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A", "Change language") }, { command: "help", description: T(lang, "Yordam", "\u041F\u043E\u043C\u043E\u0449\u044C", "Help") });
   return list;
 }
 async function personOfChat(chatId) {
-  const [row] = await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role }).from(telegramNotifyTable).innerJoin(usersTable, eq(usersTable.id, telegramNotifyTable.userId)).where(eq(telegramNotifyTable.chatId, chatId)).limit(1);
+  const [row] = await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role, lang: telegramNotifyTable.lang }).from(telegramNotifyTable).innerJoin(usersTable, eq(usersTable.id, telegramNotifyTable.userId)).where(eq(telegramNotifyTable.chatId, chatId)).limit(1);
   return row ?? null;
 }
 async function pupilsOf(person) {
@@ -54855,9 +54885,9 @@ async function pupilsOf(person) {
 async function today(person) {
   const now = tashkentNow();
   const where = await slotsFilterFor({ id: person.id, role: person.role });
-  if (!where) return "\u0420\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043A\u0430 \u043D\u0435\u0442. / Jadval hali yo\u2018q.";
+  if (!where) return T(L, "Jadval hali yo\u2018q.", "\u0420\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "There is no timetable yet.");
   const lessons = await lessonReader(where)(now.date, now.weekday);
-  if (!lessons.length) return `\u{1F4C5} ${day(now.date)}: \u0443\u0440\u043E\u043A\u043E\u0432 \u043D\u0435\u0442. / Bugun dars yo\u2018q.`;
+  if (!lessons.length) return `\u{1F4C5} ${day(now.date)}: ${T(L, "bugun dars yo\u2018q.", "\u0443\u0440\u043E\u043A\u043E\u0432 \u043D\u0435\u0442.", "no lessons today.")}`;
   const manager = MANAGERS2.includes(person.role);
   const shown = manager ? lessons.slice(0, 40) : lessons;
   const nowMs = Date.now();
@@ -54865,17 +54895,17 @@ async function today(person) {
     const state = nowMs >= Date.parse(lesson.endsAt) ? "\u2713" : nowMs >= Date.parse(lesson.startsAt) ? "\u25B6" : "\u2022";
     const who = person.role === "teacher" || manager ? `${escapeHtml(lesson.className)} \xB7 ` : "";
     const teacher = person.role !== "teacher" && lesson.teacherName ? ` \xB7 ${escapeHtml(lesson.teacherName)}` : "";
-    return `${state} ${lesson.start}\u2013${lesson.end} \xB7 ${who}<b>${escapeHtml(subjectName(lesson.subject))}</b>${lesson.room ? ` \xB7 \u043A\u0430\u0431. ${escapeHtml(lesson.room)}` : ""}${teacher}`;
+    return `${state} ${lesson.start}\u2013${lesson.end} \xB7 ${who}<b>${escapeHtml(subjectName(lesson.subject))}</b>${lesson.room ? ` \xB7 ${T(L, "xona", "\u043A\u0430\u0431.", "room")} ${escapeHtml(lesson.room)}` : ""}${teacher}`;
   });
-  return `\u{1F4C5} <b>\u0423\u0440\u043E\u043A\u0438 \u043D\u0430 ${day(now.date)}</b>
+  return `\u{1F4C5} <b>${T(L, "Darslar", "\u0423\u0440\u043E\u043A\u0438 \u043D\u0430", "Lessons")} ${day(now.date)}</b>
 ${lines.join("\n")}${lessons.length > shown.length ? `
-\u2026\u0438 \u0435\u0449\u0451 ${lessons.length - shown.length}` : ""}
+\u2026 +${lessons.length - shown.length}` : ""}
 
-\u25B6 \u0438\u0434\u0451\u0442 \u0441\u0435\u0439\u0447\u0430\u0441 \xB7 \u2713 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F`;
+\u25B6 ${T(L, "hozir", "\u0438\u0434\u0451\u0442 \u0441\u0435\u0439\u0447\u0430\u0441", "now")} \xB7 \u2713 ${T(L, "tugadi", "\u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F", "over")}`;
 }
 async function homework(person) {
   const pupils = await pupilsOf(person);
-  if (!pupils.length) return "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432. / O\u2018quvchi bog\u2018lanmagan.";
+  if (!pupils.length) return T(L, "O\u2018quvchi bog\u2018lanmagan.", "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432.", "No pupils linked.");
   const out = [];
   const since = new Date(Date.now() - 7 * 864e5);
   for (const pupil of pupils) {
@@ -54885,51 +54915,51 @@ async function homework(person) {
     const mine = tasks.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, pupil.id), inArray(assignmentSubmissionsTable.assignmentId, tasks.map((task) => task.id)))) : [];
     out.push(`\u{1F4DA} <b>${escapeHtml(pupil.name)}</b>`);
     if (!tasks.length) {
-      out.push("\u0417\u0430 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.");
+      out.push(T(L, "Bu hafta vazifa yo\u2018q.", "\u0417\u0430 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.", "No homework this week."));
       continue;
     }
     for (const task of tasks) {
       const sent = mine.find((row) => row.assignmentId === task.id);
-      const state = sent ? sent.score !== null ? `\u2705 \u043E\u0446\u0435\u043D\u043A\u0430 ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : "\u{1F4E4} \u0441\u0434\u0430\u043D\u043E, \u0436\u0434\u0451\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438" : "\u23F3 \u043D\u0435 \u0441\u0434\u0430\u043D\u043E";
+      const state = sent ? sent.score !== null ? `\u2705 ${T(L, "baho", "\u043E\u0446\u0435\u043D\u043A\u0430", "mark")} ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : `\u{1F4E4} ${T(L, "topshirildi, tekshiruv kutilmoqda", "\u0441\u0434\u0430\u043D\u043E, \u0436\u0434\u0451\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", "handed in, waiting")}` : `\u23F3 ${T(L, "topshirilmagan", "\u043D\u0435 \u0441\u0434\u0430\u043D\u043E", "not handed in")}`;
       const first = task.description.split("\n")[0].slice(0, 160);
-      out.push(`\u2022 <b>${escapeHtml(task.subject)}</b> \xB7 ${escapeHtml(task.title)}${task.dueAt ? ` \xB7 \u0434\u043E ${day(task.dueAt.toISOString())}` : ""}
+      out.push(`\u2022 <b>${escapeHtml(task.subject)}</b> \xB7 ${escapeHtml(task.title)}${task.dueAt ? ` \xB7 ${T(L, "muddat", "\u0434\u043E", "due")} ${day(task.dueAt.toISOString())}` : ""}
   ${escapeHtml(first)}
   ${state}`);
     }
   }
-  return out.join("\n") || "\u0417\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.";
+  return out.join("\n") || T(L, "Vazifa yo\u2018q.", "\u0417\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.", "No homework.");
 }
 async function grades(person) {
   const pupils = await pupilsOf(person);
-  if (!pupils.length) return "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432. / O\u2018quvchi bog\u2018lanmagan.";
+  if (!pupils.length) return T(L, "O\u2018quvchi bog\u2018lanmagan.", "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432.", "No pupils linked.");
   const out = [];
   for (const pupil of pupils) {
     const marks = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(eq(journalMarksTable.studentId, pupil.id)).orderBy(desc(journalMarksTable.date)).limit(12);
     out.push(`\u{1F4D8} <b>${escapeHtml(pupil.name)}</b>`);
     if (!marks.length) {
-      out.push("\u041E\u0446\u0435\u043D\u043E\u043A \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.");
+      out.push(T(L, "Hali baho yo\u2018q.", "\u041E\u0446\u0435\u043D\u043E\u043A \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "No marks yet."));
       continue;
     }
-    for (const row of marks) out.push(`${day(row.date)} \xB7 ${escapeHtml(subjectName(row.subject))}: ${row.absent ? "\u043D\u0431" : `<b>${row.mark}</b>`}`);
+    for (const row of marks) out.push(`${day(row.date)} \xB7 ${escapeHtml(subjectName(row.subject))}: ${row.absent ? T(L, "nb", "\u043D\u0431", "ab") : `<b>${row.mark}</b>`}`);
     const numbers = marks.map((row) => row.mark).filter((mark) => typeof mark === "number");
-    if (numbers.length) out.push(`\u0421\u0440\u0435\u0434\u043D\u044F\u044F: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
+    if (numbers.length) out.push(`${T(L, "O\u2018rtacha", "\u0421\u0440\u0435\u0434\u043D\u044F\u044F", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
   }
   return out.join("\n");
 }
 async function toCheck(person) {
   const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, person.id), eq(classMembersTable.role, "teacher")))).map((row) => row.id);
-  if (!classIds.length) return "\u041A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.";
+  if (!classIds.length) return T(L, "Hali sinf yo\u2018q.", "\u041A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "No classes yet.");
   const waiting = await db.select({ title: assignmentsTable.title, className: classesTable.name, student: usersTable.username }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentsTable.id, assignmentSubmissionsTable.assignmentId)).innerJoin(classesTable, eq(classesTable.id, assignmentsTable.classId)).innerJoin(usersTable, eq(usersTable.id, assignmentSubmissionsTable.studentId)).where(and(inArray(assignmentsTable.classId, classIds), eq(assignmentSubmissionsTable.status, "submitted"))).limit(30);
-  if (!waiting.length) return "\u2705 \u041F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043D\u0435\u0447\u0435\u0433\u043E. / Tekshiradigan ish yo\u2018q.";
-  return `\u{1F4DD} <b>\u0416\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438: ${waiting.length}</b>
+  if (!waiting.length) return `\u2705 ${T(L, "Tekshiradigan ish yo\u2018q.", "\u041F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043D\u0435\u0447\u0435\u0433\u043E.", "Nothing to check.")}`;
+  return `\u{1F4DD} <b>${T(L, "Tekshiruv kutmoqda", "\u0416\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", "Waiting to be checked")}: ${waiting.length}</b>
 ${waiting.map((row) => `\u2022 ${escapeHtml(row.className)} \xB7 ${escapeHtml(row.student)} \u2014 ${escapeHtml(row.title)}`).join("\n")}
 
-\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C: ${SITE}/teacher`;
+${T(L, "Tekshirish", "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C", "Check")}: ${SITE}/teacher`;
 }
 async function school(person) {
   const now = tashkentNow();
   const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, person.id), inArray(schoolMembersTable.role, MANAGER_ROLES)))).map((row) => row.id);
-  if (!schoolIds.length) return "\u0428\u043A\u043E\u043B\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430.";
+  if (!schoolIds.length) return T(L, "Maktab topilmadi.", "\u0428\u043A\u043E\u043B\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430.", "School not found.");
   const [info] = await db.select({ name: schoolsTable.name, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil }).from(schoolsTable).where(eq(schoolsTable.id, schoolIds[0])).limit(1);
   const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(inArray(classesTable.schoolId, schoolIds));
   const classIds = classes.map((row) => row.id);
@@ -54944,51 +54974,64 @@ async function school(person) {
   const lateCount = new Set(absent.filter((row) => row.status === "late").map((row) => row.name)).size;
   const lines = [
     `\u{1F3EB} <b>${escapeHtml(info?.name ?? "")}</b> \xB7 ${day(now.date)}`,
-    `\u0423\u0440\u043E\u043A\u043E\u0432 \u0441\u0435\u0433\u043E\u0434\u043D\u044F: <b>${lessons.length}</b>${current.length ? ` \xB7 \u0441\u0435\u0439\u0447\u0430\u0441 \u0438\u0434\u0451\u0442: ${current.length}` : ""}`,
+    `${T(L, "Bugun darslar", "\u0423\u0440\u043E\u043A\u043E\u0432 \u0441\u0435\u0433\u043E\u0434\u043D\u044F", "Lessons today")}: <b>${lessons.length}</b>${current.length ? ` \xB7 ${T(L, "hozir", "\u0441\u0435\u0439\u0447\u0430\u0441 \u0438\u0434\u0451\u0442", "now")}: ${current.length}` : ""}`,
     ...current.slice(0, 10).map((lesson) => `  \u25B6 ${escapeHtml(lesson.className)} \xB7 ${escapeHtml(subjectName(lesson.subject))}${lesson.teacherName ? ` \xB7 ${escapeHtml(lesson.teacherName)}` : ""}`),
-    `\u041E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u044E\u0442: <b>${absentNames.length}</b>${lateCount ? ` \xB7 \u043E\u043F\u043E\u0437\u0434\u0430\u043B\u0438: ${lateCount}` : ""}`,
+    `${T(L, "Kelmaganlar", "\u041E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u044E\u0442", "Absent")}: <b>${absentNames.length}</b>${lateCount ? ` \xB7 ${T(L, "kechikdi", "\u043E\u043F\u043E\u0437\u0434\u0430\u043B\u0438", "late")}: ${lateCount}` : ""}`,
     ...absentNames.slice(0, 15).map((name) => `  \u2022 ${escapeHtml(name)}`),
-    `\u0414\u043E\u043C\u0430\u0448\u043A\u0438 \u0436\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438: <b>${waiting.length}</b>`
+    `${T(L, "Tekshirilmagan uy vazifalari", "\u0414\u043E\u043C\u0430\u0448\u043A\u0438 \u0436\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", "Homework to check")}: <b>${waiting.length}</b>`
   ];
   if (info?.plan && info.plan !== "free" && info.planUntil) {
     const left = Math.ceil((info.planUntil.getTime() - nowMs) / 864e5);
-    if (left <= 30) lines.push(left >= 0 ? `\u23F3 \u0422\u0430\u0440\u0438\u0444 ${info.plan === "pro" ? "Pro" : "\u043F\u0438\u043B\u043E\u0442"} \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${left} \u0434\u043D.` : "\u26A0\uFE0F \u0421\u0440\u043E\u043A \u0442\u0430\u0440\u0438\u0444\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.");
+    if (left <= 30) lines.push(left >= 0 ? `\u23F3 ${T(L, `Tarif ${left} kundan keyin tugaydi.`, `\u0422\u0430\u0440\u0438\u0444 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${left} \u0434\u043D.`, `The plan ends in ${left} days.`)}` : `\u26A0\uFE0F ${T(L, "Tarif muddati tugadi.", "\u0421\u0440\u043E\u043A \u0442\u0430\u0440\u0438\u0444\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.", "The plan has ended.")}`);
   }
   lines.push(`
-\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u043E: ${SITE}/school`);
+${T(L, "Batafsil", "\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u043E", "Details")}: ${SITE}/school`);
   return lines.join("\n");
 }
 function help(person) {
   if (!person) {
     return [
       "\u{1F44B} <b>EDUVERSE</b>",
-      "\u0427\u0442\u043E\u0431\u044B \u0431\u043E\u0442 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B \u0432\u0430\u0448\u0438 \u0443\u0440\u043E\u043A\u0438, \u043E\u0446\u0435\u043D\u043A\u0438 \u0438 \u0434\u043E\u043C\u0430\u0448\u043A\u0443, \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0435\u0433\u043E \u043D\u0430 \u0441\u0430\u0439\u0442\u0435:",
-      `${SITE}/profile \u2192 \xAB\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\xBB \u2192 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C Telegram\xBB.`,
+      T(L, "Bot darslar, baholar va uy vazifalarini ko\u2018rsatishi uchun uni saytda ulang:", "\u0427\u0442\u043E\u0431\u044B \u0431\u043E\u0442 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B \u0432\u0430\u0448\u0438 \u0443\u0440\u043E\u043A\u0438, \u043E\u0446\u0435\u043D\u043A\u0438 \u0438 \u0434\u043E\u043C\u0430\u0448\u043A\u0443, \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0435\u0433\u043E \u043D\u0430 \u0441\u0430\u0439\u0442\u0435:", "To see your lessons, marks and homework here, link the bot on the site:"),
+      `${SITE}/profile \u2192 ${T(L, "\xABBildirishnomalar\xBB \u2192 \xABTelegramni ulash\xBB", "\xAB\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\xBB \u2192 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C Telegram\xBB", "\u201CNotifications\u201D \u2192 \u201CConnect Telegram\u201D")}.`,
       "",
-      "Botni saytda ulang: Profil \u2192 Bildirishnomalar \u2192 \xABTelegramni ulash\xBB."
+      `\u{1F310} /lang \u2014 ${T(L, "tilni o\u2018zgartirish", "\u0441\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A", "change language")}`
     ].join("\n");
   }
   const list = commandsFor(person.role).map((item) => `/${item.command} \u2014 ${item.description}`);
-  return `\u{1F44B} <b>${escapeHtml(person.name)}</b>, \u043A\u043E\u043C\u0430\u043D\u0434\u044B:
+  return `\u{1F44B} <b>${escapeHtml(person.name)}</b>
 ${list.join("\n")}
 
-\u0421\u0430\u0439\u0442: ${SITE}`;
+${T(L, "Sayt", "\u0421\u0430\u0439\u0442", "Site")}: ${SITE}`;
 }
-async function answerCommand(chatId, text2) {
+async function answerCommand(chatId, text2, telegramLang) {
   const match = /^\/([a-z]+)(?:@\w+)?\s*$/i.exec(text2.trim());
   if (!match) return null;
   const command = match[1].toLowerCase();
-  if (!["start", "help", "today", "homework", "grades", "check", "school"].includes(command)) return null;
+  if (!["start", "help", "today", "homework", "grades", "check", "school", "lang", "language", "til", "uz", "ru", "en"].includes(command)) return null;
   const person = await personOfChat(chatId);
-  if (!person || command === "start" || command === "help") return help(person);
-  if (command === "today") return today(person);
-  if (command === "homework" && (person.role === "student" || person.role === "parent")) return homework(person);
-  if (command === "grades" && (person.role === "student" || person.role === "parent")) return grades(person);
-  if (command === "check" && person.role === "teacher") return toCheck(person);
-  if (command === "school" && MANAGERS2.includes(person.role)) return school(person);
-  return `\u042D\u0442\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u043D\u0435 \u0434\u043B\u044F \u0432\u0430\u0448\u0435\u0439 \u0440\u043E\u043B\u0438.
+  L = person?.lang === "uz" || person?.lang === "ru" || person?.lang === "en" ? person.lang : langFromTelegram(telegramLang);
+  if (command === "uz" || command === "ru" || command === "en") return chooseLang(chatId, command);
+  if (command === "lang" || command === "language" || command === "til") {
+    return { text: "\u{1F310} Tilni tanlang \xB7 \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \xB7 Choose a language", keyboard: LANG_KEYBOARD };
+  }
+  if (!person || command === "start" || command === "help") return { text: help(person) };
+  if (command === "today") return { text: await today(person) };
+  if (command === "homework" && (person.role === "student" || person.role === "parent")) return { text: await homework(person) };
+  if (command === "grades" && (person.role === "student" || person.role === "parent")) return { text: await grades(person) };
+  if (command === "check" && person.role === "teacher") return { text: await toCheck(person) };
+  if (command === "school" && MANAGERS2.includes(person.role)) return { text: await school(person) };
+  return { text: `${T(L, "Bu buyruq sizning rolingiz uchun emas.", "\u042D\u0442\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u043D\u0435 \u0434\u043B\u044F \u0432\u0430\u0448\u0435\u0439 \u0440\u043E\u043B\u0438.", "This command is not for your role.")}
 
-${help(person)}`;
+${help(person)}` };
+}
+async function chooseLang(chatId, lang) {
+  await db.update(telegramNotifyTable).set({ lang }).where(eq(telegramNotifyTable.chatId, chatId));
+  L = lang;
+  const person = await personOfChat(chatId);
+  return { text: `\u2705 ${T(lang, "Til: o\u2018zbekcha", "\u042F\u0437\u044B\u043A: \u0440\u0443\u0441\u0441\u043A\u0438\u0439", "Language: English")}
+
+${help(person)}` };
 }
 
 // src/routes/school-tools.ts
@@ -55252,6 +55295,26 @@ router8.delete("/me/telegram", requireAuthenticatedRole(...everyRole4), async (_
   res.status(204).end();
 });
 router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
+  const callback = isRecord7(req.body) && isRecord7(req.body.callback_query) ? req.body.callback_query : null;
+  if (callback && typeof callback.data === "string" && /^lang:(uz|ru|en)$/.test(callback.data)) {
+    const secret = telegramWebhookSecret();
+    if (!secret || req.get("x-telegram-bot-api-secret-token") !== secret) {
+      res.status(403).json({ error: "Invalid Telegram webhook secret." });
+      return;
+    }
+    const from = isRecord7(callback.from) ? callback.from : null;
+    if (from && (typeof from.id === "number" || typeof from.id === "string")) {
+      try {
+        const reply = await chooseLang(String(from.id), callback.data.slice(5));
+        if (typeof callback.id === "string") await answerTelegramCallback(callback.id, "\u2713");
+        await sendTelegramMessage(String(from.id), reply.text);
+      } catch (error) {
+        logger.warn({ err: error }, "bot language change failed");
+      }
+    }
+    res.json({ ok: true });
+    return;
+  }
   const message = isRecord7(req.body) && isRecord7(req.body.message) ? req.body.message : null;
   const text2 = typeof message?.text === "string" ? message.text.trim() : "";
   const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text2);
@@ -55264,9 +55327,10 @@ router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
         return;
       }
       try {
-        const reply = await answerCommand(String(chatOfCommand.id), text2);
+        const sender = isRecord7(message?.from) ? message.from : null;
+        const reply = await answerCommand(String(chatOfCommand.id), text2, sender?.language_code);
         if (reply) {
-          await sendTelegramMessage(String(chatOfCommand.id), reply);
+          await sendTelegramMessage(String(chatOfCommand.id), reply.text, { replyMarkup: reply.keyboard });
           res.json({ ok: true });
           return;
         }
@@ -55292,9 +55356,13 @@ router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
   const chatId = String(chat.id);
   const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
   if (row) {
-    const result = await sendTelegramMessage(chatId, `\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B.
+    const sender = isRecord7(message?.from) ? message.from : null;
+    const welcome = await answerCommand(chatId, "/help", sender?.language_code);
+    const result = await sendTelegramMessage(chatId, `\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B. / Notifications are on.
 
-${await answerCommand(chatId, "/help") ?? ""}`);
+${welcome?.text ?? ""}
+
+\u{1F310} /lang`, { replyMarkup: LANG_KEYBOARD });
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
   }
   res.json({ ok: true });

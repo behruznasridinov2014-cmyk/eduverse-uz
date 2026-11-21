@@ -285,6 +285,8 @@ export const telegramNotifyTable = pgTable("telegram_notify", {
   chatId: text("chat_id"),
   nonce: text("nonce"),
   nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+  /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
+  lang: text("lang"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
 
