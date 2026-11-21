@@ -1,7 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { assignmentsTable, classMembersTable, courseProgressTable, db } from "@workspace/db";
 import { pushNotice, withParents } from "./inbox";
-import { escapeHtml, notifyUsers } from "./notify";
+import { escapeHtml, notifyUsers, subjectText, tl } from "./notify";
 import BOOKS from "./book-topics.json";
 import { logger } from "./logger";
 
@@ -89,9 +89,7 @@ async function announceHomework(classId: string, title: string, homework: string
     if (!pupils.length) return;
     const people = await withParents(pupils);
     await pushNotice(people, "homework", `Домашнее задание: ${subject}`, `${title} — ${homework}`, "/classes");
-    await notifyUsers(people, `📚 <b>Uy vazifasi / Домашнее задание</b> · ${escapeHtml(subject)}
-${escapeHtml(title)}
-${escapeHtml(homework)}`);
+    await notifyUsers(people, (lang) => `📚 <b>${tl(lang, "Yangi uy vazifasi", "Новое домашнее задание", "New homework")}</b> · ${subjectText(lang, subject)}\n📖 ${escapeHtml(title)}\n\n${escapeHtml(homework)}\n\n${tl(lang, "Daftar rasmini saytda yuboring", "Фото тетради отправьте на сайте", "Send a notebook photo on the site")}: https://eduverse-uz1.vercel.app/classes`);
   } catch (error) {
     logger.warn({ err: error }, "homework notice was not sent");
   }

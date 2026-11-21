@@ -50838,17 +50838,30 @@ import { randomBytes as randomBytes4, scrypt as scryptCallback2 } from "node:cry
 // src/lib/notify.ts
 init_drizzle_orm();
 init_src();
-async function notifyUsers(userIds, text2) {
+var tl = (lang, uz, ru, en) => lang === "ru" ? ru : lang === "en" ? en : uz;
+var SUBJECTS = [
+  [["physics", "\u0444\u0438\u0437\u0438\u043A\u0430", "fizika"], ["Fizika", "\u0424\u0438\u0437\u0438\u043A\u0430", "Physics"]],
+  [["chemistry", "\u0445\u0438\u043C\u0438\u044F", "kimyo"], ["Kimyo", "\u0425\u0438\u043C\u0438\u044F", "Chemistry"]],
+  [["biology", "\u0431\u0438\u043E\u043B\u043E\u0433\u0438\u044F", "biologiya"], ["Biologiya", "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", "Biology"]],
+  [["math", "mathematics", "\u043C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", "matematika"], ["Matematika", "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", "Maths"]]
+];
+function subjectText(lang, value) {
+  const found = SUBJECTS.find(([names]) => names.includes(value.trim().toLowerCase()));
+  return found ? tl(lang, ...found[1]) : value;
+}
+var dateText = (iso) => iso.slice(0, 10).split("-").reverse().join(".");
+async function notifyUsers(userIds, notice) {
   if (!telegramBotConfigured() || userIds.length === 0) return 0;
   try {
     const wanted = await usersWanting(userIds, "telegram");
     if (wanted.length === 0) return 0;
-    const rows = await db.select({ chatId: telegramNotifyTable.chatId }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, wanted), isNotNull(telegramNotifyTable.chatId)));
+    const rows = await db.select({ chatId: telegramNotifyTable.chatId, lang: telegramNotifyTable.lang }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, wanted), isNotNull(telegramNotifyTable.chatId)));
     let sent = 0;
     await Promise.all(
       rows.map(async (row) => {
         if (!row.chatId) return;
-        const result = await sendTelegramMessage(row.chatId, text2);
+        const lang = row.lang === "uz" || row.lang === "en" ? row.lang : "ru";
+        const result = await sendTelegramMessage(row.chatId, typeof notice === "function" ? notice(lang) : notice);
         if (result.ok) sent += 1;
         else logger.warn({ errorCode: result.errorCode }, "telegram notification not delivered");
       })
@@ -50863,9 +50876,11 @@ async function parentsOf(studentIds) {
   if (studentIds.length === 0) return [];
   return db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds));
 }
-async function notifyFamily(studentId, text2, includeStudent = false) {
+async function notifyFamily(studentId, notice, includeStudent = false) {
   const parents = await parentsOf([studentId]);
-  await notifyUsers([...parents.map((row) => row.parentId), ...includeStudent ? [studentId] : []], text2);
+  const [pupil] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+  const name = escapeHtml(pupil?.name ?? "");
+  await notifyUsers([...parents.map((row) => row.parentId), ...includeStudent ? [studentId] : []], typeof notice === "function" ? (lang) => notice(lang, name) : notice);
 }
 var escapeHtml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -51684,11 +51699,13 @@ router3.put(
       const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
       const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
       await Promise.all(flagged.map((entry) => {
-        const name = escapeHtml(names.find((row) => row.id === entry.studentId)?.name ?? "");
-        const text2 = entry.status === "absent" ? `\u26A0\uFE0F <b>${name}</b> bugun darsga kelmadi (${escapeHtml(ctx?.name ?? "")}, ${date2}).
-\u26A0\uFE0F <b>${name}</b> \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u043E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0430 \u0443\u0440\u043E\u043A\u0435.` : `\u23F0 <b>${name}</b> darsga kechikdi (${date2}).
-\u23F0 <b>${name}</b> \u043E\u043F\u043E\u0437\u0434\u0430\u043B \u043D\u0430 \u0443\u0440\u043E\u043A.`;
-        return notifyFamily(entry.studentId, text2);
+        const klass = escapeHtml(ctx?.name ?? "");
+        const lesson = escapeHtml(subject);
+        return notifyFamily(entry.studentId, (lang, name) => entry.status === "absent" ? `\u26A0\uFE0F <b>${tl(lang, "Darsga kelmadi", "\u041D\u0435\u0442 \u043D\u0430 \u0443\u0440\u043E\u043A\u0435", "Absent from the lesson")}</b>
+\u{1F464} ${name} \xB7 ${klass}
+\u{1F4D6} ${subjectText(lang, lesson)} \xB7 ${dateText(date2)}` : `\u23F0 <b>${tl(lang, "Darsga kechikdi", "\u041E\u043F\u043E\u0437\u0434\u0430\u043B \u043D\u0430 \u0443\u0440\u043E\u043A", "Late for the lesson")}</b>
+\u{1F464} ${name} \xB7 ${klass}
+\u{1F4D6} ${subjectText(lang, lesson)} \xB7 ${dateText(date2)}`);
       }));
     }
     res.json({ saved: finalEntries.length, date: date2 });
@@ -51797,7 +51814,9 @@ router3.post("/classes/:classId/announcements", requireAuthenticatedRole(...staf
   const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
   const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
   const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
-  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `\u{1F4E2} <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], (lang) => `\u{1F4E2} <b>${tl(lang, "E\u2019lon", "\u041E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435", "Announcement")} \xB7 ${escapeHtml(ctx?.name ?? "")}</b>
+
+${escapeHtml(body)}`);
   await pushNotice([...studentIds, ...parentRows.map((row) => row.parentId)], "announcements", `\u041E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435 \xB7 ${ctx?.name ?? ""}`, body, "/dashboard");
   res.status(201).json({ announcement: created });
 });
@@ -52351,9 +52370,10 @@ router4.post(
     if (host.role === "teacher") {
       const students = await studentsOfClasses(classId ? [classId] : await teacherClassIds(host.id));
       await pushNotice(students, "lessons", `\u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A: ${room?.title ?? ""}`, `\u041A\u043E\u0434: ${room?.code ?? ""}`, "/lesson");
-      await notifyUsers(await withParents(students), `\u{1F3A5} <b>Onlayn dars boshlandi / \u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A</b>
-${escapeHtml(room?.title ?? "")}
-https://eduverse-uz1.vercel.app/lesson`);
+      await notifyUsers(await withParents(students), (lang) => `\u{1F3A5} <b>${tl(lang, "Onlayn dars boshlandi", "\u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A", "An online lesson has started")}</b>
+\u{1F4D6} ${escapeHtml(room?.title ?? "")}
+
+${tl(lang, "Kirish", "\u0412\u043E\u0439\u0442\u0438 \u043D\u0430 \u0443\u0440\u043E\u043A", "Join")}: https://eduverse-uz1.vercel.app/lesson`);
     }
     res.status(201).json({ room });
   }
@@ -54023,8 +54043,10 @@ router5.patch(
       await pushNotice(await withParents([studentId]), "grades", `\u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: ${grade}`, `${info?.subject ?? ""} \u2014 ${info?.title ?? ""}`, "/classes");
       await notifyFamily(
         studentId,
-        `\u{1F4DD} Yangi baho / \u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: <b>${grade}</b>
-${escapeHtml(info?.subject ?? "")} \u2014 ${escapeHtml(info?.title ?? "")}`,
+        (lang, name) => `\u{1F4DD} <b>${tl(lang, "Uy vazifasiga baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435", "Homework mark")}: ${grade}</b>
+\u{1F464} ${name}
+\u{1F4D6} ${subjectText(lang, info?.subject ?? "")} \u2014 ${escapeHtml(info?.title ?? "")}${changes.feedback ? `
+\u{1F4AC} ${escapeHtml(changes.feedback.slice(0, 300))}` : ""}`,
         true
       );
     }
@@ -54446,11 +54468,12 @@ async function remindTrainer(teacherId, day2, lessons) {
 var course_default = router6;
 async function announceTrainer(studentId, score, total, subject) {
   try {
-    const names = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
-    const label = names[subject] ?? subject;
     const people = await withParents([studentId]);
-    await pushNotice(people, "grades", `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F: ${score} \u0438\u0437 ${total}`, label, "/trainer");
-    await notifyFamily(studentId, `\u{1F9E0} Kunlik trenajyor / \u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F${label ? ` \xB7 ${escapeHtml(label)}` : ""}: <b>${score} / ${total}</b>`, true);
+    await pushNotice(people, "grades", `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F: ${score} \u0438\u0437 ${total}`, subjectText("ru", subject), "/trainer");
+    await notifyFamily(studentId, (lang, name) => `\u{1F9E0} <b>${tl(lang, "Kunlik trenajyor", "\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F", "Daily trainer")}: ${score} / ${total}</b>
+\u{1F464} ${name}${subject ? `
+\u{1F4D6} ${subjectText(lang, subject)}` : ""}
+${score / total >= 0.75 ? tl(lang, "\u{1F44F} Zo\u2018r natija!", "\u{1F44F} \u041E\u0442\u043B\u0438\u0447\u043D\u044B\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442!", "\u{1F44F} Great result!") : tl(lang, "Mavzuni yana bir ko\u2018rib chiqing.", "\u0421\u0442\u043E\u0438\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u0442\u0435\u043C\u0443.", "Worth reviewing the topic.")}`, true);
   } catch {
   }
 }
@@ -54527,9 +54550,12 @@ async function announceHomework(classId, title, homework2, subject) {
     if (!pupils.length) return;
     const people = await withParents(pupils);
     await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework2}`, "/classes");
-    await notifyUsers(people, `\u{1F4DA} <b>Uy vazifasi / \u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435</b> \xB7 ${escapeHtml(subject)}
-${escapeHtml(title)}
-${escapeHtml(homework2)}`);
+    await notifyUsers(people, (lang) => `\u{1F4DA} <b>${tl(lang, "Yangi uy vazifasi", "\u041D\u043E\u0432\u043E\u0435 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435", "New homework")}</b> \xB7 ${subjectText(lang, subject)}
+\u{1F4D6} ${escapeHtml(title)}
+
+${escapeHtml(homework2)}
+
+${tl(lang, "Daftar rasmini saytda yuboring", "\u0424\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u043E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u043D\u0430 \u0441\u0430\u0439\u0442\u0435", "Send a notebook photo on the site")}: https://eduverse-uz1.vercel.app/classes`);
   } catch (error) {
     logger.warn({ err: error }, "homework notice was not sent");
   }
@@ -54689,11 +54715,11 @@ async function fillDemoTimetable(schoolId) {
   const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
   if (!classes.length) return 0;
   const teachers = await db.select({ id: usersTable.id, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username));
-  const SUBJECTS = ["math", "physics", "chemistry", "biology"];
+  const SUBJECTS2 = ["math", "physics", "chemistry", "biology"];
   const SUBJECT_RU2 = { math: "\u043C\u0430\u0442\u0435\u043C", physics: "\u0444\u0438\u0437\u0438\u043A", chemistry: "\u0445\u0438\u043C\u0438", biology: "\u0431\u0438\u043E\u043B\u043E\u0433" };
   const teaches = (teacher, subject) => Array.isArray(teacher.subjects) && teacher.subjects.some((item) => typeof item === "string" && item.toLowerCase().includes(SUBJECT_RU2[subject]));
   const ownerOf = /* @__PURE__ */ new Map();
-  SUBJECTS.forEach((subject, index2) => {
+  SUBJECTS2.forEach((subject, index2) => {
     const own = teachers.filter((teacher) => teaches(teacher, subject)).map((teacher) => teacher.id);
     const fallback = teachers.length ? [teachers[index2 % teachers.length].id] : [];
     ownerOf.set(subject, own.length ? own : fallback);
@@ -55014,9 +55040,11 @@ function help(person) {
   }
   const list = commandsFor(person.role).map((item) => `/${item.command} \u2014 ${item.description}`);
   return `\u{1F44B} <b>${escapeHtml(person.name)}</b>
+${T(L, "Buyruqni bosing:", "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0443:", "Tap a command:")}
+
 ${list.join("\n")}
 
-${T(L, "Sayt", "\u0421\u0430\u0439\u0442", "Site")}: ${SITE}`;
+\u{1F30D} ${T(L, "Sayt", "\u0421\u0430\u0439\u0442", "Site")}: ${SITE}`;
 }
 async function answerCommand(chatId, text2, telegramLang) {
   const match = /^\/([a-z]+)(?:@\w+)?\s*$/i.exec(text2.trim());
@@ -55374,12 +55402,16 @@ router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
   const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
   if (row) {
     const sender = isRecord7(message?.from) ? message.from : null;
+    const lang = langFromTelegram(sender?.language_code);
+    await db.update(telegramNotifyTable).set({ lang }).where(and(eq(telegramNotifyTable.userId, row.userId), isNull(telegramNotifyTable.lang)));
     const welcome = await answerCommand(chatId, "/help", sender?.language_code);
-    const result = await sendTelegramMessage(chatId, `\u2705 EDUVERSE: bildirishnomalar ulandi. / \u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044B. / Notifications are on.
+    const done = lang === "uz" ? "\u2705 <b>Tayyor! Telegram ulandi.</b>\nBaholar, \xABnb\xBB, uy vazifalari va onlayn darslar haqida xabarlar shu yerga keladi." : lang === "en" ? "\u2705 <b>Done! Telegram is connected.</b>\nMarks, absences, homework and online lessons will come here." : "\u2705 <b>\u0413\u043E\u0442\u043E\u0432\u043E! Telegram \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0451\u043D.</b>\n\u0421\u044E\u0434\u0430 \u0431\u0443\u0434\u0443\u0442 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u043E\u0446\u0435\u043D\u043A\u0438, \xAB\u043D\u0431\xBB, \u0434\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F \u0438 \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A\u0438.";
+    const language = lang === "uz" ? "\u{1F310} Boshqa til: /lang" : lang === "en" ? "\u{1F310} Another language: /lang" : "\u{1F310} \u0414\u0440\u0443\u0433\u043E\u0439 \u044F\u0437\u044B\u043A: /lang";
+    const result = await sendTelegramMessage(chatId, `${done}
 
 ${welcome?.text ?? ""}
 
-\u{1F310} /lang`, { replyMarkup: LANG_KEYBOARD });
+${language}`, { replyMarkup: LANG_KEYBOARD });
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
   } else {
     await sendTelegramMessage(chatId, "\u231B Havola eskirgan. \xABUlash\xBB ni qayta bosing.\n\u0421\u0441\u044B\u043B\u043A\u0430 \u0443\u0441\u0442\u0430\u0440\u0435\u043B\u0430. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\xBB \u0435\u0449\u0451 \u0440\u0430\u0437.", { replyMarkup: CONNECT_KEYBOARD });
@@ -56043,7 +56075,7 @@ router10.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER
   if (request.authorId) {
     const verdict = decision === "approve" ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430" : "\u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u0430";
     await pushNotice([request.authorId], "messages", `\u0417\u0430\u044F\u0432\u043A\u0430 ${verdict}`, note, "/school");
-    await notifyUsers([request.authorId], `EDUVERSE: \u0432\u0430\u0448\u0430 \u0437\u0430\u044F\u0432\u043A\u0430 ${verdict}${note ? `
+    await notifyUsers([request.authorId], (lang) => `${decision === "approve" ? "\u2705" : "\u274C"} <b>${decision === "approve" ? tl(lang, "Ariza tasdiqlandi", "\u0417\u0430\u044F\u0432\u043A\u0430 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430", "Request approved") : tl(lang, "Ariza rad etildi", "\u0417\u0430\u044F\u0432\u043A\u0430 \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u0430", "Request rejected")}</b>${note ? `
 ${escapeHtml(note)}` : ""}`);
   }
   res.json({ status: request.status, result });
@@ -56360,8 +56392,11 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
   if (mark !== null || absent) {
     const SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
     const day2 = date2.split("-").reverse().join(".");
-    const text2 = absent ? `\u26A0\uFE0F Jurnalda \xABnb\xBB / \u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB: ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day2}` : `\u{1F4D8} Jurnalga baho / \u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: <b>${mark}</b> \xB7 ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day2}`;
-    void notifyFamily(studentId, text2, true);
+    void notifyFamily(studentId, (lang, name) => absent ? `\u26A0\uFE0F <b>${tl(lang, "Jurnalda \xABnb\xBB (kelmadi)", "\u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB (\u043D\u0435 \u0431\u044B\u043B \u043D\u0430 \u0443\u0440\u043E\u043A\u0435)", "Absent (\xABab\xBB) in the journal")}</b>
+\u{1F464} ${name}
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}` : `\u{1F4D8} <b>${tl(lang, "Jurnalga baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B", "Journal mark")}: ${mark}</b>
+\u{1F464} ${name}
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}`, true);
     void pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME[subject] ?? subject}` : `\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day2}`, "/grades");
   }
   res.json({ ok: true });

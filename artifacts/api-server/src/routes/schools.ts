@@ -14,7 +14,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { requireAuthenticatedRole } from "./auth";
-import { escapeHtml, notifyFamily } from "../lib/notify";
+import { escapeHtml, notifyFamily, subjectText, tl } from "../lib/notify";
 import { pushNotice, studentsOfClasses, withParents } from "../lib/inbox";
 import {
   ASSIGNMENT_STATUSES,
@@ -1444,7 +1444,7 @@ router.patch(
       await pushNotice(await withParents([studentId]), "grades", `Новая оценка: ${grade}`, `${info?.subject ?? ""} — ${info?.title ?? ""}`, "/classes");
       await notifyFamily(
         studentId,
-        `📝 Yangi baho / Новая оценка: <b>${grade}</b>\n${escapeHtml(info?.subject ?? "")} — ${escapeHtml(info?.title ?? "")}`,
+        (lang, name) => `📝 <b>${tl(lang, "Uy vazifasiga baho", "Оценка за домашнее задание", "Homework mark")}: ${grade}</b>\n👤 ${name}\n📖 ${subjectText(lang, info?.subject ?? "")} — ${escapeHtml(info?.title ?? "")}${changes.feedback ? `\n💬 ${escapeHtml(changes.feedback.slice(0, 300))}` : ""}`,
         true,
       );
     }

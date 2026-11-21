@@ -17,7 +17,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
-import { escapeHtml, notifyFamily, notifyUsers } from "../lib/notify";
+import { dateText, escapeHtml, notifyFamily, notifyUsers, subjectText, tl } from "../lib/notify";
 import { pushNotice } from "../lib/inbox";
 import {
   canManageClass,
@@ -982,11 +982,11 @@ router.put(
       const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
       const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
       await Promise.all(flagged.map((entry) => {
-        const name = escapeHtml(names.find((row) => row.id === entry.studentId)?.name ?? "");
-        const text = entry.status === "absent"
-          ? `⚠️ <b>${name}</b> bugun darsga kelmadi (${escapeHtml(ctx?.name ?? "")}, ${date}).\n⚠️ <b>${name}</b> сегодня отсутствует на уроке.`
-          : `⏰ <b>${name}</b> darsga kechikdi (${date}).\n⏰ <b>${name}</b> опоздал на урок.`;
-        return notifyFamily(entry.studentId, text);
+        const klass = escapeHtml(ctx?.name ?? "");
+        const lesson = escapeHtml(subject);
+        return notifyFamily(entry.studentId, (lang, name) => entry.status === "absent"
+          ? `⚠️ <b>${tl(lang, "Darsga kelmadi", "Нет на уроке", "Absent from the lesson")}</b>\n👤 ${name} · ${klass}\n📖 ${subjectText(lang, lesson)} · ${dateText(date)}`
+          : `⏰ <b>${tl(lang, "Darsga kechikdi", "Опоздал на урок", "Late for the lesson")}</b>\n👤 ${name} · ${klass}\n📖 ${subjectText(lang, lesson)} · ${dateText(date)}`);
       }));
     }
     res.json({ saved: finalEntries.length, date });
@@ -1119,7 +1119,7 @@ router.post("/classes/:classId/announcements", requireAuthenticatedRole(...staff
   const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
   const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
   const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
-  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], `📢 <b>${escapeHtml(ctx?.name ?? "")}</b>: ${escapeHtml(body)}`);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], (lang) => `📢 <b>${tl(lang, "E’lon", "Объявление", "Announcement")} · ${escapeHtml(ctx?.name ?? "")}</b>\n\n${escapeHtml(body)}`);
   await pushNotice([...studentIds, ...parentRows.map((row) => row.parentId)], "announcements", `Объявление · ${ctx?.name ?? ""}`, body, "/dashboard");
   res.status(201).json({ announcement: created });
 });

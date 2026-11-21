@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
 import { randomBytes, scrypt as scryptCallback } from "node:crypto";
 import { Router, type IRouter, type Response } from "express";
 import {
@@ -17,7 +17,7 @@ import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "
 import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
-import { answerCommand, chooseLang, CONNECT_KEYBOARD, LANG_KEYBOARD, type BotLang } from "../lib/bot-commands";
+import { answerCommand, chooseLang, CONNECT_KEYBOARD, LANG_KEYBOARD, langFromTelegram, type BotLang } from "../lib/bot-commands";
 import { answerTelegramCallback } from "../lib/telegram";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
 import { logger } from "../lib/logger";
@@ -392,8 +392,13 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     .returning({ userId: telegramNotifyTable.userId });
   if (row) {
     const sender = isRecord(message?.from) ? message.from : null;
+    // The bot starts in the language of the person's Telegram; /lang changes it.
+    const lang = langFromTelegram(sender?.language_code);
+    await db.update(telegramNotifyTable).set({ lang }).where(and(eq(telegramNotifyTable.userId, row.userId), isNull(telegramNotifyTable.lang)));
     const welcome = await answerCommand(chatId, "/help", sender?.language_code);
-    const result = await sendTelegramMessage(chatId, `✅ EDUVERSE: bildirishnomalar ulandi. / Уведомления подключены. / Notifications are on.\n\n${welcome?.text ?? ""}\n\n🌐 /lang`, { replyMarkup: LANG_KEYBOARD });
+    const done = lang === "uz" ? "✅ <b>Tayyor! Telegram ulandi.</b>\nBaholar, «nb», uy vazifalari va onlayn darslar haqida xabarlar shu yerga keladi." : lang === "en" ? "✅ <b>Done! Telegram is connected.</b>\nMarks, absences, homework and online lessons will come here." : "✅ <b>Готово! Telegram подключён.</b>\nСюда будут приходить оценки, «нб», домашние задания и онлайн-уроки.";
+    const language = lang === "uz" ? "🌐 Boshqa til: /lang" : lang === "en" ? "🌐 Another language: /lang" : "🌐 Другой язык: /lang";
+    const result = await sendTelegramMessage(chatId, `${done}\n\n${welcome?.text ?? ""}\n\n${language}`, { replyMarkup: LANG_KEYBOARD });
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
   } else {
     await sendTelegramMessage(chatId, "⌛ Havola eskirgan. «Ulash» ni qayta bosing.\nСсылка устарела. Нажмите «Подключить» ещё раз.", { replyMarkup: CONNECT_KEYBOARD });

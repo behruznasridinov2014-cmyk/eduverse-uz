@@ -14,7 +14,7 @@ import {
 import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { canManageClass, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { tashkentNow } from "./timetable";
-import { escapeHtml, notifyFamily } from "../lib/notify";
+import { notifyFamily, subjectText, tl } from "../lib/notify";
 import { pushNotice, withParents } from "../lib/inbox";
 
 /*
@@ -130,10 +130,9 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   if (mark !== null || absent) {
     const SUBJECT_NAME: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
     const day = date.split("-").reverse().join(".");
-    const text = absent
-      ? `⚠️ Jurnalda «nb» / В журнале «нб»: ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}`
-      : `📘 Jurnalga baho / Оценка в журнал: <b>${mark}</b> · ${escapeHtml(SUBJECT_NAME[subject] ?? subject)}, ${day}`;
-    void notifyFamily(studentId, text, true);
+    void notifyFamily(studentId, (lang, name) => absent
+      ? `⚠️ <b>${tl(lang, "Jurnalda «nb» (kelmadi)", "В журнале «нб» (не был на уроке)", "Absent («ab») in the journal")}</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`
+      : `📘 <b>${tl(lang, "Jurnalga baho", "Оценка в журнал", "Journal mark")}: ${mark}</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`, true);
     void pushNotice(await withParents([studentId]), "grades", absent ? `«нб» в журнале: ${SUBJECT_NAME[subject] ?? subject}` : `Оценка в журнал: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
   }
   res.json({ ok: true });

@@ -17,7 +17,7 @@ import { importPeople, readRows, readSubjects, type ImportRow } from "./school-t
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { writeAudit } from "../lib/audit";
 import { pushNotice } from "../lib/inbox";
-import { escapeHtml, notifyUsers } from "../lib/notify";
+import { escapeHtml, notifyUsers, tl } from "../lib/notify";
 import { userPlan } from "../lib/plans";
 
 /**
@@ -304,7 +304,7 @@ router.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER_R
   if (request.authorId) {
     const verdict = decision === "approve" ? "подтверждена" : "отклонена";
     await pushNotice([request.authorId], "messages", `Заявка ${verdict}`, note, "/school");
-    await notifyUsers([request.authorId], `EDUVERSE: ваша заявка ${verdict}${note ? `\n${escapeHtml(note)}` : ""}`);
+    await notifyUsers([request.authorId], (lang) => `${decision === "approve" ? "✅" : "❌"} <b>${decision === "approve" ? tl(lang, "Ariza tasdiqlandi", "Заявка подтверждена", "Request approved") : tl(lang, "Ariza rad etildi", "Заявка отклонена", "Request rejected")}</b>${note ? `\n${escapeHtml(note)}` : ""}`);
   }
   res.json({ status: request.status, result });
 });

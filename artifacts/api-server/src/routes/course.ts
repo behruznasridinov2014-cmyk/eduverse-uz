@@ -18,7 +18,7 @@ import {
 import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { canManageClass, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { pushNotice, withParents } from "../lib/inbox";
-import { escapeHtml, notifyFamily } from "../lib/notify";
+import { notifyFamily, subjectText, tl } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -417,10 +417,8 @@ export default router;
 /** The pupil and the parents hear about a finished trainer test (bell + Telegram). */
 async function announceTrainer(studentId: string, score: number, total: number, subject: string): Promise<void> {
   try {
-    const names: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
-    const label = names[subject] ?? subject;
     const people = await withParents([studentId]);
-    await pushNotice(people, "grades", `Тренажёр дня: ${score} из ${total}`, label, "/trainer");
-    await notifyFamily(studentId, `🧠 Kunlik trenajyor / Тренажёр дня${label ? ` · ${escapeHtml(label)}` : ""}: <b>${score} / ${total}</b>`, true);
+    await pushNotice(people, "grades", `Тренажёр дня: ${score} из ${total}`, subjectText("ru", subject), "/trainer");
+    await notifyFamily(studentId, (lang, name) => `🧠 <b>${tl(lang, "Kunlik trenajyor", "Тренажёр дня", "Daily trainer")}: ${score} / ${total}</b>\n👤 ${name}${subject ? `\n📖 ${subjectText(lang, subject)}` : ""}\n${score / total >= 0.75 ? tl(lang, "👏 Zo‘r natija!", "👏 Отличный результат!", "👏 Great result!") : tl(lang, "Mavzuni yana bir ko‘rib chiqing.", "Стоит повторить тему.", "Worth reviewing the topic.")}`, true);
   } catch { /* a notice never breaks the test */ }
 }

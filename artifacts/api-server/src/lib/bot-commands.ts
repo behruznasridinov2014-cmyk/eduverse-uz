@@ -203,7 +203,7 @@ function help(person: Person | null): string {
     ].join("\n");
   }
   const list = commandsFor(person.role).map((item) => `/${item.command} — ${item.description}`);
-  return `👋 <b>${escapeHtml(person.name)}</b>\n${list.join("\n")}\n\n${T(L, "Sayt", "Сайт", "Site")}: ${SITE}`;
+  return `👋 <b>${escapeHtml(person.name)}</b>\n${T(L, "Buyruqni bosing:", "Нажмите на команду:", "Tap a command:")}\n\n${list.join("\n")}\n\n🌍 ${T(L, "Sayt", "Сайт", "Site")}: ${SITE}`;
 }
 
 export type BotReply = { text: string; keyboard?: unknown };

@@ -15,7 +15,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { pushNotice, studentsOfClasses, teacherClassIds, withParents } from "../lib/inbox";
-import { escapeHtml, notifyUsers } from "../lib/notify";
+import { escapeHtml, notifyUsers, tl } from "../lib/notify";
 import { requireAuthenticatedRole } from "./auth";
 import { logger } from "../lib/logger";
 import { userPlan } from "../lib/plans";
@@ -469,9 +469,7 @@ router.post(
     if (host.role === "teacher") {
       const students = await studentsOfClasses(classId ? [classId] : await teacherClassIds(host.id));
       await pushNotice(students, "lessons", `Начался онлайн-урок: ${room?.title ?? ""}`, `Код: ${room?.code ?? ""}`, "/lesson");
-      await notifyUsers(await withParents(students), `🎥 <b>Onlayn dars boshlandi / Начался онлайн-урок</b>
-${escapeHtml(room?.title ?? "")}
-https://eduverse-uz1.vercel.app/lesson`);
+      await notifyUsers(await withParents(students), (lang) => `🎥 <b>${tl(lang, "Onlayn dars boshlandi", "Начался онлайн-урок", "An online lesson has started")}</b>\n📖 ${escapeHtml(room?.title ?? "")}\n\n${tl(lang, "Kirish", "Войти на урок", "Join")}: https://eduverse-uz1.vercel.app/lesson`);
     }
     res.status(201).json({ room });
   },
