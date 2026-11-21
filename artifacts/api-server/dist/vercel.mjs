@@ -54339,6 +54339,7 @@ router6.post("/trainer/results", requireAuthenticatedRole("student"), trainerLim
   const day2 = isoDay(/* @__PURE__ */ new Date());
   const classId = await pupilClass(viewer.id);
   const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day: day2, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
+  if (row) void announceTrainer(viewer.id, score, total, "");
   res.status(row ? 201 : 200).json({ counted: Boolean(row), day: day2 });
 });
 router6.get("/trainer/rating", requireAuthenticatedRole(...everyRole2), async (req, res) => {
@@ -54397,6 +54398,7 @@ router6.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimit
     target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
     set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
   });
+  void announceTrainer(viewer.id, score, total, subject);
   res.status(201).json({ saved: true });
 });
 router6.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
@@ -54442,6 +54444,16 @@ async function remindTrainer(teacherId, day2, lessons) {
   }
 }
 var course_default = router6;
+async function announceTrainer(studentId, score, total, subject) {
+  try {
+    const names = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+    const label = names[subject] ?? subject;
+    const people = await withParents([studentId]);
+    await pushNotice(people, "grades", `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F: ${score} \u0438\u0437 ${total}`, label, "/trainer");
+    await notifyFamily(studentId, `\u{1F9E0} Kunlik trenajyor / \u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F${label ? ` \xB7 ${escapeHtml(label)}` : ""}: <b>${score} / ${total}</b>`, true);
+  } catch {
+  }
+}
 
 // src/lib/book-homework.ts
 init_drizzle_orm();
@@ -54857,6 +54869,7 @@ function langFromTelegram(code) {
   const value = typeof code === "string" ? code.toLowerCase() : "";
   return value.startsWith("uz") ? "uz" : value.startsWith("en") ? "en" : "ru";
 }
+var CONNECT_KEYBOARD = { inline_keyboard: [[{ text: "\u{1F517} Ulash \xB7 \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C \xB7 Connect", url: `${SITE}/profile?tab=notifications&connect=telegram` }]] };
 var LANG_KEYBOARD = { inline_keyboard: [[
   { text: "\u{1F1FA}\u{1F1FF} O\u2018zbekcha", callback_data: "lang:uz" },
   { text: "\u{1F1F7}\u{1F1FA} \u0420\u0443\u0441\u0441\u043A\u0438\u0439", callback_data: "lang:ru" },
@@ -54992,8 +55005,9 @@ function help(person) {
   if (!person) {
     return [
       "\u{1F44B} <b>EDUVERSE</b>",
-      T(L, "Bot darslar, baholar va uy vazifalarini ko\u2018rsatishi uchun uni saytda ulang:", "\u0427\u0442\u043E\u0431\u044B \u0431\u043E\u0442 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B \u0432\u0430\u0448\u0438 \u0443\u0440\u043E\u043A\u0438, \u043E\u0446\u0435\u043D\u043A\u0438 \u0438 \u0434\u043E\u043C\u0430\u0448\u043A\u0443, \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0435\u0433\u043E \u043D\u0430 \u0441\u0430\u0439\u0442\u0435:", "To see your lessons, marks and homework here, link the bot on the site:"),
-      `${SITE}/profile \u2192 ${T(L, "\xABBildirishnomalar\xBB \u2192 \xABTelegramni ulash\xBB", "\xAB\u0423\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F\xBB \u2192 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C Telegram\xBB", "\u201CNotifications\u201D \u2192 \u201CConnect Telegram\u201D")}.`,
+      T(L, "Hisobingizni ulang \u2014 2 qadam:", "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u0430\u043A\u043A\u0430\u0443\u043D\u0442 \u2014 2 \u0448\u0430\u0433\u0430:", "Connect your account \u2014 2 steps:"),
+      T(L, "1) Pastdagi \xABUlash\xBB tugmasini bosing \u2014 sayt ochiladi (kirmagan bo\u2018lsangiz, login va parol bilan kiring).", "1) \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043A\u043D\u043E\u043F\u043A\u0443 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\xBB \u043D\u0438\u0436\u0435 \u2014 \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u0441\u0430\u0439\u0442 (\u0435\u0441\u043B\u0438 \u043D\u0435 \u0432\u043E\u0448\u043B\u0438 \u2014 \u0432\u043E\u0439\u0434\u0438\u0442\u0435 \u043B\u043E\u0433\u0438\u043D\u043E\u043C \u0438 \u043F\u0430\u0440\u043E\u043B\u0435\u043C).", "1) Press \u201CConnect\u201D below \u2014 the site opens (sign in if asked)."),
+      T(L, "2) Telegram qayta ochiladi \u2014 \xABStart\xBB ni bosing. Tayyor!", "2) Telegram \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u0441\u043D\u043E\u0432\u0430 \u2014 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \xABStart\xBB. \u0413\u043E\u0442\u043E\u0432\u043E!", "2) Telegram opens again \u2014 press \u201CStart\u201D. Done!"),
       "",
       `\u{1F310} /lang \u2014 ${T(L, "tilni o\u2018zgartirish", "\u0441\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A", "change language")}`
     ].join("\n");
@@ -55015,7 +55029,8 @@ async function answerCommand(chatId, text2, telegramLang) {
   if (command === "lang" || command === "language" || command === "til") {
     return { text: "\u{1F310} Tilni tanlang \xB7 \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \xB7 Choose a language", keyboard: LANG_KEYBOARD };
   }
-  if (!person || command === "start" || command === "help") return { text: help(person) };
+  if (!person) return { text: help(null), keyboard: CONNECT_KEYBOARD };
+  if (command === "start" || command === "help") return { text: help(person) };
   if (command === "today") return { text: await today(person) };
   if (command === "homework" && (person.role === "student" || person.role === "parent")) return { text: await homework(person) };
   if (command === "grades" && (person.role === "student" || person.role === "parent")) return { text: await grades(person) };
@@ -55354,6 +55369,8 @@ router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     return;
   }
   const chatId = String(chat.id);
+  const [pending2] = await db.select({ userId: telegramNotifyTable.userId }).from(telegramNotifyTable).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).limit(1);
+  if (pending2) await db.update(telegramNotifyTable).set({ chatId: null }).where(and(eq(telegramNotifyTable.chatId, chatId), ne(telegramNotifyTable.userId, pending2.userId)));
   const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
   if (row) {
     const sender = isRecord7(message?.from) ? message.from : null;
@@ -55364,6 +55381,8 @@ ${welcome?.text ?? ""}
 
 \u{1F310} /lang`, { replyMarkup: LANG_KEYBOARD });
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
+  } else {
+    await sendTelegramMessage(chatId, "\u231B Havola eskirgan. \xABUlash\xBB ni qayta bosing.\n\u0421\u0441\u044B\u043B\u043A\u0430 \u0443\u0441\u0442\u0430\u0440\u0435\u043B\u0430. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\xBB \u0435\u0449\u0451 \u0440\u0430\u0437.", { replyMarkup: CONNECT_KEYBOARD });
   }
   res.json({ ok: true });
 });

@@ -214,11 +214,42 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
   const [prefs, change] = usePrefs();
   const [telegram, setTelegram] = useState<{ available: boolean; connected: boolean } | null>(null);
   const [permission, setPermission] = useState<string>(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'));
-  useEffect(() => { void customFetch<{ available: boolean; connected: boolean }>('/api/me/telegram', { method: 'GET' }).then(setTelegram).catch(() => {}); }, []);
+  const [waiting, setWaiting] = useState(false);
+  const [tgError, setTgError] = useState('');
+  const loadTelegram = () => customFetch<{ available: boolean; connected: boolean }>('/api/me/telegram', { method: 'GET' }).then((value) => { setTelegram(value); return value; }).catch(() => null);
+  useEffect(() => { void loadTelegram(); }, []);
+  // While the person is in Telegram, check every 3 seconds; "Connected ✓" appears by itself.
+  useEffect(() => {
+    if (!waiting) return;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      void loadTelegram().then((value) => { if (value?.connected || Date.now() - started > 3 * 60 * 1000) setWaiting(false); });
+    }, 3000);
+    const onFocus = () => { void loadTelegram().then((value) => { if (value?.connected) setWaiting(false); }); };
+    window.addEventListener('focus', onFocus);
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', onFocus); };
+  }, [waiting]);
   async function connectTelegram() {
+    setTgError('');
+    // The tab is opened right on the press (phones block windows opened later), then sent to Telegram.
+    const tab = window.open('', '_blank');
     const r = await customFetch<{ link: string }>('/api/me/telegram/link', { method: 'POST' }).catch(() => null);
-    if (r?.link) window.open(r.link, '_blank', 'noopener');
+    if (!r?.link) { tab?.close(); setTgError(tx(language, 'Ulab bo‘lmadi. Bir daqiqadan so‘ng qayta urinib ko‘ring.', 'Не получилось. Попробуйте через минуту.', 'It did not work. Try again in a minute.')); return; }
+    if (tab) tab.location.href = r.link; else window.location.href = r.link;
+    setWaiting(true);
   }
+  async function disconnectTelegram() {
+    if (!window.confirm(tx(language, 'Telegram uzilsinmi?', 'Отключить Telegram?', 'Disconnect Telegram?'))) return;
+    await customFetch('/api/me/telegram', { method: 'DELETE' }).catch(() => {});
+    void loadTelegram();
+  }
+  // Came from the bot's "Connect" button: start at once.
+  useEffect(() => {
+    if (!telegram?.available || telegram.connected) return;
+    if (new URLSearchParams(window.location.search).get('connect') !== 'telegram') return;
+    void customFetch<{ link: string }>('/api/me/telegram/link', { method: 'POST' }).then((r) => { if (r?.link) { setWaiting(true); window.location.href = r.link; } }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [telegram?.available, telegram?.connected]);
   async function togglePush(value: boolean) {
     if (value && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
       const result = await Notification.requestPermission();
@@ -245,7 +276,27 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
         <h2><Send size={16} /> {tx(language, 'Qayerga yuborish', 'Куда присылать', 'Where to send')}</h2>
         <GlassSwitch checked={prefs.telegram} onChange={(value) => void change({ telegram: value })} label="Telegram" disabled={telegram ? !telegram.available : false}
           hint={!telegram || !telegram.available ? tx(language, 'Tez orada', 'Скоро', 'Coming soon') : telegram.connected ? tx(language, 'Ulangan ✓', 'Подключено ✓', 'Connected ✓') : tx(language, 'Ulanmagan — pastdagi tugmani bosing.', 'Не подключено — нажмите кнопку ниже.', 'Not connected — use the button below.')} />
-        {telegram?.available && !telegram.connected && <button type="button" className="btn small" onClick={() => void connectTelegram()}><Send size={14} /> {tx(language, 'Telegramni ulash', 'Подключить Telegram', 'Connect Telegram')}</button>}
+        {telegram?.available && (telegram.connected ? (
+          <div className="tg-connect is-on">
+            <b>✓ {tx(language, 'Telegram ulangan', 'Telegram подключён', 'Telegram is connected')}</b>
+            <span className="muted">{tx(language, 'Botda: /today, /homework, /grades, /lang — til.', 'В боте: /today, /homework, /grades, /lang — язык.', 'In the bot: /today, /homework, /grades, /lang — language.')}</span>
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <a className="btn small primary" href="https://t.me/eduverse_uz_bot" target="_blank" rel="noopener noreferrer"><Send size={14} /> {tx(language, 'Botni ochish', 'Открыть бота', 'Open the bot')}</a>
+              <button type="button" className="btn small" onClick={() => void disconnectTelegram()}>{tx(language, 'Uzish', 'Отключить', 'Disconnect')}</button>
+            </div>
+          </div>
+        ) : (
+          <div className="tg-connect">
+            <ol>
+              <li>{tx(language, 'Pastdagi tugmani bosing — Telegram ochiladi.', 'Нажмите кнопку ниже — откроется Telegram.', 'Press the button below — Telegram opens.')}</li>
+              <li>{tx(language, 'Telegramda «Start» (Boshlash) ni bosing.', 'В Telegram нажмите «Start» («Запустить»).', 'In Telegram press “Start”.')}</li>
+              <li>{tx(language, 'Shu sahifaga qayting — «Ulangan ✓» o‘zi chiqadi.', 'Вернитесь сюда — «Подключено ✓» появится само.', 'Come back here — “Connected ✓” appears by itself.')}</li>
+            </ol>
+            <button type="button" className="btn primary tg-connect-btn" onClick={() => void connectTelegram()}><Send size={16} /> {tx(language, 'Telegramni ulash', 'Подключить Telegram', 'Connect Telegram')}</button>
+            {waiting && <span className="muted">⏳ {tx(language, 'Telegramda «Start» bosilishi kutilmoqda…', 'Ждём нажатия «Start» в Telegram…', 'Waiting for “Start” in Telegram…')}</span>}
+            {tgError && <span className="notice">{tgError}</span>}
+          </div>
+        ))}
         <GlassSwitch checked={prefs.push && permission === 'granted'} onChange={(value) => void togglePush(value)} label={tx(language, 'Push-bildirishnomalar', 'Push-уведомления', 'Push notifications')} disabled={permission === 'unsupported' || permission === 'denied'}
           hint={permission === 'denied' ? tx(language, 'Brauzer sozlamalarida ruxsat bering.', 'Разрешите уведомления в настройках браузера.', 'Allow notifications in browser settings.') : ''} />
       </section>

@@ -17,7 +17,7 @@ import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "
 import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
-import { answerCommand, chooseLang, LANG_KEYBOARD, type BotLang } from "../lib/bot-commands";
+import { answerCommand, chooseLang, CONNECT_KEYBOARD, LANG_KEYBOARD, type BotLang } from "../lib/bot-commands";
 import { answerTelegramCallback } from "../lib/telegram";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
 import { logger } from "../lib/logger";
@@ -381,6 +381,10 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     return;
   }
   const chatId = String(chat.id);
+  // One Telegram = one account: a chat linked before to someone else is moved to this account.
+  const [pending] = await db.select({ userId: telegramNotifyTable.userId }).from(telegramNotifyTable)
+    .where(and(eq(telegramNotifyTable.nonce, match[1]!), gt(telegramNotifyTable.nonceExpiresAt, new Date()))).limit(1);
+  if (pending) await db.update(telegramNotifyTable).set({ chatId: null }).where(and(eq(telegramNotifyTable.chatId, chatId), ne(telegramNotifyTable.userId, pending.userId)));
   const [row] = await db
     .update(telegramNotifyTable)
     .set({ chatId, nonce: null, nonceExpiresAt: null })
@@ -391,6 +395,8 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     const welcome = await answerCommand(chatId, "/help", sender?.language_code);
     const result = await sendTelegramMessage(chatId, `✅ EDUVERSE: bildirishnomalar ulandi. / Уведомления подключены. / Notifications are on.\n\n${welcome?.text ?? ""}\n\n🌐 /lang`, { replyMarkup: LANG_KEYBOARD });
     if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
+  } else {
+    await sendTelegramMessage(chatId, "⌛ Havola eskirgan. «Ulash» ni qayta bosing.\nСсылка устарела. Нажмите «Подключить» ещё раз.", { replyMarkup: CONNECT_KEYBOARD });
   }
   res.json({ ok: true });
 });

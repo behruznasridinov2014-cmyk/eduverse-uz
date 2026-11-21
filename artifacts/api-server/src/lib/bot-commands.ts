@@ -42,6 +42,8 @@ export function langFromTelegram(code: unknown): BotLang {
   const value = typeof code === "string" ? code.toLowerCase() : "";
   return value.startsWith("uz") ? "uz" : value.startsWith("en") ? "en" : "ru";
 }
+/** Opens the site on the profile page, which links this Telegram by itself. */
+export const CONNECT_KEYBOARD = { inline_keyboard: [[{ text: "🔗 Ulash · Подключить · Connect", url: `${SITE}/profile?tab=notifications&connect=telegram` }]] };
 export const LANG_KEYBOARD = { inline_keyboard: [[
   { text: "🇺🇿 O‘zbekcha", callback_data: "lang:uz" },
   { text: "🇷🇺 Русский", callback_data: "lang:ru" },
@@ -193,8 +195,9 @@ function help(person: Person | null): string {
   if (!person) {
     return [
       "👋 <b>EDUVERSE</b>",
-      T(L, "Bot darslar, baholar va uy vazifalarini ko‘rsatishi uchun uni saytda ulang:", "Чтобы бот показывал ваши уроки, оценки и домашку, подключите его на сайте:", "To see your lessons, marks and homework here, link the bot on the site:"),
-      `${SITE}/profile → ${T(L, "«Bildirishnomalar» → «Telegramni ulash»", "«Уведомления» → «Подключить Telegram»", "“Notifications” → “Connect Telegram”")}.`,
+      T(L, "Hisobingizni ulang — 2 qadam:", "Подключите свой аккаунт — 2 шага:", "Connect your account — 2 steps:"),
+      T(L, "1) Pastdagi «Ulash» tugmasini bosing — sayt ochiladi (kirmagan bo‘lsangiz, login va parol bilan kiring).", "1) Нажмите кнопку «Подключить» ниже — откроется сайт (если не вошли — войдите логином и паролем).", "1) Press “Connect” below — the site opens (sign in if asked)."),
+      T(L, "2) Telegram qayta ochiladi — «Start» ni bosing. Tayyor!", "2) Telegram откроется снова — нажмите «Start». Готово!", "2) Telegram opens again — press “Start”. Done!"),
       "",
       `🌐 /lang — ${T(L, "tilni o‘zgartirish", "сменить язык", "change language")}`,
     ].join("\n");
@@ -217,7 +220,8 @@ export async function answerCommand(chatId: string, text: string, telegramLang?:
   if (command === "lang" || command === "language" || command === "til") {
     return { text: "🌐 Tilni tanlang · Выберите язык · Choose a language", keyboard: LANG_KEYBOARD };
   }
-  if (!person || command === "start" || command === "help") return { text: help(person) };
+  if (!person) return { text: help(null), keyboard: CONNECT_KEYBOARD };
+  if (command === "start" || command === "help") return { text: help(person) };
   if (command === "today") return { text: await today(person) };
   if (command === "homework" && (person.role === "student" || person.role === "parent")) return { text: await homework(person) };
   if (command === "grades" && (person.role === "student" || person.role === "parent")) return { text: await grades(person) };

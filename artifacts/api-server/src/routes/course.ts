@@ -17,6 +17,8 @@ import {
 } from "@workspace/db";
 import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { canManageClass, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
+import { pushNotice, withParents } from "../lib/inbox";
+import { escapeHtml, notifyFamily } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -287,6 +289,7 @@ router.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimi
   const classId = await pupilClass(viewer.id);
   // One counted attempt a day: the first result stays.
   const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
+  if (row) void announceTrainer(viewer.id, score, total, "");
   res.status(row ? 201 : 200).json({ counted: Boolean(row), day });
 });
 
@@ -354,6 +357,7 @@ router.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimite
       target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
       set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: new Date() },
     });
+  void announceTrainer(viewer.id, score, total, subject);
   res.status(201).json({ saved: true });
 });
 
@@ -409,3 +413,14 @@ export async function remindTrainer(teacherId: string, day: string, lessons: Arr
 }
 
 export default router;
+
+/** The pupil and the parents hear about a finished trainer test (bell + Telegram). */
+async function announceTrainer(studentId: string, score: number, total: number, subject: string): Promise<void> {
+  try {
+    const names: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
+    const label = names[subject] ?? subject;
+    const people = await withParents([studentId]);
+    await pushNotice(people, "grades", `Тренажёр дня: ${score} из ${total}`, label, "/trainer");
+    await notifyFamily(studentId, `🧠 Kunlik trenajyor / Тренажёр дня${label ? ` · ${escapeHtml(label)}` : ""}: <b>${score} / ${total}</b>`, true);
+  } catch { /* a notice never breaks the test */ }
+}
