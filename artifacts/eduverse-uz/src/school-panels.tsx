@@ -507,7 +507,7 @@ export function ServerClassesPanel({
           <>
             <div className="class-info-grid">
               <div><small className="muted">{t(language, 'Grade', 'Параллель', 'Sinf')}</small><b>{activeClass?.grade}{t(language, ' grade', ' класс', '-sinf')}</b></div>
-              <div><small className="muted">{t(language, 'School year', 'Учебный год', 'O‘quv yili')}</small><b>{activeClass ? `${activeClass.academicYear}–${Number(activeClass.academicYear) + 1}` : ''}</b></div>
+              <div><small className="muted">{t(language, 'School year', 'Учебный год', 'O‘quv yili')}</small><b>{activeClass ? (/^\d{4}$/.test(String(activeClass.academicYear).trim()) ? `${activeClass.academicYear}–${Number(activeClass.academicYear) + 1}` : activeClass.academicYear) : ''}</b></div>
               <div><small className="muted">{t(language, 'Students', 'Учеников', 'O‘quvchilar')}</small><b>{studentMembers.length}</b></div>
             </div>
             <div className="class-info-block">
