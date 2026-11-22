@@ -175,7 +175,6 @@ export function TopicBookPages({ book, topic, language, step }: { book: CourseBo
           <BookOpen size={15} /> {open ? t(language, 'Yopish', 'Закрыть', 'Close') : t(language, `${topic.page}-betni ochish`, `Открыть стр. ${topic.page}`, `Open p. ${topic.page}`)}
         </button>
       </div>
-      <p className="muted">{t(language, 'Sinf bilan birga o‘qing: rasmlar va asosiy qoidani ko‘rsating.', 'Прочитайте с классом: покажите рисунки и главное правило.', 'Read with the class: show the pictures and the main rule.')}</p>
       {open && (
         <Suspense fallback={<LoadingBlock language={language} kind="book" />}>
           <PdfViewerLazy url={`/books/${book.bookId}.pdf`} title={book.title} language={language} range={{ from: start, to: end }} />
@@ -481,7 +480,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           {isTeacher && course?.canEdit && (
             <section className="panel course-mark">
               <GraduationCap size={18} />
-              <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Dars tugashi bilan mavzu o‘zi belgilanadi. Kerak bo‘lsa, qo‘lda belgilang.', 'Когда урок по расписанию заканчивается, тема отмечается сама. При необходимости отметьте вручную.', 'When the lesson ends, the topic is marked by itself. Mark it by hand if needed.')}</span>
+              <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Mavzu dars tugagach o‘zi belgilanadi.', 'Тема отметится сама после урока.', 'Marked by itself after the lesson.')}</span>
               {!lesson && <input className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
               {marks.has(topic.key)
                 ? <button type="button" className="btn small" disabled={busy} onClick={() => void mark(topic, false)}>{t(language, 'Belgini olib tashlash', 'Снять отметку', 'Remove mark')}</button>
@@ -528,7 +527,6 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
 
           <section className="panel course-check" id="step-check">
             <h3><NotebookPen size={17} /> {lesson ? `4 · ${t(language, 'Tekshiruv: esda qoldimi?', 'Проверка: запомнили?', 'Check: did it stick?')}` : t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
-            {lesson && <p className="muted">{t(language, 'Javob bering → «Tekshirish».', 'Ответьте → «Проверить ответ».', 'Answer → “Check the answer”.')}</p>}
             <ol className="course-tasks">
               {topic.tasks.map((task, index) => (
                 <li key={index}>
@@ -570,8 +568,8 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
               <h3><NotebookPen size={17} /> 5 · {t(language, 'Uy vazifasi — darslikdan', 'Домашнее задание — из учебника', 'Homework — from the textbook')}</h3>
               <p>{topic.homework}</p>
               <p className="muted">{isTeacher
-                ? t(language, 'Dars tugashi bilan bu vazifa sinfga o‘zi yuboriladi. Siz hech narsa yozmaysiz — faqat tekshirasiz.', 'Как только урок закончится, это задание само уйдёт классу. Писать ничего не нужно — только проверить.', 'When the lesson ends, this homework is sent to the class by itself. You only check it.')
-                : t(language, 'Dars tugagach bu vazifa «Vazifalar»da chiqadi.', 'После урока это задание появится во вкладке «Задания».', 'After the lesson it appears in “Homework”.')}</p>
+                ? t(language, 'Dars tugagach sinfga o‘zi boradi.', 'Уйдёт классу сам после урока.', 'Goes to the class by itself after the lesson.')
+                : t(language, 'Dars tugagach «Vazifalar»da chiqadi.', 'После урока — во вкладке «Задания».', 'After the lesson — in “Homework”.')}</p>
             </section>
           ) : (
             <section className="panel course-homework">
@@ -668,11 +666,13 @@ export function StudioGallery({ subject, language }: { subject: keyof typeof GAL
 function TopicEssence({ topic, language }: { topic: CourseTopic; language: Language }) {
   const points = keyPoints(topic);
   const [all, setAll] = useState(false);
-  const shown = points.length > 1 ? (all ? points : points.slice(0, 2)) : [topic.essence];
+  // One short sentence first: long text is boring and hard to read on a tablet.
+  const short = (text: string) => { const first = text.split(/(?<=[.!?])\s/)[0] ?? text; return first.length > 140 ? `${first.slice(0, first.lastIndexOf(' ', 130))}…` : first; };
+  const shown = all ? (points.length ? points : [topic.essence]) : [short(points[0] ?? topic.essence)];
   return (
     <>
       <ul className="course-points-short">{shown.map((point, index) => <li key={index}>{point}</li>)}</ul>
-      {points.length > 2 && <button type="button" className="btn small" onClick={() => setAll((value) => !value)}>{all ? t(language, 'Qisqaroq', 'Короче', 'Shorter') : t(language, `Batafsil · yana ${points.length - 2}`, `Подробнее · ещё ${points.length - 2}`, `More · ${points.length - 2} more`)}</button>}
+      {(points.length > 1 || topic.essence.length > 140) && <button type="button" className="btn small" onClick={() => setAll((value) => !value)}>👁 {all ? t(language, 'Qisqaroq', 'Короче', 'Shorter') : t(language, 'Batafsil', 'Подробнее', 'More')}</button>}
     </>
   );
 }

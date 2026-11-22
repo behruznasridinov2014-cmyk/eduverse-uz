@@ -13,8 +13,8 @@ import { LoadingBlock } from './ui/loading';
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
 
-function Loading() {
-  return <LoadingBlock />;
+function Loading({ language }: { language?: Language }) {
+  return <LoadingBlock language={language} />;
 }
 
 /** Remembers which lesson the 3D studio should open on. */
@@ -41,7 +41,7 @@ function UpNext({ lessons, now, current, language }: { lessons: TodayLesson[]; n
 export function TodayCoursePage({ user, school, language, onOpen }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const { data, failed, now } = useToday();
   const courses = useLessonCourses(data?.lessons, data?.next);
-  if (!data && !failed) return <Loading />;
+  if (!data && !failed) return <Loading language={language} />;
   const lessons = data?.lessons ?? [];
   // Only the lesson of today: no lessons today → nothing to open, only the plan for the next days.
   const lesson = currentOrNext(lessons, now);
@@ -83,7 +83,7 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
   const canAttend = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
   const tabs = LESSON_TABS.filter((tab) => (tab.id === 'attendance' ? canAttend : true));
   const [tab, setTab] = useState<string>('topic');
-  if (!data && !failed) return <Loading />;
+  if (!data && !failed) return <Loading language={language} />;
   const lesson = data?.lessons.find((item) => item.id === lessonId);
   if (!data || !lesson) {
     return (
@@ -180,7 +180,7 @@ export function LabTodayScene({ language, locked = false }: { language: Language
 export function LabPage({ user, language, children }: { user: User; language: Language; children: ReactNode }) {
   const { data, failed, now } = useToday();
   if (user.role !== 'student') return <><LabTodayScene language={language} />{children}</>;
-  if (!data && !failed) return <Loading />;
+  if (!data && !failed) return <Loading language={language} />;
   const lessons = data?.lessons ?? [];
   const firstStart = lessons.length ? Math.min(...lessons.map((lesson) => Date.parse(lesson.startsAt))) : 0;
   const lastEnd = lessons.length ? Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt))) : 0;
