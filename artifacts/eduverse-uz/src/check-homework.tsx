@@ -25,6 +25,8 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const [error, setError] = useState('');
   const [open, setOpen] = useState<{ studentId: string; studentName: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'review' | 'missing' | 'graded'>('all');
+  // The class list arrives after the page opens: pick the first class then.
+  useEffect(() => { if (!classId && school.classes[0]) setClassId(school.classes[0].id); }, [classId, school.classes]);
 
   const load = useCallback(async () => {
     if (!classId) return;
@@ -53,6 +55,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const shown = people.filter((row) => filter === 'all' || row.cell.state === filter);
   const waitingIn = (at: number) => journal?.rows.filter((row) => row.cells[at]?.state === 'review').length ?? 0;
 
+  if (!school.classes.length && school.status === 'loading') return <LoadingBlock language={language} />;
   if (!school.classes.length) return <div className="notice">{t(language, 'Sizga hali sinf biriktirilmagan.', 'К вам ещё не привязан класс.', 'No class is linked to you yet.')}</div>;
   return (
     <section className="check-hw">
