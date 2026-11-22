@@ -483,7 +483,8 @@ function ClassesPage({school,user,language,onOpen}:{school:SchoolData;user:User;
  return <><PageHeading eyebrow={student?text('Homework','Домашние задания','Uy vazifalari'):text('Classes','Классы','Sinflar')} title={student?text('My homework','Мои задания','Mening vazifalarim'):text('Classes of the school','Классы школы','Maktab sinflari')} subtitle={student?text('Do the task in your notebook, photograph it and explain in your own words.','Выполните в тетради, сфотографируйте и объясните своими словами.','Daftarda bajaring, rasmga oling va o‘z so‘zingiz bilan tushuntiring.'):text('Class lists, teachers and assignments.','Списки классов, учителя и задания.','Sinf ro‘yxatlari, o‘qituvchilar va topshiriqlar.')}/>
   {hasServerClasses
    ?<ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/>
-   :<div className="notice"><Info/><span>{school.status==='loading'?text('Loading…','Загрузка…','Yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('You are not in a class yet. Contact the school administration.','Вас ещё не добавили в класс. Обратитесь к администрации школы.','Sizni hali sinfga qo‘shishmagan. Maktab ma’muriyatiga murojaat qiling.')}</span></div>}
+   :school.status==='loading'?<LoadingBlock language={language}/>
+   :<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('You are not in a class yet. Contact the school administration.','Вас ещё не добавили в класс. Обратитесь к администрации школы.','Sizni hali sinfga qo‘shishmagan. Maktab ma’muriyatiga murojaat qiling.')}</span></div>}
  </>;
 }
 type TeacherTab='tasks'|'journal'|'class';
@@ -502,7 +503,7 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
   <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""></PageHeading>
   <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {!ready
-   ?<div className="notice"><Info/><span>{school.status==='loading'?text('Loading your classes…','Загружаем ваши классы…','Sinflaringiz yuklanmoqda…'):school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>
+   ?(school.status==='loading'?<LoadingBlock language={language}/>:<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>)
    :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
     {tab==='tasks'&&<><WorksheetBuilder school={school} language={language}/><ServerTeachingPanel school={school} language={language}/></>}
     {tab==='journal'&&<><ClassJournal school={school} language={language}/><GradeJournal school={school} language={language}/></>}
