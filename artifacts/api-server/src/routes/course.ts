@@ -11,6 +11,7 @@ import {
   trainerResultsTable,
   trainerTestsTable,
   userNotificationsTable,
+  noticeMarksTable,
   usersTable,
   schoolMembersTable,
   type AccountRole,
@@ -285,11 +286,11 @@ router.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimi
     res.status(400).json({ error: "Invalid result." });
     return;
   }
-  const day = isoDay(new Date());
+  const day = tashkentDay(0);
   const classId = await pupilClass(viewer.id);
   // One counted attempt a day: the first result stays.
   const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
-  if (row) void announceTrainer(viewer.id, score, total, "");
+  if (row) await announceTrainer(viewer.id, score, total, "");
   res.status(row ? 201 : 200).json({ counted: Boolean(row), day });
 });
 
@@ -312,7 +313,7 @@ router.get("/trainer/rating", requireAuthenticatedRole(...everyRole), async (req
     .orderBy(desc(sql`sum(${trainerResultsTable.score})`))
     .limit(30);
   const [today] = await db.select({ id: trainerResultsTable.id }).from(trainerResultsTable)
-    .where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, isoDay(new Date())))).limit(1);
+    .where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, tashkentDay(0)))).limit(1);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today) });
 });
@@ -359,7 +360,7 @@ router.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimite
     })
     .returning({ attempts: trainerTestsTable.attempts });
   // Only the first try of the day is announced: retries do not flood the family's Telegram.
-  if (saved?.attempts === 1) void announceTrainer(viewer.id, score, total, subject);
+  if (saved?.attempts === 1) await announceTrainer(viewer.id, score, total, subject);
   res.status(201).json({ saved: true });
 });
 
@@ -392,6 +393,9 @@ export async function remindTrainer(teacherId: string, day: string, lessons: Arr
     const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable)
       .where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
     if (already) return;
+    // Two page loads at once: only the first one writes the note.
+    const [first] = await db.insert(noticeMarksTable).values({ key: `trainer:${teacherId}:${day}` }).onConflictDoNothing().returning({ key: noticeMarksTable.key });
+    if (!first) return;
     const parts: string[] = [];
     const seen = new Set<string>();
     for (const lesson of book) {

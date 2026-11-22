@@ -25,7 +25,7 @@ const SUBJECTS: Array<[string[], [string, string, string]]> = [
 /** A subject name (key or Russian name) in the reader's language. */
 export function subjectText(lang: NoticeLang, value: string): string {
   const found = SUBJECTS.find(([names]) => names.includes(value.trim().toLowerCase()));
-  return found ? tl(lang, ...found[1]) : value;
+  return found ? tl(lang, ...found[1]) : escapeHtml(value);
 }
 export const dateText = (iso: string) => iso.slice(0, 10).split("-").reverse().join(".");
 
@@ -69,10 +69,14 @@ export async function parentsOf(studentIds: string[]): Promise<Array<{ parentId:
  * so a parent with two children knows who the message is about.
  */
 export async function notifyFamily(studentId: string, notice: string | ((lang: NoticeLang, pupil: string) => string), includeStudent = false): Promise<void> {
-  const parents = await parentsOf([studentId]);
-  const [pupil] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
-  const name = escapeHtml(pupil?.name ?? "");
-  await notifyUsers([...parents.map((row) => row.parentId), ...(includeStudent ? [studentId] : [])], typeof notice === "function" ? (lang) => notice(lang, name) : notice);
+  try {
+    const parents = await parentsOf([studentId]);
+    const [pupil] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+    const name = escapeHtml(pupil?.name ?? "");
+    await notifyUsers([...parents.map((row) => row.parentId), ...(includeStudent ? [studentId] : [])], typeof notice === "function" ? (lang) => notice(lang, name) : notice);
+  } catch (error) {
+    logger.error({ err: error }, "family notification failed");
+  }
 }
 
 export const escapeHtml = (value: string) =>

@@ -36,6 +36,12 @@ import {
 } from "../lib/ai-content";
 
 const router: IRouter = Router();
+// Paid outside services (AI, video and 3D search): a limit per session against scripted abuse.
+const aiLimiter = createRateLimiter(60, 10 * 60 * 1000, "Too many requests. Wait a few minutes.", "ai-heavy", (req: { cookies?: Record<string, unknown>; ip?: string }) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
+
 
 /**
  * Signed-in limits are counted per session, not per IP address: a whole
@@ -320,7 +326,7 @@ router.get(
 router.post(
   "/topics/:topicId/student-questions",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     if (!isValidUuid(req.params.topicId)) {
       res.status(400).json({ error: "Invalid topic identifier." });
       return;
@@ -591,7 +597,7 @@ router.get(
     "student", "teacher", "parent", "school_director", "school_admin",
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
     if (!query || query.length > 140) {
       res.status(400).json({ error: "A search query is required." });
@@ -664,7 +670,7 @@ router.get(
     "student", "teacher", "parent", "school_director", "school_admin",
     "education_admin", "ministry_admin", "platform_superadmin",
   ),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
     if (!query || query.length > 140) {
       res.status(400).json({ error: "A search query is required." });
@@ -731,7 +737,7 @@ router.post(
     "ministry_admin",
     "platform_superadmin",
   ),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     const topicId = String(req.params.topicId);
     if (!isValidUuid(topicId)) {
       res.status(400).json({ error: "Invalid topic identifier." });

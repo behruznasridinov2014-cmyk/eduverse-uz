@@ -228,6 +228,7 @@ export function IconSchedule(props: IconProps) {
 export const NAV_ICON: Record<string, (props: IconProps) => ReactElement> = {
   Overview: IconHome,
   Schedule: IconSchedule,
+  'Check homework': IconHomework,
   'Lesson room': IconLesson,
   'Topics & 3D': IconTopic,
   'Chemistry lab': IconStudio,

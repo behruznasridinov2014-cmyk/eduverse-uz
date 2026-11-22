@@ -29,6 +29,6 @@ node scripts/seed-demo-school.mjs
 ```
 
 Пароль для всех демо-аккаунтов генерируется случайно и печатается один раз в конце
-(или задайте свой: `DEMO_PASSWORD=...`). Логины: `demo_director`, `demo_teacher`, `demo_admin`,
+(или задайте свой: `DEMO_PASSWORD=ваш-пароль`). Логины: `demo_director`, `demo_teacher`, `demo_admin`,
 `demo_student_b_1` … `demo_student_b_12`.
 Повторный запуск безопасен: ничего не удаляет и не меняет пароли уже созданных аккаунтов.

@@ -98,7 +98,7 @@ const AI_BASE_URL = (process.env.AI_BASE_URL ?? "http://127.0.0.1:11434/v1").rep
 const AI_API_KEY = process.env.AI_API_KEY ?? "";
 const AI_MODEL = process.env.AI_MODEL ?? "";
 const AI_ENABLED = process.env.AI_ENABLED !== "0";
-const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? "45000");
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? "25000");
 
 // Google Gemini (OpenAI-compatible endpoint). When GEMINI_API_KEY is set the
 // AI backend uses Gemini automatically; otherwise it talks to AI_BASE_URL.
@@ -232,6 +232,8 @@ async function callModel(messages: ChatMessage[]): Promise<string | null> {
         messages,
         temperature: 0.6,
         response_format: { type: "json_object" },
+        // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
+        ...(USE_GEMINI ? { reasoning_effort: "none" } : {}),
       }),
       signal: controller.signal,
     });
@@ -924,4 +926,83 @@ export async function generateStudentQuestion(
   const quiz = parseQuiz(parsed);
   if (!quiz) return fallback;
   return { ...quiz, focus: str(parsed.focus) || fallback.focus };
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Photo check: a real notebook photo or a picture made by AI?                 */
+/* -------------------------------------------------------------------------- */
+
+export type PhotoCheck = { aiMade: "yes" | "no" | "unsure"; confidence: number; reasons: string[] };
+
+/** A hint for the teacher (never proof): does the notebook photo look made or edited by AI / a screenshot? */
+export async function checkPhotoIsAi(photos: string[], language: string): Promise<PhotoCheck | null> {
+  if (!isAiConfigured() || photos.length === 0) return null;
+  const lang = language === "uz" ? "на узбекском (латиница)" : language === "en" ? "in English" : "по-русски";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты эксперт по фотографиям. Учитель получил фото тетради с домашним заданием ученика. Определи: это настоящее фото бумажной тетради с рукописным текстом (сделанное телефоном) или изображение, созданное или сильно изменённое ИИ, либо скриншот/напечатанный текст. Признаки ИИ: слишком ровный «рукописный» шрифт, буквы без нажима, странные артефакты, бессмысленные символы, неестественные тени, идеальная бумага без перспективы. Признаки настоящего фото: перспектива и тени, клетка/линейка тетради, помарки, исправления, разный нажим ручки. Ответ строго JSON: {"aiMade":"yes|no|unsure","confidence":0-100,"reasons":["коротко","коротко"]}. Причины пиши ${lang}, 2-3 коротких пункта.`,
+    },
+    { role: "user", content: [{ type: "text", text: `Фото тетради: ${photos.length}.` }, ...photos.slice(0, 3).map((url) => ({ type: "image_url", image_url: { url } }))] },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const aiMade = parsed.aiMade === "yes" || parsed.aiMade === "no" ? parsed.aiMade : "unsure";
+  return {
+    aiMade,
+    confidence: Math.min(90, Math.max(0, Math.round(Number(parsed.confidence) || 50))),
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 3) : [],
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* "Explain this word" for a pupil during a lesson                             */
+/* -------------------------------------------------------------------------- */
+
+export type WordExplanation = { word: string; simple: string; example: string };
+
+export async function explainWord(word: string, topic: string, subject: string, language: string): Promise<WordExplanation | null> {
+  if (!isAiConfigured()) return null;
+  const lang = language === "uz" ? "на узбекском языке (латиница)" : language === "en" ? "in simple English" : "на русском языке";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты добрый учитель для ученика 7 класса. Объясни одно слово или выражение очень просто, как другу, без сложных терминов, ${lang}. Ответ строго JSON: {"word":"...","simple":"1-2 коротких предложения","example":"один пример из жизни"}. Если это не учебное слово или что-то неприличное — верни {"word":"","simple":"","example":""}.`,
+    },
+    { role: "user", content: `Слово: «${word.slice(0, 60)}». Тема урока: ${topic.slice(0, 120)}. Предмет: ${subject.slice(0, 40)}.` },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed || !str(parsed.simple)) return null;
+  return { word: str(parsed.word) || word, simple: str(parsed.simple).slice(0, 400), example: str(parsed.example).slice(0, 300) };
+}
+
+/* -------------------------------------------------------------------------- */
+/* A pupil's own practice test on the topics they find hard                    */
+/* -------------------------------------------------------------------------- */
+
+export type PracticeQuestion = { prompt: string; choices: string[]; correct: number; hint: string };
+
+export async function generatePracticeTest(topics: Array<{ subject: string; title: string; essence: string }>, language: string): Promise<PracticeQuestion[] | null> {
+  if (!isAiConfigured() || topics.length === 0) return null;
+  const lang = language === "uz" ? "на узбекском языке (латиница)" : language === "en" ? "in English" : "на русском языке";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты учитель 7 класса. Составь короткий тренировочный тест для ученика по темам, которые ему трудно даются. 5 вопросов, от лёгкого к сложному, ${lang}. В каждом 4 варианта, ровно один верный. Подсказка — одно короткое предложение, как решать, без ответа. Ответ строго JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`,
+    },
+    { role: "user", content: topics.slice(0, 3).map((topic, index) => `${index + 1}) ${topic.subject}: ${topic.title}. Суть: ${topic.essence.slice(0, 400)}`).join("\n") },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed || !Array.isArray(parsed.questions)) return null;
+  const out: PracticeQuestion[] = [];
+  for (const item of parsed.questions as unknown[]) {
+    if (typeof item !== "object" || item === null) continue;
+    const row = item as Record<string, unknown>;
+    const choices = Array.isArray(row.choices) ? row.choices.map((choice) => str(choice)).filter(Boolean).slice(0, 4) : [];
+    const correct = Number(row.correct);
+    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3) continue;
+    out.push({ prompt: str(row.prompt).slice(0, 400), choices: choices.map((choice) => choice.slice(0, 200)), correct, hint: str(row.hint).slice(0, 240) });
+  }
+  return out.length ? out.slice(0, 5) : null;
 }

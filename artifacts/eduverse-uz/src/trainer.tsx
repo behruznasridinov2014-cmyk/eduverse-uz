@@ -1,3 +1,4 @@
+import { PracticeTest } from './practice-test';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
 import { Check, Trophy, X } from 'lucide-react';
@@ -170,6 +171,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
           <p className="page-subtitle">{t(language, 'Har bir fandan 8 ta savol, faqat darsda o‘tilgan mavzu bo‘yicha.', 'По каждому предмету 8 вопросов — только по теме, которую прошли на уроке.', '8 questions per subject, only on the topic of the lesson.')}</p>
         </div>
       </div>
+      {isStudent && <PracticeTest userId={user.id} language={language} />}
 
       {loading ? (
         <div className="trainer-loading" role="status" aria-label={t(language, 'Yuklanmoqda', 'Загрузка', 'Loading')}>

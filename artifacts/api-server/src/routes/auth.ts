@@ -1696,6 +1696,8 @@ router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
   if (!user) { res.redirect(302, "/login?google=notlinked"); return; }
   if (ACCOUNT_BLOCKED.includes(user.status)) { res.redirect(302, "/login?google=blocked"); return; }
+  // With two-factor protection on, Google alone is not enough: sign in with the password and the code.
+  if (user.twoFactorEnabled) { res.redirect(302, "/login?google=twofactor"); return; }
 
   if (saved.mode === "recover") {
     // The account was stolen or the password forgotten: Google proved the owner.

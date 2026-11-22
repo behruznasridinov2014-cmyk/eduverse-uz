@@ -5,4 +5,7 @@
  */
 import app from "./app";
 
+// Room for the slower AI checks (photos), within the plan limit.
+export const maxDuration = 60;
+
 export default app;

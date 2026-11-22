@@ -70,13 +70,7 @@ export function SchedulePage({ user, school, language, onOpen }: { user: User; s
     <section className="schedule-page">
       <div className="page-heading">
         <div>
-          <div className="eyebrow">{t(language, 'Haftalik dars jadvali', 'Недельное расписание', 'Weekly timetable')}</div>
           <h1>{t(language, 'Dars jadvali', 'Расписание', 'Timetable')}</h1>
-          <p className="page-subtitle">{manager
-            ? t(language, 'Har bir sinf uchun hafta: fan, o‘qituvchi, xona va vaqt. Saqlashingiz bilan o‘qituvchi va o‘quvchilar o‘z jadvalini ko‘radi.', 'Неделя каждого класса: предмет, учитель, кабинет и время. После сохранения учителя и ученики сразу видят своё расписание.', 'Each class’s week: subject, teacher, room and time. After saving, teachers and pupils see their own timetable.')
-            : user.role === 'teacher'
-              ? t(language, 'Qaysi sinfda, qaysi xonada, qachon va qaysi mavzu — bir sahifada.', 'В каком классе, в каком кабинете, когда и какая тема — на одной странице.', 'Which class, which room, when and which topic — on one page.')
-              : t(language, 'Haftalik darslar: vaqt, xona va mavzu.', 'Уроки на неделю: время, кабинет и тема.', 'Lessons of the week: time, room and topic.')}</p>
         </div>
       </div>
       {manager
@@ -113,11 +107,10 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
 
   return (
     <>
-      {teacher && <LessonHowTo language={language} />}
       <div className="schedule-weekbar">
         <button type="button" className="btn" onClick={() => setOffset((value) => value - 1)} aria-label={t(language, 'Oldingi hafta', 'Прошлая неделя', 'Previous week')}><ChevronLeft size={16} /></button>
         <div className="schedule-weekbar-title">
-          <b>{offset === 0 ? t(language, 'Shu hafta', 'Эта неделя', 'This week') : offset === 1 ? t(language, 'Keyingi hafta', 'Следующая неделя', 'Next week') : offset === -1 ? t(language, 'O‘tgan hafta', 'Прошлая неделя', 'Last week') : ''}</b>
+          <b>{offset === 0 ? t(language, 'Shu hafta', 'Эта неделя', 'This week') : offset === 1 ? t(language, 'Keyingi hafta', 'Следующая неделя', 'Next week') : offset === -1 ? t(language, 'O‘tgan hafta', 'Прошлая неделя', 'Last week') : offset > 0 ? t(language, `${offset} hafta keyin`, `Через ${offset} нед.`, `In ${offset} weeks`) : t(language, `${-offset} hafta oldin`, `${-offset} нед. назад`, `${-offset} weeks ago`)}</b>
           {monday && saturday && <span className="muted">{dayText(monday, language)} — {dayText(saturday, language)}</span>}
         </div>
         <button type="button" className="btn" onClick={() => setOffset((value) => value + 1)} aria-label={t(language, 'Keyingi hafta', 'Следующая неделя', 'Next week')}><ChevronRight size={16} /></button>
@@ -147,7 +140,7 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
                       const open = isToday && status !== 'done';
                       return (
                         <li key={lesson.id} className={`schedule-lesson is-${status}`}>
-                          <div className="schedule-lesson-time"><Clock3 size={13} /> {lesson.start}–{lesson.end}<small>{t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)}</small></div>
+                          <div className="schedule-lesson-time"><Clock3 size={13} /> {lesson.start}–{lesson.end}</div>
                           <div className="schedule-lesson-main">
                             <b>{lessonSubjectName(lesson.subject, language)}</b>
                             <span className="schedule-lesson-meta">

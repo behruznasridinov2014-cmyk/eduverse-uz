@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { customFetch } from '@workspace/api-client-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Award } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { subjectLabel } from './ui/config';
@@ -43,6 +44,7 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
           ))}
         </div>
       </div>
+      <JournalMarks language={language} />
       {subjects.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon"><Award /></span>
@@ -76,6 +78,39 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
           })}
         </div>
       )}
+    </section>
+  );
+}
+
+
+const SUBJECTS: Record<string, [string, string, string]> = { physics: ['Fizika', 'Физика', 'Physics'], chemistry: ['Kimyo', 'Химия', 'Chemistry'], biology: ['Biologiya', 'Биология', 'Biology'], math: ['Matematika', 'Математика', 'Maths'] };
+
+/** Marks the teacher put in the class journal (2…5 and «нб»), by subject. */
+function JournalMarks({ language }: { language: Language }) {
+  const [marks, setMarks] = useState<Array<{ subject: string; date: string; mark: number | null; absent: boolean }> | null>(null);
+  useEffect(() => { void customFetch<{ marks: Array<{ subject: string; date: string; mark: number | null; absent: boolean }> }>('/api/me/marks', { method: 'GET' }).then((data) => setMarks(data.marks)).catch(() => setMarks([])); }, []);
+  if (!marks || marks.length === 0) return null;
+  const bySubject = new Map<string, typeof marks>();
+  for (const row of marks) bySubject.set(row.subject, [...(bySubject.get(row.subject) ?? []), row]);
+  return (
+    <section className="panel journal-mine">
+      <h2>{t(language, 'Jurnaldagi baholar', 'Оценки в журнале', 'Journal marks')}</h2>
+      <div className="journal-mine-list">
+        {[...bySubject.entries()].map(([subject, rows]) => {
+          const numbers = rows.map((row) => row.mark).filter((mark): mark is number => typeof mark === 'number');
+          const average = numbers.length ? (numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1) : '—';
+          const names = SUBJECTS[subject];
+          return (
+            <div key={subject} className="journal-mine-row">
+              <b>{names ? t(language, ...names) : subject}</b>
+              <span className="journal-mine-marks">{rows.slice(0, 12).map((row, index) => row.absent
+                ? <span key={index} className="journal-nb" title={row.date}>{t(language, 'nb', 'нб', 'ab')}</span>
+                : <span key={index} className={`grade-mark m${row.mark}`} title={row.date.split('-').reverse().join('.')}>{row.mark}</span>)}</span>
+              <span className="muted">{t(language, 'O‘rtacha', 'Средняя', 'Average')}: <b>{average}</b></span>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

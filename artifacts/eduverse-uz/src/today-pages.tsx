@@ -219,7 +219,7 @@ export function LessonPreviewPage({ user, school, language, onOpen }: { user: Us
       <div className="notice lesson-preview-note"><CalendarCheck2 size={16} /><span>{t(language,
         `Oldindan ko‘rish: ${date.split('-').reverse().join('.')} ${lesson.start} dagi dars shunday ko‘rinadi. Davomat va uy vazifasi dars vaqtida ishlaydi.`,
         `Предпросмотр: так будет выглядеть урок ${date.split('-').reverse().join('.')} в ${lesson.start}. Давомат и домашка заработают во время урока.`,
-        `Preview: this is how the lesson on ${date} at ${lesson.start} will look. Attendance and homework work during the lesson.`)}</span></div>
+        `Preview: this is how the lesson on ${date.split('-').reverse().join('.')} at ${lesson.start} will look. Attendance and homework work during the lesson.`)}</span></div>
       <header className="lesson-day-head is-upcoming">
         <div>
           <span className="eyebrow">{t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)} · {lesson.start}–{lesson.end}{lesson.room ? ` · ${t(language, 'xona', 'каб.', 'room')} ${lesson.room}` : ''}</span>

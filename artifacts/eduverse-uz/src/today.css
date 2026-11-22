@@ -175,7 +175,7 @@ html[data-theme="night"] .tt-grid td.has-lesson { background: rgba(255, 255, 255
 .upcoming-day li { grid-template-columns: 96px minmax(0, 1fr) auto !important; }
 
 /* My grades */
-.grades-subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.grades-subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 12px; }
 .grades-subject-head { display: flex; justify-content: space-between; align-items: center; }
 .grades-subject h2 { margin: 0; font-size: 17px; }
 .grades-subject ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
@@ -393,3 +393,65 @@ html[data-theme="night"] .studio-card-icon { color: #e2c58f; }
 .tg-connect ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .tg-connect.is-on { background: rgba(46, 160, 90, 0.1); border-color: rgba(46, 160, 90, 0.4); }
 .tg-connect-btn { justify-self: start; min-height: 46px; background: #2AABEE !important; border-color: #2AABEE !important; color: #fff !important; }
+
+/* ---- Teacher: check homework tab ---- */
+.check-hw-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.check-hw-tasks { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.check-hw-tasks .studio-tab { min-height: 42px; position: relative; }
+.check-hw-badge { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; border-radius: 11px; background: #d6a23a; color: #fff; font-size: 12px; }
+.check-hw-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.check-hw-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.check-hw-list li { display: grid; grid-template-columns: 28px 1fr auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface, #fff); border: 1px solid var(--line-2, #e2dccf); }
+.check-hw-list li.is-review { border-color: #d6a23a; }
+.check-hw-num { color: var(--text-3); font-size: 13px; }
+.check-hw-state { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.check-hw-state.ok { color: #1f7a45; }
+.check-hw-state.wait { color: #9a6b12; }
+.check-hw-state.no { color: var(--text-3); }
+html[data-theme="night"] .check-hw-list li { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.1); }
+@media (max-width: 600px) { .check-hw-list li { grid-template-columns: 24px 1fr; } .check-hw-list li > .check-hw-state, .check-hw-list li > .btn { grid-column: 2; justify-self: start; } }
+.photo-ai-check { margin: 10px 0; display: grid; gap: 8px; }
+.photo-ai-result { padding: 12px; border-radius: 12px; display: grid; gap: 6px; background: var(--surface-2, #f6f1e7); }
+.photo-ai-result.is-yes { background: rgba(214, 70, 70, 0.1); border: 1px solid rgba(214, 70, 70, 0.35); }
+.photo-ai-result.is-no { background: rgba(46, 160, 90, 0.1); border: 1px solid rgba(46, 160, 90, 0.35); }
+.photo-ai-result ul { margin: 0; padding-left: 18px; }
+
+/* ---- Journal marks on "My grades" ---- */
+.journal-mine { margin-bottom: 14px; }
+.journal-mine-list { display: grid; gap: 8px; }
+.journal-mine-row { display: grid; grid-template-columns: 130px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--surface-2, #f6f1e7); }
+.journal-mine-marks { display: flex; flex-wrap: wrap; gap: 4px; }
+html[data-theme="night"] .journal-mine-row { background: rgba(255, 255, 255, 0.05); }
+@media (max-width: 560px) { .journal-mine-row { grid-template-columns: 1fr; } }
+
+/* ---- Night theme: readable colours for status texts ---- */
+html[data-theme="night"] .today-status, html[data-theme="night"] .today-status.is-current { color: #9cc8ef; }
+html[data-theme="night"] .school-today-lessons li.is-current b { color: #8fd3ae; }
+html[data-theme="night"] .review-verdict-btn.tone-green.on { color: #8fd3ae; }
+html[data-theme="night"] .review-verdict-btn.tone-gold.on { color: #f0cf8a; }
+html[data-theme="night"] .review-verdict-btn.tone-red.on { color: #f3a3a3; }
+html[data-theme="night"] .review-saved, html[data-theme="night"] .check-hw-state.ok { color: #8fd3ae; }
+html[data-theme="night"] .check-hw-state.wait { color: #f0cf8a; }
+html[data-theme="night"] .grade-mark.m5 { color: #8fd3ae !important; }
+html[data-theme="night"] .grade-mark.m4 { color: #9cc8ef !important; }
+html[data-theme="night"] .grade-mark.m3 { color: #f0cf8a !important; }
+html[data-theme="night"] .grade-mark.m2, html[data-theme="night"] .journal-nb { color: #f3a3a3 !important; }
+html[data-theme="night"] .subject-picker .chip.on { background: rgba(46, 160, 90, 0.25); color: #d8f2e3; }
+html[data-theme="night"] .review-verdict, html[data-theme="night"] .photo-ai-result { background: rgba(255, 255, 255, 0.05); }
+
+/* ---- Lesson topic: short main idea and closed extras ---- */
+.course-hook { font-size: 17px; font-weight: 600; padding: 10px 14px; border-radius: 12px; background: rgba(184, 149, 90, 0.12); }
+.course-points-short { margin: 8px 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.course-points-short li { font-size: 17px; line-height: 1.5; padding: 10px 14px 10px 40px; border-radius: 12px; background: var(--surface-2, #f6f1e7); position: relative; }
+.course-points-short li::before { content: '✓'; position: absolute; left: 14px; top: 10px; color: var(--ev-primary, #b8955a); font-weight: 800; }
+.topic-extras { margin-top: 12px; display: grid; gap: 10px; }
+.topic-extras-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.topic-extras-buttons .btn { min-height: 40px; }
+.topic-extras-panel { margin: 0; padding: 12px 14px 12px 30px; border-radius: 12px; background: var(--surface-2, #f6f1e7); display: grid; gap: 6px; animation: ev-fade-in .25s ease both; }
+p.topic-extras-panel, .explain-word { padding-left: 14px; }
+.explain-word-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.explain-word-form .input { flex: 1; min-width: 180px; min-height: 44px; }
+.explain-word-answer { padding: 10px 12px; border-radius: 10px; background: var(--surface, #fff); }
+.explain-word-answer p { margin: 4px 0 0; }
+html[data-theme="night"] .course-points-short li, html[data-theme="night"] .topic-extras-panel { background: rgba(255, 255, 255, 0.05); }
+html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 0.06); }

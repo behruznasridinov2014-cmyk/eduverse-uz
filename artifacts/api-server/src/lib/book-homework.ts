@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { assignmentsTable, classMembersTable, courseProgressTable, db, noticeMarksTable, timetableSlotsTable } from "@workspace/db";
+import { assignmentsTable, classesTable, classMembersTable, courseProgressTable, db, noticeMarksTable, schoolCalendarTable, timetableSlotsTable } from "@workspace/db";
 import { lessonReader } from "../routes/timetable";
 import { pushNotice, withParents } from "./inbox";
 import { escapeHtml, notifyUsers, subjectText, tl } from "./notify";
@@ -35,7 +35,7 @@ function dueAfter(date: string): Date {
 }
 
 /** Gives the book homework for today's lessons that have ended. Safe to call many times. */
-export async function giveBookHomework(date: string, lessons: EndedLesson[], now = Date.now()): Promise<void> {
+async function createHomework(date: string, lessons: EndedLesson[], now: number): Promise<void> {
   const ended = lessons.filter((lesson) => lesson.teacherId && Date.parse(lesson.endsAt) <= now && bookFor(lesson.subject, lesson.grade));
   if (!ended.length) return;
   try {
@@ -78,7 +78,6 @@ export async function giveBookHomework(date: string, lessons: EndedLesson[], now
       if (created) await bellHomework(lesson.classId, `§${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
     }
     // Telegram gets ONE message per class a day, after the class's last lesson: all homework of the day.
-    for (const classId of classIds) await sendDaySummary(classId, date, now);
   } catch (error) {
     logger.warn({ err: error }, "book homework was not given");
   }
@@ -101,11 +100,8 @@ async function bellHomework(classId: string, title: string, homework: string, su
 }
 
 /** One Telegram message per class and day, once the last lesson of the class is over. */
-async function sendDaySummary(classId: string, date: string, now: number): Promise<void> {
+async function sendDaySummary(classId: string, date: string): Promise<void> {
   try {
-    const weekday = new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
-    const classLessons = await lessonReader(eq(timetableSlotsTable.classId, classId))(date, weekday);
-    if (!classLessons.length || classLessons.some((lesson) => Date.parse(lesson.endsAt) > now)) return;
     const done = await db.select({ topicKey: courseProgressTable.topicKey }).from(courseProgressTable)
       .where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.doneOn, date)));
     if (!done.length) return;
@@ -118,7 +114,7 @@ async function sendDaySummary(classId: string, date: string, now: number): Promi
     const people = await pupilsAndParents(classId);
     const day = date.split("-").reverse().join(".");
     await notifyUsers(people, (lang) => [
-      `📚 <b>${tl(lang, "Bugungi uy vazifasi", "Домашнее задание на завтра", "Today’s homework")}</b> · ${day}`,
+      `📚 <b>${tl(lang, "Bugungi uy vazifasi", "Домашнее задание", "Today’s homework")}</b> · ${day}`,
       "",
       ...tasks.map((task) => `• <b>${subjectText(lang, task.subject)}</b> — ${escapeHtml(task.title)}\n  ${escapeHtml(task.description.split("\n")[0]!.slice(0, 200))}`),
       "",
@@ -126,5 +122,43 @@ async function sendDaySummary(classId: string, date: string, now: number): Promi
     ].join("\n"));
   } catch (error) {
     logger.warn({ err: error }, "homework summary was not sent");
+  }
+}
+
+
+/** True when the date is inside one of the school's holidays (school calendar). */
+async function isHoliday(classId: string, date: string): Promise<boolean> {
+  const [row] = await db.select({ holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable)
+    .innerJoin(classesTable, eq(classesTable.schoolId, schoolCalendarTable.schoolId))
+    .where(eq(classesTable.id, classId)).limit(1);
+  const list = Array.isArray(row?.holidays) ? row!.holidays as Array<{ from?: unknown; to?: unknown }> : [];
+  return list.some((item) => typeof item.from === "string" && typeof item.to === "string" && date >= item.from && date <= item.to);
+}
+
+/**
+ * Gives the textbook homework of one school day for the given classes, using ALL lessons of each
+ * class (not only the ones the viewer sees). When the class's last lesson is over, the families get
+ * one Telegram summary and the day is marked done, so later page loads cost one quick query.
+ */
+export async function giveBookHomework(date: string, classIds: string[], now = Date.now()): Promise<void> {
+  for (const classId of [...new Set(classIds)]) {
+    try {
+      const doneKey = `hw-done:${classId}:${date}`;
+      const [done] = await db.select({ key: noticeMarksTable.key }).from(noticeMarksTable).where(eq(noticeMarksTable.key, doneKey)).limit(1);
+      if (done) continue;
+      if (await isHoliday(classId, date)) {
+        await db.insert(noticeMarksTable).values({ key: doneKey }).onConflictDoNothing();
+        continue;
+      }
+      const weekday = new Date(`${date}T12:00:00Z`).getUTCDay() || 7;
+      const classLessons = await lessonReader(eq(timetableSlotsTable.classId, classId))(date, weekday);
+      await createHomework(date, classLessons, now);
+      if (classLessons.length && classLessons.every((lesson) => Date.parse(lesson.endsAt) <= now)) {
+        await sendDaySummary(classId, date);
+        await db.insert(noticeMarksTable).values({ key: doneKey }).onConflictDoNothing();
+      }
+    } catch (error) {
+      logger.warn({ err: error }, "book homework of a class failed");
+    }
   }
 }

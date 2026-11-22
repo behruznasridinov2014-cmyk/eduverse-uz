@@ -71,7 +71,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
     if (!targetClass || picked.length === 0 || !book) return;
     const classId = targetClass;
     const className = teachClasses.find((item) => item.id === classId)?.name ?? '';
-    const name = title.trim() || (slots && slot ? `§${slot.topic.code} ${slot.topic.title}` : `${t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')} · ${SUBJECT_RU[book.subject]}`);
+    const name = title.trim() || (slots && slot ? `§${slot.topic.code} ${slot.topic.title}` : `${t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')} · ${lessonSubjectName(book.subject, language)}`);
     if (!window.confirm(t(language, `${className} sinfiga ${picked.length} ta topshiriq yuborilsinmi?`, `Отправить классу ${className}: ${picked.length} заданий?`, `Send ${picked.length} tasks to ${className}?`))) return;
     setBusy(true); setError(''); setMessage('');
     try {
@@ -83,7 +83,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
         dueAt: due ? new Date(`${due}T20:00:00`).toISOString() : null,
         ...(slots && slot ? { topicId: `course:${slot.topic.key}`, topicTitle: `§${slot.topic.code} ${slot.topic.title}` } : {}),
       });
-      setMessage(t(language, 'Yuborildi. O‘quvchilar «Vazifalar»da ko‘radi.', 'Отправлено. Ученики увидят в «Заданиях», ответы к заданиям ниже — только для вас.', 'Sent. Pupils see it in Homework.'));
+      setMessage(t(language, 'Yuborildi. O‘quvchilar «Vazifalar»da ko‘radi.', 'Отправлено. Ученики увидят в «Заданиях».', 'Sent. Pupils see it in Homework.'));
       setPicked([]); setTitle('');
     } catch (requestError) {
       setError(friendlyError(requestError, language));

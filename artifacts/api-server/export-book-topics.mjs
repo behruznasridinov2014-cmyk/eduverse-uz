@@ -23,6 +23,7 @@ const books = COURSE.map((book) => ({
     code: topic.code,
     title: topic.title,
     homework: topic.homework,
+    essence: topic.essence,
     tasks: topic.tasks.map((task) => task.q),
   })),
 }));

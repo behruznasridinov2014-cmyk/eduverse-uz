@@ -11,6 +11,7 @@ import requestsRouter from "./requests";
 import demoRouter from "./demo";
 import timetableRouter from "./timetable";
 import journalRouter from "./journal";
+import aiToolsRouter from "./ai-tools";
 import { ensureSchema } from "../lib/schema-sync";
 import { logger } from "../lib/logger";
 
@@ -33,6 +34,7 @@ router.use(requestsRouter);
 router.use(demoRouter);
 router.use(timetableRouter);
 router.use(journalRouter);
+router.use(aiToolsRouter);
 router.use(authRouter);
 router.use(learningRouter);
 router.use(lessonRoomsRouter);

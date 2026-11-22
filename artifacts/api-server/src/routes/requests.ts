@@ -184,7 +184,7 @@ router.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_ST
   try {
     result = await applyChange(schoolId, kind, targetUserId, change.payload, reason, viewer.id);
   } catch (error) {
-    res.status(400).json({ error: error instanceof Error ? error.message : "Could not make the change." });
+    res.status(400).json({ error: error instanceof Error && !/failed query|duplicate key|violates|syntax error/i.test(error.message) ? error.message : "Could not make the change." });
     return;
   }
   // Store logins only — passwords are shown to the school once and never kept.
@@ -292,7 +292,7 @@ router.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER_R
       result = await applyChange(request.schoolId, request.kind as Kind, request.targetUserId, request.payload as Record<string, unknown>, request.reason, viewer.id);
     } catch (error) {
       await db.update(schoolRequestsTable).set({ status: "pending", decidedBy: null, decidedAt: null }).where(eq(schoolRequestsTable.id, id));
-      res.status(400).json({ error: error instanceof Error ? error.message : "Could not apply the request." });
+      res.status(400).json({ error: error instanceof Error && !/failed query|duplicate key|violates|syntax error/i.test(error.message) ? error.message : "Could not apply the request." });
       return;
     }
     // Store logins only — passwords are shown to the owner once and never kept.
@@ -357,7 +357,7 @@ router.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_RO
   const untilText = typeof body.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.until) ? body.until : null;
   if (!plan) { res.status(400).json({ error: "Plan must be free, pilot or pro." }); return; }
   if (plan === "pilot" && !untilText) { res.status(400).json({ error: "A pilot needs an end date." }); return; }
-  const until = untilText ? new Date(`${untilText}T23:59:59`) : null;
+  const until = untilText ? new Date(`${untilText}T23:59:59+05:00`) : null;
   const [row] = await db.update(schoolsTable).set({ plan, planUntil: until, updatedAt: new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
   if (!row) { res.status(404).json({ error: "School not found." }); return; }
   await writeAudit(schoolId, viewerOf(res).id, "plan", null, { plan, until: untilText });

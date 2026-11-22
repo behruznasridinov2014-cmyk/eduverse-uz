@@ -16,7 +16,7 @@ import {
 } from "@workspace/db";
 import { pushNotice, studentsOfClasses, teacherClassIds, withParents } from "../lib/inbox";
 import { escapeHtml, notifyUsers, tl } from "../lib/notify";
-import { requireAuthenticatedRole } from "./auth";
+import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { logger } from "../lib/logger";
 import { userPlan } from "../lib/plans";
 import {
@@ -27,6 +27,12 @@ import {
 } from "../lib/school-access";
 
 const router: IRouter = Router();
+// Paid outside services (AI, video and 3D search): a limit per session against scripted abuse.
+const aiLimiter = createRateLimiter(60, 10 * 60 * 1000, "Too many requests. Wait a few minutes.", "ai-heavy", (req: { cookies?: Record<string, unknown>; ip?: string }) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
+
 
 type RequestUser = { id: string; role: AccountRole };
 
@@ -395,12 +401,19 @@ router.get(
       res.json({ rooms: rows });
       return;
     }
+    // Staff: their own rooms, rooms of their classes and of their schools. EDUVERSE owners see all.
+    const global = viewer.role === "education_admin" || viewer.role === "ministry_admin" || viewer.role === "platform_superadmin";
     const rows = await db
       .select()
       .from(lessonRoomsTable)
+      .where(global ? undefined : or(
+        eq(lessonRoomsTable.hostId, viewer.id),
+        inArray(lessonRoomsTable.classId, db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))),
+        inArray(lessonRoomsTable.schoolId, db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, viewer.id))),
+      ))
       .orderBy(desc(lessonRoomsTable.createdAt))
       .limit(40);
-    res.json({ rooms: rows });
+    res.json({ rooms: rows.map((room) => (room.hostId === viewer.id || global ? room : { ...room, code: "" })) });
   },
 );
 
@@ -899,7 +912,7 @@ router.put(
 router.post(
   "/rooms/:roomId/tests",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     const viewer = user(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
@@ -949,7 +962,7 @@ router.post(
 router.post(
   "/rooms/:roomId/tests/individual",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     const viewer = user(res);
     const room = await roomById(String(req.params.roomId));
     if (!room) {
@@ -1078,6 +1091,10 @@ router.post(
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!(await canAccessRoom(viewer, room))) {
+      res.status(403).json({ error: "This lesson is not for your class." });
       return;
     }
     const score = isRecord(req.body) && Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : 0;

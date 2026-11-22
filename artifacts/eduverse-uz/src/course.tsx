@@ -324,7 +324,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
     return <Empty text={t(language, 'Bu fan uchun EDUVERSE’da hali darslik yo‘q.', 'Для этого предмета в EDUVERSE пока нет учебника.', 'There is no textbook for this subject in EDUVERSE yet.')} />;
   }
   if (isStudent && !lesson && school.status === 'ready' && !studentGrade) {
-    return <Empty text={t(language, 'Sizni hali sinfga qo‘shishmagan. O‘qituvchidan so‘rang.', 'Вас ещё не добавили в класс. Попросите учителя.', 'You are not in a class yet. Ask your teacher.')} />;
+    return <Empty text={t(language, 'Sizni hali sinfga qo‘shishmagan. Maktab ma’muriyatiga murojaat qiling.', 'Вас ещё не добавили в класс. Обратитесь к администрации школы.', 'You are not in a class yet. Contact the school administration.')} />;
   }
   if (!book || !topic) {
     return <Empty text={t(language, `${grade}-sinf darsliklari hali yuklanmagan.`, `Учебники для ${grade} класса ещё не загружены.`, `Textbooks for grade ${grade} are not uploaded yet.`)} />;
@@ -509,38 +509,26 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           {lesson && <TopicBookPages book={book} topic={topic} language={language} step={1} />}
 
           <section className="panel course-essence" id="step-topic">
-            <h3><Lightbulb size={17} /> {lesson ? `2 · ${t(language, 'Tushuntiring: asosiysi', 'Объясните: главное', 'Explain: the key points')}` : t(language, 'Mohiyati', 'Суть темы', 'The essence')}</h3>
-            {topic.hook && <p className="course-hook">{topic.hook}</p>}
-            {lesson && keyPoints(topic).length > 1
-              ? <ol className="course-points">{keyPoints(topic).map((point, index) => <li key={index}>{point}</li>)}</ol>
-              : <p>{topic.essence}</p>}
-            <div className="course-life"><Target size={15} /> <span><b>{t(language, 'Hayotda:', 'В жизни:', 'In life:')}</b> {topic.life}</span></div>
+            <h3><Lightbulb size={17} /> {lesson ? `2 · ${t(language, 'Asosiysi', 'Главное', 'The main idea')}` : t(language, 'Asosiysi', 'Главное', 'The main idea')}</h3>
+            {topic.hook && <p className="course-hook">❓ {topic.hook}</p>}
+            <TopicEssence topic={topic} language={language} />
+            <TopicExtras topic={topic} subject={book.subject} language={language} />
           </section>
 
-
-          <section className={`course-3d ${lesson ? 'with-facts' : ''}`} id="step-3d">
+          <section className="course-3d" id="step-3d">
             <div className="course-3d-head">
               <h3><Box size={17} /> {lesson ? `3 · ${t(language, '3D da ko‘rsating', 'Покажите в 3D', 'Show it in 3D')}` : t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
-              {!lesson && <p className="muted">{topic.sceneHint}</p>}
+              <p className="muted">{topic.sceneHint}</p>
             </div>
             <div className="course-3d-body">
               <CourseScene3D scene={topic.scene} language={language} />
-              {lesson && (
-                <aside className="panel course-facts">
-                  <b><Lightbulb size={15} /> {t(language, 'Nimani ko‘ramiz', 'Что на модели', 'What the model shows')}</b>
-                  <p>{topic.sceneHint}</p>
-                  {topic.facts.length > 0 && <>
-                    <b><Sparkles size={15} /> {t(language, 'Qiziqarli faktlar', 'Интересные факты', 'Fun facts')}</b>
-                    <ul>{topic.facts.map((fact, index) => <li key={index}>{fact}</li>)}</ul>
-                  </>}
-                </aside>
-              )}
+
             </div>
           </section>
 
           <section className="panel course-check" id="step-check">
             <h3><NotebookPen size={17} /> {lesson ? `4 · ${t(language, 'Tekshiruv: esda qoldimi?', 'Проверка: запомнили?', 'Check: did it stick?')}` : t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
-            {lesson && <p className="muted">{t(language, 'Avval o‘zingiz javob bering, keyin javobni oching va belgilang.', 'Сначала ответьте сами, потом откройте ответ и отметьте, верно ли.', 'Answer first, then open the answer and mark it.')}</p>}
+            {lesson && <p className="muted">{t(language, 'Javob bering → «Tekshirish».', 'Ответьте → «Проверить ответ».', 'Answer → “Check the answer”.')}</p>}
             <ol className="course-tasks">
               {topic.tasks.map((task, index) => (
                 <li key={index}>
@@ -672,5 +660,98 @@ export function StudioGallery({ subject, language }: { subject: keyof typeof GAL
       </div>}
       <CourseScene3D key={`${item[0]}:${item[1]}`} scene={{ kind: 'own', scene: item[0], mode: item[1] }} language={language} />
     </section>
+  );
+}
+
+
+/** The main idea: the first two points large and clear; the rest only when asked for. */
+function TopicEssence({ topic, language }: { topic: CourseTopic; language: Language }) {
+  const points = keyPoints(topic);
+  const [all, setAll] = useState(false);
+  const shown = points.length > 1 ? (all ? points : points.slice(0, 2)) : [topic.essence];
+  return (
+    <>
+      <ul className="course-points-short">{shown.map((point, index) => <li key={index}>{point}</li>)}</ul>
+      {points.length > 2 && <button type="button" className="btn small" onClick={() => setAll((value) => !value)}>{all ? t(language, 'Qisqaroq', 'Короче', 'Shorter') : t(language, `Batafsil · yana ${points.length - 2}`, `Подробнее · ещё ${points.length - 2}`, `More · ${points.length - 2} more`)}</button>}
+    </>
+  );
+}
+
+const SOLVE_TIPS: Record<CourseBook['subject'], [string, string, string][]> = {
+  math: [
+    ['Nima berilgan va nimani topish kerak — yozing.', 'Запишите: что дано и что найти.', 'Write what is given and what to find.'],
+    ['Chizma yoki jadval chizing.', 'Нарисуйте схему или таблицу.', 'Draw a sketch or a table.'],
+    ['Qadamma-qadam yeching.', 'Решайте по шагам.', 'Solve step by step.'],
+    ['Javobni qo‘yib tekshiring.', 'Проверьте ответ подстановкой.', 'Check the answer by putting it back.'],
+  ],
+  physics: [
+    ['Kattaliklarni birliklari bilan yozing.', 'Выпишите величины с единицами.', 'Write the quantities with units.'],
+    ['SI birliklariga o‘tkazing (sm → m, g → kg).', 'Переведите в СИ (см → м, г → кг).', 'Convert to SI (cm → m, g → kg).'],
+    ['Kerakli formulani tanlang.', 'Выберите нужную формулу.', 'Pick the right formula.'],
+    ['Sonlarni qo‘ying va birlikni tekshiring.', 'Подставьте числа и проверьте единицы.', 'Put in the numbers and check the units.'],
+  ],
+  chemistry: [
+    ['Moddalarning formulalarini yozing.', 'Запишите формулы веществ.', 'Write the formulas of the substances.'],
+    ['Chap va o‘ngdagi atomlarni sanang.', 'Посчитайте атомы слева и справа.', 'Count the atoms on both sides.'],
+    ['Koeffitsiyentlar bilan tenglang.', 'Уравняйте коэффициентами.', 'Balance with coefficients.'],
+    ['Tekshiring: atomlar soni teng.', 'Проверьте: атомов поровну.', 'Check: the atoms are equal.'],
+  ],
+  biology: [
+    ['Mavzuning asosiy so‘zini toping.', 'Найдите главное слово темы.', 'Find the key word of the topic.'],
+    ['Sxema chizing: nima nimadan iborat.', 'Нарисуйте схему: что из чего состоит.', 'Draw a scheme: what is made of what.'],
+    ['Hayotdan misol bilan bog‘lang.', 'Свяжите с примером из жизни.', 'Link it to an everyday example.'],
+    ['3 ta gap bilan aytib bering.', 'Перескажите тремя предложениями.', 'Retell it in three sentences.'],
+  ],
+};
+
+/** Closed extras behind 👁 buttons: fun facts, how to solve it easily, an everyday example, a word explained. */
+function TopicExtras({ topic, subject, language }: { topic: CourseTopic; subject: CourseBook['subject']; language: Language }) {
+  const [open, setOpen] = useState<'' | 'facts' | 'tips' | 'life' | 'word'>('');
+  const toggle = (key: typeof open) => setOpen((current) => (current === key ? '' : key));
+  return (
+    <div className="topic-extras">
+      <div className="topic-extras-buttons">
+        {topic.facts.length > 0 && <button type="button" className={`btn small ${open === 'facts' ? 'primary' : ''}`} onClick={() => toggle('facts')}>👁 {t(language, 'Qiziqarli faktlar', 'Интересные факты', 'Fun facts')}</button>}
+        <button type="button" className={`btn small ${open === 'tips' ? 'primary' : ''}`} onClick={() => toggle('tips')}>👁 {t(language, 'Qanday oson yechish', 'Как решать легко', 'How to solve it easily')}</button>
+        <button type="button" className={`btn small ${open === 'life' ? 'primary' : ''}`} onClick={() => toggle('life')}>👁 {t(language, 'Hayotda', 'Пример из жизни', 'In real life')}</button>
+        <button type="button" className={`btn small ${open === 'word' ? 'primary' : ''}`} onClick={() => toggle('word')}>💬 {t(language, 'So‘zni tushunmadim', 'Не понял слово', 'I don’t get a word')}</button>
+      </div>
+      {open === 'facts' && <ul className="topic-extras-panel">{topic.facts.map((fact, index) => <li key={index}>✨ {fact}</li>)}</ul>}
+      {open === 'tips' && <ol className="topic-extras-panel">{SOLVE_TIPS[subject].map((tip, index) => <li key={index}>{t(language, ...tip)}</li>)}</ol>}
+      {open === 'life' && <p className="topic-extras-panel">🌍 {topic.life}</p>}
+      {open === 'word' && <ExplainWord topicKey={topic.key} language={language} />}
+    </div>
+  );
+}
+
+/** "I don't understand this word": a very simple explanation from the helper. */
+function ExplainWord({ topicKey, language }: { topicKey: string; language: Language }) {
+  const [word, setWord] = useState('');
+  const [answer, setAnswer] = useState<{ word: string; simple: string; example: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function ask(event: React.FormEvent) {
+    event.preventDefault();
+    if (word.trim().length < 2 || busy) return;
+    setBusy(true); setError(''); setAnswer(null);
+    try {
+      const lang = language === 'Uzbek' ? 'uz' : language === 'English' ? 'en' : 'ru';
+      setAnswer(await customFetch<{ word: string; simple: string; example: string }>('/api/ai/explain', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ word: word.trim(), topicKey, lang }) }));
+    } catch {
+      setError(t(language, 'Hozir javob berib bo‘lmadi. Bir daqiqadan so‘ng urinib ko‘ring.', 'Сейчас не получилось. Попробуйте через минуту.', 'It did not work now. Try again in a minute.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="topic-extras-panel explain-word">
+      <form className="explain-word-form" onSubmit={ask}>
+        <input className="input" value={word} maxLength={60} onChange={(event) => setWord(event.target.value)} placeholder={t(language, 'Masalan: hajm', 'Например: объём', 'For example: volume')} />
+        <button type="submit" className="btn primary" disabled={busy || word.trim().length < 2}>{busy ? '…' : t(language, 'Tushuntir', 'Объясни', 'Explain')}</button>
+      </form>
+      {busy && <LoadingBlock language={language} kind="inline" />}
+      {answer && <div className="explain-word-answer"><b>{answer.word}</b><p>{answer.simple}</p>{answer.example && <p className="muted">🌍 {answer.example}</p>}</div>}
+      {error && <p className="notice">{error}</p>}
+    </div>
   );
 }

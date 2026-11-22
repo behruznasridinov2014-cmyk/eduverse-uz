@@ -85,7 +85,7 @@ router.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), async 
   const from = dates[0] ?? today;
   const [marks, absences] = subject ? await Promise.all([
     db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent })
-      .from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, subject))),
+      .from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, subject), gte(journalMarksTable.date, from))),
     db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate })
       .from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today))),
   ]) : [[], []];
@@ -112,7 +112,8 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   const studentId = typeof body.studentId === "string" ? body.studentId : "";
   const absent = body.absent === true;
   const mark = body.mark === null || body.mark === undefined ? null : Number(body.mark);
-  if (!SUBJECT_RE.test(subject) || !DATE_RE.test(date) || !isValidUuid(studentId)) { res.status(400).json({ error: "Invalid mark." }); return; }
+  const realDate = DATE_RE.test(date) && !Number.isNaN(Date.parse(`${date}T12:00:00Z`)) && new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) === date;
+  if (!SUBJECT_RE.test(subject) || !realDate || !isValidUuid(studentId)) { res.status(400).json({ error: "Invalid mark." }); return; }
   if (mark !== null && (!Number.isInteger(mark) || mark < 2 || mark > 5)) { res.status(400).json({ error: "A mark is 2, 3, 4 or 5." }); return; }
   if (date > tashkentNow().date) { res.status(400).json({ error: "A mark cannot be given ahead of the lesson." }); return; }
   const { subjects } = await subjectsFor(viewer, classId, allowed.manager);
@@ -122,7 +123,7 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   if (!pupil) { res.status(404).json({ error: "This pupil is not in the class." }); return; }
   const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable)
     .where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date))).limit(1);
-  const changed = !previous || previous.mark !== mark || previous.absent !== absent;
+  const changed = !previous || previous.mark !== (absent ? null : mark) || previous.absent !== absent;
   if (mark === null && !absent) {
     await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date)));
   } else {
@@ -133,10 +134,10 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   if ((mark !== null || absent) && changed) {
     const SUBJECT_NAME: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
     const day = date.split("-").reverse().join(".");
-    void notifyFamily(studentId, (lang, name) => absent
+    await notifyFamily(studentId, (lang, name) => absent
       ? `⚠️ <b>${tl(lang, "Jurnalda «nb» (kelmadi)", "В журнале «нб» (не был на уроке)", "Absent («ab») in the journal")}</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`
       : `📘 <b>${tl(lang, "Jurnalga baho", "Оценка в журнал", "Journal mark")}: ${mark}</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`, true);
-    void pushNotice(await withParents([studentId]), "grades", absent ? `«нб» в журнале: ${SUBJECT_NAME[subject] ?? subject}` : `Оценка в журнал: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
+    await pushNotice(await withParents([studentId]), "grades", absent ? `«нб» в журнале: ${SUBJECT_NAME[subject] ?? subject}` : `Оценка в журнал: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
   }
   res.json({ ok: true });
 });

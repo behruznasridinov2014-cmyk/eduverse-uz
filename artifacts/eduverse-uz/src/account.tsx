@@ -502,6 +502,12 @@ export function SupportPage({ user, language }: { user: User; language: Language
 type Notice = { id: string; kind: string; title: string; body: string; link: string | null; readAt: string | null; createdAt: string };
 
 export function NotificationsBell({ userId, language, onOpen }: { userId: string; language: Language; onOpen: (path: string) => void }) {
+  // Server links are the same for everyone: send a parent to the family page, chat to Profile → Help.
+  const linkFor = (link: string) => {
+    if (link === '/support') return '/profile?tab=help';
+    if ((link === '/grades' || link === '/trainer' || link === '/classes') && document.body.dataset.role === 'parent') return '/parent';
+    return link;
+  };
   const [items, setItems] = useState<Notice[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -546,7 +552,7 @@ export function NotificationsBell({ userId, language, onOpen }: { userId: string
             <div className="bell-list">
               {items.length === 0 && <p className="muted">{tx(language, 'Hozircha hech narsa yo‘q.', 'Пока ничего нет.', 'Nothing yet.')}</p>}
               {items.map((item) => (
-                <button type="button" key={item.id} className={`bell-item ${item.readAt ? '' : 'unread'}`} onClick={() => { setOpen(false); if (item.link) onOpen(item.link); }}>
+                <button type="button" key={item.id} className={`bell-item ${item.readAt ? '' : 'unread'}`} onClick={() => { setOpen(false); if (item.link) onOpen(linkFor(item.link)); }}>
                   <b>{item.title}</b>{item.body && <span>{item.body}</span>}<small>{ago(item.createdAt, language)}</small>
                 </button>
               ))}

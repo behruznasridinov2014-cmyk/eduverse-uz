@@ -13,7 +13,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
-import { requireAuthenticatedRole } from "./auth";
+import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { escapeHtml, notifyFamily, subjectText, tl } from "../lib/notify";
 import { pushNotice, studentsOfClasses, withParents } from "../lib/inbox";
 import {
@@ -43,6 +43,12 @@ import {
 } from "../lib/school-access";
 
 const router: IRouter = Router();
+// Paid outside services (AI, video and 3D search): a limit per session against scripted abuse.
+const aiLimiter = createRateLimiter(60, 10 * 60 * 1000, "Too many requests. Wait a few minutes.", "ai-heavy", (req: { cookies?: Record<string, unknown>; ip?: string }) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
+
 
 const IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_PHOTOS = 4;
@@ -1233,7 +1239,7 @@ router.post(
 router.post(
   "/assignments/:assignmentId/submissions/:studentId/ai-check",
   requireAuthenticatedRole(...ACCOUNT_ROLES),
-  async (req, res) => {
+  aiLimiter, async (req, res) => {
     if (!requireUuidParams(res, "assignmentId", "studentId")) return;
     const assignmentId = String(req.params.assignmentId);
     const studentId = String(req.params.studentId);
@@ -1280,6 +1286,34 @@ router.post(
       res.status(503).json({ error: "The AI check is not available right now." });
       return;
     }
+    res.json({ check });
+  },
+);
+
+/** "Is this photo made by AI?" — a hint for the teacher, never proof. */
+router.post(
+  "/assignments/:assignmentId/submissions/:studentId/photo-check",
+  requireAuthenticatedRole("teacher", ...SCHOOL_MANAGEMENT_ROLES),
+  aiLimiter, async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const context = await authorizeAssignment(currentUser(res), assignmentId);
+    if (!context) { res.status(404).json({ error: "Assignment not found." }); return; }
+    if (!context.authorization.canReview) { forbidden(res, "Only the teacher can run this check."); return; }
+    const photos = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id))
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .orderBy(submissionFilesTable.position)
+      .limit(3);
+    const images = photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    if (!images.length) { res.status(404).json({ error: "No photos in this work." }); return; }
+    const { checkPhotoIsAi } = await import("../lib/ai-content");
+    const lang = typeof (req.body as Record<string, unknown> | undefined)?.lang === "string" ? String((req.body as Record<string, unknown>).lang) : "ru";
+    const check = await checkPhotoIsAi(images, lang);
+    if (!check) { res.status(503).json({ error: "The check is not available right now. Try again in a minute." }); return; }
     res.json({ check });
   },
 );
@@ -1402,6 +1436,11 @@ router.patch(
       changes.feedback = feedback;
     }
 
+    const [before] = await db
+      .select({ score: assignmentSubmissionsTable.score })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(1);
     let [updated] = await db
       .update(assignmentSubmissionsTable)
       .set(changes)
@@ -1434,7 +1473,7 @@ router.patch(
       return;
     }
 
-    if (typeof changes.score === "number") {
+    if (typeof changes.score === "number" && before?.score !== changes.score) {
       const [info] = await db
         .select({ title: assignmentsTable.title, subject: assignmentsTable.subject })
         .from(assignmentsTable)

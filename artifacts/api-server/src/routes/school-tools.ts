@@ -19,6 +19,7 @@ import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access"
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
 import { answerCommand, chooseLang, CONNECT_KEYBOARD, LANG_KEYBOARD, langFromTelegram, type BotLang } from "../lib/bot-commands";
 import { answerTelegramCallback } from "../lib/telegram";
+import { matchesTelegramWebhookSecret } from "../lib/telegram-security";
 import { generateLessonPlan, isAiConfigured } from "../lib/ai-content";
 import { logger } from "../lib/logger";
 import { writeAudit } from "../lib/audit";
@@ -324,7 +325,7 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
   const callback = isRecord(req.body) && isRecord(req.body.callback_query) ? req.body.callback_query : null;
   if (callback && typeof callback.data === "string" && /^lang:(uz|ru|en)$/.test(callback.data)) {
     const secret = telegramWebhookSecret();
-    if (!secret || req.get("x-telegram-bot-api-secret-token") !== secret) {
+    if (!secret || !matchesTelegramWebhookSecret(secret, req.get("x-telegram-bot-api-secret-token") ?? "")) {
       res.status(403).json({ error: "Invalid Telegram webhook secret." });
       return;
     }
@@ -349,7 +350,7 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     const chatOfCommand = isRecord(message?.chat) ? message.chat : null;
     if (/^\/[a-z]+(?:@\w+)?$/i.test(text) && chatOfCommand?.type === "private" && (typeof chatOfCommand.id === "number" || typeof chatOfCommand.id === "string")) {
       const secret = telegramWebhookSecret();
-      if (!secret || req.get("x-telegram-bot-api-secret-token") !== secret) {
+      if (!secret || !matchesTelegramWebhookSecret(secret, req.get("x-telegram-bot-api-secret-token") ?? "")) {
         res.status(403).json({ error: "Invalid Telegram webhook secret." });
         return;
       }
@@ -371,7 +372,7 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     return;
   }
   const expected = telegramWebhookSecret();
-  if (!expected || req.get("x-telegram-bot-api-secret-token") !== expected) {
+  if (!expected || !matchesTelegramWebhookSecret(expected, req.get("x-telegram-bot-api-secret-token") ?? "")) {
     res.status(403).json({ error: "Invalid Telegram webhook secret." });
     return;
   }
@@ -539,7 +540,7 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
     res.status(400).json({ error: "The new password must be 10 to 128 characters." });
     return;
   }
-  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)+$/.test(next)) {
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
     res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
     return;
   }

@@ -163,6 +163,12 @@ router.put("/schools/:schoolId/timetable", requireAuthenticatedRole(...MANAGERS)
   await db.transaction(async (tx) => {
     await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
     if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    // A teacher of a class in the timetable can open its journal and check its homework.
+    const links = [...new Set(rows.filter((row) => row.teacherId).map((row) => `${row.classId}|${row.teacherId}`))];
+    for (const link of links) {
+      const [classId, userId] = link.split("|") as [string, string];
+      await tx.insert(classMembersTable).values({ classId, userId, role: "teacher" }).onConflictDoNothing();
+    }
     await tx.insert(schoolBellsTable).values({ schoolId, periods: bells, updatedAt: new Date() })
       .onConflictDoUpdate({ target: schoolBellsTable.schoolId, set: { periods: bells, updatedAt: new Date() } });
   });
@@ -306,8 +312,6 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
   base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
   const lessonsOn = lessonReader(where);
   const lessons = await lessonsOn(now.date, now.weekday);
-  // A finished textbook lesson gives its homework from the book (the teacher writes nothing).
-  await giveBookHomework(now.date, lessons);
   // The next two school days (Sunday skipped): for "tomorrow" and the online lesson topics.
   const next: Array<{ date: string; weekday: number; lessons: Awaited<ReturnType<typeof lessonsOn>> }> = [];
   for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
@@ -322,8 +326,13 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
     if (day.weekday === 7) continue;
     prev = { date: day.date, weekday: day.weekday, lessons: await lessonsOn(day.date, day.weekday) };
   }
-  if (prev) await giveBookHomework(prev.date, prev.lessons);
-  if (viewer.role === "teacher") void remindTrainer(viewer.id, now.date, lessons);
+  // A finished textbook lesson gives its homework from the book (the teacher writes nothing).
+  // The day before first, so topics are marked in the right order. Directors (many classes) skip it.
+  if (viewer.role !== "school_director" && viewer.role !== "school_admin") {
+    if (prev) await giveBookHomework(prev.date, prev.lessons.map((lesson) => lesson.classId));
+    await giveBookHomework(now.date, lessons.map((lesson) => lesson.classId));
+  }
+  if (viewer.role === "teacher") await remindTrainer(viewer.id, now.date, lessons);
   res.json({ ...base, lessons, next, prev });
 });
 

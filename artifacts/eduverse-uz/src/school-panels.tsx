@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
 import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
+import { friendlyError } from './errors';
 import { statusOf, useToday } from './today';
 import { customFetch } from '@workspace/api-client-react';
 import {
@@ -270,7 +271,7 @@ export function ServerClassesPanel({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setWorkspace({ ...EMPTY_WORKSPACE, error: describeSchoolError(error) });
+        setWorkspace({ ...EMPTY_WORKSPACE, error: friendlyError(error, language) });
       });
 
     return () => {
@@ -315,7 +316,7 @@ export function ServerClassesPanel({
       await school.refresh();
       setRevision((value) => value + 1);
     } catch (error) {
-      setMutationError(describeSchoolError(error));
+      setMutationError(friendlyError(error, language));
     } finally {
       setBusyId(null);
     }
@@ -609,7 +610,7 @@ export function ServerTeachingPanel({
         );
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(describeSchoolError(requestError));
+        if (!cancelled) setError(friendlyError(requestError, language));
       })
       .finally(() => {
         if (!cancelled) setReviewLoading(false);
@@ -645,7 +646,7 @@ export function ServerTeachingPanel({
       );
       await school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setCreating(false);
     }
@@ -660,7 +661,7 @@ export function ServerTeachingPanel({
       await school.refresh();
       setNotice(t(language, 'Assignment status updated.', 'Статус задания обновлён.', 'Topshiriq holati yangilandi.'));
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusyAssignmentId(null);
     }
@@ -683,7 +684,7 @@ export function ServerTeachingPanel({
       await school.refresh();
       setNotice(t(language, 'Assignment deleted.', 'Задание удалено.', 'Topshiriq o‘chirildi.'));
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusyAssignmentId(null);
     }
@@ -722,7 +723,7 @@ export function ServerTeachingPanel({
       void listSubmissions(reviewAssignmentId).then((refreshed) => setSubmissions(refreshed.submissions)).catch(() => {});
       void school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setReviewBusyId(null);
     }
@@ -992,7 +993,7 @@ export function ServerSchoolOverview({
       setResetCard(result);
     } catch (requestError) {
       setResetCard(null);
-      setResetError(describeSchoolError(requestError));
+      setResetError(friendlyError(requestError, language));
     }
   }
   const [loading, setLoading] = useState(false);
@@ -1034,7 +1035,7 @@ export function ServerSchoolOverview({
         setMembers(memberResponse.members);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(describeSchoolError(requestError));
+        if (!cancelled) setError(friendlyError(requestError, language));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -1063,7 +1064,7 @@ export function ServerSchoolOverview({
       await school.refresh();
       setRevision((value) => value + 1);
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setCreatingClass(false);
     }
@@ -1252,7 +1253,7 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
         if (!cancelled) setSchools(response.schools);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(describeSchoolError(requestError));
+        if (!cancelled) setError(friendlyError(requestError, language));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -1280,7 +1281,7 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
       setNotice(t(language, 'School created.', 'Школа создана.', 'Maktab yaratildi.'));
       setRevision((value) => value + 1);
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setCreating(false);
     }
@@ -1426,7 +1427,7 @@ export function ServerAccountsPanel({
       setNames('');
       await school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusy(false);
     }
@@ -1609,7 +1610,7 @@ export function ServerTopicAssignPanel({
       );
       await school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setAssigningId('');
     }
@@ -1762,7 +1763,7 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
         setSubmission(found);
         if (found) setDraft({ status: found.status, score: found.score === null || found.score === undefined ? '' : String(found.score), feedback: found.feedback, signature: null });
       })
-      .catch((requestError: unknown) => { if (alive) { setSubmission(null); setError(describeSchoolError(requestError)); } });
+      .catch((requestError: unknown) => { if (alive) { setSubmission(null); setError(friendlyError(requestError, language)); } });
     return () => { alive = false; };
   }, [assignmentId, studentId]);
   useEffect(() => {
@@ -1778,7 +1779,7 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
       onSaved();
       onClose();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusy(false);
     }
@@ -1797,6 +1798,7 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
             {(submission.attachmentCount ?? 0) > 0
               ? <SubmissionPhotos assignmentId={assignmentId} studentId={studentId} count={submission.attachmentCount ?? 0} language={language} refreshKey={submission.updatedAt} />
               : <p className="muted">{t(language, 'No photos attached.', 'Фото не прикреплено.', 'Rasm biriktirilmagan.')}</p>}
+            {(submission.attachmentCount ?? 0) > 0 && <PhotoAiCheck assignmentId={assignmentId} studentId={studentId} language={language} />}
             {submission.content && <p className="school-assignment-copy"><b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}</p>}
             <ReviewVerdict draft={draft} language={language} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
             <div className="control">
@@ -1810,6 +1812,45 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
         )}
         {error && <InlineError>{error}</InlineError>}
       </section>
+    </div>
+  );
+}
+
+
+/** "Is this photo made by AI?" — asks Gemini to look at the notebook photos. A hint, never proof. */
+function PhotoAiCheck({ assignmentId, studentId, language }: { assignmentId: string; studentId: string; language: Language }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
+  const [result, setResult] = useState<{ aiMade: 'yes' | 'no' | 'unsure'; confidence: number; reasons: string[] } | null>(null);
+  const [error, setError] = useState('');
+  async function run() {
+    setState('busy'); setError('');
+    try {
+      const lang = language === 'Uzbek' ? 'uz' : language === 'English' ? 'en' : 'ru';
+      const response = await customFetch<{ check: { aiMade: 'yes' | 'no' | 'unsure'; confidence: number; reasons: string[] } }>(`/api/assignments/${assignmentId}/submissions/${studentId}/photo-check`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }) });
+      setResult(response.check); setState('done');
+    } catch (requestError) {
+      setError(friendlyError(requestError, language)); setState('error');
+    }
+  }
+  return (
+    <div className="photo-ai-check">
+      {state !== 'done' && (
+        <button type="button" className="btn" disabled={state === 'busy'} onClick={() => void run()}>
+          {state === 'busy' ? <LoadingBlock language={language} kind="inline" label={t(language, 'Checking the photo…', 'Проверяем фото…', 'Rasm tekshirilmoqda…')} /> : <>🔍 {t(language, 'Is this a real notebook photo?', 'Это настоящее фото тетради?', 'Bu haqiqiy daftar rasmimi?')}</>}
+        </button>
+      )}
+      {state === 'done' && result && (
+        <div className={`photo-ai-result is-${result.aiMade}`}>
+          <b>{result.aiMade === 'yes'
+            ? `⚠️ ${t(language, 'Looks generated or a screenshot', 'Похоже на сгенерированную картинку или скриншот', 'Yasalgan rasm yoki skrinshotga o‘xshaydi')}`
+            : result.aiMade === 'no'
+              ? `✅ ${t(language, 'A real notebook photo', 'Настоящее фото тетради', 'Haqiqiy daftar rasmi')}`
+              : `❔ ${t(language, 'Hard to say', 'Трудно сказать', 'Aniq emas')}`} · {result.confidence}%</b>
+          {result.reasons.length > 0 && <ul>{result.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+          <small className="muted">{t(language, 'This is a hint, not proof. If in doubt, ask the pupil to explain the solution.', 'Это подсказка, а не доказательство. Если сомневаетесь — попросите ученика объяснить решение.', 'Bu faqat maslahat. Shubha bo‘lsa, o‘quvchidan yechimni tushuntirib berishini so‘rang.')}</small>
+        </div>
+      )}
+      {error && <span className="notice">{error}</span>}
     </div>
   );
 }
