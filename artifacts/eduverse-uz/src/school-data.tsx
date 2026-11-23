@@ -90,7 +90,10 @@ export function useSchoolData(
     }
 
     const revision = ++generation.current;
-    setState((current) => ({ ...current, status: 'loading', error: '' }));
+    // A refresh after an action (sent homework, a mark) happens in the background: the page keeps
+    // showing what it has instead of flashing a loader and losing the "sent" message.
+    let quiet = false;
+    setState((current) => { quiet = current.status === 'ready'; return quiet ? current : { ...current, status: 'loading', error: '' }; });
 
     try {
       const [schools, feed] = await Promise.all([
@@ -110,6 +113,7 @@ export function useSchoolData(
       });
     } catch (error) {
       if (revision !== generation.current) return;
+      if (quiet) return; // keep the data already on screen
       genUnavailable(setState, error);
     }
   }, [userId, authStatus]);

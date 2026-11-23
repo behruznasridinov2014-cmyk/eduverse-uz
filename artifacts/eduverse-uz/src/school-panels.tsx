@@ -330,6 +330,7 @@ export function ServerClassesPanel({
       );
       await school.refresh();
       setRevision((value) => value + 1);
+      window.setTimeout(() => setNotice(''), 4000);
     } catch (error) {
       setMutationError(friendlyError(error, language));
     } finally {
@@ -347,8 +348,9 @@ export function ServerClassesPanel({
     // A pupil sees only the homework that is still to do.
     return (
       <Panel>
-          {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-          {mutationError && <InlineError>{mutationError}</InlineError>}
+          {/* On a phone the top of the page is off screen: the result of sending pops up at the bottom. */}
+          {notice && <div className="notice school-inline-success hw-toast" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
+          {mutationError && <div className="hw-toast is-error" role="alert"><InlineError>{mutationError}</InlineError></div>}
           {todoAssignments.length === 0 ? (
             <div className="callout">
               {classAssignments.length === 0
@@ -403,7 +405,12 @@ export function ServerClassesPanel({
                         {overdue
                           ? t(language, 'Late — not counted', 'Срок прошёл — не засчитано', 'Muddat o‘tdi — hisoblanmaydi')
                           : !submission
-                          ? t(language, 'Due by 00:00', 'Сдать до 00:00', '00:00 gacha topshiring')
+                          ? (() => {
+                            const due = assignment.dueAt ? new Date(assignment.dueAt) : null;
+                            const time = due ? due.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' }) : '00:00';
+                            const shown = time === '23:59' ? '00:00' : time;
+                            return t(language, `Due by ${shown}`, `Сдать до ${shown}`, `${shown} gacha topshiring`);
+                          })()
                           : submission.score !== null && submission.score !== undefined
                             ? `${t(language, 'Checked', 'Проверено', 'Tekshirildi')} · ${markOf(submission.score)}`
                             : t(language, 'In review', 'На проверке', 'Tekshirilmoqda')}

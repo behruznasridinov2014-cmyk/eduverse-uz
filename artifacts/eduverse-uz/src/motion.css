@@ -427,3 +427,6 @@ html[data-theme="night"] .tabbar.glass-tabs {
   *:not(.topbar):not(.tabbar):not(.tabbar-dock):not(.glass-tabs) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
   .modal-backdrop, .install-backdrop, .hw-lightbox, .qr-scanner-backdrop, .mobile-drawer-backdrop, .trainer-ask-backdrop { background-color: rgba(20, 16, 8, .5) !important; }
 }
+.hw-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 80; width: min(92vw, 460px); box-shadow: 0 14px 40px -12px rgba(0,0,0,.35); animation: expand-in .3s ease both; }
+.hw-toast.is-error > * { margin: 0; }
+@media (min-width: 900px) { .hw-toast { bottom: 28px; } }
