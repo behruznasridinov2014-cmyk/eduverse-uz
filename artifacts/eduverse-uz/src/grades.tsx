@@ -4,6 +4,7 @@ import { Award } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { subjectLabel } from './ui/config';
 import { markBand, markOf } from './marks';
+import { LoadingBlock } from './ui/loading';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
@@ -60,7 +61,7 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
           ))}
         </div>
       </div>
-      {journal === null ? null : table.length === 0 ? (
+      {journal === null ? <LoadingBlock language={language} /> : table.length === 0 ? (
         <div className="empty-state">
           <span className="empty-icon"><Award /></span>
           <h2>{t(language, 'Hali baho yo‘q', 'Оценок пока нет', 'No grades yet')}</h2>
@@ -80,11 +81,11 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
             <tbody>
               {table.map(([subject, item]) => (
                 <tr key={subject}>
-                  <td><b>{SUBJECTS[subject] ? t(language, ...SUBJECTS[subject]!) : subjectLabel(subject, language)}</b></td>
-                  <td><span className="journal-mine-marks">{chips(item.lesson)}</span></td>
-                  <td><span className="journal-mine-marks">{chips(item.homework)}</span></td>
-                  <td><span className="journal-mine-marks">{chips(item.behavior)}</span></td>
-                  <td><b>{average([...item.lesson, ...item.homework])}</b></td>
+                  <td className="my-grades-subject"><b>{SUBJECTS[subject] ? t(language, ...SUBJECTS[subject]!) : subjectLabel(subject, language)}</b></td>
+                  <td data-label={t(language, 'Darsda', 'За урок', 'Lesson')}><span className="journal-mine-marks">{chips(item.lesson)}</span></td>
+                  <td data-label={t(language, 'Uy vazifasi', 'Домашка', 'Homework')}><span className="journal-mine-marks">{chips(item.homework)}</span></td>
+                  <td data-label={t(language, 'Xulq', 'Поведение', 'Behaviour')}><span className="journal-mine-marks">{chips(item.behavior)}</span></td>
+                  <td data-label={t(language, 'O‘rtacha', 'Средняя', 'Average')}><b>{average([...item.lesson, ...item.homework])}</b></td>
                 </tr>
               ))}
             </tbody>

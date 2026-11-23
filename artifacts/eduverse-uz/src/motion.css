@@ -384,3 +384,31 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .answer-feedback.no { background: rgba(214,69,65,.08); border: 1px solid rgba(214,69,65,.30); }
 .practice-subjects { flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
 @media (prefers-reduced-motion: reduce) { .trainer-option.right, .trainer-option.wrong, .answer-choice.right, .answer-choice.wrong { animation: none; } }
+
+/* Fewer words: page headings show only the title (the small label above and the explanation below are gone). */
+.page-heading .page-subtitle, .page-heading .eyebrow { display: none !important; }
+
+/* Phone fixes from the UI sweep */
+@media (max-width: 640px) {
+  /* profile / cabinet tabs: long words ("Безопасность") no longer run into the next tab */
+  .cabinet-glass-tabs .glass-tab-label { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+  /* 3D studio: two compact cards per row, no repeated "3D model: rotate and change" line */
+  .studio-chooser { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+  .studio-card { min-height: 0 !important; padding: 12px !important; }
+  .studio-card small { display: none !important; }
+  .lab-subjects { justify-content: flex-start !important; }
+  .chem-lab .page-heading > div { width: 100%; }
+  /* My grades: marks run in a line, the table fits the screen */
+  .my-grades-table { font-size: 13px; }
+  .my-grades-table th, .my-grades-table td { padding: 6px 4px; }
+  .my-grades-table .grade-mark { min-width: 24px; padding: 1px 4px; font-size: 12px; }
+}
+@media (max-width: 560px) {
+  .my-grades-table thead { display: none; }
+  .my-grades-table, .my-grades-table tbody, .my-grades-table tr, .my-grades-table td { display: block; width: 100%; }
+  .my-grades-table tr { padding: 10px 2px; border-bottom: 1px solid var(--line-2, #e5dfd2); }
+  .my-grades-table td { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; border: 0; padding: 3px 0; }
+  .my-grades-table td::before { content: attr(data-label); color: inherit; opacity: .6; font-size: 12px; }
+  .my-grades-table td.my-grades-subject { display: block; font-size: 15px; padding-bottom: 4px; }
+  .my-grades-table td.my-grades-subject::before { content: none; }
+}

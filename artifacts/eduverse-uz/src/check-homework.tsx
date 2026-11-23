@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
 import { CheckCircle2, Clock3, RefreshCw, XCircle } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
@@ -21,6 +21,9 @@ type Journal = {
 
 export function CheckHomeworkPage({ school, language }: { school: SchoolData; language: Language }) {
   const [classId, setClassId] = useState(school.classes[0]?.id ?? '');
+  // Until the teacher picks a class, open the first class where somebody handed in work.
+  const picked = useRef(false);
+  const tried = useRef(new Set<string>());
   const [journal, setJournal] = useState<Journal | null>(null);
   const [assignmentId, setAssignmentId] = useState('');
   const [error, setError] = useState('');
@@ -34,6 +37,12 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
     setError('');
     try {
       const next = await customFetch<Journal>(`/api/classes/${classId}/journal`, { method: 'GET' });
+      tried.current.add(classId);
+      const anyWork = next.rows.some((row) => row.cells.some((cell) => cell.state !== 'missing'));
+      if (!picked.current && !anyWork) {
+        const other = school.classes.find((item) => !tried.current.has(item.id));
+        if (other) { setClassId(other.id); return; }
+      }
       setJournal(next);
       // Start on the newest task that has work waiting, else the newest task.
       setAssignmentId((current) => {
@@ -69,7 +78,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
     <section className="check-hw">
       <div className="page-heading"><div><h1>{t(language, 'Uy vazifasini tekshirish', 'Проверка домашки', 'Check homework')}</h1></div></div>
       <div className="check-hw-bar">
-        {school.classes.length > 1 && <Select value={classId} onChange={(_event, value) => { setClassId(value); setAssignmentId(''); }} options={school.classes.map((item) => ({ value: item.id, label: t(language, `${item.name} sinf`, `${item.name} класс`, `Class ${item.name}`) }))} aria-label={t(language, 'Sinf', 'Класс', 'Class')} style={{ width: 170 }} />}
+        {school.classes.length > 1 && <Select value={classId} onChange={(_event, value) => { picked.current = true; setClassId(value); setAssignmentId(''); }} options={school.classes.map((item) => ({ value: item.id, label: t(language, `${item.name} sinf`, `${item.name} класс`, `Class ${item.name}`) }))} aria-label={t(language, 'Sinf', 'Класс', 'Class')} style={{ width: 170 }} />}
         <button type="button" className="btn small" onClick={() => void load()} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
       </div>
       {error && <div className="notice" role="alert">{error}</div>}
@@ -80,7 +89,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
           <div className="check-hw-tasks" role="tablist">
             {[...journal.assignments].map((item, at) => ({ item, at })).filter(({ at }) => sentIn(at)).reverse().slice(0, 12).map(({ item, at }) => (
               <button type="button" role="tab" key={item.id} aria-selected={item.id === assignmentId} className={`studio-tab ${item.id === assignmentId ? 'active' : ''}`} onClick={() => setAssignmentId(item.id)}>
-                <span>{item.subject} · {item.title.length > 34 ? `${item.title.slice(0, 33)}…` : item.title}</span>
+                <span>{(() => { const title = item.title.startsWith(item.subject) ? item.title.slice(item.subject.length).replace(/^\s*[·:-]\s*/, '') : item.title; const label = `${item.subject} · ${title}`; return label.length > 40 ? `${label.slice(0, 39)}…` : label; })()}</span>
                 {waitingIn(at) > 0 && <b className="check-hw-badge">{waitingIn(at)}</b>}
               </button>
             ))}

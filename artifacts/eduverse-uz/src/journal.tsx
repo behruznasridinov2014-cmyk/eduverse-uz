@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
 import { BookOpenCheck, RefreshCw } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
@@ -29,6 +29,9 @@ const MONTHS_SHORT: Record<Language, string[]> = {
 
 export function ClassJournal({ school, language }: { school: SchoolData; language: Language }) {
   const [classId, setClassId] = useState(school.classes[0]?.id ?? '');
+  // Until the teacher picks a class, skip classes without lessons of theirs (opens on a class with a timetable).
+  const picked = useRef(false);
+  const tried = useRef(new Set<string>());
   const [subject, setSubject] = useState('');
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
@@ -43,6 +46,11 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
     setError('');
     try {
       const next = await customFetch<Data>(`/api/classes/${classId}/marks?kind=${kind}${subject ? `&subject=${encodeURIComponent(subject)}` : ''}`, { method: 'GET' });
+      tried.current.add(classId);
+      if (!picked.current && next.dates.length === 0) {
+        const other = school.classes.find((item) => !tried.current.has(item.id));
+        if (other) { setClassId(other.id); setSubject(''); return; }
+      }
       setData(next);
       if (next.subject !== subject) setSubject(next.subject);
     } catch (requestError) {
@@ -87,7 +95,7 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
         <h2><BookOpenCheck size={16} /> {t(language, 'Sinf jurnali', 'Классный журнал', 'Class journal')}</h2>
         <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
           {school.classes.length > 1 && (
-            <Select value={classId} onChange={(_event, value) => { setClassId(value); setSubject(''); }} options={school.classes.map((item) => ({ value: item.id, label: t(language, `${item.name} sinf`, `${item.name} класс`, `Class ${item.name}`) }))} aria-label={t(language, 'Sinf', 'Класс', 'Class')} style={{ width: 150 }} />
+            <Select value={classId} onChange={(_event, value) => { picked.current = true; setClassId(value); setSubject(''); }} options={school.classes.map((item) => ({ value: item.id, label: t(language, `${item.name} sinf`, `${item.name} класс`, `Class ${item.name}`) }))} aria-label={t(language, 'Sinf', 'Класс', 'Class')} style={{ width: 150 }} />
           )}
           {data && data.subjects.length > 0 && (
             <Select value={data.subject} onChange={(_event, value) => setSubject(value)} options={data.subjects.map((value) => ({ value, label: lessonSubjectName(value, language) }))} aria-label={t(language, 'Fan', 'Предмет', 'Subject')} style={{ width: 170 }} />

@@ -395,10 +395,6 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   {['platform_superadmin','education_admin','ministry_admin'].includes(user.role)&&<PlansOverview language={language} onOpenSchool={()=>onOpen('/admin')}/>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
   {user.role==='student'&&<AttendanceSummary language={language}/>}
-  {steps&&<>
-   <h2 className="home-section-title">{language==='Uzbek'?'Qanday ishlaydi':language==='Русский'?'Как это работает':'How it works'}</h2>
-   <ol className="home-steps">{steps.map((step,index)=><li key={step}><span>{index+1}</span>{step}</li>)}</ol>
-  </>}
   {school.status==='ready'&&!school.hasMembership&&<div className="notice"><Info size={16}/><span>{language==='Uzbek'?'Hisobingiz hali maktabga biriktirilmagan. Maktab administratoriga murojaat qiling.':language==='Русский'?'Аккаунт ещё не привязан к школе. Обратитесь к администратору школы.':'Your account is not linked to a school yet. Contact the school administrator.'}</span></div>}
  </section>
 }
