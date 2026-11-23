@@ -9,7 +9,9 @@ import type { Language, SchoolData } from './school-data';
 /* Daily trainer: tests on the topics of today's lessons, four answers to choose from. */
 
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
-type Question = { q: string; options: string[]; answer: string; topic: string };
+type Question = { q: string; options: string[]; answer: string; topic: string; explain?: string };
+/** The first sentence of the topic, short: a little hint, not the answer. */
+const shortHint = (topic: CourseTopic) => { const first = (topic.essence ?? '').split(/(?<=[.!?])\s/)[0] ?? ''; return first.length > 150 ? `${first.slice(0, first.lastIndexOf(' ', 140))}…` : first; };
 
 /** Small deterministic random: the same questions for the whole class on one day. */
 function seeded(seed: number) {
@@ -57,7 +59,7 @@ function clozeQuestions(book: CourseBook, topic: CourseTopic, random: () => numb
     const options = [lower, ...wrong].map((value) => ({ value, key: random() })).sort((a, b) => a.key - b.key).map((item) => item.value);
     out.push({
       q: `${t(language, 'Tushirib qoldirilgan so‘zni tanlang', 'Вставьте пропущенное слово', 'Fill in the missing word')}: «${sentence.replace(answer, '_____')}»`,
-      options, answer: lower, topic: `§${topic.code} ${topic.title}`,
+      options, answer: lower, topic: `§${topic.code} ${topic.title}`, explain: sentence,
     });
   }
   return out.map((item) => ({ item, key: random() })).sort((a, b) => a.key - b.key).map((row) => row.item);
@@ -92,6 +94,8 @@ function testQuestions(book: CourseBook, topic: CourseTopic, seed: string, langu
   }
   return picked.slice(0, count);
 }
+const progressKey = (userId: string) => `eduverse:trainer:${userId}`;
+type Progress = { id: string; step: number; score: number; chosen: string | null; checked: boolean };
 
 type Test = { id: string; day: string; subject: string; classId: string; book: CourseBook; topic: CourseTopic; until: number; isToday: boolean };
 
@@ -142,13 +146,47 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
   const [score, setScore] = useState(0);
   const [result, setResult] = useState<{ score: number; total: number } | null>(null);
 
-  function start(test: Test) { setAsking(null); setActive(test); setStep(0); setChosen(null); setScore(0); setResult(null); }
+  const [checked, setChecked] = useState(false);
+  const [hintOpen, setHintOpen] = useState(false);
+  // A test in progress survives a closed tab: the place, the score and the open answer are kept on the device.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (restored || !done || !tests.length || active) return;
+    setRestored(true);
+    try {
+      const raw = localStorage.getItem(progressKey(user.id));
+      const saved = raw ? JSON.parse(raw) as Progress : null;
+      const test = saved ? tests.find((item) => item.id === saved.id && !done[item.id]) : null;
+      if (test && saved) { setActive(test); setStep(saved.step); setScore(saved.score); setChosen(saved.chosen); setChecked(saved.checked); }
+    } catch { /* private mode */ }
+  }, [restored, done, tests, active, user.id]);
+  useEffect(() => {
+    try {
+      if (active && !result) localStorage.setItem(progressKey(user.id), JSON.stringify({ id: active.id, step, score, chosen, checked } satisfies Progress));
+      else if (result || (!active && restored)) localStorage.removeItem(progressKey(user.id));
+    } catch { /* private mode */ }
+  }, [active, step, score, chosen, checked, result, restored, user.id]);
+
+  // The lesson topics arrive a moment after the tests: keep the open test on the real topic of the lesson.
+  useEffect(() => {
+    if (!active) return;
+    const fresh = tests.find((item) => item.id === active.id);
+    if (fresh && fresh.topic.key !== active.topic.key) setActive(fresh);
+  }, [tests, active]);
+
+  function start(test: Test) { setAsking(null); setActive(test); setStep(0); setChosen(null); setChecked(false); setHintOpen(false); setScore(0); setResult(null); }
   function back() { setAsking(null); setActive(null); setResult(null); loadDone(); }
+  function reveal() {
+    if (chosen === null || checked) return;
+    setChecked(true);
+    window.setTimeout(() => document.querySelector('.answer-feedback')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+    if (chosen === questions[step].answer) setScore(score + 1);
+  }
   async function next() {
-    if (chosen === null || !active) return;
-    const total = score + (chosen === questions[step].answer ? 1 : 0);
-    setScore(total);
-    if (step + 1 < questions.length) { setStep(step + 1); setChosen(null); return; }
+    if (!checked || !active) return;
+    const total = score;
+    setHintOpen(false);
+    if (step + 1 < questions.length) { setStep(step + 1); setChosen(null); setChecked(false); return; }
     setResult({ score: total, total: questions.length });
     if (isStudent) {
       await customFetch('/api/trainer/tests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ day: active.day, subject: active.subject, topicKey: active.topic.key, score: total, total: questions.length }) }).catch(() => {});
@@ -196,17 +234,29 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
             <h2>{question.q}</h2>
             <div className="trainer-options">
               {question.options.map((option) => {
-                const state = chosen === null ? '' : option === question.answer ? 'right' : option === chosen ? 'wrong' : '';
+                const state = !checked ? (chosen === option ? 'picked' : '') : option === question.answer ? 'right' : option === chosen ? 'wrong' : 'dim';
                 return (
-                  <button type="button" key={option} className={`trainer-option ${state}`} disabled={chosen !== null} onClick={() => setChosen(option)}>
+                  <button type="button" key={option} className={`trainer-option ${state}`} disabled={checked} onClick={() => setChosen(option)}>
                     {state === 'right' ? <Check size={15} /> : state === 'wrong' ? <X size={15} /> : null} {option}
                   </button>
                 );
               })}
             </div>
-            <button type="button" className="btn primary" disabled={chosen === null} onClick={() => void next()}>
-              {step + 1 < questions.length ? t(language, 'Keyingisi', 'Дальше', 'Next') : t(language, 'Yakunlash', 'Завершить', 'Finish')}
-            </button>
+            {!checked && (hintOpen
+              ? <p className="practice-hint">💡 {shortHint(active.topic)}</p>
+              : <button type="button" className="btn small" onClick={() => setHintOpen(true)}>💡 {t(language, 'Biroz maslahat', 'Немного подсказки', 'A little hint')}</button>)}
+            {!checked ? (
+              <button type="button" className="btn primary" disabled={chosen === null} onClick={reveal}>{t(language, 'Javobni bilish', 'Узнать ответ', 'Check the answer')}</button>
+            ) : (
+              <div className={`answer-feedback ${chosen === question.answer ? 'ok' : 'no'}`} role="status">
+                <b>{chosen === question.answer ? `✅ ${t(language, 'To‘g‘ri!', 'Верно!', 'Correct!')}` : `❌ ${t(language, 'Noto‘g‘ri', 'Неверно', 'Not quite')}`}</b>
+                {chosen !== question.answer && <p>{t(language, 'To‘g‘ri javob', 'Верный ответ', 'Correct answer')}: <b>{question.answer}</b></p>}
+                <p className="muted">💡 {question.explain ?? shortHint(active.topic)}</p>
+                <button type="button" className="btn primary" onClick={() => void next()}>
+                  {step + 1 < questions.length ? t(language, 'Keyingisi', 'Дальше', 'Next') : t(language, 'Yakunlash', 'Завершить', 'Finish')}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="panel"><p className="muted">{t(language, 'Bu mavzu uchun savollar hali yo‘q.', 'Для этой темы вопросов пока нет.', 'No questions for this topic yet.')}</p><button type="button" className="btn" onClick={back}>{t(language, 'Orqaga', 'Назад', 'Back')}</button></div>

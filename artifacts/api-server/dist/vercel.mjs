@@ -56694,7 +56694,8 @@ router13.post("/me/practice-test", requireAuthenticatedRole("student"), testLimi
     const share = tried.length ? tried.reduce((sum, row) => sum + row.score / Math.max(1, row.total), 0) / tried.length : 0.8;
     weakness.set(subject, 5 - average + (1 - share) * 3);
   }
-  const subjects = [...weakness.entries()].sort((a, b) => b[1] - a[1]).map(([subject]) => subject);
+  const only = typeof body.subject === "string" && weakness.has(body.subject) ? body.subject : null;
+  const subjects = only ? [only] : [...weakness.entries()].sort((a, b) => b[1] - a[1]).map(([subject]) => subject);
   const picked = [];
   for (const subject of subjects) {
     const book = COURSE2.find((item) => item.subject === subject);
@@ -56703,7 +56704,7 @@ router13.post("/me/practice-test", requireAuthenticatedRole("student"), testLimi
       const topic = book.topics.find((item) => item.key === row.topicKey);
       if (topic && !picked.some((item) => item.key === topic.key)) {
         picked.push({ subject, title: `\xA7${topic.code} ${topic.title}`, essence: topic.essence ?? "", key: topic.key });
-        if (picked.filter((item) => item.subject === subject).length >= 2) break;
+        if (picked.filter((item) => item.subject === subject).length >= (only ? 3 : 2)) break;
       }
     }
     if (picked.length >= 3) break;

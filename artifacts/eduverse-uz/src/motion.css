@@ -370,3 +370,17 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .public-home-copy, .public-visual, .lesson-person, .lesson-chat-line, .fact-body p {
   animation-fill-mode: backwards !important;
 }
+
+/* Tests: pick → «Check» → green pop or red shake → short explanation → «Next». */
+.trainer-option.picked, .answer-choice.picked { border-color: var(--ev-primary, #b08a4a) !important; background: var(--ev-primary-soft, rgba(216,185,120,.18)) !important; box-shadow: 0 0 0 2px rgba(216,185,120,.35); }
+.trainer-option.right, .answer-choice.right { background: rgba(42,160,90,.16) !important; border-color: rgba(42,160,90,.55) !important; animation: answer-right .5s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)); }
+.trainer-option.wrong, .answer-choice.wrong { background: rgba(214,69,65,.14) !important; border-color: rgba(214,69,65,.55) !important; animation: answer-wrong .45s ease; }
+.trainer-option.dim, .answer-choice.dim { opacity: .55; }
+@keyframes answer-right { 0% { transform: scale(1); } 45% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes answer-wrong { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+.answer-feedback { display: grid; gap: 6px; justify-items: start; padding: 12px 14px; border-radius: 14px; margin-top: 4px; animation: expand-in .35s var(--ease-out, ease) both; }
+.answer-feedback p { margin: 0; }
+.answer-feedback.ok { background: rgba(42,160,90,.10); border: 1px solid rgba(42,160,90,.35); }
+.answer-feedback.no { background: rgba(214,69,65,.08); border: 1px solid rgba(214,69,65,.30); }
+.practice-subjects { flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+@media (prefers-reduced-motion: reduce) { .trainer-option.right, .trainer-option.wrong, .answer-choice.right, .answer-choice.wrong { animation: none; } }

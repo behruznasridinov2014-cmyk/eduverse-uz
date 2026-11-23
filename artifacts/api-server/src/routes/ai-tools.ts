@@ -70,7 +70,9 @@ router.post("/me/practice-test", requireAuthenticatedRole("student"), testLimite
     const share = tried.length ? tried.reduce((sum, row) => sum + row.score / Math.max(1, row.total), 0) / tried.length : 0.8;
     weakness.set(subject, (5 - average) + (1 - share) * 3);
   }
-  const subjects = [...weakness.entries()].sort((a, b) => b[1] - a[1]).map(([subject]) => subject);
+  // The pupil may pick one subject before the test starts; otherwise the weakest subjects come first.
+  const only = typeof body.subject === "string" && weakness.has(body.subject) ? body.subject : null;
+  const subjects = only ? [only] : [...weakness.entries()].sort((a, b) => b[1] - a[1]).map(([subject]) => subject);
   // The latest covered topics of the weakest subjects (or of any subject when everything is fine).
   const picked: Array<{ subject: string; title: string; essence: string; key: string }> = [];
   for (const subject of subjects) {
@@ -80,7 +82,7 @@ router.post("/me/practice-test", requireAuthenticatedRole("student"), testLimite
       const topic = book.topics.find((item) => item.key === row.topicKey);
       if (topic && !picked.some((item) => item.key === topic.key)) {
         picked.push({ subject, title: `§${topic.code} ${topic.title}`, essence: topic.essence ?? "", key: topic.key });
-        if (picked.filter((item) => item.subject === subject).length >= 2) break;
+        if (picked.filter((item) => item.subject === subject).length >= (only ? 3 : 2)) break;
       }
     }
     if (picked.length >= 3) break;
