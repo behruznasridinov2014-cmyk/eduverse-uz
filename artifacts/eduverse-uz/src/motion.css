@@ -357,3 +357,16 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .public-demo-roles h2{display:flex;align-items:center;gap:8px}
 .public-demo-list{display:grid;gap:4px;max-height:360px;overflow:auto;margin-top:8px}
 .public-demo-topics{display:grid;gap:12px}
+
+/*
+ * Entrance animations must not leave a transform/filter on page blocks after they finish:
+ * a lingering transform turns the block into the frame of every "position: fixed" child,
+ * so pop-ups (the trainer "Start the test?", review dialogs, menus) were dimmed only inside
+ * that block and the page looked re-scaled. "backwards" keeps the start frame during the
+ * delay and removes the effect at the end.
+ */
+.content > *, .home-tiles > *, .grid > *, .kpi-grid > *, .course-topics > *, .course-topic-view,
+.role-overview-grid > *, .role-empty-grid > *, .reveal-up, .reveal, .empty-state, .cabinet-pane,
+.public-home-copy, .public-visual, .lesson-person, .lesson-chat-line, .fact-body p {
+  animation-fill-mode: backwards !important;
+}
