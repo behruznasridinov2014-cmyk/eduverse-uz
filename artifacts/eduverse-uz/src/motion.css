@@ -420,3 +420,10 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .ev-loading:not(.is-3d) .ev-loading-text { font-size: 13px; }
 .ev-loading.is-inline { justify-content: flex-start; padding: 8px 0 !important; }
 .trainer-loading { gap: 0; }
+
+/* Phones: live blur ("glass") behind many blocks is the heaviest thing for a phone GPU and made
+   pages lag or reload on Android. Only the top bar and the bottom tab bar keep it. */
+@media (pointer: coarse), (max-width: 760px) {
+  *:not(.topbar):not(.tabbar):not(.tabbar-dock):not(.glass-tabs) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .modal-backdrop, .install-backdrop, .hw-lightbox, .qr-scanner-backdrop, .mobile-drawer-backdrop, .trainer-ask-backdrop { background-color: rgba(20, 16, 8, .5) !important; }
+}

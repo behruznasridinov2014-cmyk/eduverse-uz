@@ -241,9 +241,22 @@ export function ServerClassesPanel({
   const [selectedId, setSelectedId] = useState('');
   const [workspace, setWorkspace] = useState<ClassWorkspace>(EMPTY_WORKSPACE);
   const [revision, setRevision] = useState(0);
-  const [draftAssignmentId, setDraftAssignmentId] = useState<string | null>(null);
-  const [draftContent, setDraftContent] = useState('');
-  const [draftPhotos, setDraftPhotos] = useState<string[]>([]);
+  // The homework being written is kept on the device: when a phone reloads the page after the
+  // camera (Android and iOS do that when memory is short), the photos and the text come back.
+  const draftKey = `eduverse:hw-draft:${user.id}`;
+  const savedDraft = useMemo(() => {
+    try { const raw = localStorage.getItem(draftKey); return raw ? JSON.parse(raw) as { assignmentId: string; content: string; photos: string[] } : null; } catch { return null; }
+  }, [draftKey]);
+  const [draftAssignmentId, setDraftAssignmentId] = useState<string | null>(savedDraft?.assignmentId ?? null);
+  const [draftContent, setDraftContent] = useState(savedDraft?.content ?? '');
+  const [draftPhotos, setDraftPhotos] = useState<string[]>(savedDraft?.photos ?? []);
+  useEffect(() => {
+    try {
+      if (!draftAssignmentId) { localStorage.removeItem(draftKey); return; }
+      const value = { assignmentId: draftAssignmentId, content: draftContent, photos: draftPhotos };
+      try { localStorage.setItem(draftKey, JSON.stringify(value)); } catch { localStorage.setItem(draftKey, JSON.stringify({ ...value, photos: [] })); }
+    } catch { /* private mode */ }
+  }, [draftKey, draftAssignmentId, draftContent, draftPhotos]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [mutationError, setMutationError] = useState('');

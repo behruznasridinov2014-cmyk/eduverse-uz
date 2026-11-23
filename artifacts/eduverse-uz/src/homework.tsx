@@ -13,6 +13,14 @@ const TARGET_BYTES = 420_000;
 
 /** Decodes a photo without holding the full-size picture in memory twice (iPhone photos are 12–48 MP). */
 async function decodeSmall(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; done: () => void }> {
+  // Chrome / Android: the browser decodes the photo straight to a small size, off the main thread.
+  try {
+    const bitmap = await createImageBitmap(file, { resizeWidth: MAX_SIDE, resizeQuality: 'medium', imageOrientation: 'from-image' } as ImageBitmapOptions);
+    if (bitmap.width > 0 && bitmap.height > 0) {
+      if (bitmap.height <= MAX_SIDE * 2) return { source: bitmap, width: bitmap.width, height: bitmap.height, done: () => bitmap.close?.() };
+      bitmap.close?.();
+    }
+  } catch { /* older browsers: the <img> way below */ }
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -123,7 +131,6 @@ export function PhotoPicker({
         ref={input}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         hidden
         onChange={(event) => void addFiles(event.target.files)}
