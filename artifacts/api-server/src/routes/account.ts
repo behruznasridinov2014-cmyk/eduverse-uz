@@ -178,7 +178,7 @@ router.get("/me/teaching-stats", requireAuthenticatedRole("teacher", "school_dir
       .groupBy(assignmentsTable.classId, classesTable.name)
     : [];
   const dates = [lessons?.last, checked?.last, assigned?.last].filter(Boolean).map((d) => new Date(d as Date).getTime());
-  const toGrade = (score: number | null | undefined) => (score === null || score === undefined ? null : Math.round((Number(score) / 20) * 10) / 10);
+  const toGrade = (score: number | null | undefined) => (score === null || score === undefined ? null : Math.round(Number(score)) / 10);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
     lessons: Number(lessons?.n ?? 0),

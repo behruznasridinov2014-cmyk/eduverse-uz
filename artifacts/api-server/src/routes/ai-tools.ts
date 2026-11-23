@@ -66,7 +66,7 @@ router.post("/me/practice-test", requireAuthenticatedRole("student"), testLimite
   for (const subject of ["math", "physics", "chemistry", "biology"]) {
     const own = marks.filter((row) => row.subject === subject && typeof row.mark === "number").map((row) => row.mark as number);
     const tried = tests.filter((row) => row.subject === subject);
-    const average = own.length ? own.reduce((sum, mark) => sum + mark, 0) / own.length : 4.5;
+    const average = own.length ? own.reduce((sum, mark) => sum + mark, 0) / own.length / 2 : 4.5;
     const share = tried.length ? tried.reduce((sum, row) => sum + row.score / Math.max(1, row.total), 0) / tried.length : 0.8;
     weakness.set(subject, (5 - average) + (1 - share) * 3);
   }

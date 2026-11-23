@@ -505,8 +505,8 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
   {!ready
    ?(school.status==='loading'?<LoadingBlock language={language}/>:<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>)
    :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
-    {tab==='tasks'&&<><WorksheetBuilder school={school} language={language}/><ServerTeachingPanel school={school} language={language}/></>}
-    {tab==='journal'&&<><ClassJournal school={school} language={language}/><GradeJournal school={school} language={language}/></>}
+    {tab==='tasks'&&<ServerTeachingPanel school={school} language={language}/>}
+    {tab==='journal'&&<ClassJournal school={school} language={language}/>}
     {tab==='class'&&<><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/></>}
    </div>}
  </>;

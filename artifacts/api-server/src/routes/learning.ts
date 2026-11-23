@@ -34,6 +34,7 @@ import {
   isAiConfigured,
   SUPPORTED_SUBJECTS,
 } from "../lib/ai-content";
+import { gradeOf } from "../lib/grade";
 
 const router: IRouter = Router();
 // Paid outside services (AI, video and 3D search): a limit per session against scripted abuse.
@@ -1180,7 +1181,7 @@ router.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles),
       .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))
       .orderBy(asc(usersTable.username)),
     db
-      .select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject })
+      .select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, topicId: assignmentsTable.topicId })
       .from(assignmentsTable)
       .where(eq(assignmentsTable.classId, classId))
       .orderBy(asc(assignmentsTable.createdAt))
@@ -1205,7 +1206,7 @@ router.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles),
       const submission = submissions.find((item) => item.assignmentId === assignment.id && item.studentId === student.id);
       if (!submission) return { state: "missing" as const, grade: null };
       if (submission.score === null) return { state: "review" as const, grade: null };
-      return { state: "graded" as const, grade: Math.max(2, Math.min(5, Math.round(submission.score / 20))) };
+      return { state: "graded" as const, grade: gradeOf(submission.score) };
     });
     const grades = cells.map((cell) => cell.grade).filter((grade): grade is number => grade !== null);
     const marks = attendance.filter((item) => item.studentId === student.id);
@@ -1352,7 +1353,7 @@ router.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res)
       return {
         ...item,
         state: !sub ? "missing" : sub.score === null ? "review" : "graded",
-        grade: sub && sub.score !== null ? Math.max(2, Math.min(5, Math.round(sub.score / 20))) : null,
+        grade: sub && sub.score !== null ? gradeOf(sub.score) : null,
         feedback: sub?.feedback ?? "",
       };
     });
@@ -1412,7 +1413,7 @@ router.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_dir
     const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
     const own = marks.filter((row) => row.studentId === person.id);
     const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
-    const grades = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score! / 20))));
+    const grades = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => gradeOf(row.score!));
     const average = grades.length ? (grades.reduce((a, b) => a + b, 0) / grades.length).toFixed(1) : "";
     lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round((attended / own.length) * 100) : ""].map(cell).join(";"));
   }
@@ -1449,7 +1450,7 @@ router.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_dire
     : [];
   const lessons = await db.select({ id: lessonRoomsTable.id, classId: lessonRoomsTable.classId, createdAt: lessonRoomsTable.createdAt }).from(lessonRoomsTable).where(eq(lessonRoomsTable.schoolId, schoolId));
   const percent = (rows: typeof marks) => rows.length ? Math.round((rows.filter((row) => row.status === "present" || row.status === "late").length / rows.length) * 100) : null;
-  const gradeOf = (score: number) => Math.max(2, Math.min(5, Math.round(score / 20)));
+  
   const graded = submissions.filter((row) => row.score !== null).map((row) => gradeOf(row.score!));
   const perClass = classes.map((item) => {
     const classAssignments = assignments.filter((row) => row.classId === item.id).map((row) => row.id);

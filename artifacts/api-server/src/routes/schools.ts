@@ -4,6 +4,7 @@ import {
   ACCOUNT_ROLES,
   assignmentSubmissionsTable,
   assignmentsTable,
+  noticeMarksTable,
   classesTable,
   classMembersTable,
   db,
@@ -41,6 +42,7 @@ import {
   type ClassMemberRole,
   type SchoolMemberRole,
 } from "../lib/school-access";
+import { gradeOf } from "../lib/grade";
 
 const router: IRouter = Router();
 // Paid outside services (AI, video and 3D search): a limit per session against scripted abuse.
@@ -1104,6 +1106,9 @@ router.delete(
       return;
     }
 
+    // A cancelled automatic (textbook) homework must not come back on the next lesson check.
+    const [auto] = await db.select({ autoKey: assignmentsTable.autoKey }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (auto?.autoKey) await db.insert(noticeMarksTable).values({ key: `hw-cancel:${auto.autoKey}` }).onConflictDoNothing();
     await db.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
     res.status(204).end();
   },
@@ -1168,6 +1173,11 @@ router.post(
     }
     if (!context.authorization.canSubmit) {
       forbidden(res, "Only a student in this class can submit this assignment.");
+      return;
+    }
+    const [deadline] = await db.select({ dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (deadline?.dueAt && deadline.dueAt.getTime() < Date.now()) {
+      res.status(409).json({ error: "The deadline has passed. Homework is accepted until 00:00 on the lesson day." });
       return;
     }
 
@@ -1479,11 +1489,13 @@ router.patch(
         .from(assignmentsTable)
         .where(eq(assignmentsTable.id, assignmentId))
         .limit(1);
-      const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
-      await pushNotice(await withParents([studentId]), "grades", `Новая оценка: ${grade}`, `${info?.subject ?? ""} — ${info?.title ?? ""}`, "/classes");
+      const grade = gradeOf(changes.score);
+      await pushNotice(await withParents([studentId]), "grades", `Новая оценка: ${grade}/10`, info?.subject ?? "", "/classes");
       await notifyFamily(
         studentId,
-        (lang, name) => `📝 <b>${tl(lang, "Uy vazifasiga baho", "Оценка за домашнее задание", "Homework mark")}: ${grade}</b>\n👤 ${name}\n📖 ${subjectText(lang, info?.subject ?? "")} — ${escapeHtml(info?.title ?? "")}${changes.feedback ? `\n💬 ${escapeHtml(changes.feedback.slice(0, 300))}` : ""}`,
+        (lang, name) => `📝 <b>${tl(lang, "Uy vazifasi", "Домашка", "Homework")}: ${grade}/10</b> · ${subjectText(lang, info?.subject ?? "")}
+👤 ${name}${changes.feedback ? `
+💬 ${escapeHtml(changes.feedback.slice(0, 120))}` : ""}`,
         true,
       );
     }

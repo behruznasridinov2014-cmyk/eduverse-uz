@@ -15,6 +15,7 @@ import {
   type AccountRole,
 } from "@workspace/db";
 import { escapeHtml } from "./notify";
+import { gradeOf } from "./grade";
 import { lessonReader, slotsFilterFor, tashkentNow } from "../routes/timetable";
 
 /*
@@ -113,9 +114,9 @@ async function homework(person: Person, L: BotLang): Promise<string> {
     if (!tasks.length) { out.push(T(L, "Bu hafta vazifa yo‘q.", "За неделю заданий нет.", "No homework this week.")); continue; }
     for (const task of tasks) {
       const sent = mine.find((row) => row.assignmentId === task.id);
-      const state = sent ? (sent.score !== null ? `✅ ${T(L, "baho", "оценка", "mark")} ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : `📤 ${T(L, "topshirildi, tekshiruv kutilmoqda", "сдано, ждёт проверки", "handed in, waiting")}`) : `⏳ ${T(L, "topshirilmagan", "не сдано", "not handed in")}`;
-      const first = task.description.split("\n")[0]!.slice(0, 160);
-      out.push(`• <b>${escapeHtml(task.subject)}</b> · ${escapeHtml(task.title)}${task.dueAt ? ` · ${T(L, "muddat", "до", "due")} ${day(task.dueAt.toISOString())}` : ""}\n  ${escapeHtml(first)}\n  ${state}`);
+      const state = sent ? (sent.score !== null ? `✅ ${T(L, "baho", "оценка", "mark")} ${gradeOf(sent.score)}/10` : `📤 ${T(L, "tekshiruvda", "на проверке", "in review")}`) : `⏳ ${T(L, "topshirilmagan", "не сдано", "not handed in")}`;
+      const first = task.description.split("\n")[0]!.slice(0, 90);
+      out.push(`• <b>${escapeHtml(task.subject)}</b>: ${escapeHtml(first)} — ${state}`);
     }
   }
   return out.join("\n") || T(L, "Vazifa yo‘q.", "Заданий нет.", "No homework.");
@@ -130,8 +131,12 @@ async function grades(person: Person, L: BotLang): Promise<string> {
       .from(journalMarksTable).where(eq(journalMarksTable.studentId, pupil.id)).orderBy(desc(journalMarksTable.date)).limit(12);
     out.push(`📘 <b>${escapeHtml(pupil.name)}</b>`);
     if (!marks.length) { out.push(T(L, "Hali baho yo‘q.", "Оценок пока нет.", "No marks yet.")); continue; }
-    for (const row of marks) out.push(`${day(row.date)} · ${escapeHtml(subjectName(L, row.subject))}: ${row.absent ? T(L, "nb", "нб", "ab") : `<b>${row.mark}</b>`}`);
-    const numbers = marks.map((row) => row.mark).filter((mark): mark is number => typeof mark === "number");
+    for (const row of marks) {
+      const behavior = row.subject.startsWith("behavior:");
+      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : row.subject));
+      out.push(`${day(row.date)} · ${name}${behavior ? ` (${T(L, "xulq", "поведение", "behaviour")})` : ""}: ${row.absent ? T(L, "nb", "нб", "ab") : `<b>${row.mark}</b>/10`}`);
+    }
+    const numbers = marks.filter((row) => !row.subject.startsWith("behavior:")).map((row) => row.mark).filter((mark): mark is number => typeof mark === "number");
     if (numbers.length) out.push(`${T(L, "O‘rtacha", "Средняя", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
   }
   return out.join("\n");

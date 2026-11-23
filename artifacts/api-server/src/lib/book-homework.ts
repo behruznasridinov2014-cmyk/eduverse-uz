@@ -26,12 +26,9 @@ export function bookFor(subject: string, grade: number): Book | undefined {
 export type EndedLesson = { classId: string; subject: string; grade: number; teacherId: string | null; endsAt: string };
 
 /** "2026-11-21" → the next school day (Sunday skipped) at 20:00 Tashkent. */
+/** Homework from the book is due at midnight (Tashkent) of the lesson day; later work is not counted. */
 function dueAfter(date: string): Date {
-  const day = new Date(`${date}T20:00:00+05:00`);
-  day.setUTCDate(day.getUTCDate() + 1);
-  const local = new Date(day.getTime() + 5 * 3600 * 1000);
-  if (local.getUTCDay() === 0) day.setUTCDate(day.getUTCDate() + 1);
-  return day;
+  return new Date(`${date}T23:59:59+05:00`);
 }
 
 /** Gives the book homework for today's lessons that have ended. Safe to call many times. */
@@ -62,6 +59,8 @@ async function createHomework(date: string, lessons: EndedLesson[], now: number)
       const [exists] = await db.select({ id: assignmentsTable.id }).from(assignmentsTable)
         .where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
       if (exists) continue;
+      const [cancelled] = await db.select({ key: noticeMarksTable.key }).from(noticeMarksTable).where(eq(noticeMarksTable.key, `hw-cancel:${autoKey}`)).limit(1);
+      if (cancelled) continue;
       const tasks = topic.tasks.slice(0, 3).map((task, index) => `${index + 1}. ${task}`).join("\n");
       const [created] = await db.insert(assignmentsTable).values({
         classId: lesson.classId,
@@ -116,9 +115,9 @@ async function sendDaySummary(classId: string, date: string): Promise<void> {
     await notifyUsers(people, (lang) => [
       `📚 <b>${tl(lang, "Bugungi uy vazifasi", "Домашнее задание", "Today’s homework")}</b> · ${day}`,
       "",
-      ...tasks.map((task) => `• <b>${subjectText(lang, task.subject)}</b> — ${escapeHtml(task.title)}\n  ${escapeHtml(task.description.split("\n")[0]!.slice(0, 200))}`),
+      ...tasks.map((task) => `• <b>${subjectText(lang, task.subject)}</b>: ${escapeHtml(task.description.split("\n")[0]!.slice(0, 90))}`),
       "",
-      `${tl(lang, "Daftar rasmini saytda yuboring", "Фото тетради — на сайте", "Send notebook photos on the site")}: https://eduverse-uz1.vercel.app/classes`,
+      `${tl(lang, "00:00 gacha topshiring", "Сдать до 00:00", "Hand in by 00:00")}: https://eduverse-uz1.vercel.app/classes`,
     ].join("\n"));
   } catch (error) {
     logger.warn({ err: error }, "homework summary was not sent");

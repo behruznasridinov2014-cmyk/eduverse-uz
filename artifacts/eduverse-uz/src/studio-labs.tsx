@@ -194,7 +194,30 @@ export function MathLab({ language, initial = 'cube' }: { language: Language; in
 /* -------------------------------------------------------------------------- */
 
 type Preset = { query: string; label: [string, string, string] };
-export const WEB_PRESETS: Record<'bio' | 'geo' | 'any', Preset[]> = {
+export type WebGroup = 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
+export const WEB_PRESETS: Record<WebGroup, Preset[]> = {
+  chem: [
+    { query: 'water molecule h2o', label: ['Suv molekulasi', 'Молекула воды', 'Water molecule'] },
+    { query: 'sodium chloride crystal lattice', label: ['Osh tuzi kristali', 'Кристалл соли', 'Salt crystal'] },
+    { query: 'atom model electron orbit', label: ['Atom tuzilishi', 'Строение атома', 'Atom'] },
+    { query: 'chemistry laboratory glassware', label: ['Laboratoriya idishlari', 'Лабораторная посуда', 'Lab glassware'] },
+    { query: 'periodic table', label: ['Davriy jadval', 'Таблица Менделеева', 'Periodic table'] },
+    { query: 'methane molecule', label: ['Metan', 'Метан', 'Methane'] },
+  ],
+  phys: [
+    { query: 'electric motor cutaway', label: ['Elektr dvigatel', 'Электродвигатель', 'Electric motor'] },
+    { query: 'car engine cutaway', label: ['Avtomobil dvigateli', 'Двигатель машины', 'Car engine'] },
+    { query: 'telescope', label: ['Teleskop', 'Телескоп', 'Telescope'] },
+    { query: 'magnet magnetic field', label: ['Magnit maydoni', 'Магнитное поле', 'Magnetic field'] },
+    { query: 'wind turbine', label: ['Shamol generatori', 'Ветряк', 'Wind turbine'] },
+    { query: 'rocket launch', label: ['Raketa', 'Ракета', 'Rocket'] },
+  ],
+  math: [
+    { query: 'platonic solids', label: ['Platon jismlari', 'Платоновы тела', 'Platonic solids'] },
+    { query: 'mobius strip', label: ['Myobius lentasi', 'Лента Мёбиуса', 'Möbius strip'] },
+    { query: 'pyramid geometry', label: ['Piramida', 'Пирамида', 'Pyramid'] },
+    { query: 'fractal 3d', label: ['Fraktal', 'Фрактал', 'Fractal'] },
+  ],
   bio: [
     { query: 'animal cell biology', label: ['Hayvon hujayrasi', 'Животная клетка', 'Animal cell'] },
     { query: 'plant cell', label: ['O‘simlik hujayrasi', 'Растительная клетка', 'Plant cell'] },
@@ -221,12 +244,26 @@ export const WEB_PRESETS: Record<'bio' | 'geo' | 'any', Preset[]> = {
   ],
 };
 
-export function WebModelsLab({ language, group }: { language: Language; group: 'bio' | 'geo' | 'any' }) {
+const GROUP_LABEL: Array<[WebGroup, [string, string, string]]> = [
+  ['chem', ['Kimyo', 'Химия', 'Chemistry']], ['phys', ['Fizika', 'Физика', 'Physics']], ['bio', ['Biologiya', 'Биология', 'Biology']],
+  ['math', ['Matematika', 'Математика', 'Maths']], ['geo', ['Geografiya', 'География', 'Geography']], ['any', ['Boshqa', 'Другое', 'Other']],
+];
+
+/**
+ * Real 3D models from the internet. With `free` the pupil picks any subject and any topic
+ * («Free exploring»); `initial` opens a given topic first (the lesson's own topic).
+ */
+export function WebModelsLab({ language, group: startGroup, free = false, initial }: { language: Language; group: WebGroup; free?: boolean; initial?: { query: string; title: string } }) {
+  const [group, setGroup] = useState<WebGroup>(startGroup);
+  useEffect(() => setGroup(startGroup), [startGroup]);
   const presets = WEB_PRESETS[group];
-  const [query, setQuery] = useState(presets[0]!.query);
-  const [title, setTitle] = useState(t(language, ...presets[0]!.label));
+  const [query, setQuery] = useState(initial?.query ?? presets[0]!.query);
+  const [title, setTitle] = useState(initial?.title ?? t(language, ...presets[0]!.label));
   const [draft, setDraft] = useState('');
+  const first = useRef(true);
   useEffect(() => {
+    if (first.current && initial) { first.current = false; return; }
+    first.current = false;
     setQuery(presets[0]!.query);
     setTitle(t(language, ...presets[0]!.label));
   }, [group]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -236,6 +273,13 @@ export function WebModelsLab({ language, group }: { language: Language; group: '
   return (
     <div className="stack">
       <section className="panel">
+        {free && (
+          <div className="row lab-subjects" style={{ marginBottom: 10 }}>
+            {GROUP_LABEL.map(([key, label]) => (
+              <button type="button" key={key} className={`studio-tab ${group === key ? 'active' : ''}`} onClick={() => setGroup(key)}>{t(language, ...label)}</button>
+            ))}
+          </div>
+        )}
         <div className="chem-presets">
           {presets.map((preset) => (
             <button type="button" key={preset.query} className={`tag ${query === preset.query ? 'gold' : ''}`} onClick={() => { setQuery(preset.query); setTitle(t(language, ...preset.label)); }}>

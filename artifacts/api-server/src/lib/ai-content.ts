@@ -216,36 +216,53 @@ function blueprintFor(subject: string): SubjectBlueprint {
 
 type ChatMessage = { role: "system" | "user"; content: string | Array<Record<string, unknown>> };
 
+/**
+ * Gemini is often "overloaded" (503) or rate-limited (429) on one model while another answers fine.
+ * So the request walks a short chain of models until one replies, all inside AI_TIMEOUT_MS.
+ */
+const GEMINI_FALLBACKS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"];
+const MODEL_CHAIN = USE_GEMINI ? [...new Set([EFFECTIVE_MODEL, ...GEMINI_FALLBACKS])] : [EFFECTIVE_MODEL];
+
+async function callOneModel(model: string, messages: ChatMessage[], signal: AbortSignal): Promise<{ text: string | null; retry: boolean }> {
+  const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}),
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.6,
+      response_format: { type: "json_object" },
+      // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
+      ...(USE_GEMINI && model.startsWith("gemini-2.5") ? { reasoning_effort: "none" } : {}),
+    }),
+    signal,
+  });
+  if (!response.ok) return { text: null, retry: [400, 404, 408, 429, 500, 502, 503, 504].includes(response.status) };
+  const payload: unknown = await response.json();
+  const choices = typeof payload === "object" && payload !== null ? (payload as { choices?: unknown }).choices : null;
+  const first = Array.isArray(choices) && choices.length ? (choices[0] as { message?: { content?: unknown } }) : null;
+  const content = first?.message?.content;
+  return typeof content === "string" && content.trim() ? { text: content, retry: false } : { text: null, retry: true };
+}
+
 async function callModel(messages: ChatMessage[]): Promise<string | null> {
   if (!isAiConfigured()) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
   try {
-    const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}),
-      },
-      body: JSON.stringify({
-        model: EFFECTIVE_MODEL,
-        messages,
-        temperature: 0.6,
-        response_format: { type: "json_object" },
-        // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
-        ...(USE_GEMINI ? { reasoning_effort: "none" } : {}),
-      }),
-      signal: controller.signal,
-    });
-    if (!response.ok) return null;
-    const payload: unknown = await response.json();
-    if (typeof payload !== "object" || payload === null) return null;
-    const choices = (payload as { choices?: unknown }).choices;
-    if (!Array.isArray(choices) || choices.length === 0) return null;
-    const first = choices[0] as { message?: { content?: unknown } };
-    const content = first?.message?.content;
-    return typeof content === "string" && content.trim() ? content : null;
-  } catch {
+    for (const model of MODEL_CHAIN) {
+      if (controller.signal.aborted) break;
+      try {
+        const result = await callOneModel(model, messages, controller.signal);
+        if (result.text) return result.text;
+        if (!result.retry) break;
+      } catch {
+        if (controller.signal.aborted) break;
+      }
+    }
     return null;
   } finally {
     clearTimeout(timeout);

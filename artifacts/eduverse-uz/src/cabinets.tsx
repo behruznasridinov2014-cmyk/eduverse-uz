@@ -133,7 +133,7 @@ export function DirectorDashboard({ schoolId, language }: { schoolId: string; la
 
   if (error) return <div className="notice" role="alert">{error}</div>;
   if (!data) return <div className="panel"><p className="muted">{t(language, 'Yuklanmoqda…', 'Загрузка…', 'Loading…')}</p></div>;
-  const weak = data.perClass.filter((item) => (item.attendancePercent !== null && item.attendancePercent < 85) || (item.average !== null && item.average < 3.5));
+  const weak = data.perClass.filter((item) => (item.attendancePercent !== null && item.attendancePercent < 85) || (item.average !== null && item.average < 7));
   return (
     <section className="cabinet">
       <div className="kpi-grid">
@@ -182,7 +182,7 @@ export function DirectorDashboard({ schoolId, language }: { schoolId: string; la
             </table>
           </div>
         )}
-        {weak.length > 0 && <p className="muted">{t(language, 'Belgilangan sinflarga e’tibor bering: davomat 85% dan past yoki o‘rtacha baho 3,5 dan past.', 'Обратите внимание на отмеченные классы: посещаемость ниже 85% или средняя ниже 3,5.', 'Watch the highlighted classes: attendance below 85% or average below 3.5.')}</p>}
+        {weak.length > 0 && <p className="muted">{t(language, 'Belgilangan sinflarga e’tibor bering: davomat 85% dan past yoki o‘rtacha baho 7 dan past.', 'Обратите внимание на отмеченные классы: посещаемость ниже 85% или средняя ниже 7.', 'Watch the highlighted classes: attendance below 85% or average below 7.')}</p>}
       </section>
     </section>
   );

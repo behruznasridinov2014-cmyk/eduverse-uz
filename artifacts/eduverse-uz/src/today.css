@@ -455,3 +455,20 @@ p.topic-extras-panel, .explain-word { padding-left: 14px; }
 .explain-word-answer p { margin: 4px 0 0; }
 html[data-theme="night"] .course-points-short li, html[data-theme="night"] .topic-extras-panel { background: rgba(255, 255, 255, 0.05); }
 html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 0.06); }
+
+/* Ten-point marks: the pickers wrap into two neat rows instead of stretching the table. */
+.journal-marks { display: inline-grid; grid-template-columns: repeat(6, auto); gap: 4px; }
+.review-marks { flex-wrap: wrap; gap: 6px; }
+.review-marks .grade-pick { min-width: 44px; min-height: 42px; font-size: 17px; }
+@media (max-width: 480px) { .review-marks .grade-pick { min-width: 38px; min-height: 40px; font-size: 16px; } }
+.journal-kinds { gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; }
+.journal-hide-asked { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; margin-left: auto; }
+.journal-asked { margin-left: 6px; font-size: 11px; padding: 1px 6px; }
+.journal-name.is-asked b { opacity: 0.75; }
+.check-hw-exercises { border: 1px solid var(--line-2); border-radius: 14px; padding: 10px 14px; margin: 8px 0 12px; background: var(--surface); }
+.check-hw-exercises ul { margin: 6px 0 0; padding-left: 18px; }
+.check-hw-exercises li { margin: 2px 0; }
+.my-grades-table td, .my-grades-table th { vertical-align: middle; }
+.my-grades-table .journal-mine-marks { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.hw-today { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-2); }
+.hw-subject-head { margin: 10px 2px 0; font-size: 15px; }

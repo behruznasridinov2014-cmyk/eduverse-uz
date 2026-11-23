@@ -324,8 +324,8 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
     ['math', L('Matematika', 'Математика', 'Maths'), '△'],
     ['bio', L('Biologiya', 'Биология', 'Biology'), '❦'],
     ['geo', L('Geografiya', 'География', 'Geography'), '◍'],
-    ['any', L('Istalgan mavzu', 'Любая тема', 'Any topic'), '✦'],
     ['book', L('Darslik mavzulari', 'Темы учебников', 'Textbook topics'), '📖'],
+    ['any', L('Erkin o‘rganish', 'Свободное изучение', 'Free exploring'), '✦'],
   ];
   const [mode, setMode] = useState<'build' | 'react'>('build');
   const [pick, setPick] = useState<string | null>(null);
@@ -380,7 +380,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
       </div>
 
       {subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense>
-      : subject === 'any' ? <WebModelsLab language={language} group="any" />
+      : subject === 'any' ? <WebModelsLab language={language} group="bio" free />
       : !pick ? (
         <div className="studio-chooser">
           {studioItems(subject).map((item) => (
@@ -398,7 +398,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         : pick === 'circuit' ? <Circuit language={language} />
         : pick === 'collision' ? <CollisionLab language={language} />
         : pick === 'solids' ? <MathLab language={language} />
-        : pick === 'web' ? <WebModelsLab language={language} group={subject === 'geo' ? 'geo' : 'bio'} />
+        : pick === 'web' ? <WebModelsLab language={language} group={(['chem', 'phys', 'math', 'bio', 'geo'] as const).find((key) => key === subject) ?? 'bio'} />
         : mode === 'build' ? (
         <div className="chem-grid">
           <div className="panel chem-stage">
@@ -592,13 +592,15 @@ function studioItems(subject: string): StudioItem[] {
     chem: [
       { id: 'build', label: L('Molekula yig‘ish', 'Собрать молекулу', 'Build a molecule'), hint: L('Atomlardan modda yasang', 'Соберите вещество из атомов', 'Make a substance from atoms'), icon: '⚛' },
       { id: 'react', label: L('Reaksiya', 'Реакция', 'Reaction'), hint: L('Ikki moddani aralashtiring', 'Смешайте два вещества', 'Mix two substances'), icon: '⚗' },
+      { id: 'web', label: L('Internetdan 3D', '3D из интернета', '3D from the internet'), hint: L('Murakkab haqiqiy modellar', 'Сложные настоящие модели', 'Detailed real models'), icon: '🌐' },
     ],
     phys: [
       { id: 'collision', label: L('Mashinalar to‘qnashuvi', 'Столкновение машин', 'Car crash'), hint: L('Massa, tezlik, impuls', 'Масса, скорость, импульс', 'Mass, speed, momentum'), icon: '🚗' },
       { id: 'pendulum', label: L('Mayatnik', 'Маятник', 'Pendulum'), hint: L('Davr va energiya', 'Период и энергия', 'Period and energy'), icon: '⏱' },
       { id: 'circuit', label: L('Elektr zanjiri', 'Электрическая цепь', 'Electric circuit'), hint: L('Om qonuni', 'Закон Ома', 'Ohm’s law'), icon: '⚡' },
+      { id: 'web', label: L('Internetdan 3D', '3D из интернета', '3D from the internet'), hint: L('Murakkab haqiqiy modellar', 'Сложные настоящие модели', 'Detailed real models'), icon: '🌐' },
     ],
-    math: [{ id: 'solids', label: L('Geometrik jismlar', 'Геометрические тела', 'Solids'), hint: L('Kub, prizma, silindr…', 'Куб, призма, цилиндр…', 'Cube, prism, cylinder…'), icon: '⬢' }],
+    math: [{ id: 'solids', label: L('Geometrik jismlar', 'Геометрические тела', 'Solids'), hint: L('Kub, prizma, silindr…', 'Куб, призма, цилиндр…', 'Cube, prism, cylinder…'), icon: '⬢' }, { id: 'web', label: L('Internetdan 3D', '3D из интернета', '3D from the internet'), hint: L('Murakkab haqiqiy modellar', 'Сложные настоящие модели', 'Detailed real models'), icon: '🌐' }],
     bio: [{ id: 'web', label: L('Tayyor 3D modellar', 'Готовые 3D-модели', 'Ready 3D models'), hint: L('Yurak, skelet va boshqalar', 'Сердце, скелет и другие', 'Heart, skeleton and more'), icon: '🔎' }],
     geo: [{ id: 'web', label: L('Tayyor 3D modellar', 'Готовые 3D-модели', 'Ready 3D models'), hint: L('Yer, vulqon va boshqalar', 'Земля, вулкан и другие', 'Earth, volcano and more'), icon: '🔎' }],
   };

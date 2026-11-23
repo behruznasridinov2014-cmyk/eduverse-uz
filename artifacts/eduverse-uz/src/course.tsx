@@ -13,7 +13,7 @@ import type { OwnSceneId } from './course-scenes';
 import { MoleculeById, ReactionView } from './chem-lab';
 import { Circuit, Pendulum } from './physics-lab';
 import { CollisionLab } from './collision-lab';
-import { MathLab } from './studio-labs';
+import { MathLab, WebModelsLab } from './studio-labs';
 import { LoadingBlock } from './ui/loading';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
@@ -497,6 +497,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
                 ['step-3d', '3D'],
                 ['step-check', t(language, 'Tekshiruv', 'Проверка', 'Check')],
                 ['step-homework', t(language, 'Uyga', 'Домашка', 'Homework')],
+                ['step-free', t(language, 'Erkin', 'Свободно', 'Free')],
               ].map(([id, label], index) => (
                 <a key={id} href={`#${id}`} onClick={(event) => { event.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
                   <b>{index + 1}</b> {label}
@@ -579,6 +580,8 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
             </section>
           )}
 
+          <FreeExplore key={topic.key} topic={topic} subject={book.subject} language={language} step={lesson ? 6 : null} />
+
           <div className="course-footer">
             {isStudent && <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
               <CheckCircle2 size={15} /> {isStudied ? t(language, 'O‘rganildi ✓', 'Изучено ✓', 'Studied ✓') : t(language, 'Mavzuni o‘rgandim', 'Я изучил тему', 'I studied this topic')}
@@ -591,6 +594,24 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           </div>
         </article>
       </div>
+    </section>
+  );
+}
+
+/** The end of a topic: free exploring of detailed 3D models from the internet on the same subject. */
+function FreeExplore({ topic, subject, language, step }: { topic: CourseTopic; subject: CourseBook['subject']; language: Language; step: number | null }) {
+  const [open, setOpen] = useState(false);
+  const group = ({ math: 'math', physics: 'phys', chemistry: 'chem', biology: 'bio' } as const)[subject] ?? 'any';
+  return (
+    <section className="panel course-free" id="step-free">
+      <h3><Box size={17} /> {step ? `${step} · ` : ''}{t(language, 'Erkin o‘rganish', 'Свободное изучение', 'Free exploring')}</h3>
+      <p className="muted">{t(language,
+        'Mavzu bo‘yicha internetdagi murakkab 3D modellar: aylantiring, yaqinlashtiring, boshqa mavzuni ham qidiring.',
+        'Сложные 3D-модели из интернета по этому предмету: крутите, приближайте, ищите любую другую тему.',
+        'Detailed 3D models from the internet on this subject: rotate, zoom, search any other topic.')}</p>
+      {open
+        ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><WebModelsLab language={language} group={group} free initial={{ query: topic.title, title: topic.title }} /></Suspense>
+        : <button type="button" className="btn primary" onClick={() => setOpen(true)}><Box size={15} /> {t(language, '3D modellarni ochish', 'Открыть 3D-модели', 'Open 3D models')}</button>}
     </section>
   );
 }

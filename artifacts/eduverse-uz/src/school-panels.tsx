@@ -63,6 +63,8 @@ import {
   type SchoolData,
 } from './school-data';
 import { HomeworkAiCheck, PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
+import { MARKS, markBand, markOf, scoreOf } from './marks';
+import { COURSE, pdfPageOf } from './course-data';
 
 const ASSIGNMENT_STATUSES = [
   'assigned',
@@ -324,7 +326,9 @@ export function ServerClassesPanel({
 
   const isStudent = user.role === 'student';
   // A pupil sees only what is still to do; handed-in work goes to "My grades".
-  const todoAssignments = classAssignments.filter((item) => !item.mySubmission);
+  // Homework is accepted until 00:00 of the lesson day; missed work stays visible for 3 days, marked late.
+  const isOverdue = (item: MyAssignment) => !item.mySubmission && Boolean(item.dueAt) && new Date(item.dueAt as string).getTime() < Date.now();
+  const todoAssignments = classAssignments.filter((item) => !item.mySubmission && !(isOverdue(item) && Date.now() - new Date(item.dueAt as string).getTime() > 3 * 86_400_000));
   const [showStudents, setShowStudents] = useState(false);
   if (isStudent) {
     // A pupil sees only the homework that is still to do.
@@ -340,11 +344,41 @@ export function ServerClassesPanel({
             </div>
           ) : (
             <div className="stack school-assignment-list">
-              {todoAssignments.map((assignment) => {
+              {(() => {
+                // Subjects to hand in today: one glance, then the cards below grouped by subject.
+                const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+                const dueToday = [...new Set(todoAssignments.filter((item) => !isOverdue(item) && item.dueAt && new Date(new Date(item.dueAt).getTime() + 5 * 3600_000).toISOString().slice(0, 10) === today).map((item) => item.subject))];
+                return dueToday.length > 0 && (
+                  <div className="hw-today">
+                    <b>{t(language, 'Today, by 00:00', 'Сегодня до 00:00', 'Bugun 00:00 gacha')}:</b>
+                    {dueToday.map((subject) => <span key={subject} className="tag gold">{subject}</span>)}
+                  </div>
+                );
+              })()}
+              {[...todoAssignments].sort((a, b) => a.subject.localeCompare(b.subject)).map((assignment, at, list) => {
                 const submission = assignment.mySubmission;
+                const subjectHead = at === 0 || list[at - 1]!.subject !== assignment.subject;
                 const isEditing = draftAssignmentId === assignment.id;
+                const overdue = isOverdue(assignment);
+                const bookTopic = (() => {
+                  if (!assignment.topicId?.startsWith('course:')) return null;
+                  const key = assignment.topicId.slice(7);
+                  for (const book of COURSE) { const topic = book.topics.find((item) => item.key === key); if (topic) return { book, topic }; }
+                  return null;
+                })();
+                const openBook = () => {
+                  if (!bookTopic) { onOpen('/topics'); return; }
+                  const page = pdfPageOf(bookTopic.book, bookTopic.topic);
+                  try {
+                    if (page) localStorage.setItem(`eduverse:pdf-page:/books/${bookTopic.book.bookId}.pdf`, String(page));
+                    localStorage.removeItem(`eduverse:pdf-range:/books/${bookTopic.book.bookId}.pdf`);
+                  } catch { /* private mode */ }
+                  onOpen(`/read/${bookTopic.book.bookId}`);
+                };
                 return (
-                  <article className="school-assignment-card" key={assignment.id}>
+                  <div key={assignment.id} className="stack" style={{ gap: 6 }}>
+                  {subjectHead && <h3 className="hw-subject-head">{assignment.subject}</h3>}
+                  <article className="school-assignment-card">
                     <div className="row-between" style={{ gap: 8, alignItems: 'flex-start' }}>
                       <div>
                         <b>{assignment.title}</b>
@@ -352,19 +386,21 @@ export function ServerClassesPanel({
                           {assignment.subject} · {formatDue(assignment.dueAt)}
                         </div>
                       </div>
-                      <span className={`tag ${submission ? (submission.score !== null && submission.score !== undefined ? 'green' : 'blue') : 'gold'}`}>
-                        {!submission
-                          ? t(language, 'To do', 'Нужно сделать', 'Bajarish kerak')
+                      <span className={`tag ${overdue ? 'red' : submission ? (submission.score !== null && submission.score !== undefined ? 'green' : 'blue') : 'gold'}`}>
+                        {overdue
+                          ? t(language, 'Late — not counted', 'Срок прошёл — не засчитано', 'Muddat o‘tdi — hisoblanmaydi')
+                          : !submission
+                          ? t(language, 'Due by 00:00', 'Сдать до 00:00', '00:00 gacha topshiring')
                           : submission.score !== null && submission.score !== undefined
-                            ? `${t(language, 'Checked', 'Проверено', 'Tekshirildi')} · ${Math.max(2, Math.min(5, Math.round(submission.score / 20)))}`
+                            ? `${t(language, 'Checked', 'Проверено', 'Tekshirildi')} · ${markOf(submission.score)}`
                             : t(language, 'In review', 'На проверке', 'Tekshirilmoqda')}
                       </span>
                     </div>
                     <p className="muted school-assignment-copy">{assignment.description}</p>
-                    {assignment.topicTitle && (
-                      <button type="button" className="hw-topic-link" onClick={() => onOpen('/topics')}>
+                    {(assignment.topicTitle || bookTopic) && (
+                      <button type="button" className="hw-topic-link" onClick={openBook}>
                         <BookOpen size={14} />
-                        {t(language, 'Theory', 'Теория', 'Nazariya')}: {assignment.topicTitle}
+                        {t(language, 'More: open the textbook (examples)', 'Подробнее: открыть учебник (примеры)', 'Batafsil: darslikni ochish (misollar)')}
                         <ArrowRight size={13} />
                       </button>
                     )}
@@ -391,7 +427,7 @@ export function ServerClassesPanel({
                         {submission.score !== null && submission.score !== undefined && (
                           <>
                             {' '}
-                            · {t(language, 'Grade', 'Оценка', 'Baho')}: {Math.max(2, Math.min(5, Math.round(submission.score / 20)))}
+                            · {t(language, 'Grade', 'Оценка', 'Baho')}: {markOf(submission.score)}
                           </>
                         )}
                         {submission.signature && (
@@ -404,7 +440,7 @@ export function ServerClassesPanel({
                         )}
                       </div>
                     )}
-                    {canSubmit && !(submission && submission.score !== null && submission.score !== undefined) && !(submission?.signedAt && submission.status === 'checked') && (
+                    {canSubmit && !overdue && !(submission && submission.score !== null && submission.score !== undefined) && !(submission?.signedAt && submission.status === 'checked') && (
                       <div className="stack" style={{ gap: 8 }}>
                         {isEditing ? (
                           <>
@@ -474,6 +510,7 @@ export function ServerClassesPanel({
                       </div>
                     )}
                   </article>
+                  </div>
                 );
               })}
             </div>
@@ -737,7 +774,7 @@ export function ServerTeachingPanel({
       <div className="grid grid-2" style={{ marginTop: error || notice ? 12 : 0 }}>
         {!showForm ? (
           <Panel>
-            <SectionHead title={t(language, 'Your own assignment', 'Своё задание', 'O‘z topshirig‘ingiz')} detail={t(language, 'If the textbook tasks above are not enough, write your own.', 'Если заданий из учебника выше мало, напишите своё.', 'Darslikdagi topshiriqlar yetmasa, o‘zingiz yozing.')} />
+            <SectionHead title={t(language, 'Your own assignment', 'Своё задание', 'O‘z topshirig‘ingiz')} detail={t(language, 'If the textbook homework is not enough, write your own.', 'Если домашки из учебника мало, напишите своё.', 'Darslikdagi topshiriqlar yetmasa, o‘zingiz yozing.')} />
             <button type="button" className="btn" onClick={() => setShowForm(true)}>{t(language, 'Write an assignment', 'Написать задание', 'Topshiriq yozish')}</button>
           </Panel>
         ) : (
@@ -935,6 +972,30 @@ export function ServerTeachingPanel({
           )}
         </Panel>
       </div>
+
+      {(() => {
+        // Homework EDUVERSE sent by itself after the lesson (from the textbook): the teacher can cancel it.
+        const auto = school.assignments
+          .filter((item) => item.topicId?.startsWith('course:') && (!item.dueAt || new Date(item.dueAt).getTime() > Date.now() - 86_400_000))
+          .slice(0, 8);
+        if (!auto.length) return null;
+        return (
+          <Panel style={{ marginTop: 16 }}>
+            <SectionHead title={t(language, 'Sent automatically', 'Отправлено автоматически', 'Avtomatik yuborilgan')} detail={t(language, 'Homework from the textbook after the lesson. Cancel it if it is not needed.', 'Домашка из учебника после урока. Если не нужна — отмените.', 'Darsdan keyin darslikdan uy vazifasi. Kerak bo‘lmasa — bekor qiling.')} />
+            <ul className="check-list">
+              {auto.map((item) => (
+                <li key={item.id}>
+                  <div><b>{item.subject}</b><small className="muted">{school.classes.find((klass) => klass.id === item.classId)?.name ?? ''} · {formatDue(item.dueAt)}</small></div>
+                  <span className="tag">{t(language, `${item.submissionCount ?? 0} handed in`, `сдали: ${item.submissionCount ?? 0}`, `${item.submissionCount ?? 0} ta topshirdi`)}</span>
+                  <button type="button" className="btn small danger" disabled={busyAssignmentId === item.id} onClick={() => void removeAssignment(item)}>
+                    {t(language, 'Cancel', 'Отменить', 'Bekor qilish')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        );
+      })()}
 
       <Panel style={{ marginTop: 16 }}>
         <SectionHead
@@ -1703,17 +1764,20 @@ export function ServerTopicAssignPanel({
 
 /**
  * Checking one homework: «Checked» → how it was done (all right / partly, with mistakes / wrong)
- * → the mark 2…5 (picked for the teacher, can be changed). There is no mark below 2.
+ * → the mark 2…10. The verdict only suggests a mark: the teacher can set any mark afterwards
+ * (for effort or behaviour), and the chosen verdict stays as it is. There is no mark below 2.
  */
-const VERDICTS: Array<{ id: string; mark: number; status: string; label: [string, string, string]; note: [string, string, string]; tone: string }> = [
-  { id: 'right', mark: 5, status: 'checked', label: ['All correct', 'Всё правильно', 'Hammasi to‘g‘ri'], note: ['Well done, everything is correct.', 'Молодец, всё сделано правильно.', 'Barakalla, hammasi to‘g‘ri.'], tone: 'green' },
-  { id: 'partly', mark: 4, status: 'checked', label: ['Partly, some mistakes', 'Частично, есть ошибки', 'Qisman, xatolar bor'], note: ['Good, but there are mistakes. Look at them again.', 'Хорошо, но есть ошибки. Посмотри их ещё раз.', 'Yaxshi, lekin xatolar bor. Ularni qayta ko‘rib chiq.'], tone: 'gold' },
-  { id: 'wrong', mark: 2, status: 'needs_revision', label: ['Wrong', 'Неправильно', 'Noto‘g‘ri'], note: ['Wrong. Read the topic again and redo the task.', 'Неправильно. Перечитай тему и переделай задание.', 'Noto‘g‘ri. Mavzuni qayta o‘qib, vazifani qayta bajar.'], tone: 'red' },
+const VERDICTS: Array<{ id: 'right' | 'partly' | 'wrong'; mark: number; status: string; label: [string, string, string]; note: [string, string, string]; tone: string }> = [
+  { id: 'right', mark: 10, status: 'checked', label: ['All correct', 'Всё правильно', 'Hammasi to‘g‘ri'], note: ['Well done, everything is correct.', 'Молодец, всё сделано правильно.', 'Barakalla, hammasi to‘g‘ri.'], tone: 'green' },
+  { id: 'partly', mark: 7, status: 'checked', label: ['Partly, some mistakes', 'Частично, есть ошибки', 'Qisman, xatolar bor'], note: ['Good, but there are mistakes. Look at them again.', 'Хорошо, но есть ошибки. Посмотри их ещё раз.', 'Yaxshi, lekin xatolar bor. Ularni qayta ko‘rib chiq.'], tone: 'gold' },
+  { id: 'wrong', mark: 3, status: 'needs_revision', label: ['Wrong', 'Неправильно', 'Noto‘g‘ri'], note: ['Wrong. Read the topic again and redo the task.', 'Неправильно. Перечитай тему и переделай задание.', 'Noto‘g‘ri. Mavzuni qayta o‘qib, vazifani qayta bajar.'], tone: 'red' },
 ];
 function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; language: Language; onChange: (patch: Partial<ReviewDraft>) => void }) {
-  const mark = draft.score.trim() === '' ? null : Math.max(2, Math.min(5, Math.round(Number(draft.score) / 20)));
+  const mark = draft.score.trim() === '' ? null : markOf(Number(draft.score));
   const [opened, setOpened] = useState(mark !== null);
-  const verdict = mark === null ? null : mark >= 5 ? 'right' : draft.status === 'needs_revision' ? 'wrong' : 'partly';
+  const [verdict, setVerdict] = useState<'right' | 'partly' | 'wrong' | null>(
+    mark === null ? null : draft.status === 'needs_revision' ? 'wrong' : mark >= 9 ? 'right' : 'partly',
+  );
   if (!opened) {
     return (
       <button type="button" className="btn primary review-checked-btn" onClick={() => setOpened(true)}>
@@ -1721,22 +1785,26 @@ function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; lang
       </button>
     );
   }
+  const status = VERDICTS.find((item) => item.id === verdict)?.status ?? 'checked';
   return (
     <div className="review-verdict">
       <span className="muted">{t(language, 'How is it done?', 'Как сделано?', 'Qanday bajarilgan?')}</span>
       <div className="review-verdict-options">
         {VERDICTS.map((item) => (
           <button type="button" key={item.id} className={`review-verdict-btn tone-${item.tone} ${verdict === item.id ? 'on' : ''}`}
-            onClick={() => onChange({ status: item.status, score: String(item.mark * 20), feedback: draft.feedback.trim() && !VERDICTS.some((v) => draft.feedback === t(language, ...v.note)) ? draft.feedback : t(language, ...item.note) })}>
+            onClick={() => {
+              setVerdict(item.id);
+              onChange({ status: item.status, score: String(scoreOf(item.mark)), feedback: draft.feedback.trim() && !VERDICTS.some((v) => draft.feedback === t(language, ...v.note)) ? draft.feedback : t(language, ...item.note) });
+            }}>
             {t(language, ...item.label)}
           </button>
         ))}
       </div>
-      <span className="muted">{t(language, 'Mark', 'Оценка', 'Baho')}</span>
+      <span className="muted">{t(language, 'Mark (out of 10) — change it if you like, e.g. for effort or behaviour', 'Оценка из 10 — можно поменять, например за старание или поведение', 'Baho (10 dan) — o‘zgartirsa bo‘ladi, masalan, harakat yoki xulq uchun')}</span>
       <div className="review-marks" role="group">
-        {[2, 3, 4, 5].map((value) => (
-          <button type="button" key={value} className={`grade-pick m${value} ${mark === value ? 'on' : ''}`}
-            onClick={() => onChange({ score: String(value * 20), status: value === 2 && verdict === 'wrong' ? 'needs_revision' : 'checked' })}>{value}</button>
+        {MARKS.map((value) => (
+          <button type="button" key={value} className={`grade-pick ${markBand(value)} ${mark === value ? 'on' : ''}`}
+            onClick={() => onChange({ score: String(scoreOf(value)), status })}>{value}</button>
         ))}
       </div>
     </div>
@@ -1745,7 +1813,7 @@ function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; lang
 
 /**
  * One pupil's homework opened from the journal: notebook photos and their words first,
- * then «Checked» → verdict → mark 2…5. The teacher cannot grade without seeing the work.
+ * then «Checked» → verdict → mark 2…10. The teacher cannot grade without seeing the work.
  */
 export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentId, studentName, language, onClose, onSaved }: {
   assignmentId: string; assignmentTitle: string; studentId: string; studentName: string; language: Language; onClose: () => void; onSaved: () => void;

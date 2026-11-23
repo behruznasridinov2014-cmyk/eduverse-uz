@@ -5,6 +5,7 @@ import { Bot, CalendarCheck2, Megaphone, RefreshCw, Send, TableProperties, Trash
 import type { Language, SchoolData } from './school-data';
 import { friendlyError } from './errors';
 import { SubmissionReviewDialog } from './school-panels';
+import { MARKS, markBand, scoreOf } from './marks';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -150,7 +151,7 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
   async function grade(assignmentId: string, studentId: string, mark: number) {
     setSaving(true); setError('');
     try {
-      await customFetch(`/api/assignments/${assignmentId}/submissions/${studentId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'checked', score: mark * 20 }) });
+      await customFetch(`/api/assignments/${assignmentId}/submissions/${studentId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'checked', score: scoreOf(mark) }) });
       setEditing(null);
       await load();
     } catch (requestError) {
@@ -224,7 +225,7 @@ export function GradeJournal({ school, language }: { school: SchoolData; languag
                         ) : null}
                         {editing === key && cell.state === 'missing' ? (
                           <span className="journal-marks">
-                            {[2, 3, 4, 5].map((mark) => <button type="button" key={mark} className={`grade-pick ${cell.grade === mark ? 'on' : ''}`} disabled={saving} onClick={() => void grade(assignmentId, row.studentId, mark)}>{mark}</button>)}
+                            {MARKS.map((mark) => <button type="button" key={mark} className={`grade-pick ${markBand(mark)} ${cell.grade === mark ? 'on' : ''}`} disabled={saving} onClick={() => void grade(assignmentId, row.studentId, mark)}>{mark}</button>)}
                             <button type="button" className="grade-pick cancel" onClick={() => setEditing(null)} aria-label={t(language, 'Bekor', 'Отмена', 'Cancel')}>×</button>
                           </span>
                         ) : editing === key ? null : (

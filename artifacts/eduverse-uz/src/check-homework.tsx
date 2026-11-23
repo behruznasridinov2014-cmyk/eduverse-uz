@@ -6,6 +6,7 @@ import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
 import { SubmissionReviewDialog } from './school-panels';
+import { markBand } from './marks';
 
 /*
  * Teacher → "Check homework": choose a class and a task, see every pupil:
@@ -14,7 +15,7 @@ import { SubmissionReviewDialog } from './school-panels';
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
 
 type Journal = {
-  assignments: Array<{ id: string; title: string; subject: string }>;
+  assignments: Array<{ id: string; title: string; subject: string; description?: string }>;
   rows: Array<{ studentId: string; studentName: string; cells: Array<{ state: 'missing' | 'review' | 'graded'; grade: number | null }> }>;
 };
 
@@ -24,7 +25,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const [assignmentId, setAssignmentId] = useState('');
   const [error, setError] = useState('');
   const [open, setOpen] = useState<{ studentId: string; studentName: string } | null>(null);
-  const [filter, setFilter] = useState<'all' | 'review' | 'missing' | 'graded'>('all');
+  const [filter, setFilter] = useState<'all' | 'review' | 'graded'>('review');
   // The class list arrives after the page opens: pick the first class then.
   useEffect(() => { if (!classId && school.classes[0]) setClassId(school.classes[0].id); }, [classId, school.classes]);
 
@@ -40,7 +41,10 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
         for (let at = next.assignments.length - 1; at >= 0; at -= 1) {
           if (next.rows.some((row) => row.cells[at]?.state === 'review')) return next.assignments[at]!.id;
         }
-        return next.assignments[next.assignments.length - 1]?.id ?? '';
+        for (let at = next.assignments.length - 1; at >= 0; at -= 1) {
+          if (next.rows.some((row) => row.cells[at]?.state !== 'missing')) return next.assignments[at]!.id;
+        }
+        return '';
       });
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -51,8 +55,12 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const index = journal?.assignments.findIndex((item) => item.id === assignmentId) ?? -1;
   const assignment = index >= 0 ? journal!.assignments[index] : undefined;
   const people = useMemo(() => (journal && index >= 0 ? journal.rows.map((row) => ({ ...row, cell: row.cells[index]! })) : []), [journal, index]);
-  const counts = { review: people.filter((row) => row.cell.state === 'review').length, missing: people.filter((row) => row.cell.state === 'missing').length, graded: people.filter((row) => row.cell.state === 'graded').length };
-  const shown = people.filter((row) => filter === 'all' || row.cell.state === filter);
+  // Only the works that were handed in: the teacher checks, nothing else to scroll through.
+  const handedIn = people.filter((row) => row.cell.state !== 'missing');
+  const counts = { review: handedIn.filter((row) => row.cell.state === 'review').length, graded: handedIn.filter((row) => row.cell.state === 'graded').length };
+  const shown = handedIn.filter((row) => filter === 'all' || row.cell.state === filter);
+  const sentIn = (at: number) => journal?.rows.some((row) => row.cells[at]?.state !== 'missing') ?? false;
+  const exercises = (assignment?.description ?? '').split('\n').map((line) => line.trim()).filter(Boolean);
   const waitingIn = (at: number) => journal?.rows.filter((row) => row.cells[at]?.state === 'review').length ?? 0;
 
   if (!school.classes.length && school.status === 'loading') return <LoadingBlock language={language} />;
@@ -66,11 +74,11 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
       </div>
       {error && <div className="notice" role="alert">{error}</div>}
       {!journal && !error && <LoadingBlock language={language} />}
-      {journal && journal.assignments.length === 0 && <div className="notice">{t(language, 'Bu sinfda hali vazifa yo‘q.', 'В этом классе пока нет заданий.', 'No tasks in this class yet.')}</div>}
-      {journal && journal.assignments.length > 0 && (
+      {journal && !journal.assignments.some((_, at) => sentIn(at)) && <div className="notice">{t(language, 'Hali hech kim ish yubormadi.', 'Пока никто не прислал работу.', 'Nobody has sent work yet.')}</div>}
+      {journal && journal.assignments.some((_, at) => sentIn(at)) && (
         <>
           <div className="check-hw-tasks" role="tablist">
-            {[...journal.assignments].map((item, at) => ({ item, at })).reverse().slice(0, 12).map(({ item, at }) => (
+            {[...journal.assignments].map((item, at) => ({ item, at })).filter(({ at }) => sentIn(at)).reverse().slice(0, 12).map(({ item, at }) => (
               <button type="button" role="tab" key={item.id} aria-selected={item.id === assignmentId} className={`studio-tab ${item.id === assignmentId ? 'active' : ''}`} onClick={() => setAssignmentId(item.id)}>
                 <span>{item.subject} · {item.title.length > 34 ? `${item.title.slice(0, 33)}…` : item.title}</span>
                 {waitingIn(at) > 0 && <b className="check-hw-badge">{waitingIn(at)}</b>}
@@ -82,15 +90,21 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
               <div className="check-hw-counts">
                 <button type="button" className={`people-stat ${filter === 'review' ? 'on' : ''}`} onClick={() => setFilter(filter === 'review' ? 'all' : 'review')}><b>{counts.review}</b><span>{t(language, 'Tekshirish kerak', 'Ждут проверки', 'To check')}</span></button>
                 <button type="button" className={`people-stat ${filter === 'graded' ? 'on' : ''}`} onClick={() => setFilter(filter === 'graded' ? 'all' : 'graded')}><b>{counts.graded}</b><span>{t(language, 'Tekshirildi', 'Проверено', 'Checked')}</span></button>
-                <button type="button" className={`people-stat ${filter === 'missing' ? 'on' : ''}`} onClick={() => setFilter(filter === 'missing' ? 'all' : 'missing')}><b>{counts.missing}</b><span>{t(language, 'Topshirmagan', 'Не сдали', 'Not handed in')}</span></button>
+                
               </div>
+              {exercises.length > 0 && (
+                <div className="check-hw-exercises">
+                  <b>{t(language, 'Tekshiriladigan mashqlar', 'Упражнения для проверки', 'Exercises to check')}</b>
+                  <ul>{exercises.map((line, at) => <li key={at}>{line.replace(/^Из учебника:\s*/, '')}</li>)}</ul>
+                </div>
+              )}
               <ul className="check-hw-list">
                 {shown.map((row, number) => (
                   <li key={row.studentId} className={`is-${row.cell.state}`}>
                     <span className="check-hw-num">{number + 1}</span>
                     <b>{row.studentName}</b>
                     {row.cell.state === 'graded'
-                      ? <span className="check-hw-state ok"><CheckCircle2 size={15} /> {t(language, 'Baho', 'Оценка', 'Mark')}: <span className={`grade-mark m${row.cell.grade}`}>{row.cell.grade}</span></span>
+                      ? <span className="check-hw-state ok"><CheckCircle2 size={15} /> {t(language, 'Baho', 'Оценка', 'Mark')}: <span className={`grade-mark ${markBand(row.cell.grade ?? 0)}`}>{row.cell.grade}</span></span>
                       : row.cell.state === 'review'
                         ? <span className="check-hw-state wait"><Clock3 size={15} /> {t(language, 'Topshirdi', 'Сдал(а)', 'Handed in')}</span>
                         : <span className="check-hw-state no"><XCircle size={15} /> {t(language, 'Topshirmagan', 'Не сдал(а)', 'Not handed in')}</span>}
@@ -99,7 +113,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
                       : <span />}
                   </li>
                 ))}
-                {shown.length === 0 && <li className="muted">{t(language, 'Hech kim yo‘q.', 'Никого нет.', 'Nobody.')}</li>}
+                {shown.length === 0 && <li className="muted">{filter === 'review' ? t(language, 'Hammasi tekshirildi.', 'Всё проверено.', 'Everything is checked.') : t(language, 'Hech kim yo‘q.', 'Никого нет.', 'Nobody.')}</li>}
               </ul>
             </>
           )}

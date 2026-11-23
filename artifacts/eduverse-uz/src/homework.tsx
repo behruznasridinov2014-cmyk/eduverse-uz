@@ -8,28 +8,52 @@ const tr = (language: Language, en: string, ru: string, uz: string) =>
   language === 'Русский' ? ru : language === 'Uzbek' ? uz : en;
 
 export const MAX_PHOTOS = 4;
-const MAX_SIDE = 1400;
-const TARGET_CHARS = 600_000;
+const MAX_SIDE = 1280;
+const TARGET_BYTES = 420_000;
+
+/** Decodes a photo without holding the full-size picture in memory twice (iPhone photos are 12–48 MP). */
+async function decodeSmall(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; done: () => void }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    await img.decode();
+    return { source: img, width: img.naturalWidth, height: img.naturalHeight, done: () => { img.src = ''; URL.revokeObjectURL(url); } };
+  } catch {
+    URL.revokeObjectURL(url);
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (!bitmap) throw new Error('unreadable-image');
+    return { source: bitmap, width: bitmap.width, height: bitmap.height, done: () => bitmap.close?.() };
+  }
+}
+
+const toBlob = (canvas: HTMLCanvasElement, quality: number) =>
+  new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+const toDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); });
 
 /** Resize a notebook photo to a compact JPEG data URL that fits the free-tier database. */
 export async function compressImage(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) throw new Error('unreadable-image');
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const picture = await decodeSmall(file);
+  const scale = Math.min(1, MAX_SIDE / Math.max(picture.width, picture.height));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
+  canvas.width = Math.max(1, Math.round(picture.width * scale));
+  canvas.height = Math.max(1, Math.round(picture.height * scale));
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('no-canvas');
+  if (!context) { picture.done(); throw new Error('no-canvas'); }
   context.fillStyle = '#fff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close?.();
-  for (const quality of [0.82, 0.7, 0.58, 0.46, 0.36]) {
-    const url = canvas.toDataURL('image/jpeg', quality);
-    if (url.length <= TARGET_CHARS) return url;
+  context.drawImage(picture.source, 0, 0, canvas.width, canvas.height);
+  picture.done();
+  let blob: Blob | null = null;
+  for (const quality of [0.78, 0.62, 0.48, 0.36]) {
+    blob = await toBlob(canvas, quality);
+    if (blob && blob.size <= TARGET_BYTES) break;
   }
-  return canvas.toDataURL('image/jpeg', 0.3);
+  canvas.width = canvas.height = 0; // frees the pixels at once on iOS
+  if (!blob) throw new Error('no-image');
+  return toDataUrl(blob);
 }
 
 export function PhotoPicker({
@@ -57,6 +81,7 @@ export function PhotoPicker({
         if (next.length >= MAX_PHOTOS) break;
         if (!file.type.startsWith('image/')) continue;
         next.push(await compressImage(file));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
       onChange(next);
     } catch {

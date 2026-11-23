@@ -19,7 +19,7 @@ import { pushNotice, withParents } from "../lib/inbox";
 
 /*
  * The class journal, like the electronic school journal: one column per lesson date of a subject
- * (taken from the timetable), one row per pupil. A cell is a mark 2…5 or «нб» (absent).
+ * (taken from the timetable), one row per pupil. A cell is a mark 2…10 or «нб» (absent).
  * Marks below 2 do not exist. A teacher marks only the subjects they teach in that class.
  */
 const router: IRouter = Router();
@@ -30,6 +30,10 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SUBJECT_RE = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
 /** Attendance is saved under Russian subject names. */
 const ATTENDANCE_NAME: Record<string, string> = { physics: "Физика", chemistry: "Химия", biology: "Биология", math: "Математика" };
+/** Behaviour marks live next to the lesson marks under their own key, e.g. "behavior:math". */
+type MarkKind = "class" | "behavior";
+const kindOf = (value: unknown): MarkKind => (value === "behavior" ? "behavior" : "class");
+const keyOf = (subject: string, kind: MarkKind) => (kind === "behavior" ? `behavior:${subject}` : subject);
 const limiter = createRateLimiter(600, 10 * 60 * 1000, "Too many changes. Try again later.", "journal-marks");
 
 async function access(viewer: Viewer, classId: string) {
@@ -75,6 +79,8 @@ router.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), async 
   const { slots, subjects } = await subjectsFor(viewer, classId, allowed.manager);
   const wanted = String(req.query.subject ?? "");
   const subject = subjects.includes(wanted) ? wanted : subjects[0] ?? "";
+  const kind = kindOf(req.query.kind);
+  const key = keyOf(subject, kind);
   const today = tashkentNow().date;
   const students = await db.select({ id: usersTable.id, name: usersTable.username, status: usersTable.status })
     .from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId))
@@ -85,7 +91,7 @@ router.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), async 
   const from = dates[0] ?? today;
   const [marks, absences] = subject ? await Promise.all([
     db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent })
-      .from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, subject), gte(journalMarksTable.date, from))),
+      .from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, key), gte(journalMarksTable.date, from))),
     db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate })
       .from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today))),
   ]) : [[], []];
@@ -93,7 +99,7 @@ router.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), async 
   const allDates = [...new Set([...dates, ...marks.map((mark) => mark.date)])].sort();
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
-    subject, subjects, today, dates: allDates,
+    subject, subjects, kind, today, dates: allDates,
     students: students.filter((student) => !student.status || student.status === "active").map(({ id, name }) => ({ id, name })),
     marks,
     absences: absences.map((row) => ({ studentId: row.studentId, date: String(row.date).slice(0, 10) })),
@@ -110,24 +116,26 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
   const subject = typeof body.subject === "string" ? body.subject.trim() : "";
   const date = typeof body.date === "string" ? body.date : "";
   const studentId = typeof body.studentId === "string" ? body.studentId : "";
-  const absent = body.absent === true;
+  const kind = kindOf(body.kind);
+  const absent = kind === "class" && body.absent === true;
   const mark = body.mark === null || body.mark === undefined ? null : Number(body.mark);
   const realDate = DATE_RE.test(date) && !Number.isNaN(Date.parse(`${date}T12:00:00Z`)) && new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) === date;
   if (!SUBJECT_RE.test(subject) || !realDate || !isValidUuid(studentId)) { res.status(400).json({ error: "Invalid mark." }); return; }
-  if (mark !== null && (!Number.isInteger(mark) || mark < 2 || mark > 5)) { res.status(400).json({ error: "A mark is 2, 3, 4 or 5." }); return; }
+  if (mark !== null && (!Number.isInteger(mark) || mark < 2 || mark > 10)) { res.status(400).json({ error: "A mark is from 2 to 10." }); return; }
   if (date > tashkentNow().date) { res.status(400).json({ error: "A mark cannot be given ahead of the lesson." }); return; }
   const { subjects } = await subjectsFor(viewer, classId, allowed.manager);
   if (!subjects.includes(subject)) { res.status(403).json({ error: "You do not teach this subject in this class." }); return; }
+  const key = keyOf(subject, kind);
   const [pupil] = await db.select({ id: classMembersTable.id }).from(classMembersTable)
     .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
   if (!pupil) { res.status(404).json({ error: "This pupil is not in the class." }); return; }
   const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable)
-    .where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date))).limit(1);
+    .where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date))).limit(1);
   const changed = !previous || previous.mark !== (absent ? null : mark) || previous.absent !== absent;
   if (mark === null && !absent) {
-    await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date)));
+    await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date)));
   } else {
-    await db.insert(journalMarksTable).values({ classId, studentId, subject, date, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: new Date() })
+    await db.insert(journalMarksTable).values({ classId, studentId, subject: key, date, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: new Date() })
       .onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: new Date() } });
   }
   // The pupil and the parents hear about a new mark or an absence.
@@ -136,8 +144,8 @@ router.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limite
     const day = date.split("-").reverse().join(".");
     await notifyFamily(studentId, (lang, name) => absent
       ? `⚠️ <b>${tl(lang, "Jurnalda «nb» (kelmadi)", "В журнале «нб» (не был на уроке)", "Absent («ab») in the journal")}</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`
-      : `📘 <b>${tl(lang, "Jurnalga baho", "Оценка в журнал", "Journal mark")}: ${mark}</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`, true);
-    await pushNotice(await withParents([studentId]), "grades", absent ? `«нб» в журнале: ${SUBJECT_NAME[subject] ?? subject}` : `Оценка в журнал: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
+      : `${kind === "behavior" ? "🙂" : "📘"} <b>${kind === "behavior" ? tl(lang, "Xulq", "Поведение", "Behaviour") : tl(lang, "Darsdagi baho", "Оценка за урок", "Lesson mark")}: ${mark}/10</b>\n👤 ${name}\n📖 ${subjectText(lang, subject)} · ${day}`, true);
+    await pushNotice(await withParents([studentId]), "grades", absent ? `«нб» в журнале: ${SUBJECT_NAME[subject] ?? subject}` : `${kind === "behavior" ? "Поведение" : "Оценка за урок"}: ${mark}/10`, `${SUBJECT_NAME[subject] ?? subject}, ${day}`, "/grades");
   }
   res.json({ ok: true });
 });

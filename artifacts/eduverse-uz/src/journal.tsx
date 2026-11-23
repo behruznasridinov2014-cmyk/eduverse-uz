@@ -6,16 +6,19 @@ import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
 import { lessonSubjectName } from './today';
+import { MARKS, markBand } from './marks';
+import { GradeJournal } from './extras';
 
 /*
  * Class journal like the electronic school journal: columns are the lesson dates of one subject
- * (from the timetable), rows are pupils. Tap a cell → 2, 3, 4, 5 or «нб». Nothing below 2.
+ * (from the timetable), rows are pupils. Tap a cell → 2…10 or «нб». Nothing below 2.
  * A pupil marked absent at attendance shows «нб» by itself.
  */
 
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
 
 type Mark = { studentId: string; date: string; mark: number | null; absent: boolean };
+type Kind = 'class' | 'behavior' | 'homework';
 type Data = { subject: string; subjects: string[]; today: string; dates: string[]; students: Array<{ id: string; name: string }>; marks: Mark[]; absences: Array<{ studentId: string; date: string }> };
 
 const MONTHS_SHORT: Record<Language, string[]> = {
@@ -31,18 +34,21 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [kind, setKind] = useState<Kind>('class');
+  const [saved, setSaved] = useState('');
+  const [hideAsked, setHideAsked] = useState(false);
 
   const load = useCallback(async () => {
-    if (!classId) return;
+    if (!classId || kind === 'homework') return;
     setError('');
     try {
-      const next = await customFetch<Data>(`/api/classes/${classId}/marks${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`, { method: 'GET' });
+      const next = await customFetch<Data>(`/api/classes/${classId}/marks?kind=${kind}${subject ? `&subject=${encodeURIComponent(subject)}` : ''}`, { method: 'GET' });
       setData(next);
       if (next.subject !== subject) setSubject(next.subject);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     }
-  }, [classId, subject, language]);
+  }, [classId, subject, kind, language]);
   useEffect(() => { setData(null); void load(); }, [load]);
 
   const cells = useMemo(() => {
@@ -56,13 +62,16 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
     if (!data) return;
     setSaving(true); setError('');
     try {
-      await customFetch(`/api/classes/${classId}/marks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: data.subject, date, studentId, mark, absent }) });
+      await customFetch(`/api/classes/${classId}/marks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: data.subject, kind, date, studentId, mark, absent }) });
       setData((current) => {
         if (!current) return current;
         const rest = current.marks.filter((item) => !(item.studentId === studentId && item.date === date));
         return { ...current, marks: mark === null && !absent ? rest : [...rest, { studentId, date, mark, absent }] };
       });
       setEditing(null);
+      const who = data.students.find((item) => item.id === studentId)?.name ?? '';
+      setSaved(mark === null && !absent ? '' : `✓ ${t(language, 'Saqlandi', 'Сохранено', 'Saved')}: ${who} — ${absent ? t(language, 'nb', 'нб', 'ab') : mark}`);
+      window.setTimeout(() => setSaved(''), 2600);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     } finally {
@@ -86,15 +95,21 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
           <button type="button" className="btn small" onClick={() => void load()} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
         </div>
       </div>
-      <p className="muted journal-legend">{t(language,
-        'Katakni bosing: 2, 3, 4, 5 yoki «nb» (kelmadi). 2 dan past baho yo‘q. Davomatda «kelmadi» deb belgilangan o‘quvchiga «nb» o‘zi qo‘yiladi.',
-        'Нажмите на клетку: 2, 3, 4, 5 или «нб» (не был). Оценки ниже 2 нет. Ученик, отмеченный «не был» в давомате, получает «нб» сам.',
-        'Tap a cell: 2, 3, 4, 5 or “ab” (absent). There is no mark below 2. A pupil marked absent at attendance gets “ab” by itself.')}</p>
+      <div className="row journal-kinds" role="tablist">
+        {([['class', t(language, 'Darsdagi baho', 'За урок', 'Lesson')], ['behavior', t(language, 'Xulq', 'Поведение', 'Behaviour')], ['homework', t(language, 'Uy vazifasi', 'Домашка', 'Homework')]] as Array<[Kind, string]>).map(([value, label]) => (
+          <button type="button" role="tab" key={value} aria-selected={kind === value} className={`studio-tab ${kind === value ? 'active' : ''}`} onClick={() => { setKind(value); setEditing(null); setData(null); }}>{label}</button>
+        ))}
+        {kind !== 'homework' && data?.dates.includes(data.today) && (
+          <label className="journal-hide-asked"><input type="checkbox" checked={hideAsked} onChange={(event) => setHideAsked(event.target.checked)} /> {t(language, 'Bugun so‘ralganlarni yashirish', 'Скрыть уже спрошенных сегодня', 'Hide pupils already asked today')}</label>
+        )}
+      </div>
+      {saved && <div className="notice school-inline-success journal-saved" role="status">{saved}</div>}
+      {kind === 'homework' && <GradeJournal school={school} language={language} />}
       {error && <div className="notice" role="alert">{error}</div>}
-      {!data && !error && <LoadingBlock language={language} kind="inline" />}
+      {kind !== 'homework' && !data && !error && <LoadingBlock language={language} kind="inline" />}
       {data && data.students.length === 0 && <p className="muted">{t(language, 'Sinfda hali o‘quvchi yo‘q.', 'В классе пока нет учеников.', 'No students in this class yet.')}</p>}
       {data && data.students.length > 0 && data.dates.length === 0 && <div className="notice">{t(language, 'Bu fan jadvalda yo‘q — jadvalni direktor yoki zavuch to‘ldiradi.', 'Этого предмета нет в расписании — расписание заполняет директор или завуч.', 'This subject is not in the timetable yet.')}</div>}
-      {data && data.students.length > 0 && data.dates.length > 0 && (
+      {kind !== 'homework' && data && data.students.length > 0 && data.dates.length > 0 && (
         <div className="journal-scroll">
           <table className="grade-table journal-table class-journal-table">
             <thead>
@@ -105,28 +120,29 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
               </tr>
             </thead>
             <tbody>
-              {data.students.map((student, index) => {
+              {data.students.filter((student) => !hideAsked || !cells.get(`${student.id}:${data.today}`)).map((student, index) => {
+                const asked = Boolean(cells.get(`${student.id}:${data.today}`));
                 const marks = data.dates.map((date) => cells.get(`${student.id}:${date}`)?.mark).filter((mark): mark is number => typeof mark === 'number');
                 const average = marks.length ? marks.reduce((sum, mark) => sum + mark, 0) / marks.length : null;
                 return (
                   <tr key={student.id}>
-                    <td className="journal-name"><span className="muted">{index + 1}.</span> <b>{student.name}</b></td>
+                    <td className={`journal-name ${asked ? 'is-asked' : ''}`}><span className="muted">{index + 1}.</span> <b>{student.name}</b>{asked && <span className="tag green journal-asked">✓ {t(language, 'so‘raldi', 'спрошен', 'asked')}</span>}</td>
                     {data.dates.map((date) => {
                       const key = `${student.id}:${date}`;
                       const cell = cells.get(key);
-                      const absent = cell?.absent || (!cell && absentAt.has(key));
+                      const absent = cell?.absent || (kind === 'class' && !cell && absentAt.has(key));
                       return (
                         <td key={date} className={`journal-cell ${date === data.today ? 'is-today' : ''}`}>
                           {editing === key ? (
                             <span className="journal-marks">
-                              {[2, 3, 4, 5].map((mark) => <button type="button" key={mark} className={`grade-pick m${mark} ${cell?.mark === mark ? 'on' : ''}`} disabled={saving} onClick={() => void put(student.id, date, mark)}>{mark}</button>)}
-                              <button type="button" className={`grade-pick nb ${cell?.absent ? 'on' : ''}`} disabled={saving} onClick={() => void put(student.id, date, null, true)}>{t(language, 'nb', 'нб', 'ab')}</button>
+                              {MARKS.map((mark) => <button type="button" key={mark} className={`grade-pick ${markBand(mark)} ${cell?.mark === mark ? 'on' : ''}`} disabled={saving} onClick={() => void put(student.id, date, mark)}>{mark}</button>)}
+                              {kind === 'class' && <button type="button" className={`grade-pick nb ${cell?.absent ? 'on' : ''}`} disabled={saving} onClick={() => void put(student.id, date, null, true)}>{t(language, 'nb', 'нб', 'ab')}</button>}
                               {cell && <button type="button" className="grade-pick cancel" disabled={saving} onClick={() => void put(student.id, date, null)} aria-label={t(language, 'O‘chirish', 'Стереть', 'Clear')}>⌫</button>}
                               <button type="button" className="grade-pick cancel" onClick={() => setEditing(null)} aria-label={t(language, 'Bekor', 'Отмена', 'Cancel')}>×</button>
                             </span>
                           ) : (
                             <button type="button" className="journal-cell-btn" onClick={() => setEditing(key)}>
-                              {typeof cell?.mark === 'number' ? <span className={`grade-mark m${cell.mark}`}>{cell.mark}</span> : absent ? <span className="journal-nb">{t(language, 'nb', 'нб', 'ab')}</span> : <span className="journal-empty">·</span>}
+                              {typeof cell?.mark === 'number' ? <span className={`grade-mark ${markBand(cell.mark)}`}>{cell.mark}</span> : absent ? <span className="journal-nb">{t(language, 'nb', 'нб', 'ab')}</span> : <span className="journal-empty">·</span>}
                             </button>
                           )}
                         </td>

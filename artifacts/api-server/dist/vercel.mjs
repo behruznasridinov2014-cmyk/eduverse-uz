@@ -43419,36 +43419,45 @@ function blueprintFor(subject) {
   }
   return SUBJECT_BLUEPRINTS.geography;
 }
+async function callOneModel(model, messages, signal) {
+  const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.6,
+      response_format: { type: "json_object" },
+      // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
+      ...USE_GEMINI && model.startsWith("gemini-2.5") ? { reasoning_effort: "none" } : {}
+    }),
+    signal
+  });
+  if (!response.ok) return { text: null, retry: [400, 404, 408, 429, 500, 502, 503, 504].includes(response.status) };
+  const payload = await response.json();
+  const choices = typeof payload === "object" && payload !== null ? payload.choices : null;
+  const first = Array.isArray(choices) && choices.length ? choices[0] : null;
+  const content = first?.message?.content;
+  return typeof content === "string" && content.trim() ? { text: content, retry: false } : { text: null, retry: true };
+}
 async function callModel(messages) {
   if (!isAiConfigured()) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
   try {
-    const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}
-      },
-      body: JSON.stringify({
-        model: EFFECTIVE_MODEL,
-        messages,
-        temperature: 0.6,
-        response_format: { type: "json_object" },
-        // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
-        ...USE_GEMINI ? { reasoning_effort: "none" } : {}
-      }),
-      signal: controller.signal
-    });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    if (typeof payload !== "object" || payload === null) return null;
-    const choices = payload.choices;
-    if (!Array.isArray(choices) || choices.length === 0) return null;
-    const first = choices[0];
-    const content = first?.message?.content;
-    return typeof content === "string" && content.trim() ? content : null;
-  } catch {
+    for (const model of MODEL_CHAIN) {
+      if (controller.signal.aborted) break;
+      try {
+        const result = await callOneModel(model, messages, controller.signal);
+        if (result.text) return result.text;
+        if (!result.retry) break;
+      } catch {
+        if (controller.signal.aborted) break;
+      }
+    }
     return null;
   } finally {
     clearTimeout(timeout);
@@ -44014,7 +44023,7 @@ async function generatePracticeTest(topics, language) {
   }
   return out.length ? out.slice(0, 5) : null;
 }
-var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES;
+var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, GEMINI_FALLBACKS, MODEL_CHAIN, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES;
 var init_ai_content = __esm({
   "src/lib/ai-content.ts"() {
     "use strict";
@@ -44104,6 +44113,8 @@ var init_ai_content = __esm({
       }
     };
     SUPPORTED_SUBJECTS = Object.keys(SUBJECT_BLUEPRINTS);
+    GEMINI_FALLBACKS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"];
+    MODEL_CHAIN = USE_GEMINI ? [.../* @__PURE__ */ new Set([EFFECTIVE_MODEL, ...GEMINI_FALLBACKS])] : [EFFECTIVE_MODEL];
     SYSTEM_PROMPT = `\u0422\u044B \u2014 \u043C\u0435\u0442\u043E\u0434\u0438\u0441\u0442 \u0448\u043A\u043E\u043B\u044B \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440 \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0430 EDUVERSE-UZ.
 \u0422\u044B \u0441\u043E\u0437\u0434\u0430\u0451\u0448\u044C \u043E\u0434\u0438\u043D \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442 \u043F\u043E \u0442\u0435\u043C\u0435 \u0434\u043B\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0441\u0430.
 \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0422\u041E\u041B\u042C\u041A\u041E \u0432\u0430\u043B\u0438\u0434\u043D\u044B\u043C JSON \u0431\u0435\u0437 markdown \u0438 \u0431\u0435\u0437 \u043A\u043E\u043C\u043C\u0435\u043D\u0442\u0430\u0440\u0438\u0435\u0432, \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u044B:
@@ -44691,10 +44702,10 @@ var requireAllowedOrigin = (req, res, next) => {
   }
   res.status(403).json({ error: "Request origin is not allowed." });
 };
-function createRateLimiter(limit, windowMs, message, scope = message, keyOf) {
+function createRateLimiter(limit, windowMs, message, scope = message, keyOf2) {
   return (req, res, next) => {
     void (async () => {
-      const identifier = keyOf ? keyOf(req) : rateLimitIdentifier(req);
+      const identifier = keyOf2 ? keyOf2(req) : rateLimitIdentifier(req);
       const retryAfterSeconds = await consumeRateLimitBucket(scope, identifier, limit, windowMs);
       if (retryAfterSeconds === null) {
         next();
@@ -51066,6 +51077,13 @@ function isUniqueConstraintViolation2(error) {
 
 // src/routes/learning.ts
 init_ai_content();
+
+// src/lib/grade.ts
+var MIN_MARK = 2;
+var MAX_MARK = 10;
+var gradeOf = (score) => Math.max(MIN_MARK, Math.min(MAX_MARK, Math.round(Number(score) / 10)));
+
+// src/routes/learning.ts
 var router3 = (0, import_express3.Router)();
 var aiLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many requests. Wait a few minutes.", "ai-heavy", (req) => {
   const token = req.cookies?.["eduverse.sid"];
@@ -51936,7 +51954,7 @@ router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles)
   }
   const [students, assignments, attendance] = await Promise.all([
     db.select({ id: usersTable.id, name: usersTable.username }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username)),
-    db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.classId, classId)).orderBy(asc(assignmentsTable.createdAt)).limit(30),
+    db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, topicId: assignmentsTable.topicId }).from(assignmentsTable).where(eq(assignmentsTable.classId, classId)).orderBy(asc(assignmentsTable.createdAt)).limit(30),
     db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(eq(attendanceTable.classId, classId))
   ]);
   const submissions = assignments.length ? await db.select({
@@ -51949,7 +51967,7 @@ router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles)
       const submission = submissions.find((item) => item.assignmentId === assignment.id && item.studentId === student.id);
       if (!submission) return { state: "missing", grade: null };
       if (submission.score === null) return { state: "review", grade: null };
-      return { state: "graded", grade: Math.max(2, Math.min(5, Math.round(submission.score / 20))) };
+      return { state: "graded", grade: gradeOf(submission.score) };
     });
     const grades2 = cells.map((cell) => cell.grade).filter((grade) => grade !== null);
     const marks = attendance.filter((item) => item.studentId === student.id);
@@ -52044,7 +52062,7 @@ router3.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res
       return {
         ...item,
         state: !sub ? "missing" : sub.score === null ? "review" : "graded",
-        grade: sub && sub.score !== null ? Math.max(2, Math.min(5, Math.round(sub.score / 20))) : null,
+        grade: sub && sub.score !== null ? gradeOf(sub.score) : null,
         feedback: sub?.feedback ?? ""
       };
     });
@@ -52086,7 +52104,7 @@ router3.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_di
     const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
     const own = marks.filter((row) => row.studentId === person.id);
     const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
-    const grades2 = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => Math.max(2, Math.min(5, Math.round(row.score / 20))));
+    const grades2 = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => gradeOf(row.score));
     const average = grades2.length ? (grades2.reduce((a, b) => a + b, 0) / grades2.length).toFixed(1) : "";
     lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round(attended / own.length * 100) : ""].map(cell).join(";"));
   }
@@ -52116,7 +52134,6 @@ router3.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_dir
   const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
   const lessons = await db.select({ id: lessonRoomsTable.id, classId: lessonRoomsTable.classId, createdAt: lessonRoomsTable.createdAt }).from(lessonRoomsTable).where(eq(lessonRoomsTable.schoolId, schoolId));
   const percent = (rows) => rows.length ? Math.round(rows.filter((row) => row.status === "present" || row.status === "late").length / rows.length * 100) : null;
-  const gradeOf = (score) => Math.max(2, Math.min(5, Math.round(score / 20)));
   const graded = submissions.filter((row) => row.score !== null).map((row) => gradeOf(row.score));
   const perClass = classes.map((item) => {
     const classAssignments = assignments.filter((row) => row.classId === item.id).map((row) => row.id);
@@ -53887,6 +53904,8 @@ router5.delete(
       forbidden(res, "Assignment delete access denied.");
       return;
     }
+    const [auto] = await db.select({ autoKey: assignmentsTable.autoKey }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (auto?.autoKey) await db.insert(noticeMarksTable).values({ key: `hw-cancel:${auto.autoKey}` }).onConflictDoNothing();
     await db.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
     res.status(204).end();
   }
@@ -53940,6 +53959,11 @@ router5.post(
     }
     if (!context.authorization.canSubmit) {
       forbidden(res, "Only a student in this class can submit this assignment.");
+      return;
+    }
+    const [deadline] = await db.select({ dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (deadline?.dueAt && deadline.dueAt.getTime() < Date.now()) {
+      res.status(409).json({ error: "The deadline has passed. Homework is accepted until 00:00 on the lesson day." });
       return;
     }
     const content = readString3(req.body, "content", 1e4);
@@ -54177,14 +54201,13 @@ router5.patch(
     }
     if (typeof changes.score === "number" && before?.score !== changes.score) {
       const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
-      const grade = Math.max(2, Math.min(5, Math.round(changes.score / 20)));
-      await pushNotice(await withParents([studentId]), "grades", `\u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: ${grade}`, `${info?.subject ?? ""} \u2014 ${info?.title ?? ""}`, "/classes");
+      const grade = gradeOf(changes.score);
+      await pushNotice(await withParents([studentId]), "grades", `\u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: ${grade}/10`, info?.subject ?? "", "/classes");
       await notifyFamily(
         studentId,
-        (lang, name) => `\u{1F4DD} <b>${tl(lang, "Uy vazifasiga baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435", "Homework mark")}: ${grade}</b>
-\u{1F464} ${name}
-\u{1F4D6} ${subjectText(lang, info?.subject ?? "")} \u2014 ${escapeHtml(info?.title ?? "")}${changes.feedback ? `
-\u{1F4AC} ${escapeHtml(changes.feedback.slice(0, 300))}` : ""}`,
+        (lang, name) => `\u{1F4DD} <b>${tl(lang, "Uy vazifasi", "\u0414\u043E\u043C\u0430\u0448\u043A\u0430", "Homework")}: ${grade}/10</b> \xB7 ${subjectText(lang, info?.subject ?? "")}
+\u{1F464} ${name}${changes.feedback ? `
+\u{1F4AC} ${escapeHtml(changes.feedback.slice(0, 120))}` : ""}`,
         true
       );
     }
@@ -54632,11 +54655,7 @@ function bookFor(subject, grade) {
   return COURSE.find((book) => book.subject === subject && book.grade === grade) ?? COURSE.find((book) => book.subject === subject);
 }
 function dueAfter(date2) {
-  const day2 = /* @__PURE__ */ new Date(`${date2}T20:00:00+05:00`);
-  day2.setUTCDate(day2.getUTCDate() + 1);
-  const local = new Date(day2.getTime() + 5 * 3600 * 1e3);
-  if (local.getUTCDay() === 0) day2.setUTCDate(day2.getUTCDate() + 1);
-  return day2;
+  return /* @__PURE__ */ new Date(`${date2}T23:59:59+05:00`);
 }
 async function createHomework(date2, lessons, now) {
   const ended = lessons.filter((lesson) => lesson.teacherId && Date.parse(lesson.endsAt) <= now && bookFor(lesson.subject, lesson.grade));
@@ -54662,6 +54681,8 @@ async function createHomework(date2, lessons, now) {
       const autoKey = `book:${lesson.classId}:${topic.key}`;
       const [exists2] = await db.select({ id: assignmentsTable.id }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
       if (exists2) continue;
+      const [cancelled] = await db.select({ key: noticeMarksTable.key }).from(noticeMarksTable).where(eq(noticeMarksTable.key, `hw-cancel:${autoKey}`)).limit(1);
+      if (cancelled) continue;
       const tasks = topic.tasks.slice(0, 3).map((task, index2) => `${index2 + 1}. ${task}`).join("\n");
       const [created] = await db.insert(assignmentsTable).values({
         classId: lesson.classId,
@@ -54709,10 +54730,9 @@ async function sendDaySummary(classId, date2) {
     await notifyUsers(people, (lang) => [
       `\u{1F4DA} <b>${tl(lang, "Bugungi uy vazifasi", "\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435", "Today\u2019s homework")}</b> \xB7 ${day2}`,
       "",
-      ...tasks.map((task) => `\u2022 <b>${subjectText(lang, task.subject)}</b> \u2014 ${escapeHtml(task.title)}
-  ${escapeHtml(task.description.split("\n")[0].slice(0, 200))}`),
+      ...tasks.map((task) => `\u2022 <b>${subjectText(lang, task.subject)}</b>: ${escapeHtml(task.description.split("\n")[0].slice(0, 90))}`),
       "",
-      `${tl(lang, "Daftar rasmini saytda yuboring", "\u0424\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u2014 \u043D\u0430 \u0441\u0430\u0439\u0442\u0435", "Send notebook photos on the site")}: https://eduverse-uz1.vercel.app/classes`
+      `${tl(lang, "00:00 gacha topshiring", "\u0421\u0434\u0430\u0442\u044C \u0434\u043E 00:00", "Hand in by 00:00")}: https://eduverse-uz1.vercel.app/classes`
     ].join("\n"));
   } catch (error) {
     logger.warn({ err: error }, "homework summary was not sent");
@@ -55150,11 +55170,9 @@ async function homework(person, L) {
     }
     for (const task of tasks) {
       const sent = mine.find((row) => row.assignmentId === task.id);
-      const state = sent ? sent.score !== null ? `\u2705 ${T(L, "baho", "\u043E\u0446\u0435\u043D\u043A\u0430", "mark")} ${Math.max(2, Math.min(5, Math.round(sent.score / 20)))}` : `\u{1F4E4} ${T(L, "topshirildi, tekshiruv kutilmoqda", "\u0441\u0434\u0430\u043D\u043E, \u0436\u0434\u0451\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", "handed in, waiting")}` : `\u23F3 ${T(L, "topshirilmagan", "\u043D\u0435 \u0441\u0434\u0430\u043D\u043E", "not handed in")}`;
-      const first = task.description.split("\n")[0].slice(0, 160);
-      out.push(`\u2022 <b>${escapeHtml(task.subject)}</b> \xB7 ${escapeHtml(task.title)}${task.dueAt ? ` \xB7 ${T(L, "muddat", "\u0434\u043E", "due")} ${day(task.dueAt.toISOString())}` : ""}
-  ${escapeHtml(first)}
-  ${state}`);
+      const state = sent ? sent.score !== null ? `\u2705 ${T(L, "baho", "\u043E\u0446\u0435\u043D\u043A\u0430", "mark")} ${gradeOf(sent.score)}/10` : `\u{1F4E4} ${T(L, "tekshiruvda", "\u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435", "in review")}` : `\u23F3 ${T(L, "topshirilmagan", "\u043D\u0435 \u0441\u0434\u0430\u043D\u043E", "not handed in")}`;
+      const first = task.description.split("\n")[0].slice(0, 90);
+      out.push(`\u2022 <b>${escapeHtml(task.subject)}</b>: ${escapeHtml(first)} \u2014 ${state}`);
     }
   }
   return out.join("\n") || T(L, "Vazifa yo\u2018q.", "\u0417\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.", "No homework.");
@@ -55170,8 +55188,12 @@ async function grades(person, L) {
       out.push(T(L, "Hali baho yo\u2018q.", "\u041E\u0446\u0435\u043D\u043E\u043A \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "No marks yet."));
       continue;
     }
-    for (const row of marks) out.push(`${day(row.date)} \xB7 ${escapeHtml(subjectName(L, row.subject))}: ${row.absent ? T(L, "nb", "\u043D\u0431", "ab") : `<b>${row.mark}</b>`}`);
-    const numbers = marks.map((row) => row.mark).filter((mark) => typeof mark === "number");
+    for (const row of marks) {
+      const behavior = row.subject.startsWith("behavior:");
+      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : row.subject));
+      out.push(`${day(row.date)} \xB7 ${name}${behavior ? ` (${T(L, "xulq", "\u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "behaviour")})` : ""}: ${row.absent ? T(L, "nb", "\u043D\u0431", "ab") : `<b>${row.mark}</b>/10`}`);
+    }
+    const numbers = marks.filter((row) => !row.subject.startsWith("behavior:")).map((row) => row.mark).filter((mark) => typeof mark === "number");
     if (numbers.length) out.push(`${T(L, "O\u2018rtacha", "\u0421\u0440\u0435\u0434\u043D\u044F\u044F", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
   }
   return out.join("\n");
@@ -55873,7 +55895,7 @@ router9.get("/me/teaching-stats", requireAuthenticatedRole("teacher", "school_di
   const [assigned] = await db.select({ n: sql`count(*)`, last: sql`max(${assignmentsTable.createdAt})` }).from(assignmentsTable).where(eq(assignmentsTable.createdBy, viewer.id));
   const perClass = classIds.length ? await db.select({ classId: assignmentsTable.classId, name: classesTable.name, avg: sql`avg(${assignmentSubmissionsTable.score})` }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id)).innerJoin(classesTable, eq(assignmentsTable.classId, classesTable.id)).where(and(inArray(assignmentsTable.classId, classIds), sql`${assignmentSubmissionsTable.score} is not null`)).groupBy(assignmentsTable.classId, classesTable.name) : [];
   const dates = [lessons?.last, checked?.last, assigned?.last].filter(Boolean).map((d) => new Date(d).getTime());
-  const toGrade = (score) => score === null || score === void 0 ? null : Math.round(Number(score) / 20 * 10) / 10;
+  const toGrade = (score) => score === null || score === void 0 ? null : Math.round(Number(score)) / 10;
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
     lessons: Number(lessons?.n ?? 0),
@@ -56469,6 +56491,8 @@ var STAFF = ["teacher", "school_director", "school_admin", "education_admin", "m
 var DATE_RE2 = /^\d{4}-\d{2}-\d{2}$/;
 var SUBJECT_RE2 = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
 var ATTENDANCE_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+var kindOf = (value) => value === "behavior" ? "behavior" : "class";
+var keyOf = (subject, kind) => kind === "behavior" ? `behavior:${subject}` : subject;
 var limiter = createRateLimiter(600, 10 * 60 * 1e3, "Too many changes. Try again later.", "journal-marks");
 async function access(viewer, classId) {
   const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
@@ -56513,13 +56537,15 @@ router12.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), asyn
   const { slots, subjects } = await subjectsFor(viewer, classId, allowed.manager);
   const wanted = String(req.query.subject ?? "");
   const subject = subjects.includes(wanted) ? wanted : subjects[0] ?? "";
+  const kind = kindOf(req.query.kind);
+  const key = keyOf(subject, kind);
   const today2 = tashkentNow().date;
   const students = await db.select({ id: usersTable.id, name: usersTable.username, status: usersTable.status }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
   const weekdays = new Set(slots.filter((slot) => slot.subject === subject).map((slot) => slot.weekday));
   const dates = weekdays.size ? lessonDates(weekdays, today2) : [];
   const from = dates[0] ?? today2;
   const [marks, absences] = subject ? await Promise.all([
-    db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, subject), gte(journalMarksTable.date, from))),
+    db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, key), gte(journalMarksTable.date, from))),
     db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today2)))
   ]) : [[], []];
   const allDates = [.../* @__PURE__ */ new Set([...dates, ...marks.map((mark) => mark.date)])].sort();
@@ -56527,6 +56553,7 @@ router12.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), asyn
   res.json({
     subject,
     subjects,
+    kind,
     today: today2,
     dates: allDates,
     students: students.filter((student) => !student.status || student.status === "active").map(({ id, name }) => ({ id, name })),
@@ -56550,15 +56577,16 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
   const subject = typeof body.subject === "string" ? body.subject.trim() : "";
   const date2 = typeof body.date === "string" ? body.date : "";
   const studentId = typeof body.studentId === "string" ? body.studentId : "";
-  const absent = body.absent === true;
+  const kind = kindOf(body.kind);
+  const absent = kind === "class" && body.absent === true;
   const mark = body.mark === null || body.mark === void 0 ? null : Number(body.mark);
   const realDate = DATE_RE2.test(date2) && !Number.isNaN(Date.parse(`${date2}T12:00:00Z`)) && (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).toISOString().slice(0, 10) === date2;
   if (!SUBJECT_RE2.test(subject) || !realDate || !isValidUuid(studentId)) {
     res.status(400).json({ error: "Invalid mark." });
     return;
   }
-  if (mark !== null && (!Number.isInteger(mark) || mark < 2 || mark > 5)) {
-    res.status(400).json({ error: "A mark is 2, 3, 4 or 5." });
+  if (mark !== null && (!Number.isInteger(mark) || mark < 2 || mark > 10)) {
+    res.status(400).json({ error: "A mark is from 2 to 10." });
     return;
   }
   if (date2 > tashkentNow().date) {
@@ -56570,27 +56598,28 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
     res.status(403).json({ error: "You do not teach this subject in this class." });
     return;
   }
+  const key = keyOf(subject, kind);
   const [pupil] = await db.select({ id: classMembersTable.id }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
   if (!pupil) {
     res.status(404).json({ error: "This pupil is not in the class." });
     return;
   }
-  const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date2))).limit(1);
+  const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date2))).limit(1);
   const changed = !previous || previous.mark !== (absent ? null : mark) || previous.absent !== absent;
   if (mark === null && !absent) {
-    await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, subject), eq(journalMarksTable.date, date2)));
+    await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date2)));
   } else {
-    await db.insert(journalMarksTable).values({ classId, studentId, subject, date: date2, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
+    await db.insert(journalMarksTable).values({ classId, studentId, subject: key, date: date2, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
   }
   if ((mark !== null || absent) && changed) {
     const SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
     const day2 = date2.split("-").reverse().join(".");
     await notifyFamily(studentId, (lang, name) => absent ? `\u26A0\uFE0F <b>${tl(lang, "Jurnalda \xABnb\xBB (kelmadi)", "\u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB (\u043D\u0435 \u0431\u044B\u043B \u043D\u0430 \u0443\u0440\u043E\u043A\u0435)", "Absent (\xABab\xBB) in the journal")}</b>
 \u{1F464} ${name}
-\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}` : `\u{1F4D8} <b>${tl(lang, "Jurnalga baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B", "Journal mark")}: ${mark}</b>
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}` : `${kind === "behavior" ? "\u{1F642}" : "\u{1F4D8}"} <b>${kind === "behavior" ? tl(lang, "Xulq", "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "Behaviour") : tl(lang, "Darsdagi baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A", "Lesson mark")}: ${mark}/10</b>
 \u{1F464} ${name}
 \u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}`, true);
-    await pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME[subject] ?? subject}` : `\u041E\u0446\u0435\u043D\u043A\u0430 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B: ${mark}`, `${SUBJECT_NAME[subject] ?? subject}, ${day2}`, "/grades");
+    await pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME[subject] ?? subject}` : `${kind === "behavior" ? "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435" : "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A"}: ${mark}/10`, `${SUBJECT_NAME[subject] ?? subject}, ${day2}`, "/grades");
   }
   res.json({ ok: true });
 });
@@ -56661,7 +56690,7 @@ router13.post("/me/practice-test", requireAuthenticatedRole("student"), testLimi
   for (const subject of ["math", "physics", "chemistry", "biology"]) {
     const own = marks.filter((row) => row.subject === subject && typeof row.mark === "number").map((row) => row.mark);
     const tried = tests.filter((row) => row.subject === subject);
-    const average = own.length ? own.reduce((sum, mark) => sum + mark, 0) / own.length : 4.5;
+    const average = own.length ? own.reduce((sum, mark) => sum + mark, 0) / own.length / 2 : 4.5;
     const share = tried.length ? tried.reduce((sum, row) => sum + row.score / Math.max(1, row.total), 0) / tried.length : 0.8;
     weakness.set(subject, 5 - average + (1 - share) * 3);
   }
