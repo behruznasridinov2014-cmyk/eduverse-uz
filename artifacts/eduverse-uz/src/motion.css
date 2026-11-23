@@ -412,3 +412,11 @@ html[data-theme="night"] .tabbar.glass-tabs {
   .my-grades-table td.my-grades-subject { display: block; font-size: 15px; padding-bottom: 4px; }
   .my-grades-table td.my-grades-subject::before { content: none; }
 }
+
+/* Loaders stay small: no tall empty boxes that push the page down and then jump away.
+   They also wait a moment before showing, so a fast load shows no loader at all. */
+.ev-loading:not(.is-3d) { min-height: 0 !important; padding: 14px 8px !important; gap: 8px !important; flex-direction: row !important; justify-content: center; animation: ev-fade-in .25s ease .2s both !important; }
+.ev-loading:not(.is-3d) .ev-loading-orbit > i { width: 8px; height: 8px; }
+.ev-loading:not(.is-3d) .ev-loading-text { font-size: 13px; }
+.ev-loading.is-inline { justify-content: flex-start; padding: 8px 0 !important; }
+.trainer-loading { gap: 0; }

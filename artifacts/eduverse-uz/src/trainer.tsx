@@ -214,8 +214,6 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
       {loading ? (
         <div className="trainer-loading" role="status" aria-label={t(language, 'Yuklanmoqda', 'Загрузка', 'Loading')}>
           <span className="trainer-loading-dots"><i /><i /><i /></span>
-          <div className="today-skeleton" />
-          <div className="today-skeleton" />
         </div>
       ) : active ? (
         result ? (
