@@ -31,6 +31,7 @@ import { SchedulePage } from './schedule';
 import { CheckHomeworkPage } from './check-homework';
 import { UpdateBanner } from './update-check';
 import { TodayLessons } from './today';
+import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, TeacherDayPage, TimetableChangesPage } from './ecosystem';
 import { TimetableEditor } from './timetable-editor';
 import { LabPage, LessonDayPage, LessonPreviewPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
@@ -55,16 +56,16 @@ import {
   Minus, Monitor, MoreHorizontal, Pen, Plus, Presentation, RotateCcw, Save, Search, Send,
   Settings, Shapes, ShieldCheck, Sparkles, Timer, Trash2, Undo2, Upload, Users, Video,
   Wifi, X, ZoomIn, ZoomOut,
-  Atom, BookMarked, FlaskConical, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
+  Atom, BarChart3, BookMarked, CalendarClock, FlaskConical, ListChecks, MessageCircle, Wallet, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
 type QuizDraft = { id:number; title:string; type:string; prompt:string; choices?:string[]; correct?:string; explanation?:string; source?:'teacher'|'ai-preview'; published?:boolean };
 const NAV_LABELS:Record<Lang,Record<string,string>>={
-  Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval','Check homework':'Vazifalarni tekshirish',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab',Administration:'Boshqaruv','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya'},
-  Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание','Check homework':'Проверка домашки',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Школа',Administration:'Управление','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия'},
-  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Schedule:'Timetable','Check homework':'Check homework',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School',Administration:'Administration'}
+  Uzbek:{Support:'Yordam va chat','My grades':'Mening baholarim',Trainer:'Trenajyor',Schedule:'Jadval','Check homework':'Vazifalarni tekshirish',Classes:'Sinflar',Overview:'Umumiy ko‘rinish','Textbook library':'Darsliklar kutubxonasi',Practice:'Mashq', 'Lesson room':'Onlayn dars','Interactive board':'Interaktiv doska','Homework scan':'Uy vazifasi','Teacher workspace':'O‘qituvchi kabineti','Family view':'Oila kabineti','School insights':'Maktab',Administration:'Boshqaruv','Topics & 3D':'Dars mavzusi','Attendance':'Davomat',Homework:'Uy vazifalari','Chemistry lab':'3D studiya','My day':'Mening kunim',Messages:'Xabarlar',Analytics:'Tahlil',Finance:'To‘lovlar',Changes:'O‘zgarishlar'},
+  Русский:{Support:'Поддержка и чат','My grades':'Мои оценки',Trainer:'Тренажёр дня',Schedule:'Расписание','Check homework':'Проверка домашки',Classes:'Классы',Overview:'Обзор','Textbook library':'Библиотека учебников',Practice:'Практика','Lesson room':'Онлайн-урок','Interactive board':'Интерактивная доска','Homework scan':'Домашние задания','Teacher workspace':'Кабинет учителя','Family view':'Кабинет семьи','School insights':'Школа',Administration:'Управление','Topics & 3D':'Тема урока','Attendance':'Давомат',Homework:'Домашние задания','Chemistry lab':'3D-студия','My day':'Мой день',Messages:'Сообщения',Analytics:'Аналитика',Finance:'Оплаты',Changes:'Замены'},
+  English:{Support:'Support & chat','My grades':'My grades',Trainer:'Trainer',Schedule:'Timetable','Check homework':'Check homework',Overview:'Overview',Classes:'Classes','Topics & 3D':'Lesson topic','Lesson room':'Online lesson','Attendance':'Attendance',Homework:'Homework','Chemistry lab':'3D studio','Textbook library':'Textbooks','Interactive board':'Interactive board','Teacher workspace':'Teacher workspace','Family view':'Family','School insights':'School',Administration:'Administration','My day':'My day',Messages:'Messages',Analytics:'Analytics',Finance:'Payments',Changes:'Changes'}
 };
 const BOOKS:Book[]=[
   {id:'matematika-7-daftar',title:'Математика 7 класс — тетрадь',subject:'Mathematics',language:'Russian',author:'Идаум',year:'2026',chapters:['Полный тетрадь ученика'],tone:'',pdf:'/books/matematika-7-daftar.pdf'},
@@ -152,6 +153,11 @@ function App(){
     '/preview':['student','teacher'],
     '/check':['teacher','school_director','school_admin'],
     '/schedule':['student','teacher','parent','school_director','school_admin'],
+    '/workspace':['teacher'],
+    '/messages':['teacher','parent'],
+    '/analytics':['school_director','school_admin'],
+    '/finance':['school_director','school_admin'],
+    '/changes':['school_director','school_admin'],
     '/support':['student','teacher','parent','school_director','school_admin','education_admin','ministry_admin','platform_superadmin'],
   };
   const protectedRoute=Object.entries(protectedRoutes).find(([path])=>location===path||location.startsWith(path+'/'));
@@ -210,10 +216,13 @@ function App(){
         :location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
         :location==='/'||location==='/dashboard'?<RoleOverviewPage user={auth.user!} school={school} language={lang} onOpen={navigate}/>
         :location==='/teacher'&&auth.user?<TeacherPage school={school} user={auth.user} language={lang} onOpen={navigate}/>
-        :location==='/parent'&&auth.user?<ParentPage language={lang}/>
+        :location==='/parent'&&auth.user?<ParentPage language={lang} onOpen={navigate}/>
         :location==='/school'&&auth.user?<SchoolPage school={school} user={auth.user} language={lang}/>
         :location==='/admin'&&auth.user?<AdminPage role={auth.user.role} language={lang}/>
         :location==='/preview'&&auth.user?<LessonPreviewPage user={auth.user} school={school} language={lang} onOpen={navigate}/>
+        :location==='/workspace'&&auth.user?<TeacherDayPage language={lang} onOpen={navigate}/>
+        :location==='/messages'&&auth.user?<MessagesPage user={auth.user} language={lang}/>
+        :(location==='/analytics'||location==='/finance'||location==='/changes')&&auth.user?<SchoolToolPage school={school} language={lang} page={location.slice(1) as 'analytics'|'finance'|'changes'}/>
         :location==='/check'&&auth.user?<CheckHomeworkPage school={school} language={lang}/>
         :location==='/schedule'&&auth.user?<SchedulePage user={auth.user} school={school} language={lang} onOpen={navigate}/>
         :location==='/homework/scan'?<Redirect to="/classes"/>
@@ -259,13 +268,18 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Family view',href:'/parent',icon:UserRound,tone:'orange'},
   {label:'School insights',href:'/school',icon:School,tone:'blue'},
   {label:'Administration',href:'/admin',icon:Settings,tone:'slate'},
+  {label:'My day',href:'/workspace',icon:ListChecks,tone:'green'},
+  {label:'Messages',href:'/messages',icon:MessageCircle,tone:'blue'},
+  {label:'Analytics',href:'/analytics',icon:BarChart3,tone:'violet'},
+  {label:'Finance',href:'/finance',icon:Wallet,tone:'gold'},
+  {label:'Changes',href:'/changes',icon:CalendarClock,tone:'pink'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
   student:['Overview','Schedule','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
-  teacher:['Overview','Schedule','Lesson room','Topics & 3D','Chemistry lab','Attendance','Check homework','Teacher workspace','Textbook library'],
-  parent:['Overview','Schedule','Family view','Textbook library'],
-  school_director:['Overview','Schedule','School insights','Classes','Attendance'],
-  school_admin:['Overview','Schedule','School insights','Classes','Attendance'],
+  teacher:['Overview','My day','Schedule','Lesson room','Topics & 3D','Chemistry lab','Attendance','Check homework','Messages','Teacher workspace','Textbook library'],
+  parent:['Overview','Schedule','Family view','Messages','Textbook library'],
+  school_director:['Overview','Analytics','Schedule','Changes','School insights','Classes','Attendance','Finance'],
+  school_admin:['Overview','Analytics','Schedule','Changes','School insights','Classes','Attendance','Finance'],
   education_admin:['Overview','Administration'],
   ministry_admin:['Overview','Administration'],
   platform_superadmin:['Overview','Administration'],
@@ -273,18 +287,18 @@ const ROLE_NAV:Record<User['role'],string[]>={
 /** Phone bottom bar: the five most used sections of each role (the rest are in the ☰ menu). */
 const MOBILE_NAV:Record<User['role'],string[]>={
   student:['Overview','Topics & 3D','Trainer','Homework','Chemistry lab'],
-  teacher:['Overview','Lesson room','Topics & 3D','Attendance','Teacher workspace'],
-  parent:['Overview','Family view','Textbook library'],
-  school_director:['Overview','Schedule','School insights','Classes','Attendance'],
-  school_admin:['Overview','Schedule','School insights','Classes','Attendance'],
+  teacher:['Overview','My day','Lesson room','Attendance','Messages'],
+  parent:['Overview','Family view','Messages','Textbook library'],
+  school_director:['Overview','Analytics','Schedule','School insights','Finance'],
+  school_admin:['Overview','Analytics','Schedule','School insights','Finance'],
   education_admin:['Overview','Administration'],
   ministry_admin:['Overview','Administration'],
   platform_superadmin:['Overview','Administration'],
 };
 const NAV_SHORT:Record<Lang,Record<string,string>>={
-  Uzbek:{'Check homework':'Tekshirish',Schedule:'Jadval',Support:'Yordam','My grades':'Baholar',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv'},
-  Русский:{'Check homework':'Проверка',Schedule:'Расписание',Support:'Чат','My grades':'Оценки',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление'},
-  English:{'Check homework':'Check',Schedule:'Timetable',Support:'Support','My grades':'Grades',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin'},
+  Uzbek:{'Check homework':'Tekshirish',Schedule:'Jadval',Support:'Yordam','My grades':'Baholar',Trainer:'Trenajyor',Overview:'Bosh sahifa','Lesson room':'Dars','Topics & 3D':'Mavzu','Chemistry lab':'3D','Attendance':'Davomat','Teacher workspace':'Kabinet',Homework:'Vazifalar','Textbook library':'Kitoblar','Interactive board':'Doska','Family view':'Oila','School insights':'Maktab',Classes:'Sinflar',Administration:'Boshqaruv','My day':'Kunim',Messages:'Xabarlar',Analytics:'Tahlil',Finance:'To‘lov',Changes:'O‘zgarish'},
+  Русский:{'Check homework':'Проверка',Schedule:'Расписание',Support:'Чат','My grades':'Оценки',Trainer:'Тренажёр',Overview:'Главная','Lesson room':'Урок','Topics & 3D':'Тема','Chemistry lab':'3D','Attendance':'Давомат','Teacher workspace':'Кабинет',Homework:'Задания','Textbook library':'Книги','Interactive board':'Доска','Family view':'Семья','School insights':'Школа',Classes:'Классы',Administration:'Управление','My day':'Мой день',Messages:'Чат',Analytics:'Аналитика',Finance:'Оплаты',Changes:'Замены'},
+  English:{'Check homework':'Check',Schedule:'Timetable',Support:'Support','My grades':'Grades',Trainer:'Trainer',Overview:'Home','Lesson room':'Lesson','Topics & 3D':'Topic','Chemistry lab':'3D','Attendance':'Attendance','Teacher workspace':'Cabinet',Homework:'Homework','Textbook library':'Books','Interactive board':'Board','Family view':'Family','School insights':'School',Classes:'Classes',Administration:'Admin','My day':'My day',Messages:'Chat',Analytics:'Analytics',Finance:'Payments',Changes:'Changes'},
 };
 function navLabel(lang:Lang,label:string){return NAV_LABELS[lang][label]??NAV_LABELS.English[label]??label}
 function RoleBlocked({language,role,goHome}:{language:Lang;role:User['role'];goHome:()=>void}){
@@ -507,10 +521,17 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
    </div>}
  </>;
 }
-function ParentPage({language}:{language:Lang}){
+function ParentPage({language,onOpen}:{language:Lang;onOpen:(path:string)=>void}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
  return <><PageHeading eyebrow={text('Family view','Кабинет семьи','Oila kabineti')} title={text('Your child’s learning','Учёба вашего ребёнка','Farzandingiz ta’limi')} subtitle={text('Grades, attendance and homework in one place.','Оценки, посещаемость и домашние задания в одном месте.','Baholar, davomat va uy vazifalari bir joyda.')}/>
+  <ParentWeekPanel language={language} onOpen={onOpen}/>
   <ParentCabinet language={language}/></>;
+}
+function SchoolToolPage({school,language,page}:{school:SchoolData;language:Lang;page:'analytics'|'finance'|'changes'}){
+ const schoolId=school.memberships[0]?.schoolId;
+ if(school.status!=='ready')return <LoadingBlock language={language}/>;
+ if(!schoolId)return <div className="empty-state"><span className="empty-icon"><School/></span><h2>{language==='Uzbek'?'Maktab topilmadi':language==='Русский'?'Школа не найдена':'No school found'}</h2></div>;
+ return page==='analytics'?<SchoolAnalyticsPage schoolId={schoolId} language={language}/>:page==='finance'?<FinancePage schoolId={schoolId} language={language}/>:<TimetableChangesPage schoolId={schoolId} language={language}/>;
 }
 type SchoolTab='overview'|'enroll'|'people'|'classes'|'calendar';
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){

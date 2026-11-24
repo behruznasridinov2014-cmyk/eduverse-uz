@@ -244,4 +244,9 @@ export const NAV_ICON: Record<string, (props: IconProps) => ReactElement> = {
   Trainer: IconTrainer,
   Administration: IconAdmin,
   Support: IconChat,
+  Messages: IconChat,
+  'My day': IconSchedule,
+  Analytics: IconSchool,
+  Changes: IconSchedule,
+  Finance: IconJournal,
 };
