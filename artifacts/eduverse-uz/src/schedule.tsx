@@ -5,7 +5,7 @@ import type { Language, SchoolData } from './school-data';
 import type { CourseTopic } from './course-data';
 import { TimetableEditor } from './timetable-editor';
 import { LoadingBlock } from './ui/loading';
-import { bookForLesson, lessonSubjectName, openLessonPreview, statusOf, topicForLesson, type TodayLesson } from './today';
+import { LessonChangeTag, bookForLesson, lessonSubjectName, openLessonPreview, statusOf, topicForLesson, type TodayLesson } from './today';
 
 /*
  * "Timetable" tab.
@@ -143,6 +143,7 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
                           <div className="schedule-lesson-time"><Clock3 size={13} /> {lesson.start}–{lesson.end}</div>
                           <div className="schedule-lesson-main">
                             <b>{lessonSubjectName(lesson.subject, language)}</b>
+                            {lesson.change && <LessonChangeTag change={lesson.change} language={language} />}
                             <span className="schedule-lesson-meta">
                               {teacher ? <span>{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)}</span> : lesson.teacherName ? <span><UserRound size={12} /> {lesson.teacherName}</span> : null}
                               {lesson.room && <span><DoorOpen size={12} /> {t(language, `${lesson.room}-xona`, `каб. ${lesson.room}`, `room ${lesson.room}`)}</span>}

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, or, type SQL } from "drizzle-orm";
 import { Router, type IRouter, type Response } from "express";
 import {
   classMembersTable,
@@ -8,6 +8,7 @@ import {
   schoolBellsTable,
   schoolMembersTable,
   schoolsTable,
+  timetableChangesTable,
   timetableSlotsTable,
   usersTable,
   type AccountRole,
@@ -267,11 +268,19 @@ export async function slotsFilterFor(viewer: Viewer): Promise<SQL | null> {
 }
 
 /** Lessons on one date for a slot filter, with times, class, room and teacher. */
-export function lessonReader(where: SQL) {
+export function lessonReader(where: SQL, substituteFor?: string) {
   const teacherNames = new Map<string, string>();
   const bellCache = new Map<string, Bell[]>();
   return async function lessonsOn(date: string, weekday: number) {
     if (weekday === 7) return [];
+    // Lessons a teacher takes over on this day (a substitute) come in addition to the own ones.
+    const taken = substituteFor
+      ? await db.select({ classId: timetableChangesTable.classId, period: timetableChangesTable.period }).from(timetableChangesTable)
+        .where(and(eq(timetableChangesTable.date, date), eq(timetableChangesTable.kind, "substitute"), eq(timetableChangesTable.teacherId, substituteFor)))
+      : [];
+    const scope = taken.length
+      ? or(where, ...taken.map((item) => and(eq(timetableSlotsTable.classId, item.classId), eq(timetableSlotsTable.period, item.period))))!
+      : where;
     const slots = await db
       .select({
         id: timetableSlotsTable.id, schoolId: timetableSlotsTable.schoolId, classId: timetableSlotsTable.classId,
@@ -280,19 +289,27 @@ export function lessonReader(where: SQL) {
       })
       .from(timetableSlotsTable)
       .innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId))
-      .where(and(where, eq(timetableSlotsTable.weekday, weekday)))
+      .where(and(scope, eq(timetableSlotsTable.weekday, weekday)))
       .orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
-    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id): id is string => Boolean(id) && !teacherNames.has(id!)))];
+    const changes = slots.length
+      ? await db.select({ classId: timetableChangesTable.classId, period: timetableChangesTable.period, kind: timetableChangesTable.kind, teacherId: timetableChangesTable.teacherId, room: timetableChangesTable.room, note: timetableChangesTable.note })
+        .from(timetableChangesTable).where(and(eq(timetableChangesTable.date, date), inArray(timetableChangesTable.classId, [...new Set(slots.map((slot) => slot.classId))])))
+      : [];
+    const missing = [...new Set([...slots.map((slot) => slot.teacherId), ...changes.map((change) => change.teacherId)].filter((id): id is string => Boolean(id) && !teacherNames.has(id!)))];
     if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
     const out = [];
     for (const slot of slots) {
       if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
       const bell = bellCache.get(slot.schoolId)![slot.period - 1];
       if (!bell) continue;
+      const change = changes.find((item) => item.classId === slot.classId && item.period === slot.period);
+      const substitute = change?.kind === "substitute" && change.teacherId ? change.teacherId : null;
       out.push({
         id: slot.id, classId: slot.classId, className: slot.className, grade: slot.grade, period: slot.period,
-        subject: slot.subject, room: slot.room, teacherId: slot.teacherId, teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        subject: slot.subject, room: change?.kind === "room" && change.room ? change.room : slot.room,
+        teacherId: substitute ?? slot.teacherId, teacherName: (substitute ?? slot.teacherId) ? teacherNames.get((substitute ?? slot.teacherId)!) ?? "" : "",
         start: bell.start, end: bell.end, startsAt: atTashkent(date, bell.start), endsAt: atTashkent(date, bell.end),
+        change: change ? { kind: change.kind, note: change.note, originalTeacherName: substitute && slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : null } : null,
       });
     }
     out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
@@ -319,7 +336,7 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
 
   // Class and subject pairs of the whole week (the trainer asks only these).
   base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
-  const lessonsOn = lessonReader(where);
+  const lessonsOn = lessonReader(where, viewer.role === "teacher" ? viewer.id : undefined);
   let lessons = await lessonsOn(now.date, now.weekday);
   // Demo school: every lesson of today is open right now, so the lesson can be tried at any time
   // (on a day off the Monday lessons are shown).
@@ -365,7 +382,7 @@ router.get("/me/week", requireAuthenticatedRole(...everyRole), async (req, res) 
   monday.setUTCDate(monday.getUTCDate() - (now.weekday - 1) + offset * 7);
   const days: Array<{ date: string; weekday: number; lessons: Array<Record<string, unknown>> }> = [];
   const where = await slotsFilterFor(viewer);
-  const lessonsOn = where ? lessonReader(where) : null;
+  const lessonsOn = where ? lessonReader(where, viewer.role === "teacher" ? viewer.id : undefined) : null;
   for (let index = 0; index < 6; index += 1) {
     const day = new Date(monday.getTime() + index * 86400000);
     const date = day.toISOString().slice(0, 10);

@@ -20,6 +20,7 @@ export type TodayLesson = {
   id: string; classId: string; className: string; grade: number; period: number;
   subject: string; room: string | null; teacherName: string;
   start: string; end: string; startsAt: string; endsAt: string;
+  change?: { kind: 'substitute' | 'cancelled' | 'room'; note: string; originalTeacherName: string | null } | null;
 };
 export type NextDay = { date: string; weekday: number; lessons: TodayLesson[] };
 export type TodayResponse = { date: string; weekday: number; now: string; lessons: TodayLesson[]; next?: NextDay[]; prev?: NextDay | null };
@@ -254,6 +255,7 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
                   <span className={`today-status is-${status}`}>{status === 'current' && <i className="today-pulse" aria-hidden="true" />}{statusLabel(status, language)}</span>
                 </span>
                 <span className="today-time"><Clock3 size={15} /> {lesson.start}–{lesson.end} <small>· {t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)}</small></span>
+                {lesson.change && <LessonChangeTag change={lesson.change} language={language} />}
                 {!(isStudent || isFamily) && <span className="today-subject">{lessonSubjectName(lesson.subject, language)}</span>}
                 {open && topic && <span className="today-topic"><b>§{topic.code}</b> {topic.title}</span>}
                 <span className="today-card-foot">
@@ -453,3 +455,13 @@ export function nextBookLesson(data: { next?: Array<{ lessons: TodayLesson[] }>;
   return [...(data.next ?? []).flatMap((day) => day.lessons), ...data.lessons].find((lesson) => bookForLesson(lesson));
 }
 
+
+/** A small note on a lesson the school changed for this day: cancelled, another teacher or another room. */
+export function LessonChangeTag({ change, language }: { change: NonNullable<TodayLesson['change']>; language: Language }) {
+  const label = change.kind === 'cancelled'
+    ? t(language, 'Dars bekor qilindi', 'Урок отменён', 'Lesson cancelled')
+    : change.kind === 'substitute'
+      ? t(language, 'Almashtirish', 'Замена учителя', 'Substitute teacher')
+      : t(language, 'Boshqa xona', 'Другой кабинет', 'Room changed');
+  return <span className={`lesson-change is-${change.kind}`}>{label}{change.note ? ` · ${change.note}` : ''}</span>;
+}

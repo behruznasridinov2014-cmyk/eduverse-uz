@@ -66,54 +66,54 @@ var require_cookie = __commonJS({
     var cookieValueRegExp = /^("?)[\u0021\u0023-\u002B\u002D-\u003A\u003C-\u005B\u005D-\u007E]*\1$/;
     var domainValueRegExp = /^([.]?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)([.][a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
     var pathValueRegExp = /^[\u0020-\u003A\u003D-\u007E]*$/;
-    function parse(str3, opt) {
-      if (typeof str3 !== "string") {
+    function parse(str4, opt) {
+      if (typeof str4 !== "string") {
         throw new TypeError("argument str must be a string");
       }
       var obj = {};
-      var len = str3.length;
+      var len = str4.length;
       if (len < 2) return obj;
       var dec = opt && opt.decode || decode;
       var index2 = 0;
       var eqIdx = 0;
       var endIdx = 0;
       do {
-        eqIdx = str3.indexOf("=", index2);
+        eqIdx = str4.indexOf("=", index2);
         if (eqIdx === -1) break;
-        endIdx = str3.indexOf(";", index2);
+        endIdx = str4.indexOf(";", index2);
         if (endIdx === -1) {
           endIdx = len;
         } else if (eqIdx > endIdx) {
-          index2 = str3.lastIndexOf(";", eqIdx - 1) + 1;
+          index2 = str4.lastIndexOf(";", eqIdx - 1) + 1;
           continue;
         }
-        var keyStartIdx = startIndex(str3, index2, eqIdx);
-        var keyEndIdx = endIndex(str3, eqIdx, keyStartIdx);
-        var key = str3.slice(keyStartIdx, keyEndIdx);
+        var keyStartIdx = startIndex(str4, index2, eqIdx);
+        var keyEndIdx = endIndex(str4, eqIdx, keyStartIdx);
+        var key = str4.slice(keyStartIdx, keyEndIdx);
         if (!__hasOwnProperty.call(obj, key)) {
-          var valStartIdx = startIndex(str3, eqIdx + 1, endIdx);
-          var valEndIdx = endIndex(str3, endIdx, valStartIdx);
-          if (str3.charCodeAt(valStartIdx) === 34 && str3.charCodeAt(valEndIdx - 1) === 34) {
+          var valStartIdx = startIndex(str4, eqIdx + 1, endIdx);
+          var valEndIdx = endIndex(str4, endIdx, valStartIdx);
+          if (str4.charCodeAt(valStartIdx) === 34 && str4.charCodeAt(valEndIdx - 1) === 34) {
             valStartIdx++;
             valEndIdx--;
           }
-          var val = str3.slice(valStartIdx, valEndIdx);
+          var val = str4.slice(valStartIdx, valEndIdx);
           obj[key] = tryDecode(val, dec);
         }
         index2 = endIdx + 1;
       } while (index2 < len);
       return obj;
     }
-    function startIndex(str3, index2, max) {
+    function startIndex(str4, index2, max2) {
       do {
-        var code = str3.charCodeAt(index2);
+        var code = str4.charCodeAt(index2);
         if (code !== 32 && code !== 9) return index2;
-      } while (++index2 < max);
-      return max;
+      } while (++index2 < max2);
+      return max2;
     }
-    function endIndex(str3, index2, min) {
+    function endIndex(str4, index2, min) {
       while (index2 > min) {
-        var code = str3.charCodeAt(--index2);
+        var code = str4.charCodeAt(--index2);
         if (code !== 32 && code !== 9) return index2 + 1;
       }
       return min;
@@ -130,54 +130,54 @@ var require_cookie = __commonJS({
       if (!cookieValueRegExp.test(value)) {
         throw new TypeError("argument val is invalid");
       }
-      var str3 = name + "=" + value;
-      if (!opt) return str3;
+      var str4 = name + "=" + value;
+      if (!opt) return str4;
       if (null != opt.maxAge) {
         var maxAge = Math.floor(opt.maxAge);
         if (!isFinite(maxAge)) {
           throw new TypeError("option maxAge is invalid");
         }
-        str3 += "; Max-Age=" + maxAge;
+        str4 += "; Max-Age=" + maxAge;
       }
       if (opt.domain) {
         if (!domainValueRegExp.test(opt.domain)) {
           throw new TypeError("option domain is invalid");
         }
-        str3 += "; Domain=" + opt.domain;
+        str4 += "; Domain=" + opt.domain;
       }
       if (opt.path) {
         if (!pathValueRegExp.test(opt.path)) {
           throw new TypeError("option path is invalid");
         }
-        str3 += "; Path=" + opt.path;
+        str4 += "; Path=" + opt.path;
       }
       if (opt.expires) {
         var expires = opt.expires;
         if (!isDate(expires) || isNaN(expires.valueOf())) {
           throw new TypeError("option expires is invalid");
         }
-        str3 += "; Expires=" + expires.toUTCString();
+        str4 += "; Expires=" + expires.toUTCString();
       }
       if (opt.httpOnly) {
-        str3 += "; HttpOnly";
+        str4 += "; HttpOnly";
       }
       if (opt.secure) {
-        str3 += "; Secure";
+        str4 += "; Secure";
       }
       if (opt.partitioned) {
-        str3 += "; Partitioned";
+        str4 += "; Partitioned";
       }
       if (opt.priority) {
         var priority = typeof opt.priority === "string" ? opt.priority.toLowerCase() : opt.priority;
         switch (priority) {
           case "low":
-            str3 += "; Priority=Low";
+            str4 += "; Priority=Low";
             break;
           case "medium":
-            str3 += "; Priority=Medium";
+            str4 += "; Priority=Medium";
             break;
           case "high":
-            str3 += "; Priority=High";
+            str4 += "; Priority=High";
             break;
           default:
             throw new TypeError("option priority is invalid");
@@ -187,34 +187,34 @@ var require_cookie = __commonJS({
         var sameSite = typeof opt.sameSite === "string" ? opt.sameSite.toLowerCase() : opt.sameSite;
         switch (sameSite) {
           case true:
-            str3 += "; SameSite=Strict";
+            str4 += "; SameSite=Strict";
             break;
           case "lax":
-            str3 += "; SameSite=Lax";
+            str4 += "; SameSite=Lax";
             break;
           case "strict":
-            str3 += "; SameSite=Strict";
+            str4 += "; SameSite=Strict";
             break;
           case "none":
-            str3 += "; SameSite=None";
+            str4 += "; SameSite=None";
             break;
           default:
             throw new TypeError("option sameSite is invalid");
         }
       }
-      return str3;
+      return str4;
     }
-    function decode(str3) {
-      return str3.indexOf("%") !== -1 ? decodeURIComponent(str3) : str3;
+    function decode(str4) {
+      return str4.indexOf("%") !== -1 ? decodeURIComponent(str4) : str4;
     }
     function isDate(val) {
       return __toString.call(val) === "[object Date]";
     }
-    function tryDecode(str3, decode2) {
+    function tryDecode(str4, decode2) {
       try {
-        return decode2(str3);
+        return decode2(str4);
       } catch (e) {
-        return str3;
+        return str4;
       }
     }
   }
@@ -232,11 +232,11 @@ var require_cookie_signature = __commonJS({
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      var str3 = val.slice(0, val.lastIndexOf(".")), mac = exports.sign(str3, secret);
-      return sha1(mac) == sha1(val) ? str3 : false;
+      var str4 = val.slice(0, val.lastIndexOf(".")), mac = exports.sign(str4, secret);
+      return sha1(mac) == sha1(val) ? str4 : false;
     };
-    function sha1(str3) {
-      return crypto2.createHash("sha1").update(str3).digest("hex");
+    function sha1(str4) {
+      return crypto2.createHash("sha1").update(str4).digest("hex");
     }
   }
 });
@@ -274,12 +274,12 @@ var require_cookie_parser = __commonJS({
         next();
       };
     }
-    function JSONCookie(str3) {
-      if (typeof str3 !== "string" || str3.substr(0, 2) !== "j:") {
+    function JSONCookie(str4) {
+      if (typeof str4 !== "string" || str4.substr(0, 2) !== "j:") {
         return void 0;
       }
       try {
-        return JSON.parse(str3.slice(2));
+        return JSON.parse(str4.slice(2));
       } catch (err) {
         return void 0;
       }
@@ -297,16 +297,16 @@ var require_cookie_parser = __commonJS({
       }
       return obj;
     }
-    function signedCookie(str3, secret) {
-      if (typeof str3 !== "string") {
+    function signedCookie(str4, secret) {
+      if (typeof str4 !== "string") {
         return void 0;
       }
-      if (str3.substr(0, 2) !== "s:") {
-        return str3;
+      if (str4.substr(0, 2) !== "s:") {
+        return str4;
       }
       var secrets = !secret || Array.isArray(secret) ? secret || [] : [secret];
       for (var i = 0; i < secrets.length; i++) {
-        var val = signature.unsign(str3.slice(2), secrets[i]);
+        var val = signature.unsign(str4.slice(2), secrets[i]);
         if (val !== false) {
           return val;
         }
@@ -354,13 +354,13 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse(str3) {
-      str3 = String(str3);
-      if (str3.length > 100) {
+    function parse(str4) {
+      str4 = String(str4);
+      if (str4.length > 100) {
         return;
       }
       var match = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-        str3
+        str4
       );
       if (!match) {
         return;
@@ -961,7 +961,7 @@ var require_node = __commonJS({
     var { formatters } = module.exports;
     formatters.o = function(v) {
       this.inspectOpts.colors = this.useColors;
-      return util2.inspect(v, this.inspectOpts).split("\n").map((str3) => str3.trim()).join(" ");
+      return util2.inspect(v, this.inspectOpts).split("\n").map((str4) => str4.trim()).join(" ");
     };
     formatters.O = function(v) {
       this.inspectOpts.colors = this.useColors;
@@ -987,8 +987,8 @@ var require_depd = __commonJS({
     var relative = __require("path").relative;
     module.exports = depd;
     var basePath = process.cwd();
-    function containsNamespace(str3, namespace) {
-      var vals = str3.split(/[ ,]+/);
+    function containsNamespace(str4, namespace) {
+      var vals = str4.split(/[ ,]+/);
       var ns = String(namespace).toLowerCase();
       for (var i = 0; i < vals.length; i++) {
         var val = vals[i];
@@ -1015,21 +1015,21 @@ var require_depd = __commonJS({
       return descriptor;
     }
     function createArgumentsString(arity) {
-      var str3 = "";
+      var str4 = "";
       for (var i = 0; i < arity; i++) {
-        str3 += ", arg" + i;
+        str4 += ", arg" + i;
       }
-      return str3.substr(2);
+      return str4.substr(2);
     }
     function createStackString(stack) {
-      var str3 = this.name + ": " + this.namespace;
+      var str4 = this.name + ": " + this.namespace;
       if (this.message) {
-        str3 += " deprecated " + this.message;
+        str4 += " deprecated " + this.message;
       }
       for (var i = 0; i < stack.length; i++) {
-        str3 += "\n    at " + stack[i].toString();
+        str4 += "\n    at " + stack[i].toString();
       }
-      return str3;
+      return str4;
     }
     function depd(namespace) {
       if (!namespace) {
@@ -1058,15 +1058,15 @@ var require_depd = __commonJS({
       if (process.noDeprecation) {
         return true;
       }
-      var str3 = process.env.NO_DEPRECATION || "";
-      return containsNamespace(str3, namespace);
+      var str4 = process.env.NO_DEPRECATION || "";
+      return containsNamespace(str4, namespace);
     }
     function istraced(namespace) {
       if (process.traceDeprecation) {
         return true;
       }
-      var str3 = process.env.TRACE_DEPRECATION || "";
-      return containsNamespace(str3, namespace);
+      var str4 = process.env.TRACE_DEPRECATION || "";
+      return containsNamespace(str4, namespace);
     }
     function log(message, site) {
       var haslisteners = eehaslisteners(process, "deprecation");
@@ -1500,8 +1500,8 @@ var require_toidentifier = __commonJS({
   "../../node_modules/.pnpm/toidentifier@1.0.1/node_modules/toidentifier/index.js"(exports, module) {
     "use strict";
     module.exports = toIdentifier;
-    function toIdentifier(str3) {
-      return str3.split(" ").map(function(token) {
+    function toIdentifier(str4) {
+      return str4.split(" ").map(function(token) {
         return token.slice(0, 1).toUpperCase() + token.slice(1);
       }).join("").replace(/[^ _0-9a-z]/gi, "");
     }
@@ -1725,16 +1725,16 @@ var require_bytes = __commonJS({
         }
       }
       var val = value / map[unit.toLowerCase()];
-      var str3 = val.toFixed(decimalPlaces);
+      var str4 = val.toFixed(decimalPlaces);
       if (!fixedDecimals) {
-        str3 = str3.replace(formatDecimalsRegExp, "$1");
+        str4 = str4.replace(formatDecimalsRegExp, "$1");
       }
       if (thousandsSeparator) {
-        str3 = str3.split(".").map(function(s, i) {
+        str4 = str4.split(".").map(function(s, i) {
           return i === 0 ? s.replace(formatThousandsRegExp, thousandsSeparator) : s;
         }).join(".");
       }
-      return str3 + unitSeparator + unit;
+      return str4 + unitSeparator + unit;
     }
     function parse(val) {
       if (typeof val === "number" && !isNaN(val)) {
@@ -1839,12 +1839,12 @@ var require_bom_handling = __commonJS({
       this.encoder = encoder;
       this.addBOM = true;
     }
-    PrependBOMWrapper.prototype.write = function(str3) {
+    PrependBOMWrapper.prototype.write = function(str4) {
       if (this.addBOM) {
-        str3 = BOMChar + str3;
+        str4 = BOMChar + str4;
         this.addBOM = false;
       }
-      return this.encoder.write(str3);
+      return this.encoder.write(str4);
     };
     PrependBOMWrapper.prototype.end = function() {
       return this.encoder.end();
@@ -1943,31 +1943,31 @@ var require_internal = __commonJS({
     function InternalEncoder(options, codec) {
       this.enc = codec.enc;
     }
-    InternalEncoder.prototype.write = function(str3) {
-      return Buffer2.from(str3, this.enc);
+    InternalEncoder.prototype.write = function(str4) {
+      return Buffer2.from(str4, this.enc);
     };
     InternalEncoder.prototype.end = function() {
     };
     function InternalEncoderBase64(options, codec) {
       this.prevStr = "";
     }
-    InternalEncoderBase64.prototype.write = function(str3) {
-      str3 = this.prevStr + str3;
-      var completeQuads = str3.length - str3.length % 4;
-      this.prevStr = str3.slice(completeQuads);
-      str3 = str3.slice(0, completeQuads);
-      return Buffer2.from(str3, "base64");
+    InternalEncoderBase64.prototype.write = function(str4) {
+      str4 = this.prevStr + str4;
+      var completeQuads = str4.length - str4.length % 4;
+      this.prevStr = str4.slice(completeQuads);
+      str4 = str4.slice(0, completeQuads);
+      return Buffer2.from(str4, "base64");
     };
     InternalEncoderBase64.prototype.end = function() {
       return Buffer2.from(this.prevStr, "base64");
     };
     function InternalEncoderCesu8(options, codec) {
     }
-    InternalEncoderCesu8.prototype.write = function(str3) {
-      var buf = Buffer2.alloc(str3.length * 3);
+    InternalEncoderCesu8.prototype.write = function(str4) {
+      var buf = Buffer2.alloc(str4.length * 3);
       var bufIdx = 0;
-      for (var i = 0; i < str3.length; i++) {
-        var charCode = str3.charCodeAt(i);
+      for (var i = 0; i < str4.length; i++) {
+        var charCode = str4.charCodeAt(i);
         if (charCode < 128) {
           buf[bufIdx++] = charCode;
         } else if (charCode < 2048) {
@@ -2048,25 +2048,25 @@ var require_internal = __commonJS({
     function InternalEncoderUtf8(options, codec) {
       this.highSurrogate = "";
     }
-    InternalEncoderUtf8.prototype.write = function(str3) {
+    InternalEncoderUtf8.prototype.write = function(str4) {
       if (this.highSurrogate) {
-        str3 = this.highSurrogate + str3;
+        str4 = this.highSurrogate + str4;
         this.highSurrogate = "";
       }
-      if (str3.length > 0) {
-        var charCode = str3.charCodeAt(str3.length - 1);
+      if (str4.length > 0) {
+        var charCode = str4.charCodeAt(str4.length - 1);
         if (charCode >= 55296 && charCode < 56320) {
-          this.highSurrogate = str3[str3.length - 1];
-          str3 = str3.slice(0, str3.length - 1);
+          this.highSurrogate = str4[str4.length - 1];
+          str4 = str4.slice(0, str4.length - 1);
         }
       }
-      return Buffer2.from(str3, this.enc);
+      return Buffer2.from(str4, this.enc);
     };
     InternalEncoderUtf8.prototype.end = function() {
       if (this.highSurrogate) {
-        var str3 = this.highSurrogate;
+        var str4 = this.highSurrogate;
         this.highSurrogate = "";
-        return Buffer2.from(str3, this.enc);
+        return Buffer2.from(str4, this.enc);
       }
     };
   }
@@ -2093,8 +2093,8 @@ var require_utf32 = __commonJS({
       this.isLE = codec.isLE;
       this.highSurrogate = 0;
     }
-    Utf32Encoder.prototype.write = function(str3) {
-      var src = Buffer2.from(str3, "ucs2");
+    Utf32Encoder.prototype.write = function(str4) {
+      var src = Buffer2.from(str4, "ucs2");
       var dst = Buffer2.alloc(src.length * 2 + 4);
       var write32 = this.isLE ? dst.writeUInt32LE : dst.writeUInt32BE;
       var offset = 0;
@@ -2219,8 +2219,8 @@ var require_utf32 = __commonJS({
       }
       this.encoder = codec.iconv.getEncoder(options.defaultEncoding || "utf-32le", options);
     }
-    Utf32AutoEncoder.prototype.write = function(str3) {
-      return this.encoder.write(str3);
+    Utf32AutoEncoder.prototype.write = function(str4) {
+      return this.encoder.write(str4);
     };
     Utf32AutoEncoder.prototype.end = function() {
       return this.encoder.end();
@@ -2320,8 +2320,8 @@ var require_utf16 = __commonJS({
     Utf16BECodec.prototype.bomAware = true;
     function Utf16BEEncoder() {
     }
-    Utf16BEEncoder.prototype.write = function(str3) {
-      var buf = Buffer2.from(str3, "ucs2");
+    Utf16BEEncoder.prototype.write = function(str4) {
+      var buf = Buffer2.from(str4, "ucs2");
       for (var i = 0; i < buf.length; i += 2) {
         var tmp = buf[i];
         buf[i] = buf[i + 1];
@@ -2370,8 +2370,8 @@ var require_utf16 = __commonJS({
       }
       this.encoder = codec.iconv.getEncoder("utf-16le", options);
     }
-    Utf16Encoder.prototype.write = function(str3) {
-      return this.encoder.write(str3);
+    Utf16Encoder.prototype.write = function(str4) {
+      return this.encoder.write(str4);
     };
     Utf16Encoder.prototype.end = function() {
       return this.encoder.end();
@@ -2467,8 +2467,8 @@ var require_utf7 = __commonJS({
     function Utf7Encoder(options, codec) {
       this.iconv = codec.iconv;
     }
-    Utf7Encoder.prototype.write = function(str3) {
-      return Buffer2.from(str3.replace(nonDirectChars, function(chunk) {
+    Utf7Encoder.prototype.write = function(str4) {
+      return Buffer2.from(str4.replace(nonDirectChars, function(chunk) {
         return "+" + (chunk === "+" ? "" : this.iconv.encode(chunk, "utf16-be").toString("base64").replace(/=+$/, "")) + "-";
       }.bind(this)));
     };
@@ -2552,14 +2552,14 @@ var require_utf7 = __commonJS({
       this.base64Accum = Buffer2.alloc(6);
       this.base64AccumIdx = 0;
     }
-    Utf7IMAPEncoder.prototype.write = function(str3) {
+    Utf7IMAPEncoder.prototype.write = function(str4) {
       var inBase64 = this.inBase64;
       var base64Accum = this.base64Accum;
       var base64AccumIdx = this.base64AccumIdx;
-      var buf = Buffer2.alloc(str3.length * 5 + 10);
+      var buf = Buffer2.alloc(str4.length * 5 + 10);
       var bufIdx = 0;
-      for (var i2 = 0; i2 < str3.length; i2++) {
-        var uChar = str3.charCodeAt(i2);
+      for (var i2 = 0; i2 < str4.length; i2++) {
+        var uChar = str4.charCodeAt(i2);
         if (uChar >= 32 && uChar <= 126) {
           if (inBase64) {
             if (base64AccumIdx > 0) {
@@ -2700,10 +2700,10 @@ var require_sbcs_codec = __commonJS({
     function SBCSEncoder(options, codec) {
       this.encodeBuf = codec.encodeBuf;
     }
-    SBCSEncoder.prototype.write = function(str3) {
-      var buf = Buffer2.alloc(str3.length);
-      for (var i = 0; i < str3.length; i++) {
-        buf[i] = this.encodeBuf[str3.charCodeAt(i)];
+    SBCSEncoder.prototype.write = function(str4) {
+      var buf = Buffer2.alloc(str4.length);
+      for (var i = 0; i < str4.length; i++) {
+        buf[i] = this.encodeBuf[str4.charCodeAt(i)];
       }
       return buf;
     };
@@ -3579,8 +3579,8 @@ var require_dbcs_codec = __commonJS({
       this.defaultCharSingleByte = codec.defCharSB;
       this.gb18030 = codec.gb18030;
     }
-    DBCSEncoder.prototype.write = function(str3) {
-      var newBuf = Buffer2.alloc(str3.length * (this.gb18030 ? 4 : 3));
+    DBCSEncoder.prototype.write = function(str4) {
+      var newBuf = Buffer2.alloc(str4.length * (this.gb18030 ? 4 : 3));
       var leadSurrogate = this.leadSurrogate;
       var seqObj = this.seqObj;
       var nextChar = -1;
@@ -3588,8 +3588,8 @@ var require_dbcs_codec = __commonJS({
       var j = 0;
       while (true) {
         if (nextChar === -1) {
-          if (i2 == str3.length) break;
-          var uCode = str3.charCodeAt(i2++);
+          if (i2 == str4.length) break;
+          var uCode = str4.charCodeAt(i2++);
         } else {
           var uCode = nextChar;
           nextChar = -1;
@@ -5427,10 +5427,10 @@ var require_lib = __commonJS({
     module.exports.encodings = null;
     module.exports.defaultCharUnicode = "\uFFFD";
     module.exports.defaultCharSingleByte = "?";
-    module.exports.encode = function encode(str3, encoding, options) {
-      str3 = "" + (str3 || "");
+    module.exports.encode = function encode(str4, encoding, options) {
+      str4 = "" + (str4 || "");
       var encoder = module.exports.getEncoder(encoding, options);
-      var res = encoder.write(str3);
+      var res = encoder.write(str4);
       var trail = encoder.end();
       return trail && trail.length > 0 ? Buffer2.concat([res, trail]) : res;
     };
@@ -6038,9 +6038,9 @@ var require_dist = __commonJS({
       }
       return { type, index: index2, parameters };
     }
-    function skipValue(str3, index2, len, stopChar) {
+    function skipValue(str4, index2, len, stopChar) {
       while (index2 < len) {
-        const code = str3.charCodeAt(index2);
+        const code = str4.charCodeAt(index2);
         if (code === SEMI || code === stopChar)
           break;
         index2++;
@@ -6065,12 +6065,12 @@ var require_dist = __commonJS({
       }
       return end;
     }
-    function qstring(str3) {
-      if (TOKEN_REGEXP.test(str3))
-        return str3;
-      if (TEXT_REGEXP.test(str3))
-        return `"${str3.replace(QUOTE_REGEXP, "\\$&")}"`;
-      throw new TypeError(`Invalid parameter value: ${str3}`);
+    function qstring(str4) {
+      if (TOKEN_REGEXP.test(str4))
+        return str4;
+      if (TEXT_REGEXP.test(str4))
+        return `"${str4.replace(QUOTE_REGEXP, "\\$&")}"`;
+      throw new TypeError(`Invalid parameter value: ${str4}`);
     }
   }
 });
@@ -15506,11 +15506,11 @@ var require_mime_types = __commonJS({
       }
       return false;
     }
-    function contentType(str3) {
-      if (!str3 || typeof str3 !== "string") {
+    function contentType(str4) {
+      if (!str4 || typeof str4 !== "string") {
         return false;
       }
-      var mime = str3.indexOf("/") === -1 ? exports.lookup(str3) : str3;
+      var mime = str4.indexOf("/") === -1 ? exports.lookup(str4) : str4;
       if (!mime) {
         return false;
       }
@@ -15883,14 +15883,14 @@ var require_read = __commonJS({
             return;
           }
         }
-        let str3 = body;
+        let str4 = body;
         try {
           debug("parse body");
-          str3 = typeof body !== "string" && encoding !== null ? iconv.decode(body, encoding) : body;
-          req.body = parse(str3, encoding);
+          str4 = typeof body !== "string" && encoding !== null ? iconv.decode(body, encoding) : body;
+          req.body = parse(str4, encoding);
         } catch (err) {
           next(createError(400, err, {
-            body: str3,
+            body: str4,
             type: err.type || "entity.parse.failed"
           }));
           return;
@@ -16007,11 +16007,11 @@ var require_json = __commonJS({
         }
       };
     }
-    function createStrictSyntaxError(str3, char2) {
-      const index2 = str3.indexOf(char2);
+    function createStrictSyntaxError(str4, char2) {
+      const index2 = str4.indexOf(char2);
       let partial = "";
       if (index2 !== -1) {
-        partial = str3.substring(0, index2) + JSON_SYNTAX_CHAR.repeat(str3.length - index2);
+        partial = str4.substring(0, index2) + JSON_SYNTAX_CHAR.repeat(str4.length - index2);
       }
       try {
         JSON.parse(partial);
@@ -16019,14 +16019,14 @@ var require_json = __commonJS({
       } catch (e) {
         return normalizeJsonSyntaxError(e, {
           message: e.message.replace(JSON_SYNTAX_REGEXP, function(placeholder) {
-            return str3.substring(index2, index2 + placeholder.length);
+            return str4.substring(index2, index2 + placeholder.length);
           }),
           stack: e.stack
         });
       }
     }
-    function firstchar(str3) {
-      const match = FIRST_CHAR_REGEXP.exec(str3);
+    function firstchar(str4) {
+      const match = FIRST_CHAR_REGEXP.exec(str4);
       return match ? match[1] : void 0;
     }
     function normalizeJsonSyntaxError(error, obj) {
@@ -16137,20 +16137,20 @@ var require_object_inspect = __commonJS({
     var gPO = (typeof Reflect === "function" ? Reflect.getPrototypeOf : Object.getPrototypeOf) || ([].__proto__ === Array.prototype ? function(O) {
       return O.__proto__;
     } : null);
-    function addNumericSeparator(num2, str3) {
-      if (num2 === Infinity || num2 === -Infinity || num2 !== num2 || num2 && num2 > -1e3 && num2 < 1e3 || $test.call(/e/, str3)) {
-        return str3;
+    function addNumericSeparator(num2, str4) {
+      if (num2 === Infinity || num2 === -Infinity || num2 !== num2 || num2 && num2 > -1e3 && num2 < 1e3 || $test.call(/e/, str4)) {
+        return str4;
       }
       var sepRegex = /[0-9](?=(?:[0-9]{3})+(?![0-9]))/g;
       if (typeof num2 === "number") {
         var int = num2 < 0 ? -$floor(-num2) : $floor(num2);
         if (int !== num2) {
           var intStr = String(int);
-          var dec = $slice.call(str3, intStr.length + 1);
+          var dec = $slice.call(str4, intStr.length + 1);
           return $replace.call(intStr, sepRegex, "$&_") + "." + $replace.call($replace.call(dec, /([0-9]{3})/g, "$&_"), /_$/, "");
         }
       }
-      return $replace.call(str3, sepRegex, "$&_");
+      return $replace.call(str4, sepRegex, "$&_");
     }
     var utilInspect = require_util_inspect();
     var inspectCustom = utilInspect.custom;
@@ -16200,8 +16200,8 @@ var require_object_inspect = __commonJS({
         if (obj === 0) {
           return Infinity / obj > 0 ? "0" : "-0";
         }
-        var str3 = String(obj);
-        return numericSeparator ? addNumericSeparator(obj, str3) : str3;
+        var str4 = String(obj);
+        return numericSeparator ? addNumericSeparator(obj, str4) : str4;
       }
       if (typeof obj === "bigint") {
         var bigIntStr = String(obj) + "n";
@@ -16521,15 +16521,15 @@ var require_object_inspect = __commonJS({
       }
       return typeof x.nodeName === "string" && typeof x.getAttribute === "function";
     }
-    function inspectString(str3, opts) {
-      if (str3.length > opts.maxStringLength) {
-        var remaining = str3.length - opts.maxStringLength;
+    function inspectString(str4, opts) {
+      if (str4.length > opts.maxStringLength) {
+        var remaining = str4.length - opts.maxStringLength;
         var trailer = "... " + remaining + " more character" + (remaining > 1 ? "s" : "");
-        return inspectString($slice.call(str3, 0, opts.maxStringLength), opts) + trailer;
+        return inspectString($slice.call(str4, 0, opts.maxStringLength), opts) + trailer;
       }
       var quoteRE = quoteREs[opts.quoteStyle || "single"];
       quoteRE.lastIndex = 0;
-      var s = $replace.call($replace.call(str3, quoteRE, "\\$1"), /[\x00-\x1f]/g, lowbyte);
+      var s = $replace.call($replace.call(str4, quoteRE, "\\$1"), /[\x00-\x1f]/g, lowbyte);
       return wrapQuotes(s, "single", opts);
     }
     function lowbyte(c) {
@@ -16546,8 +16546,8 @@ var require_object_inspect = __commonJS({
       }
       return "\\x" + (n < 16 ? "0" : "") + $toUpperCase.call(n.toString(16));
     }
-    function markBoxed(str3) {
-      return "Object(" + str3 + ")";
+    function markBoxed(str4) {
+      return "Object(" + str4 + ")";
     }
     function weakCollectionOf(type) {
       return type + " { ? }";
@@ -16992,7 +16992,7 @@ var require_implementation = __commonJS({
     "use strict";
     var ERROR_MESSAGE = "Function.prototype.bind called on incompatible ";
     var toStr = Object.prototype.toString;
-    var max = Math.max;
+    var max2 = Math.max;
     var funcType = "[object Function]";
     var concatty = function concatty2(a, b) {
       var arr = [];
@@ -17012,14 +17012,14 @@ var require_implementation = __commonJS({
       return arr;
     };
     var joiny = function(arr, joiner) {
-      var str3 = "";
+      var str4 = "";
       for (var i = 0; i < arr.length; i += 1) {
-        str3 += arr[i];
+        str4 += arr[i];
         if (i + 1 < arr.length) {
-          str3 += joiner;
+          str4 += joiner;
         }
       }
-      return str3;
+      return str4;
     };
     module.exports = function bind(that) {
       var target = this;
@@ -17044,7 +17044,7 @@ var require_implementation = __commonJS({
           concatty(args, arguments)
         );
       };
-      var boundLength = max(0, target.length - args.length);
+      var boundLength = max2(0, target.length - args.length);
       var boundArgs = [];
       for (var i = 0; i < boundLength; i++) {
         boundArgs[i] = "$" + i;
@@ -17201,7 +17201,7 @@ var require_get_intrinsic = __commonJS({
     var $URIError = require_uri();
     var abs = require_abs();
     var floor = require_floor();
-    var max = require_max();
+    var max2 = require_max();
     var min = require_min();
     var pow = require_pow();
     var round = require_round();
@@ -17315,7 +17315,7 @@ var require_get_intrinsic = __commonJS({
       "%Object.getPrototypeOf%": $ObjectGPO,
       "%Math.abs%": abs,
       "%Math.floor%": floor,
-      "%Math.max%": max,
+      "%Math.max%": max2,
       "%Math.min%": min,
       "%Math.pow%": pow,
       "%Math.round%": round,
@@ -17899,8 +17899,8 @@ var require_utils2 = __commonJS({
         return acc;
       }, target);
     };
-    var decode = function(str3, defaultDecoder, charset) {
-      var strWithoutPlus = str3.replace(/\+/g, " ");
+    var decode = function(str4, defaultDecoder, charset) {
+      var strWithoutPlus = str4.replace(/\+/g, " ");
       if (charset === "iso-8859-1") {
         return strWithoutPlus.replace(/%[0-9a-f]{2}/gi, unescape);
       }
@@ -17911,15 +17911,15 @@ var require_utils2 = __commonJS({
       }
     };
     var limit = 1024;
-    var encode = function encode2(str3, defaultEncoder, charset, kind, format) {
-      if (str3.length === 0) {
-        return str3;
+    var encode = function encode2(str4, defaultEncoder, charset, kind, format) {
+      if (str4.length === 0) {
+        return str4;
       }
-      var string = str3;
-      if (typeof str3 === "symbol") {
-        string = Symbol.prototype.toString.call(str3);
-      } else if (typeof str3 !== "string") {
-        string = String(str3);
+      var string = str4;
+      if (typeof str4 === "symbol") {
+        string = Symbol.prototype.toString.call(str4);
+      } else if (typeof str4 !== "string") {
+        string = String(str4);
       }
       if (charset === "iso-8859-1") {
         return escape(string).replace(/%u[0-9a-f]{4}/gi, function($0) {
@@ -18369,8 +18369,8 @@ var require_parse = __commonJS({
       strictNullHandling: false,
       throwOnLimitExceeded: false
     };
-    var interpretNumericEntities = function(str3) {
-      return str3.replace(/&#(\d+);/g, function($0, numberStr) {
+    var interpretNumericEntities = function(str4) {
+      return str4.replace(/&#(\d+);/g, function($0, numberStr) {
         return String.fromCharCode(parseInt(numberStr, 10));
       });
     };
@@ -18396,9 +18396,9 @@ var require_parse = __commonJS({
     };
     var isoSentinel = "utf8=%26%2310003%3B";
     var charsetSentinel = "utf8=%E2%9C%93";
-    var parseValues = function parseQueryStringValues(str3, options) {
+    var parseValues = function parseQueryStringValues(str4, options) {
       var obj = { __proto__: null };
-      var cleanStr = options.ignoreQueryPrefix ? str3.replace(/^\?/, "") : str3;
+      var cleanStr = options.ignoreQueryPrefix ? str4.replace(/^\?/, "") : str4;
       cleanStr = cleanStr.replace(/%5B/gi, "[").replace(/%5D/gi, "]");
       var limit = options.parameterLimit === Infinity ? void 0 : options.parameterLimit;
       var parts = cleanStr.split(
@@ -18645,17 +18645,17 @@ var require_parse = __commonJS({
         throwOnLimitExceeded: typeof opts.throwOnLimitExceeded === "boolean" ? opts.throwOnLimitExceeded : false
       };
     };
-    module.exports = function(str3, opts) {
+    module.exports = function(str4, opts) {
       var options = normalizeParseOptions(opts);
-      if (str3 === "" || str3 === null || typeof str3 === "undefined") {
+      if (str4 === "" || str4 === null || typeof str4 === "undefined") {
         return options.plainObjects ? { __proto__: null } : {};
       }
-      var tempObj = typeof str3 === "string" ? parseValues(str3, options) : str3;
+      var tempObj = typeof str4 === "string" ? parseValues(str4, options) : str4;
       var obj = options.plainObjects ? { __proto__: null } : {};
       var keys = Object.keys(tempObj);
       for (var i = 0; i < keys.length; ++i) {
         var key = keys[i];
-        var newObj = parseKeys(key, tempObj[key], options, typeof str3 === "string");
+        var newObj = parseKeys(key, tempObj[key], options, typeof str4 === "string");
         obj = utils.merge(obj, newObj, options);
       }
       if (options.allowSparse === true) {
@@ -18827,17 +18827,17 @@ var require_escape_html = __commonJS({
     var matchHtmlRegExp = /["'&<>]/;
     module.exports = escapeHtml2;
     function escapeHtml2(string) {
-      var str3 = "" + string;
-      var match = matchHtmlRegExp.exec(str3);
+      var str4 = "" + string;
+      var match = matchHtmlRegExp.exec(str4);
       if (!match) {
-        return str3;
+        return str4;
       }
       var escape2;
       var html = "";
       var index2 = 0;
       var lastIndex = 0;
-      for (index2 = match.index; index2 < str3.length; index2++) {
-        switch (str3.charCodeAt(index2)) {
+      for (index2 = match.index; index2 < str4.length; index2++) {
+        switch (str4.charCodeAt(index2)) {
           case 34:
             escape2 = "&quot;";
             break;
@@ -18857,12 +18857,12 @@ var require_escape_html = __commonJS({
             continue;
         }
         if (lastIndex !== index2) {
-          html += str3.substring(lastIndex, index2);
+          html += str4.substring(lastIndex, index2);
         }
         lastIndex = index2 + 1;
         html += escape2;
       }
-      return lastIndex !== index2 ? html + str3.substring(lastIndex, index2) : html;
+      return lastIndex !== index2 ? html + str4.substring(lastIndex, index2) : html;
     }
   }
 });
@@ -18902,20 +18902,20 @@ var require_parseurl = __commonJS({
       parsed._raw = url2;
       return req._parsedOriginalUrl = parsed;
     }
-    function fastparse(str3) {
-      if (typeof str3 !== "string" || str3.charCodeAt(0) !== 47) {
-        return parse(str3);
+    function fastparse(str4) {
+      if (typeof str4 !== "string" || str4.charCodeAt(0) !== 47) {
+        return parse(str4);
       }
-      var pathname = str3;
+      var pathname = str4;
       var query = null;
       var search = null;
-      for (var i = 1; i < str3.length; i++) {
-        switch (str3.charCodeAt(i)) {
+      for (var i = 1; i < str4.length; i++) {
+        switch (str4.charCodeAt(i)) {
           case 63:
             if (search === null) {
-              pathname = str3.substring(0, i);
-              query = str3.substring(i + 1);
-              search = str3.substring(i);
+              pathname = str4.substring(0, i);
+              query = str4.substring(i + 1);
+              search = str4.substring(i);
             }
             break;
           case 9:
@@ -18932,12 +18932,12 @@ var require_parseurl = __commonJS({
           /* #  */
           case 160:
           case 65279:
-            return parse(str3);
+            return parse(str4);
         }
       }
       var url2 = Url !== void 0 ? new Url() : {};
-      url2.path = str3;
-      url2.href = str3;
+      url2.path = str4;
+      url2.href = str4;
       url2.pathname = pathname;
       if (search !== null) {
         url2.query = query;
@@ -19950,18 +19950,18 @@ var require_proxy_addr = __commonJS({
     }
     function parseipNotation(note) {
       var pos = note.lastIndexOf("/");
-      var str3 = pos !== -1 ? note.substring(0, pos) : note;
-      if (!isip(str3)) {
-        throw new TypeError("invalid IP address: " + str3);
+      var str4 = pos !== -1 ? note.substring(0, pos) : note;
+      if (!isip(str4)) {
+        throw new TypeError("invalid IP address: " + str4);
       }
-      var ip = parseip(str3);
+      var ip = parseip(str4);
       if (pos === -1 && ip.kind() === "ipv6" && ip.isIPv4MappedAddress()) {
         ip = ip.toIPv4Address();
       }
-      var max = ip.kind() === "ipv6" ? 128 : 32;
+      var max2 = ip.kind() === "ipv6" ? 128 : 32;
       var range = pos !== -1 ? note.substring(pos + 1, note.length) : null;
       if (range === null) {
-        range = max;
+        range = max2;
       } else if (DIGIT_REGEXP.test(range)) {
         range = parseInt(range, 10);
       } else if (ip.kind() === "ipv4" && isip(range)) {
@@ -19969,7 +19969,7 @@ var require_proxy_addr = __commonJS({
       } else {
         range = null;
       }
-      if (range <= 0 || range > max) {
+      if (range <= 0 || range > max2) {
         throw new TypeError("invalid range on address: " + note);
       }
       return [ip, range];
@@ -20079,22 +20079,22 @@ var require_utils3 = __commonJS({
     exports.normalizeTypes = function(types3) {
       return types3.map(exports.normalizeType);
     };
-    function acceptParams(str3) {
-      var length = str3.length;
-      var colonIndex = str3.indexOf(";");
+    function acceptParams(str4) {
+      var length = str4.length;
+      var colonIndex = str4.indexOf(";");
       var index2 = colonIndex === -1 ? length : colonIndex;
-      var ret = { value: str3.slice(0, index2).trim(), quality: 1, params: {} };
+      var ret = { value: str4.slice(0, index2).trim(), quality: 1, params: {} };
       while (index2 < length) {
-        var splitIndex = str3.indexOf("=", index2);
+        var splitIndex = str4.indexOf("=", index2);
         if (splitIndex === -1) break;
-        var colonIndex = str3.indexOf(";", index2);
+        var colonIndex = str4.indexOf(";", index2);
         var endIndex = colonIndex === -1 ? length : colonIndex;
         if (splitIndex > endIndex) {
-          index2 = str3.lastIndexOf(";", splitIndex - 1) + 1;
+          index2 = str4.lastIndexOf(";", splitIndex - 1) + 1;
           continue;
         }
-        var key = str3.slice(index2, splitIndex).trim();
-        var value = str3.slice(splitIndex + 1, endIndex).trim();
+        var key = str4.slice(index2, splitIndex).trim();
+        var value = str4.slice(splitIndex + 1, endIndex).trim();
         if (key === "q") {
           ret.quality = parseFloat(value);
         } else {
@@ -20177,8 +20177,8 @@ var require_utils3 = __commonJS({
         return etag(buf, options);
       };
     }
-    function parseExtendedQueryString(str3) {
-      return qs.parse(str3, {
+    function parseExtendedQueryString(str4) {
+      return qs.parse(str4, {
         allowPrototypes: true
       });
     }
@@ -20286,11 +20286,11 @@ var require_dist2 = __commonJS({
     var ID_START = /^[$_\p{ID_Start}]$/u;
     var ID_CONTINUE = /^[$\u200c\u200d\p{ID_Continue}]$/u;
     var ID = /^[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]*$/u;
-    function escapeText(str3) {
-      return str3.replace(/[{}()\[\]+?!:*\\]/g, "\\$&");
+    function escapeText(str4) {
+      return str4.replace(/[{}()\[\]+?!:*\\]/g, "\\$&");
     }
-    function escape2(str3) {
-      return str3.replace(/[.+*?^${}()[\]|/\\]/g, "\\$&");
+    function escape2(str4) {
+      return str4.replace(/[.+*?^${}()[\]|/\\]/g, "\\$&");
     }
     var TokenData = class {
       constructor(tokens, originalPath) {
@@ -20310,9 +20310,9 @@ var require_dist2 = __commonJS({
       }
     };
     exports.PathError = PathError;
-    function parse(str3, options = {}) {
+    function parse(str4, options = {}) {
       const { encodePath = NOOP_VALUE } = options;
-      const chars = [...str3];
+      const chars = [...str4];
       let index2 = 0;
       function consumeUntil(end) {
         const output = [];
@@ -20334,7 +20334,7 @@ var require_dist2 = __commonJS({
           }
           if (value === "\\") {
             if (index2 === chars.length) {
-              throw new PathError(`Unexpected end after \\ at index ${index2}`, str3);
+              throw new PathError(`Unexpected end after \\ at index ${index2}`, str4);
             }
             path += chars[index2++];
             continue;
@@ -20359,11 +20359,11 @@ var require_dist2 = __commonJS({
                 name += chars[index2];
               }
               if (quoteStart) {
-                throw new PathError(`Unterminated quote at index ${quoteStart}`, str3);
+                throw new PathError(`Unterminated quote at index ${quoteStart}`, str4);
               }
             }
             if (!name) {
-              throw new PathError(`Missing parameter name at index ${index2}`, str3);
+              throw new PathError(`Missing parameter name at index ${index2}`, str4);
             }
             writePath();
             output.push({ type, name });
@@ -20378,17 +20378,17 @@ var require_dist2 = __commonJS({
             continue;
           }
           if (value === "}" || value === "(" || value === ")" || value === "[" || value === "]" || value === "+" || value === "?" || value === "!") {
-            throw new PathError(`Unexpected ${value} at index ${index2 - 1}`, str3);
+            throw new PathError(`Unexpected ${value} at index ${index2 - 1}`, str4);
           }
           path += value;
         }
         if (end) {
-          throw new PathError(`Unexpected end at index ${index2}, expected ${end}`, str3);
+          throw new PathError(`Unexpected end at index ${index2}, expected ${end}`, str4);
         }
         writePath();
         return output;
       }
-      return new TokenData(consumeUntil(""), str3);
+      return new TokenData(consumeUntil(""), str4);
     }
     function compile(path, options = {}) {
       const { encode = encodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router16;
+    module.exports = Router17;
     module.exports.Route = Route;
-    function Router16(options) {
-      if (!(this instanceof Router16)) {
-        return new Router16(options);
+    function Router17(options) {
+      if (!(this instanceof Router17)) {
+        return new Router17(options);
       }
       const opts = options || {};
-      function router16(req, res, next) {
-        router16.handle(req, res, next);
+      function router17(req, res, next) {
+        router17.handle(req, res, next);
       }
-      Object.setPrototypeOf(router16, this);
-      router16.caseSensitive = opts.caseSensitive;
-      router16.mergeParams = opts.mergeParams;
-      router16.params = {};
-      router16.strict = opts.strict;
-      router16.stack = [];
-      return router16;
+      Object.setPrototypeOf(router17, this);
+      router17.caseSensitive = opts.caseSensitive;
+      router17.mergeParams = opts.mergeParams;
+      router17.params = {};
+      router17.strict = opts.strict;
+      router17.stack = [];
+      return router17;
     }
-    Router16.prototype = function() {
+    Router17.prototype = function() {
     };
-    Router16.prototype.param = function param(name, fn) {
+    Router17.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router16.prototype.handle = function handle(req, res, callback) {
+    Router17.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router16.prototype.use = function use(handler) {
+    Router17.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router16.prototype.route = function route(path) {
+    Router17.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router16.prototype[method] = function(path) {
+      Router17.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router16 = null;
+      var router17 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router16 === null) {
-            router16 = new Router16({
+          if (router17 === null) {
+            router17 = new Router17({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router16;
+          return router17;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router16 = this.router;
+      var router17 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router16.use(path, fn2);
+          return router17.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router16.use(path, function mounted_app(req, res, next) {
+        router17.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22132,19 +22132,19 @@ var require_fresh = __commonJS({
       var timestamp2 = date2 && Date.parse(date2);
       return typeof timestamp2 === "number" ? timestamp2 : NaN;
     }
-    function parseTokenList(str3) {
+    function parseTokenList(str4) {
       var end = 0;
       var list = [];
       var start = 0;
-      for (var i = 0, len = str3.length; i < len; i++) {
-        switch (str3.charCodeAt(i)) {
+      for (var i = 0, len = str4.length; i < len; i++) {
+        switch (str4.charCodeAt(i)) {
           case 32:
             if (start === end) {
               start = end = i + 1;
             }
             break;
           case 44:
-            list.push(str3.substring(start, end));
+            list.push(str4.substring(start, end));
             start = end = i + 1;
             break;
           default:
@@ -22152,7 +22152,7 @@ var require_fresh = __commonJS({
             break;
         }
       }
-      list.push(str3.substring(start, end));
+      list.push(str4.substring(start, end));
       return list;
     }
   }
@@ -22163,17 +22163,17 @@ var require_range_parser = __commonJS({
   "../../node_modules/.pnpm/range-parser@1.3.0/node_modules/range-parser/index.js"(exports, module) {
     "use strict";
     module.exports = rangeParser;
-    function rangeParser(size, str3, options) {
-      if (typeof str3 !== "string") {
+    function rangeParser(size, str4, options) {
+      if (typeof str4 !== "string") {
         throw new TypeError("argument str must be a string");
       }
-      var index2 = str3.indexOf("=");
+      var index2 = str4.indexOf("=");
       if (index2 === -1) {
         return -2;
       }
-      var arr = str3.slice(index2 + 1).split(",");
+      var arr = str4.slice(index2 + 1).split(",");
       var ranges = [];
-      ranges.type = str3.slice(0, index2);
+      ranges.type = str4.slice(0, index2);
       for (var i = 0; i < arr.length; i++) {
         var indexOf = arr[i].indexOf("-");
         if (indexOf === -1) {
@@ -22208,8 +22208,8 @@ var require_range_parser = __commonJS({
       }
       return options && options.combine ? combineRanges(ranges) : ranges;
     }
-    function parsePos(str3) {
-      if (/^\d+$/.test(str3)) return Number(str3);
+    function parsePos(str4) {
+      if (/^\d+$/.test(str4)) return Number(str4);
       return NaN;
     }
     function combineRanges(ranges) {
@@ -22551,17 +22551,17 @@ var require_dist3 = __commonJS({
         "filename*": encodeExtended(filename)
       };
     }
-    function decodeExtended(str3) {
-      const charsetEnd = str3.indexOf("'");
+    function decodeExtended(str4) {
+      const charsetEnd = str4.indexOf("'");
       if (charsetEnd <= 0) {
         return void 0;
       }
-      const languageEnd = str3.indexOf("'", charsetEnd + 1);
+      const languageEnd = str4.indexOf("'", charsetEnd + 1);
       if (languageEnd === -1) {
         return void 0;
       }
-      const charset = str3.slice(0, charsetEnd).toLowerCase();
-      const encoded = str3.slice(languageEnd + 1);
+      const charset = str4.slice(0, charsetEnd).toLowerCase();
+      const encoded = str4.slice(languageEnd + 1);
       switch (charset) {
         case "iso-8859-1": {
           return decodeHexEscapes(encoded);
@@ -22573,34 +22573,34 @@ var require_dist3 = __commonJS({
       }
       return void 0;
     }
-    function tryDecodeURIComponent(str3) {
+    function tryDecodeURIComponent(str4) {
       try {
-        return decodeURIComponent(str3);
+        return decodeURIComponent(str4);
       } catch {
         return void 0;
       }
     }
-    function parseToken(str3, index2, len) {
+    function parseToken(str4, index2, len) {
       while (index2 < len) {
-        const char2 = str3.charCodeAt(index2);
+        const char2 = str4.charCodeAt(index2);
         if (char2 === SEMI)
           break;
         index2++;
       }
       return index2;
     }
-    function skipOWS(str3, index2, len) {
+    function skipOWS(str4, index2, len) {
       while (index2 < len) {
-        const char2 = str3.charCodeAt(index2);
+        const char2 = str4.charCodeAt(index2);
         if (char2 !== SP && char2 !== HTAB)
           break;
         index2++;
       }
       return index2;
     }
-    function trailingOWS(str3, start, end) {
+    function trailingOWS(str4, start, end) {
       while (end > start) {
-        const char2 = str3.charCodeAt(end - 1);
+        const char2 = str4.charCodeAt(end - 1);
         if (char2 !== SP && char2 !== HTAB)
           break;
         end--;
@@ -22647,11 +22647,11 @@ var require_dist3 = __commonJS({
     function pencode(char2) {
       return "%" + char2.charCodeAt(0).toString(16).toUpperCase();
     }
-    function qstring(str3) {
-      return '"' + str3.replace(QUOTE_REGEXP, "\\$&") + '"';
+    function qstring(str4) {
+      return '"' + str4.replace(QUOTE_REGEXP, "\\$&") + '"';
     }
-    function qmultipart(str3) {
-      return '"' + str3.replace(/[\n\r"]/g, multipartEscape) + '"';
+    function qmultipart(str4) {
+      return '"' + str4.replace(/[\n\r"]/g, multipartEscape) + '"';
     }
     function multipartEscape(char2) {
       if (char2 === "\n")
@@ -22660,8 +22660,8 @@ var require_dist3 = __commonJS({
         return "%0D";
       return "%22";
     }
-    function encodeExtended(str3) {
-      const encoded = encodeURIComponent(str3).replace(ENCODE_URL_ATTR_CHAR_REGEXP, pencode);
+    function encodeExtended(str4) {
+      const encoded = encodeURIComponent(str4).replace(ENCODE_URL_ATTR_CHAR_REGEXP, pencode);
       return "UTF-8''" + encoded;
     }
     function isHexDigit(char2) {
@@ -22670,17 +22670,17 @@ var require_dist3 = __commonJS({
       code >= 65 && code <= 70 || // A-F
       code >= 97 && code <= 102;
     }
-    function decodeHexEscapes(str3) {
-      const firstEscape = str3.indexOf("%");
+    function decodeHexEscapes(str4) {
+      const firstEscape = str4.indexOf("%");
       if (firstEscape === -1)
-        return str3;
-      let result = str3.slice(0, firstEscape);
-      for (let idx = firstEscape; idx < str3.length; idx++) {
-        if (str3[idx] === "%" && idx + 2 < str3.length && isHexDigit(str3[idx + 1]) && isHexDigit(str3[idx + 2])) {
-          result += String.fromCharCode(Number.parseInt(str3[idx + 1] + str3[idx + 2], 16));
+        return str4;
+      let result = str4.slice(0, firstEscape);
+      for (let idx = firstEscape; idx < str4.length; idx++) {
+        if (str4[idx] === "%" && idx + 2 < str4.length && isHexDigit(str4[idx + 1]) && isHexDigit(str4[idx + 2])) {
+          result += String.fromCharCode(Number.parseInt(str4[idx + 1] + str4[idx + 2], 16));
           idx += 2;
         } else {
-          result += str3[idx];
+          result += str4[idx];
         }
       }
       return result;
@@ -23099,13 +23099,13 @@ var require_send = __commonJS({
         res.removeHeader(header);
       }
     }
-    function collapseLeadingSlashes(str3) {
-      for (var i = 0; i < str3.length; i++) {
-        if (str3[i] !== "/") {
+    function collapseLeadingSlashes(str4) {
+      for (var i = 0; i < str4.length; i++) {
+        if (str4[i] !== "/") {
           break;
         }
       }
-      return i > 1 ? "/" + str3.substr(i) : str3;
+      return i > 1 ? "/" + str4.substr(i) : str4;
     }
     function containsDotFile(parts) {
       for (var i = 0; i < parts.length; i++) {
@@ -23152,12 +23152,12 @@ var require_send = __commonJS({
       var timestamp2 = date2 && Date.parse(date2);
       return typeof timestamp2 === "number" ? timestamp2 : NaN;
     }
-    function parseTokenList(str3) {
+    function parseTokenList(str4) {
       var end = 0;
       var list = [];
       var start = 0;
-      for (var i = 0, len = str3.length; i < len; i++) {
-        switch (str3.charCodeAt(i)) {
+      for (var i = 0, len = str4.length; i < len; i++) {
+        switch (str4.charCodeAt(i)) {
           case 32:
             if (start === end) {
               start = end = i + 1;
@@ -23165,7 +23165,7 @@ var require_send = __commonJS({
             break;
           case 44:
             if (start !== end) {
-              list.push(str3.substring(start, end));
+              list.push(str4.substring(start, end));
             }
             start = end = i + 1;
             break;
@@ -23175,7 +23175,7 @@ var require_send = __commonJS({
         }
       }
       if (start !== end) {
-        list.push(str3.substring(start, end));
+        list.push(str4.substring(start, end));
       }
       return list;
     }
@@ -23639,9 +23639,9 @@ var require_response = __commonJS({
         opts = {};
       }
       opts._locals = self.locals;
-      done = done || function(err, str3) {
+      done = done || function(err, str4) {
         if (err) return req.next(err);
-        self.send(str3);
+        self.send(str4);
       };
       app2.render(view, opts, done);
     };
@@ -23797,13 +23797,13 @@ var require_serve_static = __commonJS({
         stream.pipe(res);
       };
     }
-    function collapseLeadingSlashes(str3) {
-      for (var i = 0; i < str3.length; i++) {
-        if (str3.charCodeAt(i) !== 47) {
+    function collapseLeadingSlashes(str4) {
+      for (var i = 0; i < str4.length; i++) {
+        if (str4.charCodeAt(i) !== 47) {
           break;
         }
       }
-      return i > 1 ? "/" + str3.substr(i) : str3;
+      return i > 1 ? "/" + str4.substr(i) : str4;
     }
     function createHtmlDocument(title, body) {
       return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>' + title + "</title>\n</head>\n<body>\n<pre>" + body + "</pre>\n</body>\n</html>\n";
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router16.Route;
-    exports.Router = Router16;
+    exports.Route = Router17.Route;
+    exports.Router = Router17;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -25077,10 +25077,10 @@ var require_redaction = __commonJS({
     var strict = false;
     function redaction(opts, serialize) {
       const { paths, censor, remove } = handle(opts);
-      const shape = paths.reduce((o, str3) => {
+      const shape = paths.reduce((o, str4) => {
         rx.lastIndex = 0;
-        const first = rx.exec(str3);
-        const next = rx.exec(str3);
+        const first = rx.exec(str4);
+        const next = rx.exec(str4);
         let ns = first[1] !== void 0 ? first[1].replace(/^(?:"|'|`)(.*)(?:"|'|`)$/, "$1") : first[0];
         if (ns === "*") {
           ns = wildcardFirstSym;
@@ -25093,7 +25093,7 @@ var require_redaction = __commonJS({
           return o;
         }
         const { index: index2 } = next;
-        const nextPath = `${str3.substr(index2, str3.length - 1)}`;
+        const nextPath = `${str4.substr(index2, str4.length - 1)}`;
         o[ns] = o[ns] || [];
         if (ns !== wildcardFirstSym && o[ns].length === 0) {
           o[ns].push(...o[wildcardFirstSym] || []);
@@ -25209,7 +25209,7 @@ var require_quick_format_unescaped = __commonJS({
       }
       var argLen = args.length;
       if (argLen === 0) return f;
-      var str3 = "";
+      var str4 = "";
       var a = 1 - offset;
       var lastPos = -1;
       var flen = f && f.length || 0;
@@ -25224,8 +25224,8 @@ var require_quick_format_unescaped = __commonJS({
                 break;
               if (args[a] == null) break;
               if (lastPos < i)
-                str3 += f.slice(lastPos, i);
-              str3 += Number(args[a]);
+                str4 += f.slice(lastPos, i);
+              str4 += Number(args[a]);
               lastPos = i + 2;
               i++;
               break;
@@ -25234,8 +25234,8 @@ var require_quick_format_unescaped = __commonJS({
                 break;
               if (args[a] == null) break;
               if (lastPos < i)
-                str3 += f.slice(lastPos, i);
-              str3 += Math.floor(Number(args[a]));
+                str4 += f.slice(lastPos, i);
+              str4 += Math.floor(Number(args[a]));
               lastPos = i + 2;
               i++;
               break;
@@ -25248,21 +25248,21 @@ var require_quick_format_unescaped = __commonJS({
                 break;
               if (args[a] === void 0) break;
               if (lastPos < i)
-                str3 += f.slice(lastPos, i);
+                str4 += f.slice(lastPos, i);
               var type = typeof args[a];
               if (type === "string") {
-                str3 += "'" + args[a] + "'";
+                str4 += "'" + args[a] + "'";
                 lastPos = i + 2;
                 i++;
                 break;
               }
               if (type === "function") {
-                str3 += args[a].name || "<anonymous>";
+                str4 += args[a].name || "<anonymous>";
                 lastPos = i + 2;
                 i++;
                 break;
               }
-              str3 += ss(args[a]);
+              str4 += ss(args[a]);
               lastPos = i + 2;
               i++;
               break;
@@ -25270,15 +25270,15 @@ var require_quick_format_unescaped = __commonJS({
               if (a >= argLen)
                 break;
               if (lastPos < i)
-                str3 += f.slice(lastPos, i);
-              str3 += String(args[a]);
+                str4 += f.slice(lastPos, i);
+              str4 += String(args[a]);
               lastPos = i + 2;
               i++;
               break;
             case 37:
               if (lastPos < i)
-                str3 += f.slice(lastPos, i);
-              str3 += "%";
+                str4 += f.slice(lastPos, i);
+              str4 += "%";
               lastPos = i + 2;
               i++;
               a--;
@@ -25291,9 +25291,9 @@ var require_quick_format_unescaped = __commonJS({
       if (lastPos === -1)
         return f;
       else if (lastPos < flen) {
-        str3 += f.slice(lastPos);
+        str4 += f.slice(lastPos);
       }
-      return str3;
+      return str4;
     }
   }
 });
@@ -26083,7 +26083,7 @@ var require_wait = __commonJS({
     "use strict";
     var MAX_TIMEOUT = 1e3;
     function wait(state, index2, expected, timeout, done) {
-      const max = Date.now() + timeout;
+      const max2 = Date.now() + timeout;
       let current = Atomics.load(state, index2);
       if (current === expected) {
         done(null, "ok");
@@ -26091,7 +26091,7 @@ var require_wait = __commonJS({
       }
       let prior = current;
       const check = (backoff) => {
-        if (Date.now() > max) {
+        if (Date.now() > max2) {
           done(null, "timed-out");
         } else {
           setTimeout(() => {
@@ -26109,14 +26109,14 @@ var require_wait = __commonJS({
       check(1);
     }
     function waitDiff(state, index2, expected, timeout, done) {
-      const max = Date.now() + timeout;
+      const max2 = Date.now() + timeout;
       let current = Atomics.load(state, index2);
       if (current !== expected) {
         done(null, "ok");
         return;
       }
       const check = (backoff) => {
-        if (Date.now() > max) {
+        if (Date.now() > max2) {
           done(null, "timed-out");
         } else {
           setTimeout(() => {
@@ -26779,29 +26779,29 @@ var require_tools = __commonJS({
         }
       }
     }
-    function asString(str3) {
+    function asString(str4) {
       let result = "";
       let last = 0;
       let found = false;
       let point2 = 255;
-      const l = str3.length;
+      const l = str4.length;
       if (l > 100) {
-        return JSON.stringify(str3);
+        return JSON.stringify(str4);
       }
       for (var i = 0; i < l && point2 >= 32; i++) {
-        point2 = str3.charCodeAt(i);
+        point2 = str4.charCodeAt(i);
         if (point2 === 34 || point2 === 92) {
-          result += str3.slice(last, i) + "\\";
+          result += str4.slice(last, i) + "\\";
           last = i;
           found = true;
         }
       }
       if (!found) {
-        result = str3;
+        result = str4;
       } else {
-        result += str3.slice(last);
+        result += str4.slice(last);
       }
-      return point2 < 32 ? JSON.stringify(str3) : '"' + result + '"';
+      return point2 < 32 ? JSON.stringify(str4) : '"' + result + '"';
     }
     function asJson(obj, msg, num2, time2) {
       if (asJsonChan.hasSubscribers === false) {
@@ -27506,11 +27506,11 @@ var require_safe_stable_stringify = __commonJS({
     exports.configure = configure;
     module.exports = stringify;
     var strEscapeSequencesRegExp = /[\u0000-\u001f\u0022\u005c\ud800-\udfff]/;
-    function strEscape(str3) {
-      if (str3.length < 5e3 && !strEscapeSequencesRegExp.test(str3)) {
-        return `"${str3}"`;
+    function strEscape(str4) {
+      if (str4.length < 5e3 && !strEscapeSequencesRegExp.test(str4)) {
+        return `"${str4}"`;
       }
-      return JSON.stringify(str3);
+      return JSON.stringify(str4);
     }
     function sort(array, comparator) {
       if (array.length > 200 || comparator) {
@@ -29896,8 +29896,8 @@ var init_sql = __esm({
         return new SQL(list);
       }
       sql2.fromList = fromList;
-      function raw(str3) {
-        return new SQL([new StringChunk(str3)]);
+      function raw(str4) {
+        return new SQL([new StringChunk(str4)]);
       }
       sql2.raw = raw;
       function join(chunks, separator) {
@@ -32194,17 +32194,17 @@ function exists(subquery) {
 function notExists(subquery) {
   return sql`not exists ${subquery}`;
 }
-function between(column, min, max) {
+function between(column, min, max2) {
   return sql`${column} between ${bindIfParam(min, column)} and ${bindIfParam(
-    max,
+    max2,
     column
   )}`;
 }
-function notBetween(column, min, max) {
+function notBetween(column, min, max2) {
   return sql`${column} not between ${bindIfParam(
     min,
     column
-  )} and ${bindIfParam(max, column)}`;
+  )} and ${bindIfParam(max2, column)}`;
 }
 function like(column, value) {
   return sql`${column} like ${value}`;
@@ -32540,8 +32540,14 @@ var init_relations = __esm({
 });
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/sql/functions/aggregate.js
+function max(expression) {
+  return sql`max(${expression})`.mapWith(is(expression, Column) ? expression : String);
+}
 var init_aggregate = __esm({
   "../../node_modules/.pnpm/drizzle-orm@0.45.4_@types+pg@8.23.1_pg@8.23.1/node_modules/drizzle-orm/sql/functions/aggregate.js"() {
+    init_column();
+    init_entity();
+    init_sql();
   }
 });
 
@@ -32856,9 +32862,9 @@ var require_postgres_interval = __commonJS({
     var NUMBER = "([+-]?\\d+)";
     var YEAR = NUMBER + "\\s+years?";
     var MONTH = NUMBER + "\\s+mons?";
-    var DAY = NUMBER + "\\s+days?";
+    var DAY2 = NUMBER + "\\s+days?";
     var TIME = "([+-])?([\\d]*):(\\d\\d):(\\d\\d)\\.?(\\d{1,6})?";
-    var INTERVAL = new RegExp([YEAR, MONTH, DAY, TIME].map(function(regexString) {
+    var INTERVAL = new RegExp([YEAR, MONTH, DAY2, TIME].map(function(regexString) {
       return "(" + regexString + ")?";
     }).join("\\s*"));
     var positions = {
@@ -33713,20 +33719,20 @@ var require_utils4 = __commonJS({
       }
       return Object.defineProperties(Object.create(Object.getPrototypeOf(config)), Object.getOwnPropertyDescriptors(config));
     }
-    var escapeIdentifier2 = function(str3) {
-      return '"' + str3.replace(/"/g, '""') + '"';
+    var escapeIdentifier2 = function(str4) {
+      return '"' + str4.replace(/"/g, '""') + '"';
     };
-    var escapeLiteral2 = function(str3) {
+    var escapeLiteral2 = function(str4) {
       let hasBackslash = false;
       let escaped = "'";
-      if (str3 == null) {
+      if (str4 == null) {
         return "''";
       }
-      if (typeof str3 !== "string") {
+      if (typeof str4 !== "string") {
         return "''";
       }
-      for (let i = 0; i < str3.length; i++) {
-        const c = str3[i];
+      for (let i = 0; i < str4.length; i++) {
+        const c = str4[i];
         if (c === "'") {
           escaped += c + c;
         } else if (c === "\\") {
@@ -34141,22 +34147,22 @@ var require_type_overrides = __commonJS({
 var require_pg_connection_string = __commonJS({
   "../../node_modules/.pnpm/pg-connection-string@2.14.1/node_modules/pg-connection-string/index.js"(exports, module) {
     "use strict";
-    function parse(str3, options = {}) {
-      if (str3.charAt(0) === "/") {
-        const config2 = str3.split(" ");
+    function parse(str4, options = {}) {
+      if (str4.charAt(0) === "/") {
+        const config2 = str4.split(" ");
         return { host: config2[0], database: config2[1] };
       }
       const config = /* @__PURE__ */ Object.create(null);
       let result;
       let dummyHost = false;
-      if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(str3)) {
-        str3 = encodeURI(str3).replace(/%25(\d\d)/g, "%$1");
+      if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(str4)) {
+        str4 = encodeURI(str4).replace(/%25(\d\d)/g, "%$1");
       }
       try {
         try {
-          result = new URL(str3, "postgres://base");
+          result = new URL(str4, "postgres://base");
         } catch (e) {
-          result = new URL(str3.replace("@/", "@___DUMMY___/"), "postgres://base");
+          result = new URL(str4.replace("@/", "@___DUMMY___/"), "postgres://base");
           dummyHost = true;
         }
       } catch (err) {
@@ -34302,8 +34308,8 @@ var require_pg_connection_string = __commonJS({
       }, /* @__PURE__ */ Object.create(null));
       return poolConfig;
     }
-    function parseIntoClientConfig(str3) {
-      return toClientConfig(parse(str3));
+    function parseIntoClientConfig(str4) {
+      return toClientConfig(parse(str4));
     }
     function deprecatedSslModeWarning(sslmode) {
       if (!deprecatedSslModeWarning.warned && typeof process !== "undefined" && process.emitWarning) {
@@ -36729,11 +36735,11 @@ var require_client = __commonJS({
       // escapeIdentifier and escapeLiteral moved to utility functions & exported
       // on PG
       // re-exported here for backwards compatibility
-      escapeIdentifier(str3) {
-        return utils.escapeIdentifier(str3);
+      escapeIdentifier(str4) {
+        return utils.escapeIdentifier(str4);
       }
-      escapeLiteral(str3) {
-        return utils.escapeLiteral(str3);
+      escapeLiteral(str4) {
+        return utils.escapeLiteral(str4);
       }
       _pulseQueryQueue() {
         if (this.pipeline) {
@@ -38361,8 +38367,8 @@ var init_dialect = __esm({
       escapeParam(num2) {
         return `$${num2 + 1}`;
       }
-      escapeString(str3) {
-        return `'${str3.replace(/'/g, "''")}'`;
+      escapeString(str4) {
+        return `'${str4.replace(/'/g, "''")}'`;
       }
       buildWithCTE(queries) {
         if (!queries?.length) return void 0;
@@ -43282,6 +43288,84 @@ var init_learning = __esm({
   }
 });
 
+// ../../lib/db/src/schema/ecosystem.ts
+var familyMessagesTable, tuitionPlansTable, tuitionPaymentsTable, timetableChangesTable;
+var init_ecosystem = __esm({
+  "../../lib/db/src/schema/ecosystem.ts"() {
+    "use strict";
+    init_pg_core();
+    init_auth();
+    init_school();
+    familyMessagesTable = pgTable("family_messages", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      teacherId: uuid("teacher_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      fromId: uuid("from_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      body: text("body").notNull(),
+      readAt: timestamp("read_at", { withTimezone: true }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      index("family_messages_thread_idx").on(table.teacherId, table.parentId, table.studentId, table.createdAt),
+      index("family_messages_parent_idx").on(table.parentId, table.createdAt)
+    ]);
+    tuitionPlansTable = pgTable("tuition_plans", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      /** Monthly fee in sums. */
+      monthlyFee: integer("monthly_fee").notNull().default(0),
+      discountPercent: integer("discount_percent").notNull().default(0),
+      /** First month to pay for, YYYY-MM. */
+      startMonth: text("start_month").notNull(),
+      note: text("note").notNull().default(""),
+      updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("tuition_plans_school_student_unique").on(table.schoolId, table.studentId)]);
+    tuitionPaymentsTable = pgTable("tuition_payments", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      amount: integer("amount").notNull(),
+      /** The month it pays for, YYYY-MM. */
+      month: text("month").notNull(),
+      /** cash | card | transfer */
+      method: text("method").notNull().default("cash"),
+      paidOn: text("paid_on").notNull(),
+      receiptNo: integer("receipt_no").notNull(),
+      note: text("note").notNull().default(""),
+      createdBy: uuid("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+      cancelledBy: uuid("cancelled_by").references(() => usersTable.id, { onDelete: "set null" }),
+      cancelReason: text("cancel_reason").notNull().default("")
+    }, (table) => [
+      index("tuition_payments_school_month_idx").on(table.schoolId, table.month),
+      index("tuition_payments_student_idx").on(table.studentId),
+      uniqueIndex("tuition_payments_school_receipt_unique").on(table.schoolId, table.receiptNo)
+    ]);
+    timetableChangesTable = pgTable("timetable_changes", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      /** YYYY-MM-DD (Tashkent). */
+      date: text("date").notNull(),
+      period: integer("period").notNull(),
+      /** substitute | cancelled | room */
+      kind: text("kind").notNull(),
+      teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+      room: text("room"),
+      note: text("note").notNull().default(""),
+      createdBy: uuid("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("timetable_changes_class_date_period_unique").on(table.classId, table.date, table.period),
+      index("timetable_changes_school_date_idx").on(table.schoolId, table.date)
+    ]);
+  }
+});
+
 // ../../lib/db/src/schema/index.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -43300,6 +43384,7 @@ __export(schema_exports, {
   classesTable: () => classesTable,
   coursePaceTable: () => coursePaceTable,
   courseProgressTable: () => courseProgressTable,
+  familyMessagesTable: () => familyMessagesTable,
   journalMarksTable: () => journalMarksTable,
   labReportsTable: () => labReportsTable,
   lessonContentTable: () => lessonContentTable,
@@ -43332,9 +43417,12 @@ __export(schema_exports, {
   supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  timetableChangesTable: () => timetableChangesTable,
   timetableSlotsTable: () => timetableSlotsTable,
   trainerResultsTable: () => trainerResultsTable,
   trainerTestsTable: () => trainerTestsTable,
+  tuitionPaymentsTable: () => tuitionPaymentsTable,
+  tuitionPlansTable: () => tuitionPlansTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -43346,6 +43434,7 @@ var init_schema2 = __esm({
     init_auth();
     init_school();
     init_learning();
+    init_ecosystem();
   }
 });
 
@@ -43369,6 +43458,7 @@ __export(src_exports, {
   courseProgressTable: () => courseProgressTable,
   databaseIsConfigured: () => databaseIsConfigured,
   db: () => db,
+  familyMessagesTable: () => familyMessagesTable,
   journalMarksTable: () => journalMarksTable,
   labReportsTable: () => labReportsTable,
   lessonContentTable: () => lessonContentTable,
@@ -43402,9 +43492,12 @@ __export(src_exports, {
   supportMessagesTable: () => supportMessagesTable,
   telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  timetableChangesTable: () => timetableChangesTable,
   timetableSlotsTable: () => timetableSlotsTable,
   trainerResultsTable: () => trainerResultsTable,
   trainerTestsTable: () => trainerTestsTable,
+  tuitionPaymentsTable: () => tuitionPaymentsTable,
+  tuitionPlansTable: () => tuitionPlansTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
   userNotificationsTable: () => userNotificationsTable,
@@ -43870,8 +43963,8 @@ function num(value) {
   const n = Number(value);
   return Number.isFinite(n) ? clamp(n, -1.5, 1.5) : 0;
 }
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+function clamp(value, min, max2) {
+  return Math.min(max2, Math.max(min, value));
 }
 async function enrichFacts(pkg) {
   const wiki = await fetchWikipediaFact(pkg.title);
@@ -44271,12 +44364,12 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
@@ -47434,14 +47527,14 @@ var ZodString = class _ZodString extends ZodType {
     return min;
   }
   get maxLength() {
-    let max = null;
+    let max2 = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
+        if (max2 === null || ch.value < max2)
+          max2 = ch.value;
       }
     }
-    return max;
+    return max2;
   }
 };
 ZodString.create = (params) => {
@@ -47655,20 +47748,20 @@ var ZodNumber = class _ZodNumber extends ZodType {
     return min;
   }
   get maxValue() {
-    let max = null;
+    let max2 = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
+        if (max2 === null || ch.value < max2)
+          max2 = ch.value;
       }
     }
-    return max;
+    return max2;
   }
   get isInt() {
     return !!this._def.checks.find((ch) => ch.kind === "int" || ch.kind === "multipleOf" && util.isInteger(ch.value));
   }
   get isFinite() {
-    let max = null;
+    let max2 = null;
     let min = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "finite" || ch.kind === "int" || ch.kind === "multipleOf") {
@@ -47677,11 +47770,11 @@ var ZodNumber = class _ZodNumber extends ZodType {
         if (min === null || ch.value > min)
           min = ch.value;
       } else if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
+        if (max2 === null || ch.value < max2)
+          max2 = ch.value;
       }
     }
-    return Number.isFinite(min) && Number.isFinite(max);
+    return Number.isFinite(min) && Number.isFinite(max2);
   }
 };
 ZodNumber.create = (params) => {
@@ -47846,14 +47939,14 @@ var ZodBigInt = class _ZodBigInt extends ZodType {
     return min;
   }
   get maxValue() {
-    let max = null;
+    let max2 = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
+        if (max2 === null || ch.value < max2)
+          max2 = ch.value;
       }
     }
-    return max;
+    return max2;
   }
 };
 ZodBigInt.create = (params) => {
@@ -47980,14 +48073,14 @@ var ZodDate = class _ZodDate extends ZodType {
     return min != null ? new Date(min) : null;
   }
   get maxDate() {
-    let max = null;
+    let max2 = null;
     for (const ch of this._def.checks) {
       if (ch.kind === "max") {
-        if (max === null || ch.value < max)
-          max = ch.value;
+        if (max2 === null || ch.value < max2)
+          max2 = ch.value;
       }
     }
-    return max != null ? new Date(max) : null;
+    return max2 != null ? new Date(max2) : null;
   }
 };
 ZodDate.create = (params) => {
@@ -53331,17 +53424,17 @@ async function loadClassContext(classId) {
 async function authorizeClass(user3, classId) {
   const schoolClass = await loadClassContext(classId);
   if (!schoolClass) return null;
-  const [schoolRole3, classRole3] = await Promise.all([
+  const [schoolRole4, classRole3] = await Promise.all([
     schoolMembershipRole(user3.id, schoolClass.schoolId),
     classMembershipRole(user3.id, classId)
   ]);
   return {
     schoolClass,
-    schoolRole: schoolRole3,
+    schoolRole: schoolRole4,
     classRole: classRole3,
-    canAccess: isGlobalAdminRole(user3.role) || canManageSchool(user3.role, schoolRole3) || Boolean(classRole3),
-    canManage: canManageClass(user3.role, schoolRole3, classRole3),
-    canReview: canReviewAssignments(user3.role, schoolRole3, classRole3),
+    canAccess: isGlobalAdminRole(user3.role) || canManageSchool(user3.role, schoolRole4) || Boolean(classRole3),
+    canManage: canManageClass(user3.role, schoolRole4, classRole3),
+    canReview: canReviewAssignments(user3.role, schoolRole4, classRole3),
     canSubmit: canSubmitAssignment(user3.role, classRole3)
   };
 }
@@ -53459,12 +53552,12 @@ router5.get(
       res.status(404).json({ error: "School not found." });
       return;
     }
-    const schoolRole3 = await schoolMembershipRole(user3.id, schoolId);
-    if (!isGlobalAdminRole(user3.role) && !schoolRole3) {
+    const schoolRole4 = await schoolMembershipRole(user3.id, schoolId);
+    if (!isGlobalAdminRole(user3.role) && !schoolRole4) {
       forbidden(res);
       return;
     }
-    res.json({ school: school2, role: schoolRole3 });
+    res.json({ school: school2, role: schoolRole4 });
   }
 );
 router5.get(
@@ -53474,8 +53567,8 @@ router5.get(
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
     const user3 = currentUser(res);
-    const schoolRole3 = await schoolMembershipRole(user3.id, schoolId);
-    if (!canManageSchool(user3.role, schoolRole3)) {
+    const schoolRole4 = await schoolMembershipRole(user3.id, schoolId);
+    if (!canManageSchool(user3.role, schoolRole4)) {
       forbidden(res, "School management access denied.");
       return;
     }
@@ -53497,8 +53590,8 @@ router5.post(
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
     const user3 = currentUser(res);
-    const schoolRole3 = await schoolMembershipRole(user3.id, schoolId);
-    if (!canManageSchool(user3.role, schoolRole3)) {
+    const schoolRole4 = await schoolMembershipRole(user3.id, schoolId);
+    if (!canManageSchool(user3.role, schoolRole4)) {
       forbidden(res, "School management access denied.");
       return;
     }
@@ -53511,12 +53604,12 @@ router5.post(
     if (!isGlobalAdminRole(user3.role)) {
       const managerAssignable = [
         ...MEMBER_ROLES_A_SCHOOL_MANAGER_CAN_ADD,
-        ...schoolRole3 === "school_director" ? ["school_admin", "school_director"] : []
+        ...schoolRole4 === "school_director" ? ["school_admin", "school_director"] : []
       ];
       if (!managerAssignable.includes(role)) {
         forbidden(
           res,
-          schoolRole3 === "school_director" ? "School directors can add staff, students, and parents." : "School administrators can add students, teachers, and parents."
+          schoolRole4 === "school_director" ? "School directors can add staff, students, and parents." : "School administrators can add students, teachers, and parents."
         );
         return;
       }
@@ -53541,8 +53634,8 @@ router5.delete(
     const schoolId = String(req.params.schoolId);
     const userId = String(req.params.userId);
     const user3 = currentUser(res);
-    const schoolRole3 = await schoolMembershipRole(user3.id, schoolId);
-    if (!canManageSchool(user3.role, schoolRole3)) {
+    const schoolRole4 = await schoolMembershipRole(user3.id, schoolId);
+    if (!canManageSchool(user3.role, schoolRole4)) {
       forbidden(res, "School management access denied.");
       return;
     }
@@ -53556,7 +53649,7 @@ router5.delete(
         forbidden(res, "Only EDUVERSE staff can remove a school director.");
         return;
       }
-      if (targetRole === "school_admin" && schoolRole3 !== "school_director") {
+      if (targetRole === "school_admin" && schoolRole4 !== "school_director") {
         forbidden(res, "Only the director can remove a deputy.");
         return;
       }
@@ -53591,13 +53684,13 @@ router5.get(
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
     const user3 = currentUser(res);
-    const schoolRole3 = await schoolMembershipRole(user3.id, schoolId);
-    if (!isGlobalAdminRole(user3.role) && !schoolRole3) {
+    const schoolRole4 = await schoolMembershipRole(user3.id, schoolId);
+    if (!isGlobalAdminRole(user3.role) && !schoolRole4) {
       forbidden(res);
       return;
     }
     const conditions = [eq(classesTable.schoolId, schoolId)];
-    if (!isGlobalAdminRole(user3.role) && !isSchoolManagementRole(schoolRole3 ?? "")) {
+    if (!isGlobalAdminRole(user3.role) && !isSchoolManagementRole(schoolRole4 ?? "")) {
       const memberClasses = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, user3.id));
       if (memberClasses.length === 0) {
         res.json({ classes: [] });
@@ -53630,8 +53723,8 @@ router5.post(
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
     const user3 = currentUser(res);
-    const schoolRole3 = await schoolMembershipRole(user3.id, schoolId);
-    if (!canManageSchool(user3.role, schoolRole3)) {
+    const schoolRole4 = await schoolMembershipRole(user3.id, schoolId);
+    if (!canManageSchool(user3.role, schoolRole4)) {
       forbidden(res, "School management access denied.");
       return;
     }
@@ -53673,7 +53766,7 @@ router5.get(
       forbidden(res, "Class access denied.");
       return;
     }
-    const { schoolClass, schoolRole: schoolRole3, classRole: classRole3 } = authorization;
+    const { schoolClass, schoolRole: schoolRole4, classRole: classRole3 } = authorization;
     res.json({
       class: {
         ...schoolClass,
@@ -53681,7 +53774,7 @@ router5.get(
         teacherCount: await classMemberCount(schoolClass.id, "teacher")
       },
       role: classRole3,
-      schoolRole: schoolRole3
+      schoolRole: schoolRole4
     });
   }
 );
@@ -53770,15 +53863,15 @@ router5.post(
       return;
     }
     const member = await db.transaction(async (transaction) => {
-      const schoolRole3 = isSchoolMemberRole(accountRole) ? accountRole : null;
-      if (schoolRole3) {
+      const schoolRole4 = isSchoolMemberRole(accountRole) ? accountRole : null;
+      if (schoolRole4) {
         await transaction.insert(schoolMembersTable).values({
           schoolId: authorization.schoolClass.schoolId,
           userId,
-          role: schoolRole3
+          role: schoolRole4
         }).onConflictDoUpdate({
           target: [schoolMembersTable.schoolId, schoolMembersTable.userId],
-          set: { role: schoolRole3 }
+          set: { role: schoolRole4 }
         });
       }
       const [created] = await transaction.insert(classMembersTable).values({ classId, userId, role }).onConflictDoUpdate({
@@ -55159,11 +55252,13 @@ async function slotsFilterFor(viewer) {
   if (!schoolIds.length) return null;
   return inArray(timetableSlotsTable.schoolId, schoolIds);
 }
-function lessonReader(where) {
+function lessonReader(where, substituteFor) {
   const teacherNames = /* @__PURE__ */ new Map();
   const bellCache = /* @__PURE__ */ new Map();
   return async function lessonsOn(date2, weekday) {
     if (weekday === 7) return [];
+    const taken = substituteFor ? await db.select({ classId: timetableChangesTable.classId, period: timetableChangesTable.period }).from(timetableChangesTable).where(and(eq(timetableChangesTable.date, date2), eq(timetableChangesTable.kind, "substitute"), eq(timetableChangesTable.teacherId, substituteFor))) : [];
+    const scope = taken.length ? or(where, ...taken.map((item) => and(eq(timetableSlotsTable.classId, item.classId), eq(timetableSlotsTable.period, item.period)))) : where;
     const slots = await db.select({
       id: timetableSlotsTable.id,
       schoolId: timetableSlotsTable.schoolId,
@@ -55174,14 +55269,17 @@ function lessonReader(where) {
       teacherId: timetableSlotsTable.teacherId,
       className: classesTable.name,
       grade: classesTable.grade
-    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
-    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id) && !teacherNames.has(id)))];
+    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(scope, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
+    const changes = slots.length ? await db.select({ classId: timetableChangesTable.classId, period: timetableChangesTable.period, kind: timetableChangesTable.kind, teacherId: timetableChangesTable.teacherId, room: timetableChangesTable.room, note: timetableChangesTable.note }).from(timetableChangesTable).where(and(eq(timetableChangesTable.date, date2), inArray(timetableChangesTable.classId, [...new Set(slots.map((slot) => slot.classId))]))) : [];
+    const missing = [...new Set([...slots.map((slot) => slot.teacherId), ...changes.map((change) => change.teacherId)].filter((id) => Boolean(id) && !teacherNames.has(id)))];
     if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
     const out = [];
     for (const slot of slots) {
       if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
       const bell = bellCache.get(slot.schoolId)[slot.period - 1];
       if (!bell) continue;
+      const change = changes.find((item) => item.classId === slot.classId && item.period === slot.period);
+      const substitute = change?.kind === "substitute" && change.teacherId ? change.teacherId : null;
       out.push({
         id: slot.id,
         classId: slot.classId,
@@ -55189,13 +55287,14 @@ function lessonReader(where) {
         grade: slot.grade,
         period: slot.period,
         subject: slot.subject,
-        room: slot.room,
-        teacherId: slot.teacherId,
-        teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        room: change?.kind === "room" && change.room ? change.room : slot.room,
+        teacherId: substitute ?? slot.teacherId,
+        teacherName: substitute ?? slot.teacherId ? teacherNames.get(substitute ?? slot.teacherId) ?? "" : "",
         start: bell.start,
         end: bell.end,
         startsAt: atTashkent(date2, bell.start),
-        endsAt: atTashkent(date2, bell.end)
+        endsAt: atTashkent(date2, bell.end),
+        change: change ? { kind: change.kind, note: change.note, originalTeacherName: substitute && slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : null } : null
       });
     }
     out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
@@ -55217,7 +55316,7 @@ router7.get("/me/today", requireAuthenticatedRole(...everyRole3), async (_req, r
     return;
   }
   base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
-  const lessonsOn = lessonReader(where);
+  const lessonsOn = lessonReader(where, viewer.role === "teacher" ? viewer.id : void 0);
   let lessons = await lessonsOn(now.date, now.weekday);
   const demo = await inDemoSchool(viewer.id);
   if (demo) {
@@ -55257,7 +55356,7 @@ router7.get("/me/week", requireAuthenticatedRole(...everyRole3), async (req, res
   monday.setUTCDate(monday.getUTCDate() - (now.weekday - 1) + offset * 7);
   const days = [];
   const where = await slotsFilterFor(viewer);
-  const lessonsOn = where ? lessonReader(where) : null;
+  const lessonsOn = where ? lessonReader(where, viewer.role === "teacher" ? viewer.id : void 0) : null;
   for (let index2 = 0; index2 < 6; index2 += 1) {
     const day2 = new Date(monday.getTime() + index2 * 864e5);
     const date2 = day2.toISOString().slice(0, 10);
@@ -56944,7 +57043,7 @@ var perSession6 = (req) => {
 };
 var isRecord10 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var TOPIC_RE2 = /^[a-z0-9][a-z0-9.\-]{1,39}$/;
-var str2 = (value, max) => typeof value === "string" ? value.trim().slice(0, max) : "";
+var str2 = (value, max2) => typeof value === "string" ? value.trim().slice(0, max2) : "";
 var COURSE3 = book_topics_default;
 function topicOf(key) {
   for (const book of COURSE3) {
@@ -57281,6 +57380,679 @@ router14.post("/ai/lesson-help", requireAuthenticatedRole(...everyRole7), helpLi
 });
 var lessons_default = router14;
 
+// src/routes/ecosystem.ts
+init_drizzle_orm();
+var import_express15 = __toESM(require_express2(), 1);
+init_src();
+var router15 = (0, import_express15.Router)();
+var viewerOf10 = (res) => res.locals.authenticatedUser;
+var isRecord11 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var str3 = (value, max2) => typeof value === "string" ? value.trim().slice(0, max2) : "";
+var MANAGERS3 = ["school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var STAFF2 = ["teacher", ...MANAGERS3];
+var DAY = 864e5;
+var MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+var DATE_RE3 = /^\d{4}-\d{2}-\d{2}$/;
+var writeLimiter = createRateLimiter(240, 10 * 60 * 1e3, "Too many changes. Wait a minute.", "ecosystem-write");
+var messageLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many messages. Wait a few minutes.", "family-messages");
+var dayText = (ms) => tashkentNow(new Date(ms)).date;
+var avg = (values) => values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 10) / 10 : null;
+var percentPresent = (rows) => rows.length ? Math.round(rows.filter((row) => row.status !== "absent").length / rows.length * 100) : null;
+async function schoolRole3(userId, schoolId) {
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+  return row?.role ?? null;
+}
+async function isManager(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const role = await schoolRole3(viewer.id, schoolId);
+  return role === "school_director" || role === "school_admin";
+}
+async function emptyJournals(slotFilter, days) {
+  const where = slotFilter.teacherId ? eq(timetableSlotsTable.teacherId, slotFilter.teacherId) : eq(timetableSlotsTable.schoolId, slotFilter.schoolId);
+  const slots = await db.select({
+    classId: timetableSlotsTable.classId,
+    weekday: timetableSlotsTable.weekday,
+    period: timetableSlotsTable.period,
+    subject: timetableSlotsTable.subject,
+    teacherId: timetableSlotsTable.teacherId,
+    className: classesTable.name,
+    createdAt: timetableSlotsTable.createdAt
+  }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(where);
+  if (!slots.length) return [];
+  const today2 = tashkentNow();
+  const dates = [];
+  for (let offset = 1; offset <= days; offset += 1) {
+    const day2 = tashkentNow(new Date(Date.now() - offset * DAY));
+    if (day2.weekday !== 7) dates.push({ date: day2.date, weekday: day2.weekday });
+  }
+  if (!dates.length) return [];
+  const classIds = [...new Set(slots.map((slot) => slot.classId))];
+  const from = dates[dates.length - 1].date;
+  const [attendance, marks, cancelled] = await Promise.all([
+    db.selectDistinct({ classId: attendanceTable.classId, date: attendanceTable.attendanceDate, subject: attendanceTable.subject }).from(attendanceTable).where(and(inArray(attendanceTable.classId, classIds), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today2.date))),
+    db.selectDistinct({ classId: journalMarksTable.classId, date: journalMarksTable.date, subject: journalMarksTable.subject }).from(journalMarksTable).where(and(inArray(journalMarksTable.classId, classIds), gte(journalMarksTable.date, from), lte(journalMarksTable.date, today2.date))),
+    db.select({ classId: timetableChangesTable.classId, date: timetableChangesTable.date, period: timetableChangesTable.period }).from(timetableChangesTable).where(and(inArray(timetableChangesTable.classId, classIds), gte(timetableChangesTable.date, from), eq(timetableChangesTable.kind, "cancelled")))
+  ]);
+  const filled = new Set([...attendance, ...marks].map((row) => `${row.classId}|${row.date}|${row.subject.toLowerCase()}`));
+  const wholeDay = new Set(attendance.filter((row) => row.subject === "").map((row) => `${row.classId}|${row.date}`));
+  const off = new Set(cancelled.map((row) => `${row.classId}|${row.date}|${row.period}`));
+  const out = [];
+  for (const { date: date2, weekday } of dates) {
+    for (const slot of slots) {
+      if (slot.weekday !== weekday || dayText(slot.createdAt.getTime()) > date2) continue;
+      if (off.has(`${slot.classId}|${date2}|${slot.period}`)) continue;
+      if (filled.has(`${slot.classId}|${date2}|${slot.subject.toLowerCase()}`) || wholeDay.has(`${slot.classId}|${date2}`)) continue;
+      out.push({ date: date2, classId: slot.classId, className: slot.className, subject: slot.subject, teacherId: slot.teacherId, period: slot.period });
+    }
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date) || a.period - b.period);
+}
+async function pupilsNeedingAttention(classIds, days, subjects) {
+  if (!classIds.length) return [];
+  const now = Date.now();
+  const from = dayText(now - days * DAY);
+  const prevFrom = dayText(now - 2 * days * DAY);
+  const pupils = await db.select({ id: usersTable.id, name: usersTable.username, classId: classMembersTable.classId, className: classesTable.name }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).innerJoin(classesTable, eq(classesTable.id, classMembersTable.classId)).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
+  if (!pupils.length) return [];
+  const ids = [...new Set(pupils.map((pupil) => pupil.id))];
+  const subjectFilter = (rows) => subjects?.length ? rows.filter((row) => subjects.some((item) => item.toLowerCase() === row.subject.toLowerCase())) : rows;
+  const [absences, marks, assignments] = await Promise.all([
+    db.select({ studentId: attendanceTable.studentId, subject: attendanceTable.subject }).from(attendanceTable).where(and(inArray(attendanceTable.studentId, ids), inArray(attendanceTable.classId, classIds), gte(attendanceTable.attendanceDate, from), eq(attendanceTable.status, "absent"))),
+    db.select({ studentId: journalMarksTable.studentId, mark: journalMarksTable.mark, date: journalMarksTable.date, subject: journalMarksTable.subject }).from(journalMarksTable).where(and(inArray(journalMarksTable.studentId, ids), inArray(journalMarksTable.classId, classIds), gte(journalMarksTable.date, prevFrom))),
+    db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId, subject: assignmentsTable.subject }).from(assignmentsTable).where(and(inArray(assignmentsTable.classId, classIds), lte(assignmentsTable.dueAt, new Date(now)), gte(assignmentsTable.dueAt, new Date(now - days * DAY))))
+  ]);
+  const dueAssignments = subjectFilter(assignments);
+  const submitted = dueAssignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, studentId: assignmentSubmissionsTable.studentId }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, dueAssignments.map((item) => item.id))) : [];
+  const done = new Set(submitted.map((row) => `${row.assignmentId}|${row.studentId}`));
+  const ownMarks = subjectFilter(marks);
+  const out = [];
+  for (const pupil of pupils) {
+    const reasons = [];
+    const absent = subjectFilter(absences).filter((row) => row.studentId === pupil.id).length;
+    if (absent >= 3) reasons.push({ kind: "absent", value: String(absent) });
+    const mine = ownMarks.filter((row) => row.studentId === pupil.id && row.mark !== null);
+    const nowMarks = mine.filter((row) => row.date >= from).map((row) => row.mark);
+    const prevMarks = mine.filter((row) => row.date < from).map((row) => row.mark);
+    const nowAvg = avg(nowMarks);
+    const prevAvg = avg(prevMarks);
+    if (nowAvg !== null && nowAvg < 5 && nowMarks.length >= 2) reasons.push({ kind: "low", value: nowAvg.toFixed(1) });
+    else if (nowAvg !== null && prevAvg !== null && prevAvg - nowAvg >= 1.5 && nowMarks.length >= 2) reasons.push({ kind: "falling", value: `${prevAvg.toFixed(1)} \u2192 ${nowAvg.toFixed(1)}` });
+    const missing = dueAssignments.filter((item) => item.classId === pupil.classId && !done.has(`${item.id}|${pupil.id}`)).length;
+    if (missing >= 2) reasons.push({ kind: "homework", value: String(missing) });
+    if (reasons.length) out.push({ id: pupil.id, name: pupil.name, className: pupil.className, classId: pupil.classId, reasons });
+  }
+  return out.sort((a, b) => b.reasons.length - a.reasons.length || a.name.localeCompare(b.name));
+}
+var PERIOD_DAYS = { week: 7, month: 30, quarter: 90 };
+router15.get("/schools/:schoolId/analytics", requireAuthenticatedRole(...MANAGERS3), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!await isManager(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the school administration sees this." });
+    return;
+  }
+  const period = PERIOD_DAYS[String(req.query.period ?? "month")] ? String(req.query.period ?? "month") : "month";
+  const days = PERIOD_DAYS[period];
+  const now = Date.now();
+  const from = dayText(now - days * DAY);
+  const prevFrom = dayText(now - 2 * days * DAY);
+  const today2 = tashkentNow().date;
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.grade), asc(classesTable.name));
+  const classIds = classes.map((item) => item.id);
+  const members = await db.select({ role: schoolMembersTable.role, userId: schoolMembersTable.userId, name: usersTable.username, status: usersTable.status }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId));
+  const teachers = members.filter((row) => row.role === "teacher");
+  const scopeIds = classIds.length ? classIds : ["00000000-0000-0000-0000-000000000000"];
+  const [attendance, marks, assignments, teacherClasses] = await Promise.all([
+    db.select({ classId: attendanceTable.classId, status: attendanceTable.status, date: attendanceTable.attendanceDate, subject: attendanceTable.subject }).from(attendanceTable).where(and(inArray(attendanceTable.classId, scopeIds), gte(attendanceTable.attendanceDate, prevFrom))),
+    db.select({ classId: journalMarksTable.classId, subject: journalMarksTable.subject, mark: journalMarksTable.mark, date: journalMarksTable.date }).from(journalMarksTable).where(and(inArray(journalMarksTable.classId, scopeIds), gte(journalMarksTable.date, prevFrom))),
+    db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId, createdBy: assignmentsTable.createdBy, subject: assignmentsTable.subject, createdAt: assignmentsTable.createdAt }).from(assignmentsTable).where(inArray(assignmentsTable.classId, scopeIds)),
+    db.select({ classId: classMembersTable.classId, userId: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, scopeIds), eq(classMembersTable.role, "teacher")))
+  ]);
+  const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, submittedAt: assignmentSubmissionsTable.submittedAt, updatedAt: assignmentSubmissionsTable.updatedAt }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const current = attendance.filter((row) => row.date >= from);
+  const previous = attendance.filter((row) => row.date < from);
+  const marksNow = marks.filter((row) => row.date >= from && row.mark !== null);
+  const marksPrev = marks.filter((row) => row.date < from && row.mark !== null);
+  const assignmentOf = new Map(assignments.map((item) => [item.id, item]));
+  const unchecked = submissions.filter((row) => row.score === null);
+  const perClass = classes.map((klass) => {
+    const att = current.filter((row) => row.classId === klass.id);
+    const nowMarks = marksNow.filter((row) => row.classId === klass.id).map((row) => row.mark);
+    const prevMarks = marksPrev.filter((row) => row.classId === klass.id).map((row) => row.mark);
+    return {
+      id: klass.id,
+      name: klass.name,
+      grade: klass.grade,
+      students: 0,
+      attendancePercent: percentPresent(att),
+      attendancePrev: percentPresent(previous.filter((row) => row.classId === klass.id)),
+      absences: att.filter((row) => row.status === "absent").length,
+      average: avg(nowMarks),
+      averagePrev: avg(prevMarks),
+      marks: nowMarks.length,
+      unchecked: unchecked.filter((row) => assignmentOf.get(row.assignmentId)?.classId === klass.id).length
+    };
+  });
+  const pupilCounts = await db.select({ classId: classMembersTable.classId, count: sql`count(*)::int` }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(inArray(classMembersTable.classId, scopeIds), eq(classMembersTable.role, "student"), eq(usersTable.status, "active"))).groupBy(classMembersTable.classId);
+  for (const row of pupilCounts) {
+    const item = perClass.find((klass) => klass.id === row.classId);
+    if (item) item.students = row.count;
+  }
+  const subjectNames = [...new Set([...marksNow, ...marksPrev].map((row) => row.subject))].sort();
+  const perSubject = subjectNames.map((subject) => {
+    const nowValues = marksNow.filter((row) => row.subject === subject).map((row) => row.mark);
+    const prevValues = marksPrev.filter((row) => row.subject === subject).map((row) => row.mark);
+    const absent = current.filter((row) => row.subject.toLowerCase() === subject.toLowerCase());
+    return { subject, average: avg(nowValues), averagePrev: avg(prevValues), marks: nowValues.length, attendancePercent: percentPresent(absent) };
+  }).filter((item) => item.marks > 0 || item.averagePrev !== null);
+  const empty = await emptyJournals({ schoolId }, Math.min(days, 14));
+  const teacherRows = teachers.map((teacher) => {
+    const mine = unchecked.filter((row) => assignmentOf.get(row.assignmentId)?.createdBy === teacher.userId);
+    const oldest = mine.reduce((min, row) => Math.min(min, row.submittedAt.getTime()), Number.POSITIVE_INFINITY);
+    return {
+      id: teacher.userId,
+      name: teacher.name,
+      classes: teacherClasses.filter((row) => row.userId === teacher.userId).length,
+      unchecked: mine.length,
+      oldestDays: Number.isFinite(oldest) ? Math.floor((now - oldest) / DAY) : null,
+      emptyJournals: empty.filter((row) => row.teacherId === teacher.userId).length,
+      homeworkGiven: assignments.filter((row) => row.createdBy === teacher.userId && row.createdAt.getTime() >= now - days * DAY).length,
+      marksGiven: 0
+    };
+  }).sort((a, b) => b.unchecked + b.emptyJournals - (a.unchecked + a.emptyJournals) || a.name.localeCompare(b.name));
+  const attention = await pupilsNeedingAttention(classIds, days);
+  const attentionClasses = perClass.filter((item) => item.attendancePercent !== null && item.attendancePercent < 85 || item.average !== null && item.average < 6 || item.average !== null && item.averagePrev !== null && item.averagePrev - item.average >= 1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    period,
+    from,
+    to: today2,
+    days,
+    totals: {
+      students: members.filter((row) => row.role === "student" && row.status === "active").length,
+      teachers: teachers.length,
+      parents: members.filter((row) => row.role === "parent").length,
+      classes: classes.length,
+      attendancePercent: percentPresent(current),
+      attendancePrev: percentPresent(previous),
+      absentToday: attendance.filter((row) => row.date === today2 && row.status === "absent").length,
+      average: avg(marksNow.map((row) => row.mark)),
+      averagePrev: avg(marksPrev.map((row) => row.mark)),
+      unchecked: unchecked.length,
+      emptyJournals: empty.length,
+      needAttention: attention.length + attentionClasses.length,
+      homeworkAverage: avg(submissions.filter((row) => row.score !== null && row.updatedAt.getTime() >= now - days * DAY).map((row) => gradeOf(row.score)))
+    },
+    perClass,
+    perSubject,
+    teachers: teacherRows,
+    emptyJournals: empty.slice(0, 60),
+    attention: attention.slice(0, 40),
+    attentionClasses: attentionClasses.map((item) => item.id)
+  });
+});
+router15.get("/me/workspace", requireAuthenticatedRole("teacher", "school_director", "school_admin"), async (_req, res) => {
+  const viewer = viewerOf10(res);
+  const myClasses = await db.select({ id: classMembersTable.classId, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classesTable.id, classMembersTable.classId)).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
+  const classIds = myClasses.map((item) => item.id);
+  const [me] = await db.select({ subjects: usersTable.subjects }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const subjects = Array.isArray(me?.subjects) ? me.subjects.filter((item) => typeof item === "string") : [];
+  const mine = await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, classId: assignmentsTable.classId, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(eq(assignmentsTable.createdBy, viewer.id)).orderBy(desc(assignmentsTable.createdAt)).limit(200);
+  const pending2 = mine.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, submittedAt: assignmentSubmissionsTable.submittedAt }).from(assignmentSubmissionsTable).where(and(inArray(assignmentSubmissionsTable.assignmentId, mine.map((item) => item.id)), isNull(assignmentSubmissionsTable.score))) : [];
+  const className = new Map(myClasses.map((item) => [item.id, item.name]));
+  const toReview = mine.map((item) => {
+    const rows = pending2.filter((row) => row.assignmentId === item.id);
+    return { id: item.id, title: item.title, subject: item.subject, classId: item.classId, className: className.get(item.classId) ?? "", count: rows.length, oldest: rows.length ? new Date(Math.min(...rows.map((row) => row.submittedAt.getTime()))).toISOString() : null };
+  }).filter((item) => item.count > 0);
+  const empty = await emptyJournals({ teacherId: viewer.id }, 14);
+  const attention = await pupilsNeedingAttention(classIds, 30, subjects.length ? subjects : void 0);
+  const today2 = tashkentNow().date;
+  const changes = await db.select({ id: timetableChangesTable.id, classId: timetableChangesTable.classId, className: classesTable.name, date: timetableChangesTable.date, period: timetableChangesTable.period, kind: timetableChangesTable.kind, room: timetableChangesTable.room, note: timetableChangesTable.note, teacherId: timetableChangesTable.teacherId }).from(timetableChangesTable).innerJoin(classesTable, eq(classesTable.id, timetableChangesTable.classId)).where(and(gte(timetableChangesTable.date, today2), lte(timetableChangesTable.date, dayText(Date.now() + 7 * DAY))));
+  const mySlots = await db.select({ classId: timetableSlotsTable.classId, weekday: timetableSlotsTable.weekday, period: timetableSlotsTable.period }).from(timetableSlotsTable).where(eq(timetableSlotsTable.teacherId, viewer.id));
+  const weekdayOf = (date2) => {
+    const day2 = (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).getUTCDay();
+    return day2 === 0 ? 7 : day2;
+  };
+  const myChanges = changes.filter((item) => item.teacherId === viewer.id || mySlots.some((slot) => slot.classId === item.classId && slot.period === item.period && slot.weekday === weekdayOf(item.date)));
+  const unread = await db.select({ count: sql`count(*)::int` }).from(familyMessagesTable).where(and(eq(familyMessagesTable.teacherId, viewer.id), isNull(familyMessagesTable.readAt), sql`${familyMessagesTable.fromId} <> ${viewer.id}`));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    classes: myClasses,
+    toReview,
+    emptyJournals: empty.slice(0, 30),
+    attention: attention.slice(0, 20),
+    changes: myChanges.map((item) => ({ ...item, mine: item.teacherId === viewer.id })),
+    unreadMessages: unread[0]?.count ?? 0
+  });
+});
+async function teachersOf(studentId) {
+  const classes = await db.select({ classId: classMembersTable.classId, schoolId: classesTable.schoolId, className: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classesTable.id, classMembersTable.classId)).where(and(eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student")));
+  if (!classes.length) return [];
+  const rows = await db.select({ classId: classMembersTable.classId, id: usersTable.id, name: usersTable.username, subjects: usersTable.subjects }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(inArray(classMembersTable.classId, classes.map((item) => item.classId)), eq(classMembersTable.role, "teacher")));
+  return rows.map((row) => {
+    const klass = classes.find((item) => item.classId === row.classId);
+    return { id: row.id, name: row.name, subjects: Array.isArray(row.subjects) ? row.subjects.slice(0, 4) : [], classId: row.classId, className: klass.className, schoolId: klass.schoolId };
+  });
+}
+async function threadAllowed(parentId, teacherId, studentId) {
+  const [link] = await db.select({ id: parentLinksTable.id }).from(parentLinksTable).where(and(eq(parentLinksTable.parentId, parentId), eq(parentLinksTable.studentId, studentId))).limit(1);
+  if (!link) return null;
+  const teacher = (await teachersOf(studentId)).find((item) => item.id === teacherId);
+  return teacher ? { schoolId: teacher.schoolId } : null;
+}
+router15.get("/me/family-threads", requireAuthenticatedRole("parent", "teacher"), async (_req, res) => {
+  const viewer = viewerOf10(res);
+  res.setHeader("Cache-Control", "private, no-store");
+  const messages = await db.select().from(familyMessagesTable).where(viewer.role === "parent" ? eq(familyMessagesTable.parentId, viewer.id) : eq(familyMessagesTable.teacherId, viewer.id)).orderBy(desc(familyMessagesTable.createdAt)).limit(1e3);
+  const summary = (parentId, teacherId, studentId) => {
+    const rows = messages.filter((row) => row.parentId === parentId && row.teacherId === teacherId && row.studentId === studentId);
+    return { last: rows[0] ? { body: rows[0].body.slice(0, 140), at: rows[0].createdAt, mine: rows[0].fromId === viewer.id } : null, unread: rows.filter((row) => row.fromId !== viewer.id && !row.readAt).length };
+  };
+  if (viewer.role === "parent") {
+    const children = await db.select({ id: usersTable.id, name: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(usersTable.id, parentLinksTable.studentId)).where(eq(parentLinksTable.parentId, viewer.id));
+    const threads2 = [];
+    for (const child of children) {
+      const seen = /* @__PURE__ */ new Set();
+      for (const teacher of await teachersOf(child.id)) {
+        if (seen.has(teacher.id)) continue;
+        seen.add(teacher.id);
+        threads2.push({ studentId: child.id, studentName: child.name, otherId: teacher.id, otherName: teacher.name, subtitle: [teacher.className, ...teacher.subjects].filter(Boolean).join(" \xB7 "), ...summary(viewer.id, teacher.id, child.id) });
+      }
+    }
+    threads2.sort((a, b) => (b.last ? new Date(b.last.at).getTime() : 0) - (a.last ? new Date(a.last.at).getTime() : 0));
+    res.json({ threads: threads2 });
+    return;
+  }
+  const pupils = await db.select({ studentId: classMembersTable.userId, className: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classesTable.id, classMembersTable.classId)).where(and(eq(classMembersTable.role, "student"), inArray(
+    classMembersTable.classId,
+    db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")))
+  )));
+  const studentIds = [...new Set(pupils.map((row) => row.studentId))];
+  const links = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId, parentName: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(usersTable.id, parentLinksTable.parentId)).where(inArray(parentLinksTable.studentId, studentIds)) : [];
+  const names = studentIds.length ? await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, studentIds)) : [];
+  const threads = links.map((link) => ({
+    studentId: link.studentId,
+    studentName: names.find((row) => row.id === link.studentId)?.name ?? "",
+    otherId: link.parentId,
+    otherName: link.parentName,
+    subtitle: pupils.find((row) => row.studentId === link.studentId)?.className ?? "",
+    ...summary(link.parentId, viewer.id, link.studentId)
+  }));
+  threads.sort((a, b) => (b.last ? new Date(b.last.at).getTime() : 0) - (a.last ? new Date(a.last.at).getTime() : 0) || a.studentName.localeCompare(b.studentName));
+  res.json({ threads });
+});
+function threadParties(viewer, otherId) {
+  return viewer.role === "parent" ? { parentId: viewer.id, teacherId: otherId } : { parentId: otherId, teacherId: viewer.id };
+}
+router15.get("/family-threads/:studentId/:otherId", requireAuthenticatedRole("parent", "teacher"), async (req, res) => {
+  const viewer = viewerOf10(res);
+  const studentId = String(req.params.studentId ?? "");
+  const otherId = String(req.params.otherId ?? "");
+  if (!isValidUuid(studentId) || !isValidUuid(otherId)) {
+    res.status(400).json({ error: "Invalid conversation." });
+    return;
+  }
+  const { parentId, teacherId } = threadParties(viewer, otherId);
+  if (!await threadAllowed(parentId, teacherId, studentId)) {
+    res.status(403).json({ error: "This conversation is not available." });
+    return;
+  }
+  const where = and(eq(familyMessagesTable.parentId, parentId), eq(familyMessagesTable.teacherId, teacherId), eq(familyMessagesTable.studentId, studentId));
+  const rows = await db.select({ id: familyMessagesTable.id, body: familyMessagesTable.body, fromId: familyMessagesTable.fromId, createdAt: familyMessagesTable.createdAt, readAt: familyMessagesTable.readAt }).from(familyMessagesTable).where(where).orderBy(desc(familyMessagesTable.createdAt)).limit(200);
+  await db.update(familyMessagesTable).set({ readAt: /* @__PURE__ */ new Date() }).where(and(where, isNull(familyMessagesTable.readAt), sql`${familyMessagesTable.fromId} <> ${viewer.id}`));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ messages: rows.reverse().map((row) => ({ ...row, mine: row.fromId === viewer.id })) });
+});
+router15.post("/family-threads/:studentId/:otherId", requireAuthenticatedRole("parent", "teacher"), messageLimiter, async (req, res) => {
+  const viewer = viewerOf10(res);
+  const studentId = String(req.params.studentId ?? "");
+  const otherId = String(req.params.otherId ?? "");
+  const body = str3(isRecord11(req.body) ? req.body.body : "", 2e3);
+  if (!isValidUuid(studentId) || !isValidUuid(otherId) || body.length < 1) {
+    res.status(400).json({ error: "Write a message." });
+    return;
+  }
+  const { parentId, teacherId } = threadParties(viewer, otherId);
+  const allowed = await threadAllowed(parentId, teacherId, studentId);
+  if (!allowed) {
+    res.status(403).json({ error: "This conversation is not available." });
+    return;
+  }
+  const [row] = await db.insert(familyMessagesTable).values({ schoolId: allowed.schoolId, studentId, parentId, teacherId, fromId: viewer.id, body }).returning();
+  const [me] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  await pushNotice([otherId], "messages", `\u0421\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \xB7 ${me?.name ?? ""}`, body.slice(0, 200), "/messages");
+  res.status(201).json({ message: { id: row.id, body: row.body, fromId: row.fromId, createdAt: row.createdAt, mine: true } });
+});
+router15.get("/me/children/:studentId/report", requireAuthenticatedRole("parent"), async (req, res) => {
+  const viewer = viewerOf10(res);
+  const studentId = String(req.params.studentId ?? "");
+  if (!isValidUuid(studentId)) {
+    res.status(400).json({ error: "Invalid pupil." });
+    return;
+  }
+  const [link] = await db.select({ id: parentLinksTable.id }).from(parentLinksTable).where(and(eq(parentLinksTable.parentId, viewer.id), eq(parentLinksTable.studentId, studentId))).limit(1);
+  if (!link) {
+    res.status(403).json({ error: "This is not your child." });
+    return;
+  }
+  const now = Date.now();
+  const from = dayText(now - 7 * DAY);
+  const prevFrom = dayText(now - 14 * DAY);
+  const [marks, attendance, classes] = await Promise.all([
+    db.select({ subject: journalMarksTable.subject, mark: journalMarksTable.mark, date: journalMarksTable.date, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.studentId, studentId), gte(journalMarksTable.date, prevFrom))).orderBy(desc(journalMarksTable.date)),
+    db.select({ date: attendanceTable.attendanceDate, subject: attendanceTable.subject, status: attendanceTable.status }).from(attendanceTable).where(and(eq(attendanceTable.studentId, studentId), gte(attendanceTable.attendanceDate, from))),
+    db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student")))
+  ]);
+  const homework2 = classes.length ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt, createdAt: assignmentsTable.createdAt }).from(assignmentsTable).where(and(inArray(assignmentsTable.classId, classes.map((item) => item.id)), gte(assignmentsTable.createdAt, new Date(now - 7 * DAY)))) : [];
+  const subs = homework2.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, studentId), inArray(assignmentSubmissionsTable.assignmentId, homework2.map((item) => item.id)))) : [];
+  const week = marks.filter((row) => row.date >= from && row.mark !== null);
+  const before = marks.filter((row) => row.date < from && row.mark !== null);
+  const subjects = [...new Set(week.map((row) => row.subject))].map((subject) => ({ subject, marks: week.filter((row) => row.subject === subject).map((row) => row.mark), average: avg(week.filter((row) => row.subject === subject).map((row) => row.mark)) }));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    from,
+    to: tashkentNow().date,
+    average: avg(week.map((row) => row.mark)),
+    averagePrev: avg(before.map((row) => row.mark)),
+    subjects,
+    absences: attendance.filter((row) => row.status === "absent").map((row) => ({ date: row.date, subject: row.subject })),
+    late: attendance.filter((row) => row.status === "late").length,
+    lessonsMarked: attendance.length,
+    homework: homework2.map((item) => {
+      const sub = subs.find((row) => row.assignmentId === item.id);
+      return { id: item.id, title: item.title, subject: item.subject, dueAt: item.dueAt, state: !sub ? "missing" : sub.score === null ? "review" : "graded", grade: sub?.score !== null && sub?.score !== void 0 ? gradeOf(sub.score) : null };
+    })
+  });
+});
+var monthsBetween = (start, end) => {
+  if (!MONTH_RE.test(start) || !MONTH_RE.test(end) || start > end) return [];
+  const out = [];
+  let [year, month] = start.split("-").map(Number);
+  while (out.length < 240) {
+    const text2 = `${year}-${String(month).padStart(2, "0")}`;
+    out.push(text2);
+    if (text2 === end) break;
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return out;
+};
+var dueOf = (plan) => Math.round(plan.monthlyFee * (100 - plan.discountPercent) / 100);
+async function financeRows(schoolId, month) {
+  const pupils = await db.select({ id: usersTable.id, name: usersTable.username, status: usersTable.status }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "student"))).orderBy(asc(usersTable.username));
+  const classRows = await db.select({ studentId: classMembersTable.userId, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classesTable.id, classMembersTable.classId)).where(and(eq(classesTable.schoolId, schoolId), eq(classMembersTable.role, "student")));
+  const plans = await db.select().from(tuitionPlansTable).where(eq(tuitionPlansTable.schoolId, schoolId));
+  const payments = await db.select({ studentId: tuitionPaymentsTable.studentId, amount: tuitionPaymentsTable.amount, month: tuitionPaymentsTable.month }).from(tuitionPaymentsTable).where(and(eq(tuitionPaymentsTable.schoolId, schoolId), isNull(tuitionPaymentsTable.cancelledAt)));
+  return pupils.map((pupil) => {
+    const plan = plans.find((item) => item.studentId === pupil.id) ?? null;
+    const mine = payments.filter((item) => item.studentId === pupil.id);
+    const due = plan ? dueOf(plan) : 0;
+    const months = plan ? monthsBetween(plan.startMonth, month) : [];
+    const totalDue = months.length * due;
+    const paidUpTo = mine.filter((item) => item.month <= month).reduce((sum, item) => sum + item.amount, 0);
+    const paidThisMonth = mine.filter((item) => item.month === month).reduce((sum, item) => sum + item.amount, 0);
+    return {
+      id: pupil.id,
+      name: pupil.name,
+      status: pupil.status,
+      className: classRows.filter((row) => row.studentId === pupil.id).map((row) => row.name).join(", "),
+      plan: plan ? { monthlyFee: plan.monthlyFee, discountPercent: plan.discountPercent, startMonth: plan.startMonth, note: plan.note } : null,
+      due,
+      paidThisMonth,
+      debt: Math.max(0, totalDue - paidUpTo),
+      advance: Math.max(0, paidUpTo - totalDue)
+    };
+  });
+}
+router15.get("/schools/:schoolId/finance", requireAuthenticatedRole(...MANAGERS3), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  const month = MONTH_RE.test(String(req.query.month ?? "")) ? String(req.query.month) : tashkentNow().date.slice(0, 7);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isManager(viewerOf10(res), schoolId)) {
+    res.status(403).json({ error: "Only the school administration sees payments." });
+    return;
+  }
+  const rows = await financeRows(schoolId, month);
+  const recent = await db.select({ id: tuitionPaymentsTable.id, studentId: tuitionPaymentsTable.studentId, name: usersTable.username, amount: tuitionPaymentsTable.amount, month: tuitionPaymentsTable.month, method: tuitionPaymentsTable.method, paidOn: tuitionPaymentsTable.paidOn, receiptNo: tuitionPaymentsTable.receiptNo, note: tuitionPaymentsTable.note, cancelledAt: tuitionPaymentsTable.cancelledAt, cancelReason: tuitionPaymentsTable.cancelReason }).from(tuitionPaymentsTable).innerJoin(usersTable, eq(usersTable.id, tuitionPaymentsTable.studentId)).where(and(eq(tuitionPaymentsTable.schoolId, schoolId), eq(tuitionPaymentsTable.month, month))).orderBy(desc(tuitionPaymentsTable.receiptNo));
+  const [school2] = await db.select({ name: schoolsTable.name }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  const billed = rows.filter((row) => row.plan && row.plan.startMonth <= month);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    month,
+    school: school2?.name ?? "",
+    totals: {
+      expected: billed.reduce((sum, row) => sum + row.due, 0),
+      collected: recent.filter((row) => !row.cancelledAt).reduce((sum, row) => sum + row.amount, 0),
+      debt: rows.reduce((sum, row) => sum + row.debt, 0),
+      debtors: rows.filter((row) => row.debt > 0).length,
+      withoutPlan: rows.filter((row) => !row.plan && row.status === "active").length
+    },
+    students: rows,
+    payments: recent
+  });
+});
+router15.put("/schools/:schoolId/finance/plans/:studentId", requireAuthenticatedRole(...MANAGERS3), writeLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  const studentId = String(req.params.studentId ?? "");
+  const body = isRecord11(req.body) ? req.body : {};
+  const monthlyFee = Math.round(Number(body.monthlyFee));
+  const discountPercent = Math.round(Number(body.discountPercent ?? 0));
+  const startMonth = str3(body.startMonth, 7);
+  if (!isValidUuid(schoolId) || !isValidUuid(studentId) || !Number.isFinite(monthlyFee) || monthlyFee < 0 || monthlyFee > 1e8 || !Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100 || !MONTH_RE.test(startMonth)) {
+    res.status(400).json({ error: "Check the fee, the discount (0\u2013100%) and the first month." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!await isManager(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the school administration sets fees." });
+    return;
+  }
+  if (await schoolRole3(studentId, schoolId) !== "student") {
+    res.status(404).json({ error: "No such pupil in the school." });
+    return;
+  }
+  const values = { monthlyFee, discountPercent, startMonth, note: str3(body.note, 300), updatedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() };
+  await db.insert(tuitionPlansTable).values({ schoolId, studentId, ...values }).onConflictDoUpdate({ target: [tuitionPlansTable.schoolId, tuitionPlansTable.studentId], set: values });
+  await writeAudit(schoolId, viewer.id, "tuition.plan", studentId, { monthlyFee, discountPercent, startMonth });
+  res.json({ ok: true });
+});
+router15.post("/schools/:schoolId/finance/payments", requireAuthenticatedRole(...MANAGERS3), writeLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  const body = isRecord11(req.body) ? req.body : {};
+  const studentId = str3(body.studentId, 40);
+  const amount = Math.round(Number(body.amount));
+  const month = str3(body.month, 7);
+  const method = ["cash", "card", "transfer"].includes(String(body.method)) ? String(body.method) : "cash";
+  const paidOn = DATE_RE3.test(str3(body.paidOn, 10)) ? str3(body.paidOn, 10) : tashkentNow().date;
+  if (!isValidUuid(schoolId) || !isValidUuid(studentId) || !Number.isFinite(amount) || amount <= 0 || amount > 1e8 || !MONTH_RE.test(month)) {
+    res.status(400).json({ error: "Check the pupil, the sum and the month." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!await isManager(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the school administration records payments." });
+    return;
+  }
+  if (await schoolRole3(studentId, schoolId) !== "student") {
+    res.status(404).json({ error: "No such pupil in the school." });
+    return;
+  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const [last] = await db.select({ value: max(tuitionPaymentsTable.receiptNo) }).from(tuitionPaymentsTable).where(eq(tuitionPaymentsTable.schoolId, schoolId));
+    const receiptNo = (last?.value ?? 0) + 1;
+    try {
+      const [row] = await db.insert(tuitionPaymentsTable).values({ schoolId, studentId, amount, month, method, paidOn, receiptNo, note: str3(body.note, 300), createdBy: viewer.id }).returning();
+      await writeAudit(schoolId, viewer.id, "tuition.payment", studentId, { amount, month, receiptNo });
+      const parents = await db.select({ id: parentLinksTable.parentId }).from(parentLinksTable).where(eq(parentLinksTable.studentId, studentId));
+      await pushNotice(parents.map((item) => item.id), "announcements", `\u041E\u043F\u043B\u0430\u0442\u0430 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0430 \xB7 \u2116 ${receiptNo}`, `${amount.toLocaleString("ru-RU")} \u0441\u0443\u043C \u0437\u0430 ${month}`, "/parent");
+      res.status(201).json({ payment: row });
+      return;
+    } catch (error) {
+      if (attempt === 2) throw error;
+    }
+  }
+});
+router15.post("/schools/:schoolId/finance/payments/:paymentId/cancel", requireAuthenticatedRole(...MANAGERS3), writeLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  const paymentId = String(req.params.paymentId ?? "");
+  const reason = str3(isRecord11(req.body) ? req.body.reason : "", 300);
+  if (!isValidUuid(schoolId) || !isValidUuid(paymentId) || reason.length < 3) {
+    res.status(400).json({ error: "Write why the payment is cancelled." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!await isManager(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the school administration cancels payments." });
+    return;
+  }
+  const [row] = await db.update(tuitionPaymentsTable).set({ cancelledAt: /* @__PURE__ */ new Date(), cancelledBy: viewer.id, cancelReason: reason }).where(and(eq(tuitionPaymentsTable.id, paymentId), eq(tuitionPaymentsTable.schoolId, schoolId), isNull(tuitionPaymentsTable.cancelledAt))).returning();
+  if (!row) {
+    res.status(404).json({ error: "The payment is not found or already cancelled." });
+    return;
+  }
+  await writeAudit(schoolId, viewer.id, "tuition.cancel", row.studentId, { receiptNo: row.receiptNo, amount: row.amount, reason });
+  res.json({ ok: true });
+});
+router15.get("/students/:studentId/payments", requireAuthenticatedRole("parent", ...MANAGERS3), async (req, res) => {
+  const studentId = String(req.params.studentId ?? "");
+  if (!isValidUuid(studentId)) {
+    res.status(400).json({ error: "Invalid pupil." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  const schools = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, studentId), eq(schoolMembersTable.role, "student")));
+  let allowed = [];
+  if (viewer.role === "parent") {
+    const [link] = await db.select({ id: parentLinksTable.id }).from(parentLinksTable).where(and(eq(parentLinksTable.parentId, viewer.id), eq(parentLinksTable.studentId, studentId))).limit(1);
+    if (link) allowed = schools.map((item) => item.schoolId);
+  } else {
+    for (const item of schools) if (await isManager(viewer, item.schoolId)) allowed.push(item.schoolId);
+  }
+  if (!allowed.length) {
+    res.status(403).json({ error: "Not available." });
+    return;
+  }
+  const month = tashkentNow().date.slice(0, 7);
+  const plans = await db.select().from(tuitionPlansTable).where(and(eq(tuitionPlansTable.studentId, studentId), inArray(tuitionPlansTable.schoolId, allowed)));
+  const payments = await db.select({ id: tuitionPaymentsTable.id, amount: tuitionPaymentsTable.amount, month: tuitionPaymentsTable.month, method: tuitionPaymentsTable.method, paidOn: tuitionPaymentsTable.paidOn, receiptNo: tuitionPaymentsTable.receiptNo, cancelledAt: tuitionPaymentsTable.cancelledAt }).from(tuitionPaymentsTable).where(and(eq(tuitionPaymentsTable.studentId, studentId), inArray(tuitionPaymentsTable.schoolId, allowed))).orderBy(desc(tuitionPaymentsTable.paidOn), desc(tuitionPaymentsTable.receiptNo)).limit(60);
+  const plan = plans[0] ?? null;
+  const valid = payments.filter((item) => !item.cancelledAt);
+  const totalDue = plan ? monthsBetween(plan.startMonth, month).length * dueOf(plan) : 0;
+  const paid = valid.filter((item) => item.month <= month).reduce((sum, item) => sum + item.amount, 0);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    plan: plan ? { monthlyFee: plan.monthlyFee, discountPercent: plan.discountPercent, due: dueOf(plan), startMonth: plan.startMonth } : null,
+    debt: Math.max(0, totalDue - paid),
+    payments: viewer.role === "parent" ? valid : payments
+  });
+});
+router15.get("/schools/:schoolId/timetable-changes", requireAuthenticatedRole(...STAFF2), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!isGlobalAdminRole(viewer.role) && !await schoolRole3(viewer.id, schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  const from = DATE_RE3.test(String(req.query.from ?? "")) ? String(req.query.from) : tashkentNow().date;
+  const to = DATE_RE3.test(String(req.query.to ?? "")) ? String(req.query.to) : dayText(Date.now() + 14 * DAY);
+  const rows = await db.select({
+    id: timetableChangesTable.id,
+    classId: timetableChangesTable.classId,
+    className: classesTable.name,
+    date: timetableChangesTable.date,
+    period: timetableChangesTable.period,
+    kind: timetableChangesTable.kind,
+    teacherId: timetableChangesTable.teacherId,
+    room: timetableChangesTable.room,
+    note: timetableChangesTable.note,
+    teacherName: usersTable.username
+  }).from(timetableChangesTable).innerJoin(classesTable, eq(classesTable.id, timetableChangesTable.classId)).leftJoin(usersTable, eq(usersTable.id, timetableChangesTable.teacherId)).where(and(eq(timetableChangesTable.schoolId, schoolId), gte(timetableChangesTable.date, from), lte(timetableChangesTable.date, to))).orderBy(asc(timetableChangesTable.date), asc(timetableChangesTable.period));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ from, to, changes: rows });
+});
+router15.put("/schools/:schoolId/timetable-changes", requireAuthenticatedRole(...MANAGERS3), writeLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  const body = isRecord11(req.body) ? req.body : {};
+  const classId = str3(body.classId, 40);
+  const date2 = str3(body.date, 10);
+  const period = Number(body.period);
+  const kind = ["substitute", "cancelled", "room"].includes(String(body.kind)) ? String(body.kind) : "";
+  const teacherId = str3(body.teacherId, 40) || null;
+  const room = str3(body.room, 40) || null;
+  if (!isValidUuid(schoolId) || !isValidUuid(classId) || !DATE_RE3.test(date2) || !Number.isInteger(period) || period < 1 || period > 10 || !kind || kind === "substitute" && (!teacherId || !isValidUuid(teacherId)) || kind === "room" && !room || date2 < dayText(Date.now() - DAY)) {
+    res.status(400).json({ error: "Choose the class, the day (today or later), the lesson and what changes." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!await isManager(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the school administration changes the timetable." });
+    return;
+  }
+  const [klass] = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(and(eq(classesTable.id, classId), eq(classesTable.schoolId, schoolId))).limit(1);
+  if (!klass) {
+    res.status(404).json({ error: "No such class." });
+    return;
+  }
+  if (kind === "substitute" && await schoolRole3(teacherId, schoolId) !== "teacher") {
+    res.status(400).json({ error: "The substitute must be a teacher of the school." });
+    return;
+  }
+  const values = { schoolId, kind, teacherId: kind === "substitute" ? teacherId : null, room: kind === "room" ? room : null, note: str3(body.note, 200), createdBy: viewer.id, createdAt: /* @__PURE__ */ new Date() };
+  const [row] = await db.insert(timetableChangesTable).values({ classId, date: date2, period, ...values }).onConflictDoUpdate({ target: [timetableChangesTable.classId, timetableChangesTable.date, timetableChangesTable.period], set: values }).returning();
+  await writeAudit(schoolId, viewer.id, "timetable.change", teacherId, { classId, date: date2, period, kind });
+  const weekday = (() => {
+    const day2 = (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).getUTCDay();
+    return day2 === 0 ? 7 : day2;
+  })();
+  const [slot] = await db.select({ teacherId: timetableSlotsTable.teacherId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(and(eq(timetableSlotsTable.classId, classId), eq(timetableSlotsTable.weekday, weekday), eq(timetableSlotsTable.period, period))).limit(1);
+  const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")));
+  const parents = pupils.length ? await db.select({ id: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, pupils.map((item) => item.id))) : [];
+  const text2 = kind === "cancelled" ? "\u0443\u0440\u043E\u043A \u043E\u0442\u043C\u0435\u043D\u0451\u043D" : kind === "room" ? `\u0443\u0440\u043E\u043A \u0432 \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0435 ${room}` : "\u0437\u0430\u043C\u0435\u043D\u0430 \u0443\u0447\u0438\u0442\u0435\u043B\u044F";
+  await pushNotice(
+    [...pupils.map((item) => item.id), ...parents.map((item) => item.id), ...slot?.teacherId ? [slot.teacherId] : [], ...teacherId ? [teacherId] : []],
+    "lessons",
+    `\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0440\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u044F \xB7 ${klass.name}`,
+    `${date2}, ${period}-\u0439 \u0443\u0440\u043E\u043A${slot?.subject ? ` (${slot.subject})` : ""}: ${text2}${values.note ? `. ${values.note}` : ""}`,
+    "/schedule"
+  );
+  res.json({ change: row });
+});
+router15.delete("/schools/:schoolId/timetable-changes/:changeId", requireAuthenticatedRole(...MANAGERS3), writeLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  const changeId = String(req.params.changeId ?? "");
+  if (!isValidUuid(schoolId) || !isValidUuid(changeId)) {
+    res.status(400).json({ error: "Invalid change." });
+    return;
+  }
+  const viewer = viewerOf10(res);
+  if (!await isManager(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the school administration changes the timetable." });
+    return;
+  }
+  const [row] = await db.delete(timetableChangesTable).where(and(eq(timetableChangesTable.id, changeId), eq(timetableChangesTable.schoolId, schoolId))).returning();
+  if (!row) {
+    res.status(404).json({ error: "Not found." });
+    return;
+  }
+  await writeAudit(schoolId, viewer.id, "timetable.change.removed", null, { classId: row.classId, date: row.date, period: row.period, kind: row.kind });
+  res.json({ ok: true });
+});
+var ecosystem_default = router15;
+
 // src/lib/schema-sync.ts
 init_drizzle_orm();
 init_pg_core();
@@ -57452,9 +58224,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router15 = (0, import_express15.Router)();
-router15.use(health_default);
-router15.use(async (_req, _res, next) => {
+var router16 = (0, import_express16.Router)();
+router16.use(health_default);
+router16.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -57462,23 +58234,24 @@ router15.use(async (_req, _res, next) => {
   }
   next();
 });
-router15.use(school_tools_default);
-router15.use(course_default);
-router15.use(account_default);
-router15.use(requests_default);
-router15.use(demo_default);
-router15.use(timetable_default);
-router15.use(journal_default);
-router15.use(ai_tools_default);
-router15.use(lessons_default);
-router15.use(auth_default);
-router15.use(learning_default);
-router15.use(lesson_rooms_default);
-router15.use(schools_default);
-var routes_default = router15;
+router16.use(school_tools_default);
+router16.use(course_default);
+router16.use(account_default);
+router16.use(requests_default);
+router16.use(demo_default);
+router16.use(timetable_default);
+router16.use(journal_default);
+router16.use(ai_tools_default);
+router16.use(lessons_default);
+router16.use(ecosystem_default);
+router16.use(auth_default);
+router16.use(learning_default);
+router16.use(lesson_rooms_default);
+router16.use(schools_default);
+var routes_default = router16;
 
 // src/app.ts
-var app = (0, import_express16.default)();
+var app = (0, import_express17.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -57529,8 +58302,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express16.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express16.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express17.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express17.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {
