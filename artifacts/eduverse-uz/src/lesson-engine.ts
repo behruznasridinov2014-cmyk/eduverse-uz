@@ -20,13 +20,13 @@ export type Pair = { left: string; right: string };
 export type TrueFalse = { id: string; text: string; answer: boolean; why: string };
 
 export const STAGES: Array<{ n: number; key: string; title: Txt; goal: Txt; minutes: number }> = [
-  { n: 1, key: 'mission', title: ['Missiya', 'Миссия', 'Mission'], goal: ['Mavzuga sahna orqali kiring', 'Войдите в тему через ситуацию', 'Enter the topic through a scenario'], minutes: 5 },
-  { n: 2, key: 'book', title: ['Darslik', 'Учебник', 'Textbook'], goal: ['Asosiysini o‘qing va tushuning', 'Прочитайте и поймите главное', 'Read and understand the main idea'], minutes: 8 },
-  { n: 3, key: 'visual', title: ['3D va ko‘rgazma', '3D и наглядно', '3D & visual'], goal: ['Ko‘ring, aylantiring, o‘zgartiring', 'Посмотрите, покрутите, измените', 'See, rotate, change'], minutes: 6 },
+  { n: 1, key: 'mission', title: ['Missiya', 'Миссия', 'Mission'], goal: ['Mavzuga sahna orqali kiring', 'Войдите в тему через ситуацию', 'Enter the topic through a scenario'], minutes: 4 },
+  { n: 2, key: 'book', title: ['Darslik', 'Учебник', 'Textbook'], goal: ['Asosiysini o‘qing va tushuning', 'Прочитайте и поймите главное', 'Read and understand the main idea'], minutes: 6 },
+  { n: 3, key: 'visual', title: ['3D va ko‘rgazma', '3D и наглядно', '3D & visual'], goal: ['Ko‘ring, aylantiring, o‘zgartiring', 'Посмотрите, покрутите, измените', 'See, rotate, change'], minutes: 8 },
   { n: 4, key: 'practice', title: ['Amaliyot', 'Практика', 'Practice'], goal: ['Bilimni qo‘llang', 'Примените знания', 'Apply what you learned'], minutes: 8 },
-  { n: 5, key: 'test', title: ['Tekshiruv', 'Проверка знаний', 'Assessment'], goal: ['Nimani bilasiz — tekshiring', 'Проверьте, что вы знаете', 'Check what you know'], minutes: 8 },
-  { n: 6, key: 'challenge', title: ['Mustahkamlash', 'Закрепление', 'Reinforcement'], goal: ['Tezkor sinovlar va yutuqlar', 'Быстрые испытания и награды', 'Quick challenges and awards'], minutes: 5 },
-  { n: 7, key: 'homework', title: ['Uy vazifasi', 'Домашнее задание', 'Homework'], goal: ['Uyda mustahkamlang', 'Закрепите дома', 'Practise at home'], minutes: 5 },
+  { n: 5, key: 'test', title: ['Tekshiruv', 'Проверка знаний', 'Assessment'], goal: ['Nimani bilasiz — tekshiring', 'Проверьте, что вы знаете', 'Check what you know'], minutes: 7 },
+  { n: 6, key: 'challenge', title: ['Mustahkamlash', 'Закрепление', 'Reinforcement'], goal: ['Tezkor sinovlar va yutuqlar', 'Быстрые испытания и награды', 'Quick challenges and awards'], minutes: 4 },
+  { n: 7, key: 'homework', title: ['Uy vazifasi', 'Домашнее задание', 'Homework'], goal: ['Uyda mustahkamlang', 'Закрепите дома', 'Practise at home'], minutes: 3 },
 ];
 
 /* ------------------------------------------------------------------ */
