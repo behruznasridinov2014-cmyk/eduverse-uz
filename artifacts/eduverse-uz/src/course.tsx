@@ -13,7 +13,8 @@ import type { OwnSceneId } from './course-scenes';
 import { MoleculeById, ReactionView } from './chem-lab';
 import { Circuit, Pendulum } from './physics-lab';
 import { CollisionLab } from './collision-lab';
-import { MathLab, WebModelsLab } from './studio-labs';
+import { MathLab } from './studio-labs';
+import { LessonStages } from './lesson-stages';
 import { LoadingBlock } from './ui/loading';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
@@ -489,27 +490,11 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           )}
 
 
-          {lesson && (
-            <nav className="lesson-steps" aria-label={t(language, 'Dars bosqichlari', 'Шаги урока', 'Lesson steps')}>
-              {[
-                ['step-book', t(language, 'Kitob', 'Книга', 'Book')],
-                ['step-topic', t(language, 'Tushuntirish', 'Объяснение', 'Explain')],
-                ['step-3d', '3D'],
-                ['step-check', t(language, 'Tekshiruv', 'Проверка', 'Check')],
-                ['step-homework', t(language, 'Uyga', 'Домашка', 'Homework')],
-                ['step-free', t(language, 'Erkin', 'Свободно', 'Free')],
-              ].map(([id, label], index) => (
-                <a key={id} href={`#${id}`} onClick={(event) => { event.preventDefault(); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
-                  <b>{index + 1}</b> {label}
-                </a>
-              ))}
-            </nav>
-          )}
+          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} />}
 
-          {lesson && <TopicBookPages book={book} topic={topic} language={language} step={1} />}
-
+          {!lesson && <>
           <section className="panel course-essence" id="step-topic">
-            <h3><Lightbulb size={17} /> {lesson ? `2 · ${t(language, 'Asosiysi', 'Главное', 'The main idea')}` : t(language, 'Asosiysi', 'Главное', 'The main idea')}</h3>
+            <h3><Lightbulb size={17} /> {t(language, 'Asosiysi', 'Главное', 'The main idea')}</h3>
             {topic.hook && <p className="course-hook">❓ {topic.hook}</p>}
             <TopicEssence topic={topic} language={language} />
             <TopicExtras topic={topic} subject={book.subject} language={language} />
@@ -517,70 +502,34 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
 
           <section className="course-3d" id="step-3d">
             <div className="course-3d-head">
-              <h3><Box size={17} /> {lesson ? `3 · ${t(language, '3D da ko‘rsating', 'Покажите в 3D', 'Show it in 3D')}` : t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
+              <h3><Box size={17} /> {t(language, '3D da o‘rganing', 'Изучите в 3D', 'Explore in 3D')}</h3>
               <p className="muted">{topic.sceneHint}</p>
             </div>
             <div className="course-3d-body">
               <CourseScene3D scene={topic.scene} language={language} />
-
             </div>
           </section>
 
           <section className="panel course-check" id="step-check">
-            <h3><NotebookPen size={17} /> {lesson ? `4 · ${t(language, 'Tekshiruv: esda qoldimi?', 'Проверка: запомнили?', 'Check: did it stick?')}` : t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
+            <h3><NotebookPen size={17} /> {t(language, 'Topshiriqlar', 'Задания', 'Tasks')} {topic.fromBook && <span className="tag gold">{t(language, 'darslikdan', 'из учебника', 'from the textbook')}</span>}</h3>
             <ol className="course-tasks">
               {topic.tasks.map((task, index) => (
                 <li key={index}>
                   <p>{task.q}</p>
                   {openAnswers[index]
-                    ? <>
-                      <div className="course-answer">{task.a}</div>
-                      {lesson && (
-                        <div className="course-self">
-                          <button type="button" className={`btn small ${selfCheck[index] === true ? 'primary' : ''}`} onClick={() => setSelfCheck((current) => ({ ...current, [index]: true }))}><CheckCircle2 size={13} /> {t(language, 'To‘g‘ri', 'Верно', 'Right')}</button>
-                          <button type="button" className={`btn small ${selfCheck[index] === false ? 'danger' : ''}`} onClick={() => setSelfCheck((current) => ({ ...current, [index]: false }))}>{t(language, 'Xato', 'Ошибся', 'Wrong')}</button>
-                        </div>
-                      )}
-                    </>
+                    ? <div className="course-answer">{task.a}</div>
                     : <button type="button" className="btn small" onClick={() => setOpenAnswers((current) => ({ ...current, [index]: true }))}>{t(language, 'Javobni tekshirish', 'Проверить ответ', 'Check the answer')}</button>}
                 </li>
               ))}
             </ol>
-            {lesson && Object.keys(selfCheck).length > 0 && (() => {
-              const right = Object.values(selfCheck).filter(Boolean).length;
-              const total = topic.tasks.length;
-              const answered = Object.keys(selfCheck).length;
-              return (
-                <div className={`course-self-score ${right / total >= 0.75 ? 'good' : ''}`}>
-                  <b>{t(language, `To‘g‘ri: ${right} / ${total}`, `Верно: ${right} из ${total}`, `Right: ${right} of ${total}`)}</b>
-                  <span className="muted">{answered < total
-                    ? t(language, 'Qolgan savollarga ham javob bering.', 'Ответьте и на остальные вопросы.', 'Answer the rest too.')
-                    : right / total >= 0.75
-                      ? t(language, 'Zo‘r! Mavzu tushunarli.', 'Отлично! Тема понятна.', 'Great! You got the topic.')
-                      : t(language, 'Mavzuni yana bir o‘qing va 3D ni ko‘ring.', 'Перечитайте тему и посмотрите 3D.', 'Read the topic again and look at the 3D.')}</span>
-                </div>
-              );
-            })()}
           </section>
 
-
-          {lesson ? (
-            <section className="panel course-homework" id="step-homework">
-              <h3><NotebookPen size={17} /> 5 · {t(language, 'Uy vazifasi — darslikdan', 'Домашнее задание — из учебника', 'Homework — from the textbook')}</h3>
-              <p>{topic.homework}</p>
-              <p className="muted">{isTeacher
-                ? t(language, 'Dars tugagach sinfga o‘zi boradi.', 'Уйдёт классу сам после урока.', 'Goes to the class by itself after the lesson.')
-                : t(language, 'Dars tugagach «Vazifalar»da chiqadi.', 'После урока — во вкладке «Задания».', 'After the lesson — in “Homework”.')}</p>
-            </section>
-          ) : (
-            <section className="panel course-homework">
-              <h3>{t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h3>
-              <p>{topic.homework}</p>
-              {isStudent && <button type="button" className="btn" onClick={() => onOpen('/classes')}><NotebookPen size={15} /> {t(language, 'Daftar rasmini yuborish', 'Отправить фото тетради', 'Send a notebook photo')}</button>}
-            </section>
-          )}
-
-          <FreeExplore key={topic.key} topic={topic} subject={book.subject} language={language} step={lesson ? 6 : null} />
+          <section className="panel course-homework">
+            <h3>{t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h3>
+            <p>{topic.homework}</p>
+            {isStudent && <button type="button" className="btn" onClick={() => onOpen('/classes')}><NotebookPen size={15} /> {t(language, 'Daftar rasmini yuborish', 'Отправить фото тетради', 'Send a notebook photo')}</button>}
+          </section>
+          </>}
 
           <div className="course-footer">
             {isStudent && <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
@@ -594,24 +543,6 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           </div>
         </article>
       </div>
-    </section>
-  );
-}
-
-/** The end of a topic: free exploring of detailed 3D models from the internet on the same subject. */
-function FreeExplore({ topic, subject, language, step }: { topic: CourseTopic; subject: CourseBook['subject']; language: Language; step: number | null }) {
-  const [open, setOpen] = useState(false);
-  const group = ({ math: 'math', physics: 'phys', chemistry: 'chem', biology: 'bio' } as const)[subject] ?? 'any';
-  return (
-    <section className="panel course-free" id="step-free">
-      <h3><Box size={17} /> {step ? `${step} · ` : ''}{t(language, 'Erkin o‘rganish', 'Свободное изучение', 'Free exploring')}</h3>
-      <p className="muted">{t(language,
-        'Mavzu bo‘yicha internetdagi murakkab 3D modellar: aylantiring, yaqinlashtiring, boshqa mavzuni ham qidiring.',
-        'Сложные 3D-модели из интернета по этому предмету: крутите, приближайте, ищите любую другую тему.',
-        'Detailed 3D models from the internet on this subject: rotate, zoom, search any other topic.')}</p>
-      {open
-        ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><WebModelsLab language={language} group={group} free initial={{ query: topic.title, title: topic.title }} /></Suspense>
-        : <button type="button" className="btn primary" onClick={() => setOpen(true)}><Box size={15} /> {t(language, '3D modellarni ochish', 'Открыть 3D-модели', 'Open 3D models')}</button>}
     </section>
   );
 }

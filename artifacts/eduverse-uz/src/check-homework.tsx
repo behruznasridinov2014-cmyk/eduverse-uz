@@ -9,15 +9,27 @@ import { SubmissionReviewDialog } from './school-panels';
 import { markBand } from './marks';
 
 /*
- * Teacher → "Check homework": choose a class and a task, see every pupil:
+ * Teacher → "Check homework": choose a class and a subject (today's homework first), see every pupil:
  * who handed in, who is waiting for a check, who is checked. A tap opens the notebook photos.
  */
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
 
 type Journal = {
-  assignments: Array<{ id: string; title: string; subject: string; description?: string }>;
+  assignments: Array<{ id: string; title: string; subject: string; description?: string; createdAt?: string; dueAt?: string | null }>;
   rows: Array<{ studentId: string; studentName: string; cells: Array<{ state: 'missing' | 'review' | 'graded'; grade: number | null }> }>;
 };
+
+/** "Today", "Yesterday" or the date the homework was given. */
+function dayLabel(item: { createdAt?: string; dueAt?: string | null }, language: Language): string {
+  const raw = item.createdAt ?? item.dueAt;
+  if (!raw) return t(language, 'Vazifa', 'Задание', 'Task');
+  const date = new Date(raw);
+  const startOf = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+  const days = Math.round((startOf(new Date()) - startOf(date)) / 86_400_000);
+  if (days === 0) return t(language, 'Bugun berilgan', 'Задано сегодня', 'Given today');
+  if (days === 1) return t(language, 'Kecha berilgan', 'Задано вчера', 'Given yesterday');
+  return date.toLocaleDateString(language === 'English' ? 'en-GB' : language === 'Uzbek' ? 'uz-UZ' : 'ru-RU', { day: 'numeric', month: 'long' });
+}
 
 export function CheckHomeworkPage({ school, language }: { school: SchoolData; language: Language }) {
   const [classId, setClassId] = useState(school.classes[0]?.id ?? '');
@@ -86,14 +98,41 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
       {journal && !journal.assignments.some((_, at) => sentIn(at)) && <div className="notice">{t(language, 'Hali hech kim ish yubormadi.', 'Пока никто не прислал работу.', 'Nobody has sent work yet.')}</div>}
       {journal && journal.assignments.some((_, at) => sentIn(at)) && (
         <>
-          <div className="check-hw-tasks" role="tablist">
-            {[...journal.assignments].map((item, at) => ({ item, at })).filter(({ at }) => sentIn(at)).reverse().slice(0, 12).map(({ item, at }) => (
-              <button type="button" role="tab" key={item.id} aria-selected={item.id === assignmentId} className={`studio-tab ${item.id === assignmentId ? 'active' : ''}`} onClick={() => setAssignmentId(item.id)}>
-                <span>{(() => { const title = item.title.startsWith(item.subject) ? item.title.slice(item.subject.length).replace(/^\s*[·:-]\s*/, '') : item.title; const label = `${item.subject} · ${title}`; return label.length > 40 ? `${label.slice(0, 39)}…` : label; })()}</span>
-                {waitingIn(at) > 0 && <b className="check-hw-badge">{waitingIn(at)}</b>}
-              </button>
-            ))}
-          </div>
+          {(() => {
+            // One tab per subject: its newest homework with work handed in ("today's"), older days in a list.
+            const withWork = journal.assignments.map((item, at) => ({ item, at })).filter(({ at }) => sentIn(at)).reverse();
+            const subjects = [...new Set(withWork.map(({ item }) => item.subject))];
+            const current = journal.assignments[index];
+            const activeSubject = current?.subject ?? subjects[0];
+            const days = withWork.filter(({ item }) => item.subject === activeSubject);
+            return (
+              <>
+                <div className="check-hw-tasks" role="tablist">
+                  {subjects.map((subject) => {
+                    const list = withWork.filter(({ item }) => item.subject === subject);
+                    const waiting = list.reduce((sum, { at }) => sum + waitingIn(at), 0);
+                    return (
+                      <button type="button" role="tab" key={subject} aria-selected={subject === activeSubject} className={`studio-tab ${subject === activeSubject ? 'active' : ''}`}
+                        onClick={() => setAssignmentId((list.find(({ at }) => waitingIn(at) > 0) ?? list[0])!.item.id)}>
+                        <span>{subject}</span>
+                        {waiting > 0 && <b className="check-hw-badge">{waiting}</b>}
+                      </button>
+                    );
+                  })}
+                </div>
+                {current && (
+                  <div className="check-hw-day">
+                    <b>{dayLabel(current, language)}</b>
+                    <span className="muted">{(() => { const title = current.title.startsWith(current.subject) ? current.title.slice(current.subject.length).replace(/^\s*[·:-]\s*/, '') : current.title; return title; })()}</span>
+                    {days.length > 1 && (
+                      <Select value={current.id} onChange={(_event, value) => setAssignmentId(value)} aria-label={t(language, 'Kun', 'День', 'Day')} style={{ width: 210 }}
+                        options={days.map(({ item, at }) => ({ value: item.id, label: `${dayLabel(item, language)}${waitingIn(at) ? ` · ${waitingIn(at)}` : ''}` }))} />
+                    )}
+                  </div>
+                )}
+              </>
+            );
+          })()}
           {assignment && (
             <>
               <div className="check-hw-counts">

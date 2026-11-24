@@ -1023,3 +1023,98 @@ export async function generatePracticeTest(topics: Array<{ subject: string; titl
   }
   return out.length ? out.slice(0, 5) : null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Help with checking a notebook photo: mistakes, advice, a suggested mark     */
+/* -------------------------------------------------------------------------- */
+
+export type HomeworkReview = {
+  summary: string;
+  mistakes: Array<{ where: string; why: string; fix: string }>;
+  good: string[];
+  advice: string;
+  suggestedMark: number | null;
+  realPhoto: "yes" | "no" | "unsure";
+};
+
+/**
+ * Reads the notebook photos against the task and writes, for the TEACHER, what is right,
+ * where the mistakes are, why, and how the pupil can fix them, plus a suggested mark on
+ * the 10-point scale. The teacher always decides the final mark.
+ */
+export async function reviewHomework(input: { subject: string; task: string; explanation: string; photos: string[]; language: string }): Promise<HomeworkReview | null> {
+  if (!isAiConfigured() || input.photos.length === 0) return null;
+  const lang = input.language === "uz" ? "на узбекском (латиница)" : input.language === "en" ? "in English" : "по-русски";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты опытный учитель 7 класса в Узбекистане и помогаешь коллеге проверить домашнюю работу по фото тетради. Прочитай решение на фото, сравни с заданием. Найди ошибки: где, почему это ошибка и как исправить (объясняй как учитель, чтобы ученик понял, а не просто дай ответ). Отметь, что сделано хорошо. Предложи оценку по 10-балльной шкале (10 — без ошибок). Также оцени, настоящее ли это фото бумажной тетради (не скриншот и не картинка ИИ). Если на фото ничего не разобрать — так и напиши в summary и поставь suggestedMark null. Пиши ${lang}, коротко. Ответ строго JSON: {"summary":"1-2 предложения","mistakes":[{"where":"номер задачи или строка","why":"почему ошибка","fix":"как исправить"}],"good":["..."],"advice":"что повторить ученику","suggestedMark":0-10|null,"realPhoto":"yes|no|unsure"}`,
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `Предмет: ${input.subject.slice(0, 60)}. Задание: ${input.task.slice(0, 1200)}.${input.explanation ? ` Ученик написал своими словами: «${input.explanation.slice(0, 800)}».` : ""}` },
+        ...input.photos.slice(0, 3).map((url) => ({ type: "image_url", image_url: { url } })),
+      ],
+    },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const mistakes = Array.isArray(parsed.mistakes)
+    ? parsed.mistakes.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+      .map((item) => ({ where: str(item.where).slice(0, 120), why: str(item.why).slice(0, 400), fix: str(item.fix).slice(0, 400) }))
+      .filter((item) => item.why).slice(0, 6)
+    : [];
+  const markRaw = Number(parsed.suggestedMark);
+  return {
+    summary: str(parsed.summary).slice(0, 500),
+    mistakes,
+    good: Array.isArray(parsed.good) ? parsed.good.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice).slice(0, 400),
+    suggestedMark: parsed.suggestedMark === null || !Number.isFinite(markRaw) ? null : Math.max(1, Math.min(10, Math.round(markRaw))),
+    realPhoto: parsed.realPhoto === "yes" || parsed.realPhoto === "no" ? parsed.realPhoto : "unsure",
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* The lesson helper: explains the topic, teaches, never just gives answers    */
+/* -------------------------------------------------------------------------- */
+
+export type LessonHelpAction = "simple" | "detail" | "example" | "word" | "practice" | "mistake" | "review" | "ask";
+
+export async function lessonHelp(input: {
+  action: LessonHelpAction;
+  subject: string;
+  grade: number;
+  topic: string;
+  essence: string;
+  stage: string;
+  question: string;
+  mistakes: string[];
+  language: string;
+}): Promise<string | null> {
+  const lang = input.language === "uz" ? "на узбекском языке (латиница)" : input.language === "en" ? "in simple English" : "на русском языке";
+  const task: Record<LessonHelpAction, string> = {
+    simple: "Объясни тему совсем просто, как другу, 3-4 коротких предложения.",
+    detail: "Объясни тему подробнее: 2-3 абзаца, по шагам, с одной формулой или правилом, если есть.",
+    example: "Дай один новый пример из жизни в Узбекистане (не из учебника), который показывает тему.",
+    word: "Объясни это слово или выражение очень просто и дай пример.",
+    practice: "Придумай 3 новых упражнения по теме от лёгкого к сложному. Ответы НЕ пиши, только подсказку к каждому.",
+    mistake: "Ученик ошибся в этих вопросах. Помоги понять, где обычно ошибаются и как рассуждать, но не называй готовый ответ — задай наводящий вопрос.",
+    review: "По ошибкам ученика скажи, что именно повторить (2-3 пункта) и в каком порядке.",
+    ask: "Ответь на вопрос ученика по теме. Если он просит готовый ответ на задачу — не давай его, а объясни путь решения и задай наводящий вопрос.",
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты — помощник на уроке EDUVERSE для ученика ${input.grade} класса в Узбекистане. Ты учишь, а не подсказываешь ответы. Пиши ${lang}, коротко и понятно, без сложных терминов, без выдуманных фактов. Только по теме урока; на посторонние темы вежливо верни к уроку. Ответ строго JSON: {"answer":"текст"}`,
+    },
+    {
+      role: "user",
+      content: `Предмет: ${input.subject}. Тема: ${input.topic.slice(0, 160)}. Суть темы: ${input.essence.slice(0, 900)}. Сейчас ученик на этапе: ${input.stage.slice(0, 60)}.${input.mistakes.length ? ` Ошибки ученика: ${input.mistakes.slice(0, 6).map((item) => item.slice(0, 160)).join(" | ")}.` : ""}${input.question ? ` Вопрос/слово ученика: «${input.question.slice(0, 400)}».` : ""}\nЗадача: ${task[input.action]}`,
+    },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  const answer = parsed ? str(parsed.answer) : "";
+  return answer ? answer.slice(0, 2500) : null;
+}

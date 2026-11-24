@@ -7,6 +7,7 @@ import {
   parentLinksTable,
   schoolBellsTable,
   schoolMembersTable,
+  schoolsTable,
   timetableSlotsTable,
   usersTable,
   type AccountRole,
@@ -299,6 +300,14 @@ export function lessonReader(where: SQL) {
   };
 }
 
+/** True when the viewer belongs to a demo school (made by the owner for showing EDUVERSE). */
+async function inDemoSchool(userId: string): Promise<boolean> {
+  const [row] = await db.select({ id: schoolsTable.id }).from(schoolMembersTable)
+    .innerJoin(schoolsTable, eq(schoolsTable.id, schoolMembersTable.schoolId))
+    .where(and(eq(schoolMembersTable.userId, userId), eq(schoolsTable.isDemo, true))).limit(1);
+  return Boolean(row);
+}
+
 /** The viewer's lessons for today (Tashkent), in time order. */
 router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res) => {
   const viewer = viewerOf(res);
@@ -311,7 +320,16 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
   // Class and subject pairs of the whole week (the trainer asks only these).
   base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
   const lessonsOn = lessonReader(where);
-  const lessons = await lessonsOn(now.date, now.weekday);
+  let lessons = await lessonsOn(now.date, now.weekday);
+  // Demo school: every lesson of today is open right now, so the lesson can be tried at any time
+  // (on a day off the Monday lessons are shown).
+  const demo = await inDemoSchool(viewer.id);
+  if (demo) {
+    if (!lessons.length) lessons = await lessonsOn(now.date, 1);
+    const start = Math.floor(Date.now() / 300000) * 300000 - 300000;
+    const hhmm = (ms: number) => { const local = tashkentNow(new Date(ms)); return `${String(Math.floor(local.minutes / 60)).padStart(2, "0")}:${String(local.minutes % 60).padStart(2, "0")}`; };
+    lessons = lessons.map((lesson) => ({ ...lesson, start: hhmm(start), end: hhmm(start + 45 * 60000), startsAt: new Date(start).toISOString(), endsAt: new Date(start + 45 * 60000).toISOString() }));
+  }
   // The next two school days (Sunday skipped): for "tomorrow" and the online lesson topics.
   const next: Array<{ date: string; weekday: number; lessons: Awaited<ReturnType<typeof lessonsOn>> }> = [];
   for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
@@ -333,7 +351,7 @@ router.get("/me/today", requireAuthenticatedRole(...everyRole), async (_req, res
     await giveBookHomework(now.date, lessons.map((lesson) => lesson.classId));
   }
   if (viewer.role === "teacher") await remindTrainer(viewer.id, now.date, lessons);
-  res.json({ ...base, lessons, next, prev });
+  res.json({ ...base, lessons, next, prev, demo });
 });
 
 /** The viewer's week (Monday to Saturday) of lessons. ?offset=1 is next week, -1 the week before. */

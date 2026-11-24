@@ -316,16 +316,16 @@ function shade(hex: string): string {
 
 export function ChemLabPage({ language, user }: { language: Language; user: User }) {
   const tx = (text: Txt) => text[language];
-  type Subject = 'book' | 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'any';
-  const [subject, setSubject] = useState<Subject>('chem');
+  type Subject = 'book' | 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'sandbox';
+  const [subject, setSubject] = useState<Subject>('sandbox');
   const SUBJECTS: Array<[Subject, Txt, string]> = [
+    ['sandbox', L('Qum quti: erkin tajriba', 'Песочница: свободный опыт', 'Sandbox: free experiment'), '✦'],
     ['chem', L('Kimyo', 'Химия', 'Chemistry'), '⚗'],
     ['phys', L('Fizika', 'Физика', 'Physics'), '⚛'],
     ['math', L('Matematika', 'Математика', 'Maths'), '△'],
     ['bio', L('Biologiya', 'Биология', 'Biology'), '❦'],
     ['geo', L('Geografiya', 'География', 'Geography'), '◍'],
     ['book', L('Darslik mavzulari', 'Темы учебников', 'Textbook topics'), '📖'],
-    ['any', L('Erkin o‘rganish', 'Свободное изучение', 'Free exploring'), '✦'],
   ];
   const [mode, setMode] = useState<'build' | 'react'>('build');
   const [pick, setPick] = useState<string | null>(null);
@@ -380,7 +380,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
       </div>
 
       {subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense>
-      : subject === 'any' ? <WebModelsLab language={language} group="bio" free />
+      : subject === 'sandbox' ? <AtomSandbox language={language} userId={user.id} />
       : !pick ? (
         <div className="studio-chooser">
           {studioItems(subject).map((item) => (
@@ -605,4 +605,178 @@ function studioItems(subject: string): StudioItem[] {
     geo: [{ id: 'web', label: L('Tayyor 3D modellar', 'Готовые 3D-модели', 'Ready 3D models'), hint: L('Yer, vulqon va boshqalar', 'Земля, вулкан и другие', 'Earth, volcano and more'), icon: '🔎' }],
   };
   return [...own, ...(labs[subject] ?? [])];
+}
+
+/* ------------------------------------------------------------------------ */
+/* Sandbox: free experiments — put any atoms together and see what comes out */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * Free exploring in the 3D studio. The pupil drops atoms into the flask in any
+ * amount; a real substance is recognised at once (name, 3D, properties), any
+ * other set is drawn too, with a valence check that says whether it can exist.
+ * Found substances go to the discovery journal; two found substances can be
+ * mixed to see the reaction. A random goal gives a small challenge.
+ */
+function AtomSandbox({ language, userId }: { language: Language; userId: string }) {
+  const tx = (text: Txt) => text[language];
+  const key = `eduverse:sandbox:${userId}`;
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [found, setFound] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(key) ?? '[]') as string[]; } catch { return []; } });
+  const [goal, setGoal] = useState<string | null>(null);
+  const [fresh, setFresh] = useState<string | null>(null);
+  const [mixA, setMixA] = useState('');
+  const [mixB, setMixB] = useState('');
+  const [mixed, setMixed] = useState<Reaction | null | undefined>(undefined);
+  const [mixKey, setMixKey] = useState(0);
+  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(found)); } catch { /* private mode */ } }, [found, key]);
+
+  const match = useMemo(() => MOLECULES.find((molecule) => sameCounts(countsOf(molecule), counts)) ?? null, [counts]);
+  const shape = useMemo(() => (match ? null : sandboxMolecule(counts)), [match, counts]);
+  const report = useMemo(() => valenceReport(counts), [counts]);
+  const atoms = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  const formula = Object.entries(counts).map(([el, n]) => `${el}${n > 1 ? n : ''}`).join('');
+  const discover = (ids: string[]) => {
+    const added = ids.filter((id) => !found.includes(id));
+    if (added.length) { setFound((current) => [...current, ...added.filter((id) => !current.includes(id))]); setFresh(added[0]!); window.setTimeout(() => setFresh(null), 2600); }
+  };
+  useEffect(() => { if (match) discover([match.id]); }, [match]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const add = (el: El) => setCounts((current) => (atoms >= 12 ? current : { ...current, [el]: (current[el] ?? 0) + 1 }));
+  const remove = (el: string) => setCounts((current) => { const next = { ...current, [el]: (current[el] ?? 0) - 1 }; if (next[el]! <= 0) delete next[el]; return next; });
+  // What else can be made from this set: substances that contain all of these atoms (names stay hidden).
+  const nearby = useMemo(() => {
+    if (!atoms || match) return [];
+    return MOLECULES.map((molecule) => ({ molecule, need: countsOf(molecule) }))
+      .filter(({ need }) => Object.entries(counts).every(([el, n]) => (need[el] ?? 0) >= n))
+      .map(({ molecule, need }) => ({ molecule, missing: Object.entries(need).map(([el, n]) => [el, n - (counts[el] ?? 0)] as const).filter(([, n]) => n > 0) }))
+      .sort((a, b) => a.missing.reduce((s, [, n]) => s + n, 0) - b.missing.reduce((s, [, n]) => s + n, 0))
+      .slice(0, 3);
+  }, [counts, atoms, match]);
+  const goalMolecule = goal ? MOLECULES.find((item) => item.id === goal) ?? null : null;
+  const reached = Boolean(goalMolecule && match && match.id === goalMolecule.id);
+  const newGoal = () => {
+    const pool = MOLECULES.filter((item) => !found.includes(item.id));
+    const list = pool.length ? pool : MOLECULES;
+    setGoal(list[Math.floor(Math.random() * list.length)]!.id);
+    setCounts({});
+  };
+  const mixable = MOLECULES.filter((item) => found.includes(item.id));
+  const mix = () => {
+    const reaction = REACTIONS.find((r) => (r.a === mixA && r.b === mixB) || (r.a === mixB && r.b === mixA)) ?? null;
+    setMixed(reaction); setMixKey((value) => value + 1);
+    if (reaction) discover(reaction.products);
+  };
+  const byId = (id: string) => MOLECULES.find((m) => m.id === id)!;
+  const shown = match ?? shape;
+
+  return (
+    <div className="sandbox">
+      <div className="chem-grid">
+        <div className="panel chem-stage sandbox-flask">
+          {shown ? <MoleculeView key={formula} molecule={shown} /> : (
+            <div className="sandbox-empty"><Atom size={34} /><p>{tx(L('Atomlarni bosing — ular kolbaga tushadi. Nima chiqishini ko‘ring!', 'Нажимайте на атомы — они попадут в колбу. Посмотрите, что получится!', 'Tap atoms to drop them into the flask. See what comes out!'))}</p></div>
+          )}
+          <div className="sandbox-chips" aria-label={tx(L('Kolbada', 'В колбе', 'In the flask'))}>
+            {Object.entries(counts).flatMap(([el, n]) => Array.from({ length: n }, (_, i) => (
+              <button key={`${el}${i}`} type="button" className="chem-ball sandbox-chip" style={{ background: ELEMENTS[el as El].color, color: el === 'H' ? '#1C1C21' : '#fff' }} onClick={() => remove(el)} title={tx(L('Olib tashlash', 'Убрать', 'Remove'))}>{el}</button>
+            )))}
+          </div>
+          <div className={`chem-result ${match ? 'ok' : ''}`}>
+            <span>{formula || '—'}</span>
+            <b>{match ? `= ${tx(match.name)} ${match.formula}` : atoms < 2 ? tx(L('Kamida ikki atom qo‘shing', 'Добавьте хотя бы два атома', 'Add at least two atoms'))
+              : report.ok ? tx(L('Bog‘lar mos: bunday modda bo‘lishi mumkin, lekin kutubxonada yo‘q', 'Связи сходятся: такое вещество возможно, но его нет в нашей коллекции', 'The bonds fit: it may exist, but it is not in our collection'))
+                : tx(L('Barqaror emas: atomlarda bo‘sh bog‘lar qoldi', 'Неустойчиво: у атомов остались свободные связи', 'Unstable: free bonds are left'))}</b>
+          </div>
+          {fresh && <div className="sandbox-new" role="status"><Sparkles size={16} /> {tx(L('Yangi kashfiyot!', 'Новое открытие!', 'New discovery!'))} {byId(fresh).formula} · {tx(byId(fresh).name)}</div>}
+        </div>
+        <div className="stack">
+          <section className="panel">
+            <div className="section-head"><h2>{tx(L('Atomlar', 'Атомы', 'Atoms'))}</h2>
+              <button type="button" className="btn small" onClick={() => setCounts({})} disabled={!atoms}><RotateCcw /> {tx(L('Bo‘shatish', 'Очистить колбу', 'Empty'))}</button>
+            </div>
+            <div className="sandbox-atoms">
+              {(Object.keys(ELEMENTS) as El[]).map((el) => (
+                <button type="button" key={el} className="sandbox-atom" onClick={() => add(el)} disabled={atoms >= 12}>
+                  <span className="chem-ball" style={{ background: ELEMENTS[el].color, color: el === 'H' ? '#1C1C21' : '#fff' }}>{el}</span>
+                  <small>{tx(ELEMENTS[el].name)}</small>
+                  <small className="muted">{tx(L(`valentlik ${VALENCE[el]}`, `валентность ${VALENCE[el]}`, `valence ${VALENCE[el]}`))}</small>
+                </button>
+              ))}
+            </div>
+            {nearby.length > 0 && (
+              <div className="sandbox-hints">
+                <b>{tx(L('Nima qo‘shsa bo‘ladi?', 'Что можно добавить?', 'What could you add?'))}</b>
+                {nearby.map(({ molecule, missing }) => (
+                  <span key={molecule.id} className="tag">+ {missing.map(([el, n]) => `${el}${n > 1 ? ` ×${n}` : ''}`).join(', ')} → {found.includes(molecule.id) ? molecule.formula : tx(L('yangi modda', 'новое вещество', 'a new substance'))}</span>
+                ))}
+              </div>
+            )}
+          </section>
+          {match && <RealLife molecule={match} language={language} />}
+          {match && (
+            <section className="panel">
+              <div className="section-head"><h2>{tx(L('Xossalari', 'Свойства', 'Properties'))}</h2><span className="tag">{tx(match.state)}</span></div>
+              <ul className="chem-facts">{match.facts.map((fact, i) => <li key={i}>{tx(fact)}</li>)}</ul>
+              {match.danger && <div className="notice" role="note">⚠ {tx(match.danger)}</div>}
+            </section>
+          )}
+          <section className="panel sandbox-goal">
+            <div className="section-head"><h2>{tx(L('Topshiriq', 'Задание-загадка', 'Challenge'))}</h2>
+              <button type="button" className="btn small" onClick={newGoal}><Sparkles /> {goal ? tx(L('Boshqasi', 'Другое', 'Another')) : tx(L('Topshiriq olish', 'Получить задание', 'Get a challenge'))}</button>
+            </div>
+            {goalMolecule
+              ? <p className={reached ? 'sandbox-reached' : ''}>{reached ? `🏆 ${tx(L('Barakalla! Siz yig‘dingiz', 'Отлично! Вы собрали', 'Well done! You built'))} ${tx(goalMolecule.name)} ${goalMolecule.formula}` : `${tx(L('Yig‘ing', 'Соберите', 'Build'))}: «${tx(goalMolecule.name)}». ${goalMolecule.life ? tx(goalMolecule.life) : ''}`}</p>
+              : <p className="muted">{tx(L('Modda nomini aytamiz — uning atomlarini o‘zingiz toping.', 'Мы назовём вещество — найдите его атомы сами.', 'We name a substance — find its atoms yourself.'))}</p>}
+          </section>
+        </div>
+      </div>
+
+      <section className="panel sandbox-journal">
+        <div className="section-head"><h2>{tx(L('Kashfiyotlar daftari', 'Журнал открытий', 'Discovery journal'))}</h2><span className="tag gold">{found.length} / {MOLECULES.length}</span></div>
+        <div className="test-progress"><span style={{ width: `${(found.length / MOLECULES.length) * 100}%` }} /></div>
+        <div className="sandbox-cards">
+          {MOLECULES.map((molecule) => {
+            const has = found.includes(molecule.id);
+            return (
+              <button type="button" key={molecule.id} className={`sandbox-card ${has ? 'found' : ''} ${fresh === molecule.id ? 'fresh' : ''}`} onClick={() => has && setCounts(countsOf(molecule))} disabled={!has}>
+                <b>{has ? molecule.formula : '?'}</b>
+                <small>{has ? tx(molecule.name) : tx(L(`${Object.values(countsOf(molecule)).reduce((a, b) => a + b, 0)} ta atom`, `${Object.values(countsOf(molecule)).reduce((a, b) => a + b, 0)} атома(ов)`, `${Object.values(countsOf(molecule)).reduce((a, b) => a + b, 0)} atoms`))}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="panel sandbox-mix">
+        <div className="section-head"><h2>{tx(L('Topilgan moddalarni aralashtiring', 'Смешайте найденные вещества', 'Mix what you found'))}</h2></div>
+        {mixable.length < 2 ? <p className="muted">{tx(L('Aralashtirish uchun kamida ikkita moddani kashf qiling.', 'Чтобы смешивать, откройте хотя бы два вещества.', 'Discover at least two substances to mix them.'))}</p> : (
+          <>
+            <div className="chem-mix">
+              <Select className="input" value={mixA} onChange={(event) => { setMixA(event.target.value); setMixed(undefined); }}>
+                <option value="">—</option>
+                {mixable.map((m) => <option key={m.id} value={m.id}>{m.formula} · {tx(m.name)}</option>)}
+              </Select>
+              <span className="chem-plus">+</span>
+              <Select className="input" value={mixB} onChange={(event) => { setMixB(event.target.value); setMixed(undefined); }}>
+                <option value="">—</option>
+                {mixable.map((m) => <option key={m.id} value={m.id}>{m.formula} · {tx(m.name)}</option>)}
+              </Select>
+              <button type="button" className="btn primary" disabled={!mixA || !mixB} onClick={mix}><FlaskConical /> {tx(L('Aralashtirish', 'Смешать', 'Mix'))}</button>
+            </div>
+            {mixed && (
+              <div className={`chem-reaction effect-${mixed.effect}`} key={mixKey}>
+                <div className="chem-equation">{mixed.equation}</div>
+                <div className="chem-flask-row">
+                  {mixed.products.map((id) => <div className="chem-mini" key={id}><MoleculeView molecule={byId(id)} height={170} /><small>{byId(id).formula} · {tx(byId(id).name)}</small></div>)}
+                </div>
+                <p>{tx(mixed.note)}</p>
+              </div>
+            )}
+            {mixed === null && <div className="notice">{tx(L('Bu moddalar oddiy sharoitda reaksiyaga kirmaydi. Boshqa juftlikni sinab ko‘ring.', 'Эти вещества при обычных условиях не реагируют. Попробуйте другую пару.', 'These do not react under normal conditions. Try another pair.'))}</div>}
+          </>
+        )}
+      </section>
+    </div>
+  );
 }

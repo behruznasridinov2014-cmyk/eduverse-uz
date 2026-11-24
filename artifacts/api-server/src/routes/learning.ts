@@ -1181,11 +1181,13 @@ router.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles),
       .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))
       .orderBy(asc(usersTable.username)),
     db
-      .select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, topicId: assignmentsTable.topicId })
+      .select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, topicId: assignmentsTable.topicId, createdAt: assignmentsTable.createdAt, dueAt: assignmentsTable.dueAt })
       .from(assignmentsTable)
       .where(eq(assignmentsTable.classId, classId))
-      .orderBy(asc(assignmentsTable.createdAt))
-      .limit(30),
+      // the newest 60 tasks (older ones used to push the new homework out of the list)
+      .orderBy(desc(assignmentsTable.createdAt))
+      .limit(60)
+      .then((rows) => rows.reverse()),
     db
       .select({ studentId: attendanceTable.studentId, status: attendanceTable.status })
       .from(attendanceTable)

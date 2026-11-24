@@ -304,7 +304,6 @@ export function ServerClassesPanel({
   const canManageClass = isManagerRole(user.role) || workspace.role === 'teacher';
 
   async function submitWork(assignment: MyAssignment) {
-    if (!draftContent.trim()) return;
     if (draftPhotos.length === 0 && !assignment.mySubmission?.attachmentCount) {
       setMutationError(t(language, 'Add at least one photo of your notebook.', 'Добавьте хотя бы одно фото тетради.', 'Daftaringizning kamida bitta rasmini qo‘shing.'));
       return;
@@ -314,7 +313,7 @@ export function ServerClassesPanel({
     setNotice('');
     try {
       await submitAssignment(assignment.id, {
-        content: draftContent.trim(),
+        content: draftContent.trim() || t(language, 'Notebook photo', 'Фото тетради', 'Daftar rasmi'),
         ...(draftPhotos.length ? { attachments: draftPhotos } : {}),
       });
       setDraftAssignmentId(null);
@@ -475,7 +474,7 @@ export function ServerClassesPanel({
                             </div>
                             <div className="control">
                               <label htmlFor={`submit-${assignment.id}`}>
-                                {t(language, '2. In your own words: what did you understand?', '2. Своими словами: что вы поняли?', '2. O‘z so‘zingiz bilan: nimani tushundingiz?')}
+                                {t(language, '2. In your own words (optional)', '2. Своими словами (по желанию)', '2. O‘z so‘zingiz bilan (ixtiyoriy)')}
                               </label>
                               <textarea
                                 id={`submit-${assignment.id}`}
@@ -488,7 +487,7 @@ export function ServerClassesPanel({
                               <button
                                 type="button"
                                 className="btn primary"
-                                disabled={!draftContent.trim() || busyId === assignment.id || (draftPhotos.length === 0 && !submission?.attachmentCount)}
+                                disabled={busyId === assignment.id || (draftPhotos.length === 0 && !submission?.attachmentCount)}
                                 onClick={() => void submitWork(assignment)}
                               >
                                 <Send size={14} />
@@ -992,30 +991,6 @@ export function ServerTeachingPanel({
           )}
         </Panel>
       </div>
-
-      {(() => {
-        // Homework EDUVERSE sent by itself after the lesson (from the textbook): the teacher can cancel it.
-        const auto = school.assignments
-          .filter((item) => item.topicId?.startsWith('course:') && (!item.dueAt || new Date(item.dueAt).getTime() > Date.now() - 86_400_000))
-          .slice(0, 8);
-        if (!auto.length) return null;
-        return (
-          <Panel style={{ marginTop: 16 }}>
-            <SectionHead title={t(language, 'Sent automatically', 'Отправлено автоматически', 'Avtomatik yuborilgan')} detail={t(language, 'Homework from the textbook after the lesson. Cancel it if it is not needed.', 'Домашка из учебника после урока. Если не нужна — отмените.', 'Darsdan keyin darslikdan uy vazifasi. Kerak bo‘lmasa — bekor qiling.')} />
-            <ul className="check-list">
-              {auto.map((item) => (
-                <li key={item.id}>
-                  <div><b>{item.subject}</b><small className="muted">{school.classes.find((klass) => klass.id === item.classId)?.name ?? ''} · {formatDue(item.dueAt)}</small></div>
-                  <span className="tag">{t(language, `${item.submissionCount ?? 0} handed in`, `сдали: ${item.submissionCount ?? 0}`, `${item.submissionCount ?? 0} ta topshirdi`)}</span>
-                  <button type="button" className="btn small danger" disabled={busyAssignmentId === item.id} onClick={() => void removeAssignment(item)}>
-                    {t(language, 'Cancel', 'Отменить', 'Bekor qilish')}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        );
-      })()}
 
       <Panel style={{ marginTop: 16 }}>
         <SectionHead
@@ -1840,6 +1815,7 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
 }) {
   const [submission, setSubmission] = useState<SubmissionWithStudent | null | undefined>(undefined);
   const [draft, setDraft] = useState<ReviewDraft>({ status: 'checked', score: '', feedback: '', signature: null });
+  const [verdictKey, setVerdictKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -1886,9 +1862,9 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
             {(submission.attachmentCount ?? 0) > 0
               ? <SubmissionPhotos assignmentId={assignmentId} studentId={studentId} count={submission.attachmentCount ?? 0} language={language} refreshKey={submission.updatedAt} />
               : <p className="muted">{t(language, 'No photos attached.', 'Фото не прикреплено.', 'Rasm biriktirilmagan.')}</p>}
-            {(submission.attachmentCount ?? 0) > 0 && <PhotoAiCheck assignmentId={assignmentId} studentId={studentId} language={language} />}
+            {(submission.attachmentCount ?? 0) > 0 && <HomeworkHelpCheck assignmentId={assignmentId} studentId={studentId} language={language} onUseMark={(mark, feedback) => { setDraft((current) => ({ ...current, status: mark >= 5 ? 'checked' : 'needs_revision', score: String(scoreOf(mark)), feedback: current.feedback.trim() ? current.feedback : feedback })); setVerdictKey((value) => value + 1); }} />}
             {submission.content && <p className="school-assignment-copy"><b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}</p>}
-            <ReviewVerdict draft={draft} language={language} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
+            <ReviewVerdict key={verdictKey} draft={draft} language={language} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
             <div className="control">
               <label htmlFor="dialog-feedback">{t(language, 'Comment', 'Комментарий', 'Izoh')}</label>
               <textarea id="dialog-feedback" value={draft.feedback} maxLength={4000} onChange={(event) => setDraft((current) => ({ ...current, feedback: event.target.value }))} />
@@ -1905,40 +1881,58 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
 }
 
 
-/** "Is this photo made by AI?" — asks Gemini to look at the notebook photos. A hint, never proof. */
-function PhotoAiCheck({ assignmentId, studentId, language }: { assignmentId: string; studentId: string; language: Language }) {
-  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
-  const [result, setResult] = useState<{ aiMade: 'yes' | 'no' | 'unsure'; confidence: number; reasons: string[] } | null>(null);
+type HomeworkReview = { summary: string; mistakes: Array<{ where: string; why: string; fix: string }>; good: string[]; advice: string; suggestedMark: number | null; realPhoto: 'yes' | 'no' | 'unsure' };
+
+/**
+ * Help with checking: the helper reads the notebook photos against the task and lists the
+ * mistakes (where, why, how to fix), what is good and a suggested mark. The teacher decides.
+ */
+function HomeworkHelpCheck({ assignmentId, studentId, language, onUseMark }: { assignmentId: string; studentId: string; language: Language; onUseMark: (mark: number, feedback: string) => void }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'off' | 'error'>('idle');
+  const [review, setReview] = useState<HomeworkReview | null>(null);
   const [error, setError] = useState('');
   async function run() {
     setState('busy'); setError('');
     try {
       const lang = language === 'Uzbek' ? 'uz' : language === 'English' ? 'en' : 'ru';
-      const response = await customFetch<{ check: { aiMade: 'yes' | 'no' | 'unsure'; confidence: number; reasons: string[] } }>(`/api/assignments/${assignmentId}/submissions/${studentId}/photo-check`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }) });
-      setResult(response.check); setState('done');
+      const response = await customFetch<{ review: HomeworkReview }>(`/api/assignments/${assignmentId}/submissions/${studentId}/ai-review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }) });
+      setReview(response.review); setState('done');
     } catch (requestError) {
+      const body = (requestError as { data?: { error?: string } })?.data;
+      if (body?.error === 'not-configured') { setState('off'); return; }
       setError(friendlyError(requestError, language)); setState('error');
     }
   }
+  const feedbackText = (item: HomeworkReview) => [item.summary, ...item.mistakes.map((m) => `• ${m.where ? `${m.where}: ` : ''}${m.why}${m.fix ? ` → ${m.fix}` : ''}`), item.advice].filter(Boolean).join('\n');
   return (
     <div className="photo-ai-check">
-      {state !== 'done' && (
+      {(state === 'idle' || state === 'busy' || state === 'error') && (
         <button type="button" className="btn" disabled={state === 'busy'} onClick={() => void run()}>
-          {state === 'busy' ? <LoadingBlock language={language} kind="inline" label={t(language, 'Checking the photo…', 'Проверяем фото…', 'Rasm tekshirilmoqda…')} /> : <>🔍 {t(language, 'Is this a real notebook photo?', 'Это настоящее фото тетради?', 'Bu haqiqiy daftar rasmimi?')}</>}
+          {state === 'busy' ? <LoadingBlock language={language} kind="inline" label={t(language, 'Reading the notebook…', 'Читаем тетрадь…', 'Daftar o‘qilmoqda…')} /> : <>🔍 {t(language, 'Help me check: mistakes and advice', 'Помочь проверить: ошибки и советы', 'Tekshirishga yordam: xatolar va maslahat')}</>}
         </button>
       )}
-      {state === 'done' && result && (
-        <div className={`photo-ai-result is-${result.aiMade}`}>
-          <b>{result.aiMade === 'yes'
-            ? `⚠️ ${t(language, 'Looks generated or a screenshot', 'Похоже на сгенерированную картинку или скриншот', 'Yasalgan rasm yoki skrinshotga o‘xshaydi')}`
-            : result.aiMade === 'no'
-              ? `✅ ${t(language, 'A real notebook photo', 'Настоящее фото тетради', 'Haqiqiy daftar rasmi')}`
-              : `❔ ${t(language, 'Hard to say', 'Трудно сказать', 'Aniq emas')}`} · {result.confidence}%</b>
-          {result.reasons.length > 0 && <ul>{result.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
-          <small className="muted">{t(language, 'This is a hint, not proof. If in doubt, ask the pupil to explain the solution.', 'Это подсказка, а не доказательство. Если сомневаетесь — попросите ученика объяснить решение.', 'Bu faqat maslahat. Shubha bo‘lsa, o‘quvchidan yechimni tushuntirib berishini so‘rang.')}</small>
+      {state === 'off' && <p className="muted">{t(language, 'Check help is not connected for this school yet. Check the photos yourself.', 'Помощь в проверке для школы ещё не подключена. Проверьте фото сами.', 'Tekshirish yordamchisi hali ulanmagan. Rasmlarni o‘zingiz tekshiring.')}</p>}
+      {state === 'done' && review && (
+        <div className="photo-ai-result is-review">
+          {review.summary && <b>{review.summary}</b>}
+          {review.mistakes.length > 0 && (
+            <ul className="hw-review-mistakes">
+              {review.mistakes.map((item, index) => <li key={index}><b>{item.where || `${index + 1}`}</b> — {item.why}{item.fix && <><br /><span className="muted">✎ {item.fix}</span></>}</li>)}
+            </ul>
+          )}
+          {review.good.length > 0 && <p>✅ {review.good.join(' · ')}</p>}
+          {review.advice && <p>💬 {review.advice}</p>}
+          {review.realPhoto === 'no' && <p className="notice">⚠️ {t(language, 'This may not be a real notebook photo (screenshot or generated picture).', 'Возможно, это не настоящее фото тетради (скриншот или созданная картинка).', 'Bu haqiqiy daftar rasmi bo‘lmasligi mumkin (skrinshot yoki yasalgan rasm).')}</p>}
+          {review.suggestedMark !== null && (
+            <button type="button" className="btn small primary" onClick={() => onUseMark(review.suggestedMark!, feedbackText(review))}>
+              {t(language, `Use the suggested mark: ${review.suggestedMark}`, `Взять предложенную оценку: ${review.suggestedMark}`, `Taklif qilingan baho: ${review.suggestedMark}`)}
+            </button>
+          )}
+          <small className="muted">{t(language, 'Only a hint. The final mark is yours.', 'Это только подсказка. Итоговую оценку ставите вы.', 'Bu faqat maslahat. Yakuniy bahoni siz qo‘yasiz.')}</small>
         </div>
       )}
       {error && <span className="notice">{error}</span>}
     </div>
   );
 }
+

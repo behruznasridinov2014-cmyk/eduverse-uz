@@ -185,7 +185,9 @@ export function LabPage({ user, language, children }: { user: User; language: La
   const firstStart = lessons.length ? Math.min(...lessons.map((lesson) => Date.parse(lesson.startsAt))) : 0;
   const lastEnd = lessons.length ? Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt))) : 0;
   const schoolDay = lessons.length > 0 && now >= firstStart && now < lastEnd;
-  if (!schoolDay) return <><LabTodayScene language={language} />{children}</>;
+  // In the demo school lessons are always going on, so the studio stays open there.
+  const demo = Boolean((data as { demo?: boolean } | undefined)?.demo);
+  if (!schoolDay || demo) return <><LabTodayScene language={language} />{children}</>;
   const end = new Date(lastEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
   return (
     <>

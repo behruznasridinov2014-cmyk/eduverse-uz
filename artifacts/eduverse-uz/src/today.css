@@ -472,3 +472,6 @@ html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 
 .my-grades-table .journal-mine-marks { display: inline-flex; flex-wrap: wrap; gap: 4px; }
 .hw-today { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-2); }
 .hw-subject-head { margin: 10px 2px 0; font-size: 15px; }
+.check-hw-day { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+.check-hw-day .muted { flex: 1 1 200px; min-width: 0; }
+.hw-review-mistakes { margin: 6px 0; padding-left: 18px; display: grid; gap: 6px; }

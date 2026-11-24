@@ -1044,3 +1044,24 @@ h1, h2, h3, .auth-panel h2, .auth-page-login .auth-panel h2, .profile-head h1, .
 /* sign-in page: no dark frame, light language picker */
 .auth-layout, .auth-page-login .auth-layout { background: rgba(255, 255, 255, 0.55) !important; }
 .auth-language select, .auth-page-login .auth-language select, .top-select { background: rgba(255, 255, 255, 0.85) !important; color: var(--text) !important; border: 1px solid rgba(184, 149, 90, 0.3) !important; }
+
+/* 3D studio sandbox */
+.sandbox { display: grid; gap: 14px; }
+.sandbox-flask { display: grid; gap: 10px; }
+.sandbox-empty { min-height: 320px; display: grid; place-items: center; align-content: center; gap: 10px; text-align: center; color: var(--text-3); padding: 20px; }
+.sandbox-empty svg { color: var(--ev-primary); }
+.sandbox-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
+.sandbox-chip { border: 0; cursor: pointer; animation: ls-drop .35s var(--spring, ease) both; }
+@keyframes ls-drop { from { transform: translateY(-14px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+.sandbox-new { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--ev-r-md); background: var(--ev-primary-soft); font-weight: 700; animation: glass-in .5s var(--ease) both; }
+.sandbox-atoms { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; }
+.sandbox-atom { display: grid; justify-items: center; gap: 3px; padding: 10px 6px; border-radius: var(--ev-r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; cursor: pointer; transition: transform .2s var(--ease), border-color .2s; }
+.sandbox-atom:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ev-primary-line); }
+.sandbox-atom small { font-size: 11px; }
+.sandbox-hints { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
+.sandbox-reached { font-weight: 700; color: var(--ok); }
+.sandbox-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin-top: 10px; }
+.sandbox-card { display: grid; gap: 2px; padding: 10px; border-radius: var(--ev-r-sm); border: 1px dashed var(--line-2); background: transparent; color: var(--text-3); font: inherit; text-align: left; }
+.sandbox-card b { font-size: 16px; }
+.sandbox-card.found { border-style: solid; border-color: var(--ev-primary-line); background: var(--ev-primary-soft); color: var(--text); cursor: pointer; }
+.sandbox-card.fresh { animation: ls-drop .5s var(--ease) both; box-shadow: 0 0 0 2px var(--ev-primary); }

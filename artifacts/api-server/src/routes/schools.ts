@@ -1328,6 +1328,52 @@ router.post(
   },
 );
 
+/**
+ * Help with checking: reads the notebook photos against the task and lists mistakes,
+ * how to fix them and a suggested mark. Only advice: the teacher sets the final mark.
+ */
+router.post(
+  "/assignments/:assignmentId/submissions/:studentId/ai-review",
+  requireAuthenticatedRole("teacher", ...SCHOOL_MANAGEMENT_ROLES),
+  aiLimiter, async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const context = await authorizeAssignment(currentUser(res), assignmentId);
+    if (!context) { res.status(404).json({ error: "Assignment not found." }); return; }
+    if (!context.authorization.canReview) { forbidden(res, "Only the teacher can run this check."); return; }
+    const [details] = await db
+      .select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description })
+      .from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    const [submission] = await db
+      .select({ id: assignmentSubmissionsTable.id, content: assignmentSubmissionsTable.content })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(1);
+    if (!submission) { res.status(404).json({ error: "The pupil has not handed in this work." }); return; }
+    const photos = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .where(eq(submissionFilesTable.submissionId, submission.id))
+      .orderBy(submissionFilesTable.position)
+      .limit(3);
+    const images = photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    if (!images.length) { res.status(404).json({ error: "No photos in this work." }); return; }
+    const { isAiConfigured, reviewHomework } = await import("../lib/ai-content");
+    if (!isAiConfigured()) { res.status(503).json({ error: "not-configured" }); return; }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const review = await reviewHomework({
+      subject: details?.subject ?? "",
+      task: `${details?.title ?? ""}. ${details?.description ?? ""}`,
+      explanation: submission.content ?? "",
+      photos: images,
+      language: typeof body.lang === "string" ? body.lang : "ru",
+    });
+    if (!review) { res.status(503).json({ error: "The check is not available right now. Try again in a minute." }); return; }
+    res.json({ review });
+  },
+);
+
 router.get(
   "/assignments/:assignmentId/submissions/:studentId/files",
   requireAuthenticatedRole(...ACCOUNT_ROLES),

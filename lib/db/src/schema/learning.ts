@@ -515,3 +515,72 @@ export const noticeMarksTable = pgTable("notice_marks", {
   key: text("key").primaryKey(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/* -------------------------------------------------------------------------- */
+/* Seven-stage interactive lesson                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One pupil's result in one stage of a textbook topic lesson
+ * (1 mission, 2 textbook, 3 visual/3D, 4 practice, 5 assessment, 6 reinforcement, 7 homework).
+ * `answers` keeps every answer with right/wrong, so the teacher sees what the class got wrong.
+ */
+export const lessonStageProgressTable = pgTable("lesson_stage_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+  topicKey: text("topic_key").notNull(),
+  stage: integer("stage").notNull(),
+  score: integer("score").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  done: boolean("done").notNull().default(false),
+  answers: jsonb("answers").notNull().default([]),
+  attempts: integer("attempts").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_stage_progress_user_topic_stage_unique").on(table.userId, table.topicKey, table.stage),
+  index("lesson_stage_progress_class_topic_idx").on(table.classId, table.topicKey),
+]);
+
+/**
+ * What a teacher added to a textbook topic with the lesson builder: own intro, notes,
+ * questions, videos, pictures, 3D links, timing and homework. One row per teacher and topic;
+ * pupils of the teacher's classes see it.
+ */
+export const lessonContentTable = pgTable("lesson_content", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  teacherId: uuid("teacher_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  topicKey: text("topic_key").notNull(),
+  content: jsonb("content").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_content_teacher_topic_unique").on(table.teacherId, table.topicKey),
+]);
+
+/** The class board: which stage and question the teacher shows now. One row per class. */
+export const lessonLiveTable = pgTable("lesson_live", {
+  classId: uuid("class_id").primaryKey().references(() => classesTable.id, { onDelete: "cascade" }),
+  teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+  topicKey: text("topic_key").notNull(),
+  stage: integer("stage").notNull().default(1),
+  /** the question shown to the class: { id, prompt, choices[], correct } or null */
+  question: jsonb("question"),
+  reveal: boolean("reveal").notNull().default(false),
+  active: boolean("active").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Pupils' answers to the question on the class board (anonymous statistics for the class). */
+export const lessonLiveAnswersTable = pgTable("lesson_live_answers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  questionId: text("question_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  choice: integer("choice").notNull(),
+  correct: boolean("correct").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_live_answers_unique").on(table.classId, table.questionId, table.userId),
+]);
