@@ -4,6 +4,7 @@ import './theme.css';
 import './glass.css';
 import './motion.css';
 import './ui/ui.css';
+import './phone.css';
 import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -197,6 +198,7 @@ function App(){
             <span className="lang-thumb" aria-hidden="true" style={{transform:`translateX(calc(var(--seg-w) * ${(['Uzbek','Русский','English'] as Lang[]).indexOf(lang)}))`}}/>
             {(['Uzbek','Русский','English'] as Lang[]).map(value=><button key={value} type="button" className={lang===value?'active':''} onClick={()=>changeLang(value)}>{value==='Uzbek'?'UZ':value==='Русский'?'RU':'EN'}</button>)}
           </div>
+          <button type="button" className="lang-cycle" aria-label="Language" onClick={()=>changeLang(lang==='Uzbek'?'Русский':lang==='Русский'?'English':'Uzbek')}>{lang==='Uzbek'?'UZ':lang==='Русский'?'RU':'EN'}</button>
           {auth.user&&<Link href="/profile" className="top-avatar" aria-label={auth.user.username} title={auth.user.username}><UserAvatar userId={auth.user.id} name={auth.user.username}/></Link>}
         </div>
       </header>
