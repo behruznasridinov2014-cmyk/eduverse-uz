@@ -188,3 +188,6 @@
   .eco-attention li { flex-wrap: wrap; }
   .eco-attention li .eco-reasons { max-width: 100%; flex-basis: 100%; justify-content: flex-start; padding-left: 46px; margin-top: 0; }
 }
+.eco-dialog .section-head { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.eco-dialog .section-head h2 { margin: 0; font-size: 17px; line-height: 1.3; min-width: 0; }
+.eco-dialog .section-head .btn { flex: none; }
