@@ -4,6 +4,7 @@ import {
   ACCOUNT_ROLES,
   assignmentSubmissionsTable,
   assignmentsTable,
+  noticeMarksTable,
   classesTable,
   classMembersTable,
   db,
@@ -13,7 +14,9 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
-import { requireAuthenticatedRole } from "./auth";
+import { createRateLimiter, requireAuthenticatedRole } from "./auth";
+import { escapeHtml, notifyFamily, subjectText, tl } from "../lib/notify";
+import { pushNotice, studentsOfClasses, withParents } from "../lib/inbox";
 import {
   ASSIGNMENT_STATUSES,
   GLOBAL_ADMIN_ROLES,
@@ -39,8 +42,15 @@ import {
   type ClassMemberRole,
   type SchoolMemberRole,
 } from "../lib/school-access";
+import { gradeOf } from "../lib/grade";
 
 const router: IRouter = Router();
+// Paid outside services (AI, video and 3D search): a limit per session against scripted abuse.
+const aiLimiter = createRateLimiter(60, 10 * 60 * 1000, "Too many requests. Wait a few minutes.", "ai-heavy", (req: { cookies?: Record<string, unknown>; ip?: string }) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
+
 
 const IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_PHOTOS = 4;
@@ -276,8 +286,10 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
-        memberCount: sql<number>`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-        classCount: sql<number>`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`,
+        plan: schoolsTable.plan,
+        planUntil: schoolsTable.planUntil,
+        memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+        classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })
       .from(schoolsTable)
       .orderBy(schoolsTable.name);
@@ -331,8 +343,8 @@ router.get(
         district: schoolsTable.district,
         address: schoolsTable.address,
         createdAt: schoolsTable.createdAt,
-        memberCount: sql<number>`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-        classCount: sql<number>`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`,
+        memberCount: sql<number>`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+        classCount: sql<number>`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`,
       })
       .from(schoolsTable)
       .where(eq(schoolsTable.id, schoolId))
@@ -391,7 +403,7 @@ router.get(
 
 router.post(
   "/schools/:schoolId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
@@ -453,7 +465,7 @@ router.post(
 
 router.delete(
   "/schools/:schoolId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId", "userId")) return;
     const schoolId = String(req.params.schoolId);
@@ -468,6 +480,18 @@ router.delete(
     if (userId === user.id && !isGlobalAdminRole(user.role)) {
       res.status(400).json({ error: "Managers cannot remove their own school membership." });
       return;
+    }
+    // A deputy manages pupils, parents and teachers, never the director or other deputies.
+    const targetRole = await schoolMembershipRole(userId, schoolId);
+    if (!isGlobalAdminRole(user.role)) {
+      if (targetRole === "school_director") {
+        forbidden(res, "Only EDUVERSE staff can remove a school director.");
+        return;
+      }
+      if (targetRole === "school_admin" && schoolRole !== "school_director") {
+        forbidden(res, "Only the director can remove a deputy.");
+        return;
+      }
     }
 
     await db.transaction(async (transaction) => {
@@ -695,7 +719,7 @@ router.get(
 
 router.post(
   "/classes/:classId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId")) return;
     const classId = String(req.params.classId);
@@ -781,7 +805,7 @@ router.post(
 
 router.delete(
   "/classes/:classId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId", "userId")) return;
     const classId = String(req.params.classId);
@@ -949,6 +973,7 @@ router.post(
       })
       .returning();
 
+    await pushNotice(await studentsOfClasses([classId]), "homework", `Новое задание: ${title}`, `${subject}${dueAtResult.value ? ` · до ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes");
     res.status(201).json({ assignment });
   },
 );
@@ -1081,6 +1106,9 @@ router.delete(
       return;
     }
 
+    // A cancelled automatic (textbook) homework must not come back on the next lesson check.
+    const [auto] = await db.select({ autoKey: assignmentsTable.autoKey }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (auto?.autoKey) await db.insert(noticeMarksTable).values({ key: `hw-cancel:${auto.autoKey}` }).onConflictDoNothing();
     await db.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
     res.status(204).end();
   },
@@ -1147,6 +1175,11 @@ router.post(
       forbidden(res, "Only a student in this class can submit this assignment.");
       return;
     }
+    const [deadline] = await db.select({ dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (deadline?.dueAt && deadline.dueAt.getTime() < Date.now()) {
+      res.status(409).json({ error: "The deadline has passed. Homework is accepted until 00:00 on the lesson day." });
+      return;
+    }
 
     const content = readString(req.body, "content", 10_000);
     if (!content) {
@@ -1210,6 +1243,134 @@ router.post(
     }
 
     res.status(201).json({ submission });
+  },
+);
+
+router.post(
+  "/assignments/:assignmentId/submissions/:studentId/ai-check",
+  requireAuthenticatedRole(...ACCOUNT_ROLES),
+  aiLimiter, async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const user = currentUser(res);
+    const context = await authorizeAssignment(user, assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    if (!context.authorization.canReview) {
+      forbidden(res, "Only the teacher can run this check.");
+      return;
+    }
+    const [submission] = await db
+      .select({ id: assignmentSubmissionsTable.id, content: assignmentSubmissionsTable.content })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(1);
+    if (!submission) {
+      res.status(404).json({ error: "Submission not found." });
+      return;
+    }
+    const [info] = await db
+      .select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description })
+      .from(assignmentsTable)
+      .where(eq(assignmentsTable.id, assignmentId))
+      .limit(1);
+    const [student] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+    const photos = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .where(eq(submissionFilesTable.submissionId, submission.id))
+      .orderBy(submissionFilesTable.position)
+      .limit(2);
+    const { analyzeHomework } = await import("../lib/ai-content");
+    const check = await analyzeHomework({
+      subject: info?.subject ?? "",
+      task: `${info?.title ?? ""}. ${info?.description ?? ""}`.slice(0, 600),
+      studentName: student?.name ?? "",
+      explanation: submission.content,
+      photos: photos.map((row) => row.data).filter((data) => data.startsWith("data:image/")),
+    });
+    if (!check) {
+      res.status(503).json({ error: "The AI check is not available right now." });
+      return;
+    }
+    res.json({ check });
+  },
+);
+
+/** "Is this photo made by AI?" — a hint for the teacher, never proof. */
+router.post(
+  "/assignments/:assignmentId/submissions/:studentId/photo-check",
+  requireAuthenticatedRole("teacher", ...SCHOOL_MANAGEMENT_ROLES),
+  aiLimiter, async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const context = await authorizeAssignment(currentUser(res), assignmentId);
+    if (!context) { res.status(404).json({ error: "Assignment not found." }); return; }
+    if (!context.authorization.canReview) { forbidden(res, "Only the teacher can run this check."); return; }
+    const photos = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id))
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .orderBy(submissionFilesTable.position)
+      .limit(3);
+    const images = photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    if (!images.length) { res.status(404).json({ error: "No photos in this work." }); return; }
+    const { checkPhotoIsAi } = await import("../lib/ai-content");
+    const lang = typeof (req.body as Record<string, unknown> | undefined)?.lang === "string" ? String((req.body as Record<string, unknown>).lang) : "ru";
+    const check = await checkPhotoIsAi(images, lang);
+    if (!check) { res.status(503).json({ error: "The check is not available right now. Try again in a minute." }); return; }
+    res.json({ check });
+  },
+);
+
+/**
+ * Help with checking: reads the notebook photos against the task and lists mistakes,
+ * how to fix them and a suggested mark. Only advice: the teacher sets the final mark.
+ */
+router.post(
+  "/assignments/:assignmentId/submissions/:studentId/ai-review",
+  requireAuthenticatedRole("teacher", ...SCHOOL_MANAGEMENT_ROLES),
+  aiLimiter, async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const context = await authorizeAssignment(currentUser(res), assignmentId);
+    if (!context) { res.status(404).json({ error: "Assignment not found." }); return; }
+    if (!context.authorization.canReview) { forbidden(res, "Only the teacher can run this check."); return; }
+    const [details] = await db
+      .select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description })
+      .from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    const [submission] = await db
+      .select({ id: assignmentSubmissionsTable.id, content: assignmentSubmissionsTable.content })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(1);
+    if (!submission) { res.status(404).json({ error: "The pupil has not handed in this work." }); return; }
+    const photos = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .where(eq(submissionFilesTable.submissionId, submission.id))
+      .orderBy(submissionFilesTable.position)
+      .limit(3);
+    const images = photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    if (!images.length) { res.status(404).json({ error: "No photos in this work." }); return; }
+    const { isAiConfigured, reviewHomework } = await import("../lib/ai-content");
+    if (!isAiConfigured()) { res.status(503).json({ error: "not-configured" }); return; }
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const review = await reviewHomework({
+      subject: details?.subject ?? "",
+      task: `${details?.title ?? ""}. ${details?.description ?? ""}`,
+      explanation: submission.content ?? "",
+      photos: images,
+      language: typeof body.lang === "string" ? body.lang : "ru",
+    });
+    if (!review) { res.status(503).json({ error: "The check is not available right now. Try again in a minute." }); return; }
+    res.json({ review });
   },
 );
 
@@ -1314,6 +1475,11 @@ router.patch(
         res.status(400).json({ error: "Score must be an integer from 0 to 100." });
         return;
       }
+      // The school scale is 2…5 (score 40…100): a mark below 2 cannot be given.
+      if (score !== null && score < 40) {
+        res.status(400).json({ error: "The lowest mark is 2." });
+        return;
+      }
       changes.score = score;
     }
     if (hasField(req.body, "feedback")) {
@@ -1326,7 +1492,12 @@ router.patch(
       changes.feedback = feedback;
     }
 
-    const [updated] = await db
+    const [before] = await db
+      .select({ score: assignmentSubmissionsTable.score })
+      .from(assignmentSubmissionsTable)
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(1);
+    let [updated] = await db
       .update(assignmentSubmissionsTable)
       .set(changes)
       .where(
@@ -1337,9 +1508,42 @@ router.patch(
       )
       .returning();
 
+    // The teacher may grade a pupil who handed in nothing (for example, work done in class).
+    if (!updated && typeof changes.score === "number") {
+      const [member] = await db
+        .select({ id: classMembersTable.id })
+        .from(classMembersTable)
+        .where(and(eq(classMembersTable.classId, context.assignment.classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student")))
+        .limit(1);
+      if (member) {
+        [updated] = await db
+          .insert(assignmentSubmissionsTable)
+          .values({ assignmentId, studentId, status: "checked", content: "", score: changes.score, feedback: changes.feedback ?? "" })
+          .onConflictDoNothing()
+          .returning();
+      }
+    }
+
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });
       return;
+    }
+
+    if (typeof changes.score === "number" && before?.score !== changes.score) {
+      const [info] = await db
+        .select({ title: assignmentsTable.title, subject: assignmentsTable.subject })
+        .from(assignmentsTable)
+        .where(eq(assignmentsTable.id, assignmentId))
+        .limit(1);
+      const grade = gradeOf(changes.score);
+      await pushNotice(await withParents([studentId]), "grades", `Новая оценка: ${grade}/10`, info?.subject ?? "", "/classes");
+      await notifyFamily(
+        studentId,
+        (lang, name) => `📝 <b>${tl(lang, "Uy vazifasi", "Домашка", "Homework")}: ${grade}/10</b> · ${subjectText(lang, info?.subject ?? "")}
+👤 ${name}${changes.feedback ? `
+💬 ${escapeHtml(changes.feedback.slice(0, 120))}` : ""}`,
+        true,
+      );
     }
 
     res.json({ submission: updated });

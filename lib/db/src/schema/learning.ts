@@ -29,16 +29,19 @@ export const attendanceTable = pgTable(
     studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
     markedBy: uuid("marked_by").notNull().references(() => usersTable.id, { onDelete: "restrict" }),
     attendanceDate: text("attendance_date").notNull(),
+    /** The lesson's subject: every teacher marks their own lesson ("" = old whole-day mark). */
+    subject: text("subject").notNull().default(""),
     status: attendanceStatusEnum("status").notNull().default("present"),
     note: text("note").notNull().default(""),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("attendance_class_student_date_unique").on(
+    uniqueIndex("attendance_class_student_date_subject_unique").on(
       table.classId,
       table.studentId,
       table.attendanceDate,
+      table.subject,
     ),
     index("attendance_class_date_idx").on(table.classId, table.attendanceDate),
     index("attendance_student_idx").on(table.studentId),
@@ -119,6 +122,8 @@ export const lessonRoomsTable = pgTable(
     hostId: uuid("host_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
     subject: text("subject").notNull().default(""),
     title: text("title").notNull().default(""),
+    // Topic from the class textbook (course-data key) shown in the lesson.
+    courseKey: text("course_key"),
     status: lessonRoomStatusEnum("status").notNull().default("open"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
@@ -147,6 +152,8 @@ export const lessonRoomParticipantsTable = pgTable(
     testExplanation: text("test_explanation").notNull().default(""),
     testAnswer: text("test_answer"),
     testScore: integer("test_score"),
+    // Several questions per student: [{prompt, choices, correct, explanation, answer}]
+    testItems: jsonb("test_items").notNull().default([]),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
   },
@@ -242,3 +249,338 @@ export const qrLoginSessionsTable = pgTable(
     index("qr_login_sessions_expires_idx").on(table.expiresAt),
   ],
 );
+
+/** Short messages from a teacher to a whole class (shown on the home page). */
+export const classAnnouncementsTable = pgTable(
+  "class_announcements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("class_announcements_class_idx").on(table.classId)],
+);
+
+/** A parent account linked to a student account (set by school staff). */
+export const parentLinksTable = pgTable(
+  "parent_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("parent_links_parent_student_unique").on(table.parentId, table.studentId),
+    index("parent_links_student_idx").on(table.studentId),
+  ],
+);
+
+/** Telegram chat that receives school notifications for an account. */
+export const telegramNotifyTable = pgTable("telegram_notify", {
+  userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+  chatId: text("chat_id"),
+  nonce: text("nonce"),
+  nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+  /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
+  lang: text("lang"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
+
+/** A virtual lab report done by a student (measurements, result, grade). */
+export const labReportsTable = pgTable("lab_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  lab: text("lab").notNull(),
+  data: jsonb("data").notNull().default({}),
+  result: text("result").notNull().default(""),
+  errorPercent: integer("error_percent"),
+  grade: integer("grade"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("lab_reports_student_idx").on(table.studentId)]);
+
+/** A student's (or teacher's) own drawings on top of a textbook page — like writing in a notebook. */
+export const bookAnnotationsTable = pgTable("book_annotations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  book: text("book").notNull(),
+  page: integer("page").notNull(),
+  /** Strokes in page-relative coordinates (0…1), so they fit any zoom. */
+  strokes: jsonb("strokes").notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("book_annotations_user_book_page_unique").on(table.userId, table.book, table.page)]);
+
+/** Where a class stopped in a textbook: one row per topic covered in class, with its date. */
+export const courseProgressTable = pgTable("course_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  topicKey: text("topic_key").notNull(),
+  /** Lesson date, YYYY-MM-DD. */
+  doneOn: text("done_on").notNull(),
+  markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("course_progress_class_topic_unique").on(table.classId, table.topicKey),
+  index("course_progress_class_idx").on(table.classId),
+]);
+
+/** Lessons per week a class has for one textbook (used for the finish forecast). */
+export const coursePaceTable = pgTable("course_pace", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  book: text("book").notNull(),
+  lessonsPerWeek: integer("lessons_per_week").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("course_pace_class_book_unique").on(table.classId, table.book)]);
+
+/** In-app notifications (the bell): grades, homework, messages, announcements, lessons, security. */
+export const userNotificationsTable = pgTable("user_notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  link: text("link"),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("user_notifications_user_created_idx").on(table.userId, table.createdAt)]);
+
+/**
+ * In-app support chat. One thread per user and channel:
+ *  - "curator": the user ↔ EDUVERSE curators (platform staff);
+ *  - "school":  the user ↔ the administration of their school.
+ */
+export const supportMessagesTable = pgTable("support_messages", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  threadUserId: uuid("thread_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  channel: text("channel").notNull(),
+  schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+  fromStaff: boolean("from_staff").notNull().default(false),
+  body: text("body").notNull(),
+  readByOwner: boolean("read_by_owner").notNull().default(false),
+  readByStaff: boolean("read_by_staff").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("support_messages_thread_idx").on(table.threadUserId, table.channel, table.createdAt),
+  index("support_messages_school_idx").on(table.schoolId, table.channel),
+]);
+
+/**
+ * The school's own year calendar: four quarters and any extra days off (holidays,
+ * quarantine). The textbook forecast counts only these school weeks.
+ */
+export const schoolCalendarTable = pgTable("school_calendar", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  /** [{ start: "2026-09-02", end: "2026-10-31" }, ...] — exactly four, in order. */
+  quarters: jsonb("quarters").notNull(),
+  /** [{ from: "2026-12-31", to: "2027-01-02", name: "Новый год" }, ...] */
+  holidays: jsonb("holidays").notNull().default([]),
+  updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("school_calendar_school_unique").on(table.schoolId)]);
+
+/**
+ * A school's request to EDUVERSE: enrol pupils, expel / transfer / graduate one,
+ * restore one, or correct a person's details. The owner approves or rejects it.
+ */
+export const schoolRequestsTable = pgTable("school_requests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+  /** enroll | expel | transfer | graduate | restore | edit */
+  kind: text("kind").notNull(),
+  /** The person the request is about (null for enroll). */
+  targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  payload: jsonb("payload").notNull().default({}),
+  reason: text("reason").notNull().default(""),
+  /** pending | approved | rejected */
+  status: text("status").notNull().default("pending"),
+  decidedBy: uuid("decided_by").references(() => usersTable.id, { onDelete: "set null" }),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  decisionNote: text("decision_note").notNull().default(""),
+  /** What approving did, e.g. created logins (without passwords). */
+  result: jsonb("result").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("school_requests_status_idx").on(table.status, table.createdAt),
+  index("school_requests_school_idx").on(table.schoolId, table.createdAt),
+]);
+
+/** Who created, changed or removed what — kept for every school. */
+export const auditLogTable = pgTable("audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+  actorId: uuid("actor_id").references(() => usersTable.id, { onDelete: "set null" }),
+  action: text("action").notNull(),
+  targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("audit_log_school_idx").on(table.schoolId, table.createdAt)]);
+
+/** Daily trainer: one result per pupil per day; the class rating sums the last 7 days. */
+export const trainerResultsTable = pgTable("trainer_results", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+  /** YYYY-MM-DD */
+  day: text("day").notNull(),
+  score: integer("score").notNull(),
+  total: integer("total").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
+  index("trainer_results_class_day_idx").on(table.classId, table.day),
+]);
+
+/**
+ * Trainer test of one subject on one lesson day: 8 questions on the topic of that lesson.
+ * A pupil may redo it within 24 hours of the lesson; the best score stays.
+ */
+export const trainerTestsTable = pgTable("trainer_tests", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+  /** YYYY-MM-DD: the lesson day */
+  day: text("day").notNull(),
+  /** textbook subject key: physics / chemistry / biology / math */
+  subject: text("subject").notNull(),
+  topicKey: text("topic_key").notNull().default(""),
+  score: integer("score").notNull(),
+  total: integer("total").notNull(),
+  attempts: integer("attempts").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("trainer_tests_user_day_subject_unique").on(table.userId, table.day, table.subject),
+  index("trainer_tests_class_day_idx").on(table.classId, table.day),
+]);
+
+/**
+ * The school's weekly timetable: on which weekday (1 = Monday … 6 = Saturday) and in which
+ * period a class has which subject and with which teacher. The bell times of the periods are
+ * kept per school in `school_bells`. Subject is the textbook subject key
+ * (physics / chemistry / biology / math) or any other subject name.
+ */
+export const timetableSlotsTable = pgTable("timetable_slots", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  weekday: integer("weekday").notNull(),
+  period: integer("period").notNull(),
+  subject: text("subject").notNull(),
+  teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+  room: text("room"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("timetable_slots_class_day_period_unique").on(table.classId, table.weekday, table.period),
+  index("timetable_slots_teacher_idx").on(table.teacherId, table.weekday),
+  index("timetable_slots_school_idx").on(table.schoolId),
+]);
+
+/** Bell times of a school: [{ start: "08:30", end: "09:15" }, …], period 1 first. */
+export const schoolBellsTable = pgTable("school_bells", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  periods: jsonb("periods").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("school_bells_school_unique").on(table.schoolId)]);
+
+/**
+ * The class journal (like a paper school journal): one mark per pupil, subject and lesson date.
+ * A mark is 2…5 (the school scale for grades 5–11); "absent" is «нб». Kept by the subject teacher.
+ */
+export const journalMarksTable = pgTable("journal_marks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  subject: text("subject").notNull(),
+  /** Lesson date, YYYY-MM-DD (Tashkent). */
+  date: text("date").notNull(),
+  mark: integer("mark"),
+  absent: boolean("absent").notNull().default(false),
+  markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("journal_marks_cell_unique").on(table.classId, table.studentId, table.subject, table.date),
+  index("journal_marks_class_subject_idx").on(table.classId, table.subject),
+]);
+
+/** "Already sent" marks for once-a-day messages (e.g. the evening homework summary of a class). */
+export const noticeMarksTable = pgTable("notice_marks", {
+  key: text("key").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/* -------------------------------------------------------------------------- */
+/* Seven-stage interactive lesson                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One pupil's result in one stage of a textbook topic lesson
+ * (1 mission, 2 textbook, 3 visual/3D, 4 practice, 5 assessment, 6 reinforcement, 7 homework).
+ * `answers` keeps every answer with right/wrong, so the teacher sees what the class got wrong.
+ */
+export const lessonStageProgressTable = pgTable("lesson_stage_progress", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+  topicKey: text("topic_key").notNull(),
+  stage: integer("stage").notNull(),
+  score: integer("score").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  done: boolean("done").notNull().default(false),
+  answers: jsonb("answers").notNull().default([]),
+  attempts: integer("attempts").notNull().default(1),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_stage_progress_user_topic_stage_unique").on(table.userId, table.topicKey, table.stage),
+  index("lesson_stage_progress_class_topic_idx").on(table.classId, table.topicKey),
+]);
+
+/**
+ * What a teacher added to a textbook topic with the lesson builder: own intro, notes,
+ * questions, videos, pictures, 3D links, timing and homework. One row per teacher and topic;
+ * pupils of the teacher's classes see it.
+ */
+export const lessonContentTable = pgTable("lesson_content", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  teacherId: uuid("teacher_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  topicKey: text("topic_key").notNull(),
+  content: jsonb("content").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_content_teacher_topic_unique").on(table.teacherId, table.topicKey),
+]);
+
+/** The class board: which stage and question the teacher shows now. One row per class. */
+export const lessonLiveTable = pgTable("lesson_live", {
+  classId: uuid("class_id").primaryKey().references(() => classesTable.id, { onDelete: "cascade" }),
+  teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+  topicKey: text("topic_key").notNull(),
+  stage: integer("stage").notNull().default(1),
+  /** the question shown to the class: { id, prompt, choices[], correct } or null */
+  question: jsonb("question"),
+  reveal: boolean("reveal").notNull().default(false),
+  active: boolean("active").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Pupils' answers to the question on the class board (anonymous statistics for the class). */
+export const lessonLiveAnswersTable = pgTable("lesson_live_answers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  questionId: text("question_id").notNull(),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  choice: integer("choice").notNull(),
+  correct: boolean("correct").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_live_answers_unique").on(table.classId, table.questionId, table.userId),
+]);

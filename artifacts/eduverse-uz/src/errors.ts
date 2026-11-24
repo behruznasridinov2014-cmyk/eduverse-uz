@@ -28,10 +28,13 @@ export function friendlyError(error: unknown, language: Language, fallback?: { e
       return pick(language, 'Too many attempts. Wait a minute and try again.', 'Слишком много попыток. Подождите минуту.', 'Juda ko‘p urinish. Bir daqiqa kuting.');
     }
     if (error.status >= 500) {
-      return pick(language, 'The server is busy. Try again in a few seconds.', 'Сервер занят. Попробуйте через несколько секунд.', 'Server band. Bir necha soniyadan keyin urinib ko‘ring.');
+      return pick(language, 'EDUVERSE is busy right now. Try again in a few seconds.', 'EDUVERSE сейчас занят. Попробуйте через несколько секунд.', 'EDUVERSE hozir band. Bir necha soniyadan keyin urinib ko‘ring.');
     }
     if (typeof error.data === 'object' && error.data !== null && 'error' in error.data) {
       const message = (error.data as { error?: unknown }).error;
+      if (typeof message === 'string' && message.startsWith('The deadline has passed')) {
+        return pick(language, 'Too late: homework is accepted until 00:00 on the lesson day.', 'Поздно: домашку принимают до 00:00 в день урока. Эта работа уже не засчитается.', 'Kech qoldi: uy vazifasi dars kuni soat 00:00 gacha qabul qilinadi.');
+      }
       if (typeof message === 'string' && message.trim()) return message;
     }
   }

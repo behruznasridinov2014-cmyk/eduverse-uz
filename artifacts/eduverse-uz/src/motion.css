@@ -1,0 +1,432 @@
+/*
+ * EDUVERSE motion & glass system (loaded last).
+ *
+ * Principles: one spring for everything that moves, a short press and a
+ * springy release for everything you can touch, transitions only on transform
+ * and opacity (GPU-friendly), blur only on floating chrome (top bar, bottom
+ * bar, switches, dialogs) — never on scrolling cards. Nothing loops forever
+ * except real loading indicators.
+ */
+
+:root {
+  /* real damped springs (ζ≈0.62 and ζ≈0.8), sampled for CSS linear() */
+  --ease-spring: linear(0, 0.046, 0.1589, 0.3069, 0.4655, 0.6176, 0.7521, 0.8634, 0.9496, 1.0115, 1.0519, 1.0744, 1.0831, 1.0817, 1.0737, 1.062, 1.0489, 1.0359, 1.0241, 1.0142, 1.0063, 1.0005, 0.9966, 0.9942, 0.9932, 0.9931, 0.9936, 0.9945, 0.9956, 0.9967, 0.9977, 0.9986, 0.9993, 0.9998, 1.0002, 1.0004, 1.0006, 1.0006, 1.0004, 1.0002, 1);
+  --ease-snap: linear(0, 0.0645, 0.2076, 0.3755, 0.5369, 0.6759, 0.7871, 0.8705, 0.9296, 0.969, 0.9933, 1.007, 1.0134, 1.0152, 1.0143, 1.0122, 1.0097, 1.0072, 1.0051, 1.0034, 1.0021, 1.0011, 1.0005, 1.0001, 0.9999, 0.9998, 0.9998, 0.9999, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-press: 110ms;
+  --dur-release: 560ms;
+  --dur-page: 380ms;
+  --dur-open: 520ms;
+  --dur-close: 200ms;
+  /* the old names now use the real spring too */
+  --spring: var(--ease-spring);
+}
+@supports not (transition-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+    --ease-snap: cubic-bezier(0.25, 1.2, 0.5, 1);
+  }
+}
+
+/* ---------- 1. press feedback: shrink on press, spring back on release ---------- */
+.btn, .pdfv-btn, .ink-tool, .ink-color, .ctrl, .tool-btn, .studio-tab, .cabinet-tab, button.tag, .tag[role="button"],
+.glass-tab, .glass-seg button, .nav-item, .side-user, .avatar-xl, .answer-choice, .pen-toggle, .board-color,
+.home-tile, .home-primary, .home-stat, .course-topic, .class-card, .course-fact, .open-room-row, .lesson-person,
+.collision-phases span, .pdfv-notes button, .auth-submit, .auth-tab {
+  transition:
+    transform var(--dur-release) var(--ease-snap),
+    background-color .3s var(--ease-out), background .3s var(--ease-out), color .3s var(--ease-out),
+    border-color .3s var(--ease-out), box-shadow .3s var(--ease-out), opacity .3s var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active:not(:disabled), .pdfv-btn:active:not(:disabled), .ink-tool:active:not(:disabled), .ctrl:active:not(:disabled),
+.tool-btn:active, .studio-tab:active, button.tag:active, .tag[role="button"]:active, .glass-seg button:active, .pen-toggle:active,
+.board-color:active, .ink-color:active, .auth-submit:active:not(:disabled), .auth-tab:active, .answer-choice:active, .pdfv-notes button:active {
+  transform: scale(0.94);
+  transition-duration: var(--dur-press);
+  transition-timing-function: ease-out;
+}
+.nav-item:active, .side-user:active, .open-room-row:active, .lesson-person:active { transform: scale(0.975); transition-duration: var(--dur-press); transition-timing-function: ease-out; }
+/* big surfaces press less, so they never feel rubbery */
+.home-tile:active, .home-primary:active, .course-topic:active, .class-card:active, .home-stat:active, .course-fact:active {
+  transform: scale(0.985);
+  transition-duration: var(--dur-press);
+  transition-timing-function: ease-out;
+}
+.avatar-xl:active { transform: scale(0.94); transition-duration: var(--dur-press); }
+@media (hover: hover) {
+  .home-tile:hover, .class-card:hover { transform: translateY(-2px); }
+  .home-tile:hover:active, .class-card:hover:active { transform: scale(0.985); }
+}
+
+/* ---------- 2. glass navigation: lens, tab press, icon state ---------- */
+.glass-tab { transition: transform var(--dur-release) var(--ease-snap), color .35s var(--ease-out); }
+.glass-tab:active { transform: scale(0.9); transition-duration: var(--dur-press); transition-timing-function: ease-out; }
+.glass-tab.hover { transform: scale(1.06); }
+.glass-lens { transition: transform .62s var(--ease-spring), width .5s var(--ease-spring), background .3s var(--ease-out), opacity .3s; will-change: transform; }
+.glass-tabs.is-dragging .glass-lens { transition: transform .14s var(--ease-out), width .3s var(--ease-out), background .2s; }
+.glass-tab.active .glass-tab-icon, .nav-item.active .nav-icon { animation: icon-pop .55s var(--ease-spring) both; }
+@keyframes icon-pop { 0% { transform: scale(0.82); } 100% { transform: scale(1); } }
+.glass-tab-icon svg, .nav-icon svg { transition: color .35s var(--ease-out); }
+.glass-seg-thumb, .lang-switch.glass-seg .lang-thumb { transition: transform .6s var(--ease-spring) !important; }
+.glass-tab:focus-visible, .glass-seg button:focus-visible { outline: 2px solid var(--sky-deep); outline-offset: 2px; }
+
+/* ---------- 3. page and tab transitions (never block input) ---------- */
+.content > * { animation: page-in var(--dur-page) var(--ease-out) both; }
+.content > *:nth-child(2) { animation-delay: 40ms; }
+.content > *:nth-child(3) { animation-delay: 80ms; }
+.content > *:nth-child(n + 4) { animation-delay: 110ms; }
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.home-tiles > *, .grid > *, .kpi-grid > *, .course-topics > * { animation: page-in .44s var(--ease-out) both; }
+.home-tiles > *:nth-child(2), .grid > *:nth-child(2) { animation-delay: 30ms; }
+.home-tiles > *:nth-child(3), .grid > *:nth-child(3) { animation-delay: 60ms; }
+.home-tiles > *:nth-child(n + 4), .grid > *:nth-child(n + 4) { animation-delay: 90ms; }
+.cabinet-pane { animation: page-in .4s var(--ease-out) backwards !important; transition: transform .5s var(--ease-spring); }
+.cabinet-pane.slide-from-right { animation: tab-from-right .42s var(--ease-out) backwards !important; }
+.cabinet-pane.slide-from-left { animation: tab-from-left .42s var(--ease-out) backwards !important; }
+@keyframes tab-from-right { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: none; } }
+@keyframes tab-from-left { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
+.course-topic-view { animation: page-in .4s var(--ease-out) both; }
+
+/* expanding content: forms, answers, detail cards */
+.reveal, .course-answer, .password-form, .ai-check-result, .pdfv-inkbar { animation: expand-in .42s var(--ease-out) both; }
+@keyframes expand-in { from { opacity: 0; transform: translateY(-6px); clip-path: inset(0 0 100% 0 round 14px); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0 round 14px); } }
+@supports (interpolate-size: allow-keywords) {
+  :root { interpolate-size: allow-keywords; }
+  details::details-content { height: 0; overflow: clip; transition: height .42s var(--ease-out), content-visibility .42s allow-discrete; }
+  details[open]::details-content { height: auto; }
+}
+summary { cursor: pointer; }
+
+/* ---------- 4. dialogs: open with a spring, close quickly ---------- */
+.modal-backdrop, .install-backdrop, .qr-scanner-backdrop, .hw-lightbox { animation: fade-in .24s var(--ease-out) both; }
+.modal, .install-modal { animation: sheet-in var(--dur-open) var(--ease-spring) both; transform-origin: 50% 60%; }
+.qr-scanner { animation: sheet-in var(--dur-open) var(--ease-spring) both !important; }
+.hw-lightbox > * { animation: sheet-in var(--dur-open) var(--ease-spring) both; }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(14px) scale(0.95); } to { opacity: 1; transform: none; } }
+.is-closing.modal-backdrop, .is-closing .modal-backdrop, .is-closing .qr-scanner-backdrop, .is-closing.install-backdrop { animation: fade-out var(--dur-close) ease-in both !important; }
+.is-closing .modal, .is-closing.modal, .is-closing .install-modal, .is-closing.qr-scanner, .is-closing .qr-scanner { animation: sheet-out var(--dur-close) ease-in both !important; }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes sheet-out { to { opacity: 0; transform: translateY(8px) scale(0.97); } }
+.modal-backdrop, .install-backdrop, .hw-lightbox, .qr-scanner-backdrop { backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; }
+
+/* selects look like glass controls; focus rings animate in */
+.control select, select.input, .top-select {
+  appearance: none; -webkit-appearance: none; padding-right: 34px !important;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%) !important;
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52% !important;
+  background-size: 5px 5px, 5px 5px !important; background-repeat: no-repeat !important;
+}
+.control input, .control select, .control textarea, .input { transition: border-color .25s var(--ease-out), box-shadow .3s var(--ease-out), background-color .3s; }
+
+/* ---------- 5. performance: blur only on floating chrome ---------- */
+.panel, .home-tile, .home-stat, .kpi, .class-card, .topic-list, .topic-detail, .lesson-topic-panel, .school-scope-summary,
+.profile-head, .cabinet-hero, .home-primary, .notice, .account-banner, .side-user, .lesson-room-bar, .sidebar, .auth-panel,
+.course-hero, .course-fact, .chem-caption, .school-assignment-card, .school-review-card {
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.panel, .home-tile, .home-stat, .kpi, .class-card, .topic-list, .topic-detail, .lesson-topic-panel, .school-scope-summary { background: rgba(255, 253, 248, 0.84); }
+.sidebar { background: rgba(250, 247, 240, 0.94) !important; }
+.glass-tabs, .glass-seg, .topbar { will-change: auto; }
+.visual-float, .i3d-glow { animation: none !important; }
+.content > *, .glass-lens, .cabinet-pane { backface-visibility: hidden; }
+
+/* ---------- 6. premium night: matte glass, thin borders, soft shadows ---------- */
+html[data-theme="night"] {
+  --lg-bg: rgba(30, 43, 64, 0.62);
+  --lg-rim: rgba(255, 255, 255, 0.1);
+  --lg-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 30px -14px rgba(0, 0, 0, 0.7);
+  --lens-bg: rgba(255, 255, 255, 0.09);
+  --tab-ink: #A9B2C0;
+  --tab-active: #E6BC84;
+  --accent-night: #D7A968;
+}
+html[data-theme="night"] body {
+  background: radial-gradient(1200px 700px at 50% -20%, rgba(70, 100, 140, 0.18), transparent 60%), #0E1624 !important;
+  background-attachment: fixed;
+}
+html[data-theme="night"] h1 { color: #F2E9DA !important; }
+html[data-theme="night"] .panel, html[data-theme="night"] .home-tile, html[data-theme="night"] .home-stat, html[data-theme="night"] .kpi,
+html[data-theme="night"] .class-card, html[data-theme="night"] .topic-list, html[data-theme="night"] .topic-detail,
+html[data-theme="night"] .lesson-topic-panel, html[data-theme="night"] .school-scope-summary, html[data-theme="night"] .modal,
+html[data-theme="night"] .school-assignment-card, html[data-theme="night"] .school-review-card, html[data-theme="night"] .lesson-side,
+html[data-theme="night"] .lesson-stage, html[data-theme="night"] .model-card, html[data-theme="night"] .topic-assign-card {
+  background: rgba(22, 33, 51, 0.9) !important; border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 32px -22px rgba(0, 0, 0, 0.8) !important;
+}
+html[data-theme="night"] .sidebar { background: rgba(13, 21, 35, 0.96) !important; }
+html[data-theme="night"] .btn.primary, html[data-theme="night"] .auth-submit, html[data-theme="night"] .studio-tab.active,
+html[data-theme="night"] .ctrl.on, html[data-theme="night"] .tool-btn.selected, html[data-theme="night"] .ai-q, html[data-theme="night"] .pen-toggle.on,
+html[data-theme="night"] .pdfv-write.on, html[data-theme="night"] .ink-tool.on, html[data-theme="night"] .pdfv-notes button.on, html[data-theme="night"] .collision-phases span.active {
+  background: var(--accent-night) !important; color: #1A1309 !important; border-color: transparent !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 16px -10px rgba(0, 0, 0, 0.7) !important;
+}
+html[data-theme="night"] .btn.primary svg { color: #1A1309 !important; }
+html[data-theme="night"] .home-primary {
+  background: rgba(215, 169, 104, 0.1) !important; border: 1px solid rgba(215, 169, 104, 0.32) !important;
+  color: var(--text) !important; box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.8) !important;
+}
+html[data-theme="night"] .home-primary small { color: var(--text-2) !important; }
+html[data-theme="night"] .home-primary b { color: var(--text) !important; }
+html[data-theme="night"] .home-primary-icon { background: var(--accent-night); color: #1A1309; }
+html[data-theme="night"] .profile-head, html[data-theme="night"] .cabinet-hero, html[data-theme="night"] .course-hero {
+  background: rgba(26, 38, 58, 0.92) !important; border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+html[data-theme="night"] .glass-tab.active, html[data-theme="night"] .glass-tab.hover { text-shadow: none; }
+html[data-theme="night"] .glass-tabs::before { opacity: 0.22; }
+html[data-theme="night"] .glass-lens::after { opacity: 0.25; }
+html[data-theme="night"] .glass-lens { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px -8px rgba(0, 0, 0, 0.6); border-color: rgba(255, 255, 255, 0.14); }
+html[data-theme="night"] .glass-seg-thumb, html[data-theme="night"] .lang-switch.glass-seg .lang-thumb {
+  background: rgba(255, 255, 255, 0.1) !important; border-color: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 10px -6px rgba(0, 0, 0, 0.7) !important;
+}
+html[data-theme="night"] .home-stat b, html[data-theme="night"] .kpi b, html[data-theme="night"] .metric-value, html[data-theme="night"] .course-progress b,
+html[data-theme="night"] .open-room-code, html[data-theme="night"] .lesson-room-code b, html[data-theme="night"] .grade-mark { color: var(--accent-night) !important; }
+
+/* ---------- 7. accessibility ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important; transition-delay: 0ms !important; scroll-behavior: auto !important;
+  }
+  .auth-spinner, .school-spin { animation-duration: 1.4s !important; animation-iteration-count: infinite !important; }
+}
+@media (prefers-contrast: more) {
+  :root { --text: #111821; --text-2: #26303D; --text-3: #3E4757; --tab-ink: #1E2633; --tab-active: #7A5410; }
+  .panel, .home-tile, .home-stat, .kpi, .class-card, .glass-tabs, .glass-seg, .topbar, .sidebar, .modal, .notice {
+    background: #FFFDF8 !important; border: 1.5px solid #4F5867 !important; box-shadow: none !important;
+  }
+  .glass-tabs::before, .glass-lens::after { display: none; }
+  .glass-lens, .glass-seg-thumb, .lang-switch.glass-seg .lang-thumb { background: #F1E6D2 !important; border: 2px solid #1E2633 !important; }
+  html[data-theme="night"] { --text: #FFFFFF; --text-2: #E6E9EE; --text-3: #C2C9D4; --tab-ink: #E6E9EE; --tab-active: #FFD596; }
+  html[data-theme="night"] .panel, html[data-theme="night"] .home-tile, html[data-theme="night"] .glass-tabs, html[data-theme="night"] .glass-seg,
+  html[data-theme="night"] .topbar, html[data-theme="night"] .sidebar, html[data-theme="night"] .modal { background: #0B111C !important; border: 1.5px solid #C2C9D4 !important; }
+  html[data-theme="night"] .glass-lens, html[data-theme="night"] .glass-seg-thumb { background: #26354D !important; border-color: #FFFFFF !important; }
+}
+@media (forced-colors: active) {
+  .glass-lens, .glass-seg-thumb, .lang-thumb { border: 2px solid Highlight !important; background: transparent !important; }
+  .glass-tab.active, .glass-seg button.active { color: Highlight !important; }
+}
+/* night: the select arrow must survive the dark background shorthand */
+html[data-theme="night"] .control select, html[data-theme="night"] select.input, html[data-theme="night"] .top-select {
+  background-image: linear-gradient(45deg, transparent 50%, #A9B2C0 50%), linear-gradient(135deg, #A9B2C0 50%, transparent 50%) !important;
+  background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52% !important;
+  background-size: 5px 5px, 5px 5px !important; background-repeat: no-repeat !important;
+}
+
+/* phone bottom bar: matte glass — content behind it must not show through the labels */
+.tabbar.glass-tabs {
+  background: linear-gradient(180deg, rgba(252, 249, 243, 0.9), rgba(246, 241, 231, 0.94));
+  backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 18px 40px -16px rgba(40, 52, 80, 0.45);
+}
+.tabbar.glass-tabs::before { opacity: 0.45; }
+html[data-theme="night"] .tabbar.glass-tabs {
+  background: linear-gradient(180deg, rgba(24, 36, 56, 0.92), rgba(16, 26, 42, 0.95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px -16px rgba(0, 0, 0, 0.8);
+}
+
+/* AI assistant: input and a round send button on one line, also on phones */
+.ai-form { display: flex !important; flex-wrap: nowrap !important; gap: 8px; align-items: center; margin-top: 10px; }
+.ai-form .input { flex: 1; min-width: 0; }
+.ai-form .btn { flex: none; width: 44px !important; height: 44px; padding: 0 !important; justify-content: center; border-radius: 50%; }
+.ai-tutor .section-head h2 { display: flex; align-items: center; gap: 8px; }
+.ai-tutor .muted { margin: 4px 0 0; }
+
+/* every chat (lesson, curator, inbox): wide input + round send button, also on phones */
+.chat-form { display: flex !important; flex-wrap: nowrap !important; gap: 8px; align-items: flex-end; }
+.chat-form .input, .chat-form textarea { flex: 1 1 auto; min-width: 0; width: auto !important; }
+.chat-form .btn { flex: none; width: 44px !important; min-width: 44px; height: 44px; padding: 0 !important; justify-content: center; border-radius: 50%; }
+
+/* "Remember me" on the sign-in form */
+.auth-remember{display:flex;align-items:flex-start;gap:10px;cursor:pointer;user-select:none}
+.auth-remember input{width:20px;height:20px;margin-top:1px;flex:none;accent-color:var(--accent,#2a7b6f);cursor:pointer}
+.auth-remember span{display:grid;gap:2px}
+.auth-remember b{font-size:14px;font-weight:600}
+.auth-remember small{font-size:12px;line-height:1.35;opacity:.7}
+.course-forecast{margin:8px 0 0;font-size:13px;line-height:1.4}
+.course-forecast.warn{color:#c2562b;opacity:1}
+.course-pace-btns{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}.course-pace-btns .btn{min-width:28px;padding:2px 8px}
+
+/* School calendar editor */
+.school-calendar .calendar-grid{display:grid;gap:8px;margin-top:8px}
+.school-calendar .calendar-row{display:grid;grid-template-columns:110px minmax(0,1fr) auto minmax(0,1fr);gap:8px;align-items:center}
+.school-calendar .calendar-row.holiday{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto minmax(0,1fr) auto}
+.school-calendar .calendar-sub{margin:16px 0 0;font-size:15px}
+@media (max-width:640px){
+  .school-calendar .calendar-row{grid-template-columns:1fr 1fr}
+  .school-calendar .calendar-row > b,.school-calendar .calendar-row.holiday > input:first-child{grid-column:1 / -1}
+  .school-calendar .calendar-row > span{display:none}
+}
+.setup-steps{margin:8px 0 0;padding-left:20px;display:grid;gap:6px;line-height:1.45}
+.course-all-btn{width:100%;justify-content:center;margin-top:10px}
+.school-member-list{display:grid;gap:4px;max-height:420px;overflow:auto}
+.school-member-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:10px}
+.school-member-row:nth-child(odd){background:rgba(127,127,127,.06)}
+.school-member-row small{margin-left:4px}
+.reset-card{align-items:flex-start;gap:8px}
+
+/* People of a school, requests and the owner's queue */
+.people-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:8px;margin:8px 0}
+.people-list{display:grid;gap:6px;margin-top:8px;max-height:560px;overflow:auto}
+.people-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(127,127,127,.06)}
+.people-main{display:grid;gap:2px;flex:1;min-width:200px}
+.people-actions{display:flex;flex-wrap:wrap;gap:6px}
+.people-form{flex-basis:100%;display:grid;gap:8px;padding-top:8px;border-top:1px solid rgba(127,127,127,.18)}
+.people-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tag.red{background:rgba(214,69,65,.14);color:#c0392b}
+.owner-created{display:grid;gap:6px}
+.owner-created-list{display:grid;gap:4px;max-height:260px;overflow:auto;font-size:13px}
+@media (max-width:640px){.people-filters,.people-form-grid{grid-template-columns:1fr}}
+.people-panel,.owner-queue{min-width:0;max-width:100%;box-sizing:border-box}
+.people-panel .input,.people-panel select{min-width:0;max-width:100%;box-sizing:border-box}
+.people-list{overflow-x:hidden}
+.people-row{min-width:0}
+.people-main{min-width:0;flex:1 1 180px}
+.people-main b,.people-main small{overflow-wrap:anywhere}
+
+/* 3D library */
+.scene-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:12px}
+.scene-card{display:grid;gap:6px;text-align:left;padding:14px;border-radius:16px;border:1px solid rgba(127,127,127,.18);background:var(--panel,rgba(255,255,255,.6));color:inherit;cursor:pointer;font:inherit}
+.scene-card.active{outline:2px solid var(--accent,#2a7b6f)}
+.scene-card small{opacity:.7;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.scene-card-tag{font-size:11px;font-weight:700;letter-spacing:.3px;opacity:.75}
+.scene-library-open{margin-top:12px}
+.pro-lock{text-align:center;display:grid;gap:10px;justify-items:center;padding:36px 20px;max-width:620px;margin:24px auto}
+.pro-lock-icon{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:rgba(127,127,127,.12)}
+.worksheet-tasks{display:grid;gap:6px;max-height:380px;overflow:auto;margin-top:8px}
+.worksheet-task{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:rgba(127,127,127,.06);cursor:pointer}
+.worksheet-task.on{background:rgba(42,123,111,.14)}
+.worksheet-task input{margin-top:3px;width:18px;height:18px;flex:none}
+.worksheet-task > span{display:grid;gap:2px}
+.worksheet-picked{margin-top:12px;display:grid;gap:8px}
+.worksheet-picked ol{margin:0;padding-left:20px;display:grid;gap:4px}
+
+/* Daily trainer */
+.trainer-card{display:grid;gap:12px}
+.trainer-card h2{font-size:19px;line-height:1.35}
+.trainer-progress{height:6px;border-radius:6px;background:rgba(127,127,127,.15);overflow:hidden}
+.trainer-progress span{display:block;height:100%;background:var(--accent,#2a7b6f);transition:width .3s}
+.trainer-options{display:grid;gap:8px}
+.trainer-option{display:flex;gap:8px;align-items:center;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid rgba(127,127,127,.22);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.trainer-option.right{background:rgba(42,160,90,.16);border-color:rgba(42,160,90,.5)}
+.trainer-option.wrong{background:rgba(214,69,65,.14);border-color:rgba(214,69,65,.5)}
+.trainer-result{display:grid;justify-items:center;gap:6px;text-align:center;padding:28px}
+.trainer-rating{margin:0;padding-left:22px;display:grid;gap:6px}
+.trainer-rating li span{margin-right:8px}
+.trainer-rating li.me b{color:var(--accent,#2a7b6f)}
+
+/* Owner's school setup wizard */
+.setup-steps-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.setup-class{display:grid;gap:4px;max-width:260px;margin-bottom:8px}
+.setup-rows{display:grid;gap:6px}
+.setup-row{display:grid;gap:6px;align-items:center;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) 36px}
+.setup-row.teacher{grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,.8fr) 36px}
+.setup-row.pupil{grid-template-columns:minmax(0,1.6fr) minmax(0,1.4fr) minmax(0,1.1fr) 36px}
+.setup-row.head{font-size:12px;font-weight:700;opacity:.65}
+.setup-created{margin-top:16px;display:grid;gap:8px}
+.setup-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.setup-card{display:grid;gap:3px;padding:12px;border:1px dashed rgba(127,127,127,.5);border-radius:12px;break-inside:avoid}
+.setup-card code{font-size:14px;font-weight:700}
+@media (max-width:640px){.setup-row,.setup-row.teacher,.setup-row.pupil{grid-template-columns:1fr}.setup-row.head{display:none}}
+@media print{body *{visibility:hidden}.setup-created,.setup-created *{visibility:visible}.setup-created{position:absolute;inset:0;padding:12px}.setup-created button{display:none}}
+
+/* Google sign-in */
+.google-signin{display:grid;gap:10px;margin-top:12px}
+.google-or{display:flex;align-items:center;gap:10px;font-size:12px;opacity:.6}
+.google-or::before,.google-or::after{content:"";flex:1;height:1px;background:rgba(127,127,127,.3)}
+.google-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;font-weight:600}
+.google-link h2{display:flex;align-items:center;gap:8px}
+
+/* Full-screen 3D for the class */
+.scene-shell{position:relative}
+.scene-full-btn{position:relative;display:flex;margin:0 0 8px auto;width:max-content;z-index:5;backdrop-filter:blur(8px)}
+.scene-shell.scene-full{background:#0f1b2d;display:grid;justify-items:center;align-content:start;padding:56px 20px 20px;overflow:auto}
+.scene-shell.scene-full .scene-full-btn{position:fixed;top:14px;right:14px}
+.scene-shell.scene-overlay{position:fixed;inset:0;z-index:2000;border-radius:0}
+.scene-placeholder{min-height:120px}
+.google-recover{font-size:13px;text-align:center;color:inherit;opacity:.75}
+
+/* Public demo without an account */
+.public-demo{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:14px}
+.public-demo-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.public-demo-logo{font-size:18px;letter-spacing:.5px}
+.public-demo-actions{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px}
+.public-demo-roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.public-demo-roles h2{display:flex;align-items:center;gap:8px}
+.public-demo-list{display:grid;gap:4px;max-height:360px;overflow:auto;margin-top:8px}
+.public-demo-topics{display:grid;gap:12px}
+
+/*
+ * Entrance animations must not leave a transform/filter on page blocks after they finish:
+ * a lingering transform turns the block into the frame of every "position: fixed" child,
+ * so pop-ups (the trainer "Start the test?", review dialogs, menus) were dimmed only inside
+ * that block and the page looked re-scaled. "backwards" keeps the start frame during the
+ * delay and removes the effect at the end.
+ */
+.content > *, .home-tiles > *, .grid > *, .kpi-grid > *, .course-topics > *, .course-topic-view,
+.role-overview-grid > *, .role-empty-grid > *, .reveal-up, .reveal, .empty-state, .cabinet-pane,
+.public-home-copy, .public-visual, .lesson-person, .lesson-chat-line, .fact-body p {
+  animation-fill-mode: backwards !important;
+}
+
+/* Tests: pick → «Check» → green pop or red shake → short explanation → «Next». */
+.trainer-option.picked, .answer-choice.picked { border-color: var(--ev-primary, #b08a4a) !important; background: var(--ev-primary-soft, rgba(216,185,120,.18)) !important; box-shadow: 0 0 0 2px rgba(216,185,120,.35); }
+.trainer-option.right, .answer-choice.right { background: rgba(42,160,90,.16) !important; border-color: rgba(42,160,90,.55) !important; animation: answer-right .5s var(--ease-spring, cubic-bezier(.34,1.56,.64,1)); }
+.trainer-option.wrong, .answer-choice.wrong { background: rgba(214,69,65,.14) !important; border-color: rgba(214,69,65,.55) !important; animation: answer-wrong .45s ease; }
+.trainer-option.dim, .answer-choice.dim { opacity: .55; }
+@keyframes answer-right { 0% { transform: scale(1); } 45% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes answer-wrong { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(2px); } }
+.answer-feedback { display: grid; gap: 6px; justify-items: start; padding: 12px 14px; border-radius: 14px; margin-top: 4px; animation: expand-in .35s var(--ease-out, ease) both; }
+.answer-feedback p { margin: 0; }
+.answer-feedback.ok { background: rgba(42,160,90,.10); border: 1px solid rgba(42,160,90,.35); }
+.answer-feedback.no { background: rgba(214,69,65,.08); border: 1px solid rgba(214,69,65,.30); }
+.practice-subjects { flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+@media (prefers-reduced-motion: reduce) { .trainer-option.right, .trainer-option.wrong, .answer-choice.right, .answer-choice.wrong { animation: none; } }
+
+/* Fewer words: page headings show only the title (the small label above and the explanation below are gone). */
+.page-heading .page-subtitle, .page-heading .eyebrow { display: none !important; }
+
+/* Phone fixes from the UI sweep */
+@media (max-width: 640px) {
+  /* profile / cabinet tabs: long words ("Безопасность") no longer run into the next tab */
+  .cabinet-glass-tabs .glass-tab-label { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
+  /* 3D studio: two compact cards per row, no repeated "3D model: rotate and change" line */
+  .studio-chooser { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+  .studio-card { min-height: 0 !important; padding: 12px !important; }
+  .studio-card small { display: none !important; }
+  .lab-subjects { justify-content: flex-start !important; }
+  .chem-lab .page-heading > div { width: 100%; }
+  /* My grades: marks run in a line, the table fits the screen */
+  .my-grades-table { font-size: 13px; }
+  .my-grades-table th, .my-grades-table td { padding: 6px 4px; }
+  .my-grades-table .grade-mark { min-width: 24px; padding: 1px 4px; font-size: 12px; }
+}
+@media (max-width: 560px) {
+  .my-grades-table thead { display: none; }
+  .my-grades-table, .my-grades-table tbody, .my-grades-table tr, .my-grades-table td { display: block; width: 100%; }
+  .my-grades-table tr { padding: 10px 2px; border-bottom: 1px solid var(--line-2, #e5dfd2); }
+  .my-grades-table td { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; border: 0; padding: 3px 0; }
+  .my-grades-table td::before { content: attr(data-label); color: inherit; opacity: .6; font-size: 12px; }
+  .my-grades-table td.my-grades-subject { display: block; font-size: 15px; padding-bottom: 4px; }
+  .my-grades-table td.my-grades-subject::before { content: none; }
+}
+
+/* Loaders stay small: no tall empty boxes that push the page down and then jump away.
+   They also wait a moment before showing, so a fast load shows no loader at all. */
+.ev-loading:not(.is-3d) { min-height: 0 !important; padding: 14px 8px !important; gap: 8px !important; flex-direction: row !important; justify-content: center; animation: ev-fade-in .25s ease .2s both !important; }
+.ev-loading:not(.is-3d) .ev-loading-orbit > i { width: 8px; height: 8px; }
+.ev-loading:not(.is-3d) .ev-loading-text { font-size: 13px; }
+.ev-loading.is-inline { justify-content: flex-start; padding: 8px 0 !important; }
+.trainer-loading { gap: 0; }
+
+/* Phones: live blur ("glass") behind many blocks is the heaviest thing for a phone GPU and made
+   pages lag or reload on Android. Only the top bar and the bottom tab bar keep it. */
+@media (pointer: coarse), (max-width: 760px) {
+  *:not(.topbar):not(.tabbar):not(.tabbar-dock):not(.glass-tabs) { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .modal-backdrop, .install-backdrop, .hw-lightbox, .qr-scanner-backdrop, .mobile-drawer-backdrop, .trainer-ask-backdrop { background-color: rgba(20, 16, 8, .5) !important; }
+}
+.hw-toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 80; width: min(92vw, 460px); box-shadow: 0 14px 40px -12px rgba(0,0,0,.35); animation: expand-in .3s ease both; }
+.hw-toast.is-error > * { margin: 0; }
+@media (min-width: 900px) { .hw-toast { bottom: 28px; } }

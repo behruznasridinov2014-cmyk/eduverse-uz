@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   index,
+  jsonb,
   integer,
   pgEnum,
   pgTable,
@@ -37,10 +38,34 @@ export const usersTable = pgTable(
     loginNormalized: text("login_normalized").notNull(),
     passwordHash: text("password_hash").notNull(),
     role: accountRoleEnum("role").notNull().default("student"),
+    /** Contact phone (parents), set by the school on import. */
+    phone: text("phone"),
+    /**
+     * Study status: active | transferred | expelled | graduated. Only EDUVERSE (the owner)
+     * changes it, on the school's request. Grades and attendance are never deleted.
+     */
+    status: text("status").notNull().default("active"),
+    statusReason: text("status_reason").notNull().default(""),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
+    /** True for accounts created by the school: the first sign-in asks to change the password. */
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
+    /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
+    avatar: text("avatar"),
+    /** Contact email the user entered in the profile (optional). */
+    email: text("email"),
+    /** Subjects a teacher teaches, e.g. ["Физика", "Химия"]. */
+    subjects: jsonb("subjects").notNull().default([]),
+    /** Notification settings: { grades, homework, messages, announcements, lessons, telegram, push, newDevice } → boolean. */
+    notifyPrefs: jsonb("notify_prefs").notNull().default({}),
     /** AES-256-GCM encrypted TOTP secret (base32 outside crypto layer). */
     twoFactorSecret: text("two_factor_secret"),
     /** Telegram chat id that is allowed to receive 2FA codes. */
     twoFactorTelegramId: text("two_factor_telegram_id"),
+    /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
+    googleSub: text("google_sub"),
+    googleEmail: text("google_email"),
+    /** After recovery through Google: until this moment a new password can be set without the old one. */
+    recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
     twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
     /** One-time nonce used to bind the Telegram bot to this account. */
     twoFactorPendingNonce: text("two_factor_pending_nonce"),
@@ -67,6 +92,9 @@ export const usersTable = pgTable(
     uniqueIndex("users_two_factor_telegram_id_unique")
       .on(table.twoFactorTelegramId)
       .where(sql`${table.twoFactorTelegramId} is not null`),
+    uniqueIndex("users_google_sub_unique")
+      .on(table.googleSub)
+      .where(sql`${table.googleSub} is not null`),
     index("users_two_factor_pending_expires_at_idx").on(
       table.twoFactorPendingExpiresAt,
     ),
@@ -86,6 +114,11 @@ export const sessionsTable = pgTable(
       .defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    /** Browser and system of the device, e.g. "Chrome · Windows". */
+    device: text("device"),
+    /** Partly hidden address, e.g. "213.230.*.*". */
+    ipMasked: text("ip_masked"),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
   },
   (table) => [
     uniqueIndex("sessions_token_hash_unique").on(table.tokenHash),

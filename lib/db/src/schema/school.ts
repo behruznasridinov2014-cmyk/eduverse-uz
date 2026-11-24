@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   pgEnum,
@@ -21,6 +22,15 @@ export const schoolsTable = pgTable("schools", {
   region: text("region").notNull(),
   district: text("district"),
   address: text("address"),
+  /**
+   * free  — journal, attendance, homework, grades (always free);
+   * pilot — everything, free until plan_until (trial for one quarter);
+   * pro   — everything, paid (3D topics, 3D library, online lessons, trainer).
+   */
+  plan: text("plan").notNull().default("free"),
+  /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
+  isDemo: boolean("is_demo").notNull().default(false),
+  planUntil: timestamp("plan_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("schools_region_idx").on(table.region)]);
@@ -69,11 +79,13 @@ export const assignmentsTable = pgTable("assignments", {
   description: text("description").notNull(),
   topicId: text("topic_id"),
   topicTitle: text("topic_title"),
+  /** Set on homework given automatically from the textbook after a lesson: "book:<classId>:<topicKey>". */
+  autoKey: text("auto_key"),
   dueAt: timestamp("due_at", { withTimezone: true }),
   status: assignmentStatusEnum("status").notNull().default("assigned"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index("assignments_class_idx").on(table.classId), index("assignments_creator_idx").on(table.createdBy)]);
+}, (table) => [index("assignments_class_idx").on(table.classId), index("assignments_creator_idx").on(table.createdBy), uniqueIndex("assignments_auto_key_unique").on(table.autoKey)]);
 
 export const assignmentSubmissionsTable = pgTable("assignment_submissions", {
   id: uuid("id").defaultRandom().primaryKey(),

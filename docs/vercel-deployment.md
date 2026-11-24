@@ -97,7 +97,7 @@ Then seed a demonstration school, classes and 30 demo students
 node scripts/seed-demo-school.mjs
 ```
 
-Demo accounts (all with password `demo-school-2026`):
+Demo accounts (passwords are printed once by the seed script and are never written to the repository)
 
 | Login           | Role                | What they can do                                |
 |-----------------|---------------------|--------------------------------------------------|

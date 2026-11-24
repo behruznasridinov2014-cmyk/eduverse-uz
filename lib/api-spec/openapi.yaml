@@ -2089,6 +2089,8 @@ components:
           type: string
           minLength: 8
           maxLength: 128
+        remember:
+          type: boolean
       required: [login, password]
     AuthenticatedUserResponse:
       type: object

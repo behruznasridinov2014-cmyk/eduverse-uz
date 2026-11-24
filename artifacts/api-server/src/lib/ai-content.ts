@@ -98,7 +98,7 @@ const AI_BASE_URL = (process.env.AI_BASE_URL ?? "http://127.0.0.1:11434/v1").rep
 const AI_API_KEY = process.env.AI_API_KEY ?? "";
 const AI_MODEL = process.env.AI_MODEL ?? "";
 const AI_ENABLED = process.env.AI_ENABLED !== "0";
-const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? "45000");
+const AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? "25000");
 
 // Google Gemini (OpenAI-compatible endpoint). When GEMINI_API_KEY is set the
 // AI backend uses Gemini automatically; otherwise it talks to AI_BASE_URL.
@@ -214,36 +214,55 @@ function blueprintFor(subject: string): SubjectBlueprint {
 /* Model call                                                                  */
 /* -------------------------------------------------------------------------- */
 
-type ChatMessage = { role: "system" | "user"; content: string };
+type ChatMessage = { role: "system" | "user"; content: string | Array<Record<string, unknown>> };
+
+/**
+ * Gemini is often "overloaded" (503) or rate-limited (429) on one model while another answers fine.
+ * So the request walks a short chain of models until one replies, all inside AI_TIMEOUT_MS.
+ */
+const GEMINI_FALLBACKS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"];
+const MODEL_CHAIN = USE_GEMINI ? [...new Set([EFFECTIVE_MODEL, ...GEMINI_FALLBACKS])] : [EFFECTIVE_MODEL];
+
+async function callOneModel(model: string, messages: ChatMessage[], signal: AbortSignal): Promise<{ text: string | null; retry: boolean }> {
+  const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}),
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.6,
+      response_format: { type: "json_object" },
+      // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
+      ...(USE_GEMINI && model.startsWith("gemini-2.5") ? { reasoning_effort: "none" } : {}),
+    }),
+    signal,
+  });
+  if (!response.ok) return { text: null, retry: [400, 404, 408, 429, 500, 502, 503, 504].includes(response.status) };
+  const payload: unknown = await response.json();
+  const choices = typeof payload === "object" && payload !== null ? (payload as { choices?: unknown }).choices : null;
+  const first = Array.isArray(choices) && choices.length ? (choices[0] as { message?: { content?: unknown } }) : null;
+  const content = first?.message?.content;
+  return typeof content === "string" && content.trim() ? { text: content, retry: false } : { text: null, retry: true };
+}
 
 async function callModel(messages: ChatMessage[]): Promise<string | null> {
   if (!isAiConfigured()) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
   try {
-    const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}),
-      },
-      body: JSON.stringify({
-        model: EFFECTIVE_MODEL,
-        messages,
-        temperature: 0.6,
-        response_format: { type: "json_object" },
-      }),
-      signal: controller.signal,
-    });
-    if (!response.ok) return null;
-    const payload: unknown = await response.json();
-    if (typeof payload !== "object" || payload === null) return null;
-    const choices = (payload as { choices?: unknown }).choices;
-    if (!Array.isArray(choices) || choices.length === 0) return null;
-    const first = choices[0] as { message?: { content?: unknown } };
-    const content = first?.message?.content;
-    return typeof content === "string" && content.trim() ? content : null;
-  } catch {
+    for (const model of MODEL_CHAIN) {
+      if (controller.signal.aborted) break;
+      try {
+        const result = await callOneModel(model, messages, controller.signal);
+        if (result.text) return result.text;
+        if (!result.retry) break;
+      } catch {
+        if (controller.signal.aborted) break;
+      }
+    }
     return null;
   } finally {
     clearTimeout(timeout);
@@ -703,6 +722,143 @@ async function enrichFacts(pkg: GeneratedTopicPackage): Promise<GeneratedTopicPa
 /* Per-student differentiated questions                                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Free-form tutoring answer for a student or teacher question, grounded in
+ * the current topic. Returns null when no AI key is configured.
+ */
+export async function answerTutorQuestion(
+  question: string,
+  context: { subject?: string; title?: string; facts?: string[] },
+): Promise<string | null> {
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        "Ты — школьный ИИ-помощник EDUVERSE для Узбекистана. Отвечай кратко (до 120 слов), простым языком, на языке вопроса (узбекский, русский или английский). Объясняй по шагам, приводи один маленький пример. Не выдумывай факты, не отвечай на темы вне школьной программы — вежливо верни разговор к учёбе.",
+    },
+    {
+      role: "user",
+      content: `Тема урока: ${context.title ?? "не выбрана"} (${context.subject ?? "предмет не указан"}). ${
+        context.facts?.length ? `Факты темы: ${context.facts.slice(0, 5).join(" | ")}. ` : ""
+      }Вопрос: ${question}`,
+    },
+  ]);
+  return raw ? raw.trim().slice(0, 2000) : null;
+}
+
+export type LessonPlan = {
+  title: string;
+  goals: string[];
+  steps: Array<{ minutes: number; title: string; activity: string }>;
+  questions: string[];
+  homework: string;
+  experiment: string;
+  source: "ai" | "local";
+};
+
+/** A ready lesson plan for one textbook paragraph. Falls back to a template. */
+export async function generateLessonPlan(input: { subject: string; topic: string; grade: number; minutes: number; language: string }): Promise<LessonPlan> {
+  const m = input.minutes;
+  const fallback: LessonPlan = {
+    title: input.topic,
+    goals: [`${input.topic}: asosiy tushunchalar / основные понятия`, "Mustaqil misol yechish / самостоятельное решение примера"],
+    steps: [
+      { minutes: Math.round(m * 0.1), title: "Kirish / Вступление", activity: "Savol bilan qiziqtirish, oldingi mavzuni eslash." },
+      { minutes: Math.round(m * 0.3), title: "Yangi mavzu / Новая тема", activity: "Darslik paragrafi, 3D model yoki doskada tushuntirish." },
+      { minutes: Math.round(m * 0.3), title: "Amaliyot / Практика", activity: "Juftlikda misollar, o‘qituvchi yordami." },
+      { minutes: Math.round(m * 0.2), title: "Test / Тест", activity: "Onlayn darsda individual test." },
+      { minutes: Math.round(m * 0.1), title: "Yakun / Итог", activity: "Xulosa va uy vazifasi." },
+    ],
+    questions: [`${input.topic} nima?`, "Hayotdan misol keltiring.", "Asosiy qoida qanday?"],
+    homework: "Paragrafni o‘qing va 3 ta savolga daftarda javob yozing.",
+    experiment: "",
+    source: "local",
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        `Ты — методист узбекской школы. Составь план урока строго в JSON: {"title":"","goals":["",""],"steps":[{"minutes":5,"title":"","activity":""}],"questions":["","",""],"homework":"","experiment":""}. Сумма minutes = ${m}. 4–6 шагов. experiment — простой опыт или 3D-демонстрация, если уместно, иначе пустая строка. Язык ответа: ${input.language === "Uzbek" ? "узбекский (латиница)" : input.language === "English" ? "английский" : "русский"}.`,
+    },
+    { role: "user", content: `Предмет: ${input.subject}. Класс: ${input.grade}. Тема/параграф учебника: ${input.topic}. Длительность: ${m} минут.` },
+  ]);
+  if (!raw) return fallback;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return fallback;
+  const list = (value: unknown) => (Array.isArray(value) ? value.map((item) => str(item)).filter(Boolean).slice(0, 8) : []);
+  const steps = Array.isArray(parsed.steps)
+    ? parsed.steps
+        .map((step) => (typeof step === "object" && step !== null ? (step as Record<string, unknown>) : null))
+        .filter((step): step is Record<string, unknown> => step !== null)
+        .map((step) => ({ minutes: Math.max(1, Math.min(90, Math.round(Number(step.minutes) || 5))), title: str(step.title), activity: str(step.activity) }))
+        .filter((step) => step.title)
+        .slice(0, 8)
+    : [];
+  if (!steps.length) return fallback;
+  return {
+    title: str(parsed.title) || input.topic,
+    goals: list(parsed.goals),
+    steps,
+    questions: list(parsed.questions),
+    homework: str(parsed.homework),
+    experiment: str(parsed.experiment),
+    source: "ai",
+  };
+}
+
+export type HomeworkCheck = {
+  verdict: "self" | "unclear" | "ai";
+  confidence: number;
+  handwritten: boolean;
+  matchesTask: boolean;
+  reasons: string[];
+  advice: string;
+};
+
+/**
+ * Looks at the notebook photos and the student's own explanation and gives
+ * the TEACHER a hint whether the work looks self-made or copied from an AI.
+ * It is advice, never proof: no tool can prove that a text was written by AI.
+ */
+export async function analyzeHomework(input: {
+  subject: string;
+  task: string;
+  studentName: string;
+  explanation: string;
+  photos: string[];
+}): Promise<HomeworkCheck | null> {
+  if (!isAiConfigured()) return null;
+  const content: Array<Record<string, unknown>> = [
+    {
+      type: "text",
+      text: `Предмет: ${input.subject}. Задание: ${input.task}. Ученик 7 класса: ${input.studentName}.\nОбъяснение ученика своими словами: «${input.explanation.slice(0, 1500)}».\nФото тетради прикреплены (${input.photos.length}).`,
+    },
+    ...input.photos.slice(0, 2).map((url) => ({ type: "image_url", image_url: { url } })),
+  ];
+  const raw = await callModel([
+    {
+      role: "system",
+      content:
+        'Ты помощник учителя. Оцени, похоже ли, что ученик сделал работу сам. Признаки самостоятельной работы: решение написано от руки в тетради, есть исправления и черновые шаги, объяснение простым детским языком, совпадает с решением на фото. Признаки ответа ИИ: идеальный «взрослый» текст с терминами не по возрасту, шаблонные фразы, объяснение не совпадает с тетрадью, на фото напечатанный текст или экран. Это только подсказка учителю, не обвинение. Отвечай строго JSON: {"verdict":"self|unclear|ai","confidence":0-100,"handwritten":true|false,"matchesTask":true|false,"reasons":["...","..."],"advice":"что спросить у ученика"}. Пиши по-русски кратко.',
+    },
+    { role: "user", content },
+  ]);
+  if (!raw) return null;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return null;
+  const verdict = parsed.verdict === "self" || parsed.verdict === "ai" ? parsed.verdict : "unclear";
+  const confidence = Math.max(0, Math.min(100, Math.round(Number(parsed.confidence) || 50)));
+  return {
+    verdict,
+    // never claim certainty: an AI detector cannot prove authorship
+    confidence: Math.min(confidence, 90),
+    handwritten: parsed.handwritten === true,
+    matchesTask: parsed.matchesTask !== false,
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice),
+  };
+}
+
 export async function generateTopicTest(
   subject: string,
   grade: number,
@@ -787,4 +943,178 @@ export async function generateStudentQuestion(
   const quiz = parseQuiz(parsed);
   if (!quiz) return fallback;
   return { ...quiz, focus: str(parsed.focus) || fallback.focus };
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Photo check: a real notebook photo or a picture made by AI?                 */
+/* -------------------------------------------------------------------------- */
+
+export type PhotoCheck = { aiMade: "yes" | "no" | "unsure"; confidence: number; reasons: string[] };
+
+/** A hint for the teacher (never proof): does the notebook photo look made or edited by AI / a screenshot? */
+export async function checkPhotoIsAi(photos: string[], language: string): Promise<PhotoCheck | null> {
+  if (!isAiConfigured() || photos.length === 0) return null;
+  const lang = language === "uz" ? "на узбекском (латиница)" : language === "en" ? "in English" : "по-русски";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты эксперт по фотографиям. Учитель получил фото тетради с домашним заданием ученика. Определи: это настоящее фото бумажной тетради с рукописным текстом (сделанное телефоном) или изображение, созданное или сильно изменённое ИИ, либо скриншот/напечатанный текст. Признаки ИИ: слишком ровный «рукописный» шрифт, буквы без нажима, странные артефакты, бессмысленные символы, неестественные тени, идеальная бумага без перспективы. Признаки настоящего фото: перспектива и тени, клетка/линейка тетради, помарки, исправления, разный нажим ручки. Ответ строго JSON: {"aiMade":"yes|no|unsure","confidence":0-100,"reasons":["коротко","коротко"]}. Причины пиши ${lang}, 2-3 коротких пункта.`,
+    },
+    { role: "user", content: [{ type: "text", text: `Фото тетради: ${photos.length}.` }, ...photos.slice(0, 3).map((url) => ({ type: "image_url", image_url: { url } }))] },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const aiMade = parsed.aiMade === "yes" || parsed.aiMade === "no" ? parsed.aiMade : "unsure";
+  return {
+    aiMade,
+    confidence: Math.min(90, Math.max(0, Math.round(Number(parsed.confidence) || 50))),
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 3) : [],
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* "Explain this word" for a pupil during a lesson                             */
+/* -------------------------------------------------------------------------- */
+
+export type WordExplanation = { word: string; simple: string; example: string };
+
+export async function explainWord(word: string, topic: string, subject: string, language: string): Promise<WordExplanation | null> {
+  if (!isAiConfigured()) return null;
+  const lang = language === "uz" ? "на узбекском языке (латиница)" : language === "en" ? "in simple English" : "на русском языке";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты добрый учитель для ученика 7 класса. Объясни одно слово или выражение очень просто, как другу, без сложных терминов, ${lang}. Ответ строго JSON: {"word":"...","simple":"1-2 коротких предложения","example":"один пример из жизни"}. Если это не учебное слово или что-то неприличное — верни {"word":"","simple":"","example":""}.`,
+    },
+    { role: "user", content: `Слово: «${word.slice(0, 60)}». Тема урока: ${topic.slice(0, 120)}. Предмет: ${subject.slice(0, 40)}.` },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed || !str(parsed.simple)) return null;
+  return { word: str(parsed.word) || word, simple: str(parsed.simple).slice(0, 400), example: str(parsed.example).slice(0, 300) };
+}
+
+/* -------------------------------------------------------------------------- */
+/* A pupil's own practice test on the topics they find hard                    */
+/* -------------------------------------------------------------------------- */
+
+export type PracticeQuestion = { prompt: string; choices: string[]; correct: number; hint: string };
+
+export async function generatePracticeTest(topics: Array<{ subject: string; title: string; essence: string }>, language: string): Promise<PracticeQuestion[] | null> {
+  if (!isAiConfigured() || topics.length === 0) return null;
+  const lang = language === "uz" ? "на узбекском языке (латиница)" : language === "en" ? "in English" : "на русском языке";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты учитель 7 класса. Составь короткий тренировочный тест для ученика по темам, которые ему трудно даются. 5 вопросов, от лёгкого к сложному, ${lang}. В каждом 4 варианта, ровно один верный. Подсказка — одно короткое предложение, как решать, без ответа. Ответ строго JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`,
+    },
+    { role: "user", content: topics.slice(0, 3).map((topic, index) => `${index + 1}) ${topic.subject}: ${topic.title}. Суть: ${topic.essence.slice(0, 400)}`).join("\n") },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed || !Array.isArray(parsed.questions)) return null;
+  const out: PracticeQuestion[] = [];
+  for (const item of parsed.questions as unknown[]) {
+    if (typeof item !== "object" || item === null) continue;
+    const row = item as Record<string, unknown>;
+    const choices = Array.isArray(row.choices) ? row.choices.map((choice) => str(choice)).filter(Boolean).slice(0, 4) : [];
+    const correct = Number(row.correct);
+    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3) continue;
+    out.push({ prompt: str(row.prompt).slice(0, 400), choices: choices.map((choice) => choice.slice(0, 200)), correct, hint: str(row.hint).slice(0, 240) });
+  }
+  return out.length ? out.slice(0, 5) : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Help with checking a notebook photo: mistakes, advice, a suggested mark     */
+/* -------------------------------------------------------------------------- */
+
+export type HomeworkReview = {
+  summary: string;
+  mistakes: Array<{ where: string; why: string; fix: string }>;
+  good: string[];
+  advice: string;
+  suggestedMark: number | null;
+  realPhoto: "yes" | "no" | "unsure";
+};
+
+/**
+ * Reads the notebook photos against the task and writes, for the TEACHER, what is right,
+ * where the mistakes are, why, and how the pupil can fix them, plus a suggested mark on
+ * the 10-point scale. The teacher always decides the final mark.
+ */
+export async function reviewHomework(input: { subject: string; task: string; explanation: string; photos: string[]; language: string }): Promise<HomeworkReview | null> {
+  if (!isAiConfigured() || input.photos.length === 0) return null;
+  const lang = input.language === "uz" ? "на узбекском (латиница)" : input.language === "en" ? "in English" : "по-русски";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты опытный учитель 7 класса в Узбекистане и помогаешь коллеге проверить домашнюю работу по фото тетради. Прочитай решение на фото, сравни с заданием. Найди ошибки: где, почему это ошибка и как исправить (объясняй как учитель, чтобы ученик понял, а не просто дай ответ). Отметь, что сделано хорошо. Предложи оценку по 10-балльной шкале (10 — без ошибок). Также оцени, настоящее ли это фото бумажной тетради (не скриншот и не картинка ИИ). Если на фото ничего не разобрать — так и напиши в summary и поставь suggestedMark null. Пиши ${lang}, коротко. Ответ строго JSON: {"summary":"1-2 предложения","mistakes":[{"where":"номер задачи или строка","why":"почему ошибка","fix":"как исправить"}],"good":["..."],"advice":"что повторить ученику","suggestedMark":0-10|null,"realPhoto":"yes|no|unsure"}`,
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `Предмет: ${input.subject.slice(0, 60)}. Задание: ${input.task.slice(0, 1200)}.${input.explanation ? ` Ученик написал своими словами: «${input.explanation.slice(0, 800)}».` : ""}` },
+        ...input.photos.slice(0, 3).map((url) => ({ type: "image_url", image_url: { url } })),
+      ],
+    },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const mistakes = Array.isArray(parsed.mistakes)
+    ? parsed.mistakes.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+      .map((item) => ({ where: str(item.where).slice(0, 120), why: str(item.why).slice(0, 400), fix: str(item.fix).slice(0, 400) }))
+      .filter((item) => item.why).slice(0, 6)
+    : [];
+  const markRaw = Number(parsed.suggestedMark);
+  return {
+    summary: str(parsed.summary).slice(0, 500),
+    mistakes,
+    good: Array.isArray(parsed.good) ? parsed.good.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice).slice(0, 400),
+    suggestedMark: parsed.suggestedMark === null || !Number.isFinite(markRaw) ? null : Math.max(1, Math.min(10, Math.round(markRaw))),
+    realPhoto: parsed.realPhoto === "yes" || parsed.realPhoto === "no" ? parsed.realPhoto : "unsure",
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* The lesson helper: explains the topic, teaches, never just gives answers    */
+/* -------------------------------------------------------------------------- */
+
+export type LessonHelpAction = "simple" | "detail" | "example" | "word" | "practice" | "mistake" | "review" | "ask";
+
+export async function lessonHelp(input: {
+  action: LessonHelpAction;
+  subject: string;
+  grade: number;
+  topic: string;
+  essence: string;
+  stage: string;
+  question: string;
+  mistakes: string[];
+  language: string;
+}): Promise<string | null> {
+  const lang = input.language === "uz" ? "на узбекском языке (латиница)" : input.language === "en" ? "in simple English" : "на русском языке";
+  const task: Record<LessonHelpAction, string> = {
+    simple: "Объясни тему совсем просто, как другу, 3-4 коротких предложения.",
+    detail: "Объясни тему подробнее: 2-3 абзаца, по шагам, с одной формулой или правилом, если есть.",
+    example: "Дай один новый пример из жизни в Узбекистане (не из учебника), который показывает тему.",
+    word: "Объясни это слово или выражение очень просто и дай пример.",
+    practice: "Придумай 3 новых упражнения по теме от лёгкого к сложному. Ответы НЕ пиши, только подсказку к каждому.",
+    mistake: "Ученик ошибся в этих вопросах. Помоги понять, где обычно ошибаются и как рассуждать, но не называй готовый ответ — задай наводящий вопрос.",
+    review: "По ошибкам ученика скажи, что именно повторить (2-3 пункта) и в каком порядке.",
+    ask: "Ответь на вопрос ученика по теме. Если он просит готовый ответ на задачу — не давай его, а объясни путь решения и задай наводящий вопрос.",
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты — помощник на уроке EDUVERSE для ученика ${input.grade} класса в Узбекистане. Ты учишь, а не подсказываешь ответы. Пиши ${lang}, коротко и понятно, без сложных терминов, без выдуманных фактов. Только по теме урока; на посторонние темы вежливо верни к уроку. Ответ строго JSON: {"answer":"текст"}`,
+    },
+    {
+      role: "user",
+      content: `Предмет: ${input.subject}. Тема: ${input.topic.slice(0, 160)}. Суть темы: ${input.essence.slice(0, 900)}. Сейчас ученик на этапе: ${input.stage.slice(0, 60)}.${input.mistakes.length ? ` Ошибки ученика: ${input.mistakes.slice(0, 6).map((item) => item.slice(0, 160)).join(" | ")}.` : ""}${input.question ? ` Вопрос/слово ученика: «${input.question.slice(0, 400)}».` : ""}\nЗадача: ${task[input.action]}`,
+    },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  const answer = parsed ? str(parsed.answer) : "";
+  return answer ? answer.slice(0, 2500) : null;
 }

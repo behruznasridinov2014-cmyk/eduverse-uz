@@ -53,6 +53,8 @@ export interface RegisterRequest {
 }
 
 export interface LoginRequest {
+  /** Keep the session after the browser closes (30 days). */
+  remember?: boolean;
   /**
      * @minLength 3
      * @maxLength 32

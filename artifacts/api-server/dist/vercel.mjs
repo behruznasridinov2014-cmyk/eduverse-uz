@@ -66,54 +66,54 @@ var require_cookie = __commonJS({
     var cookieValueRegExp = /^("?)[\u0021\u0023-\u002B\u002D-\u003A\u003C-\u005B\u005D-\u007E]*\1$/;
     var domainValueRegExp = /^([.]?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)([.][a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
     var pathValueRegExp = /^[\u0020-\u003A\u003D-\u007E]*$/;
-    function parse(str2, opt) {
-      if (typeof str2 !== "string") {
+    function parse(str3, opt) {
+      if (typeof str3 !== "string") {
         throw new TypeError("argument str must be a string");
       }
       var obj = {};
-      var len = str2.length;
+      var len = str3.length;
       if (len < 2) return obj;
       var dec = opt && opt.decode || decode;
       var index2 = 0;
       var eqIdx = 0;
       var endIdx = 0;
       do {
-        eqIdx = str2.indexOf("=", index2);
+        eqIdx = str3.indexOf("=", index2);
         if (eqIdx === -1) break;
-        endIdx = str2.indexOf(";", index2);
+        endIdx = str3.indexOf(";", index2);
         if (endIdx === -1) {
           endIdx = len;
         } else if (eqIdx > endIdx) {
-          index2 = str2.lastIndexOf(";", eqIdx - 1) + 1;
+          index2 = str3.lastIndexOf(";", eqIdx - 1) + 1;
           continue;
         }
-        var keyStartIdx = startIndex(str2, index2, eqIdx);
-        var keyEndIdx = endIndex(str2, eqIdx, keyStartIdx);
-        var key = str2.slice(keyStartIdx, keyEndIdx);
+        var keyStartIdx = startIndex(str3, index2, eqIdx);
+        var keyEndIdx = endIndex(str3, eqIdx, keyStartIdx);
+        var key = str3.slice(keyStartIdx, keyEndIdx);
         if (!__hasOwnProperty.call(obj, key)) {
-          var valStartIdx = startIndex(str2, eqIdx + 1, endIdx);
-          var valEndIdx = endIndex(str2, endIdx, valStartIdx);
-          if (str2.charCodeAt(valStartIdx) === 34 && str2.charCodeAt(valEndIdx - 1) === 34) {
+          var valStartIdx = startIndex(str3, eqIdx + 1, endIdx);
+          var valEndIdx = endIndex(str3, endIdx, valStartIdx);
+          if (str3.charCodeAt(valStartIdx) === 34 && str3.charCodeAt(valEndIdx - 1) === 34) {
             valStartIdx++;
             valEndIdx--;
           }
-          var val = str2.slice(valStartIdx, valEndIdx);
+          var val = str3.slice(valStartIdx, valEndIdx);
           obj[key] = tryDecode(val, dec);
         }
         index2 = endIdx + 1;
       } while (index2 < len);
       return obj;
     }
-    function startIndex(str2, index2, max) {
+    function startIndex(str3, index2, max) {
       do {
-        var code = str2.charCodeAt(index2);
+        var code = str3.charCodeAt(index2);
         if (code !== 32 && code !== 9) return index2;
       } while (++index2 < max);
       return max;
     }
-    function endIndex(str2, index2, min) {
+    function endIndex(str3, index2, min) {
       while (index2 > min) {
-        var code = str2.charCodeAt(--index2);
+        var code = str3.charCodeAt(--index2);
         if (code !== 32 && code !== 9) return index2 + 1;
       }
       return min;
@@ -130,54 +130,54 @@ var require_cookie = __commonJS({
       if (!cookieValueRegExp.test(value)) {
         throw new TypeError("argument val is invalid");
       }
-      var str2 = name + "=" + value;
-      if (!opt) return str2;
+      var str3 = name + "=" + value;
+      if (!opt) return str3;
       if (null != opt.maxAge) {
         var maxAge = Math.floor(opt.maxAge);
         if (!isFinite(maxAge)) {
           throw new TypeError("option maxAge is invalid");
         }
-        str2 += "; Max-Age=" + maxAge;
+        str3 += "; Max-Age=" + maxAge;
       }
       if (opt.domain) {
         if (!domainValueRegExp.test(opt.domain)) {
           throw new TypeError("option domain is invalid");
         }
-        str2 += "; Domain=" + opt.domain;
+        str3 += "; Domain=" + opt.domain;
       }
       if (opt.path) {
         if (!pathValueRegExp.test(opt.path)) {
           throw new TypeError("option path is invalid");
         }
-        str2 += "; Path=" + opt.path;
+        str3 += "; Path=" + opt.path;
       }
       if (opt.expires) {
         var expires = opt.expires;
         if (!isDate(expires) || isNaN(expires.valueOf())) {
           throw new TypeError("option expires is invalid");
         }
-        str2 += "; Expires=" + expires.toUTCString();
+        str3 += "; Expires=" + expires.toUTCString();
       }
       if (opt.httpOnly) {
-        str2 += "; HttpOnly";
+        str3 += "; HttpOnly";
       }
       if (opt.secure) {
-        str2 += "; Secure";
+        str3 += "; Secure";
       }
       if (opt.partitioned) {
-        str2 += "; Partitioned";
+        str3 += "; Partitioned";
       }
       if (opt.priority) {
         var priority = typeof opt.priority === "string" ? opt.priority.toLowerCase() : opt.priority;
         switch (priority) {
           case "low":
-            str2 += "; Priority=Low";
+            str3 += "; Priority=Low";
             break;
           case "medium":
-            str2 += "; Priority=Medium";
+            str3 += "; Priority=Medium";
             break;
           case "high":
-            str2 += "; Priority=High";
+            str3 += "; Priority=High";
             break;
           default:
             throw new TypeError("option priority is invalid");
@@ -187,34 +187,34 @@ var require_cookie = __commonJS({
         var sameSite = typeof opt.sameSite === "string" ? opt.sameSite.toLowerCase() : opt.sameSite;
         switch (sameSite) {
           case true:
-            str2 += "; SameSite=Strict";
+            str3 += "; SameSite=Strict";
             break;
           case "lax":
-            str2 += "; SameSite=Lax";
+            str3 += "; SameSite=Lax";
             break;
           case "strict":
-            str2 += "; SameSite=Strict";
+            str3 += "; SameSite=Strict";
             break;
           case "none":
-            str2 += "; SameSite=None";
+            str3 += "; SameSite=None";
             break;
           default:
             throw new TypeError("option sameSite is invalid");
         }
       }
-      return str2;
+      return str3;
     }
-    function decode(str2) {
-      return str2.indexOf("%") !== -1 ? decodeURIComponent(str2) : str2;
+    function decode(str3) {
+      return str3.indexOf("%") !== -1 ? decodeURIComponent(str3) : str3;
     }
     function isDate(val) {
       return __toString.call(val) === "[object Date]";
     }
-    function tryDecode(str2, decode2) {
+    function tryDecode(str3, decode2) {
       try {
-        return decode2(str2);
+        return decode2(str3);
       } catch (e) {
-        return str2;
+        return str3;
       }
     }
   }
@@ -232,11 +232,11 @@ var require_cookie_signature = __commonJS({
     exports.unsign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Signed cookie string must be provided.");
       if ("string" != typeof secret) throw new TypeError("Secret string must be provided.");
-      var str2 = val.slice(0, val.lastIndexOf(".")), mac = exports.sign(str2, secret);
-      return sha1(mac) == sha1(val) ? str2 : false;
+      var str3 = val.slice(0, val.lastIndexOf(".")), mac = exports.sign(str3, secret);
+      return sha1(mac) == sha1(val) ? str3 : false;
     };
-    function sha1(str2) {
-      return crypto2.createHash("sha1").update(str2).digest("hex");
+    function sha1(str3) {
+      return crypto2.createHash("sha1").update(str3).digest("hex");
     }
   }
 });
@@ -274,12 +274,12 @@ var require_cookie_parser = __commonJS({
         next();
       };
     }
-    function JSONCookie(str2) {
-      if (typeof str2 !== "string" || str2.substr(0, 2) !== "j:") {
+    function JSONCookie(str3) {
+      if (typeof str3 !== "string" || str3.substr(0, 2) !== "j:") {
         return void 0;
       }
       try {
-        return JSON.parse(str2.slice(2));
+        return JSON.parse(str3.slice(2));
       } catch (err) {
         return void 0;
       }
@@ -297,16 +297,16 @@ var require_cookie_parser = __commonJS({
       }
       return obj;
     }
-    function signedCookie(str2, secret) {
-      if (typeof str2 !== "string") {
+    function signedCookie(str3, secret) {
+      if (typeof str3 !== "string") {
         return void 0;
       }
-      if (str2.substr(0, 2) !== "s:") {
-        return str2;
+      if (str3.substr(0, 2) !== "s:") {
+        return str3;
       }
       var secrets = !secret || Array.isArray(secret) ? secret || [] : [secret];
       for (var i = 0; i < secrets.length; i++) {
-        var val = signature.unsign(str2.slice(2), secrets[i]);
+        var val = signature.unsign(str3.slice(2), secrets[i]);
         if (val !== false) {
           return val;
         }
@@ -354,13 +354,13 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse(str2) {
-      str2 = String(str2);
-      if (str2.length > 100) {
+    function parse(str3) {
+      str3 = String(str3);
+      if (str3.length > 100) {
         return;
       }
       var match = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
-        str2
+        str3
       );
       if (!match) {
         return;
@@ -961,7 +961,7 @@ var require_node = __commonJS({
     var { formatters } = module.exports;
     formatters.o = function(v) {
       this.inspectOpts.colors = this.useColors;
-      return util2.inspect(v, this.inspectOpts).split("\n").map((str2) => str2.trim()).join(" ");
+      return util2.inspect(v, this.inspectOpts).split("\n").map((str3) => str3.trim()).join(" ");
     };
     formatters.O = function(v) {
       this.inspectOpts.colors = this.useColors;
@@ -987,8 +987,8 @@ var require_depd = __commonJS({
     var relative = __require("path").relative;
     module.exports = depd;
     var basePath = process.cwd();
-    function containsNamespace(str2, namespace) {
-      var vals = str2.split(/[ ,]+/);
+    function containsNamespace(str3, namespace) {
+      var vals = str3.split(/[ ,]+/);
       var ns = String(namespace).toLowerCase();
       for (var i = 0; i < vals.length; i++) {
         var val = vals[i];
@@ -1015,21 +1015,21 @@ var require_depd = __commonJS({
       return descriptor;
     }
     function createArgumentsString(arity) {
-      var str2 = "";
+      var str3 = "";
       for (var i = 0; i < arity; i++) {
-        str2 += ", arg" + i;
+        str3 += ", arg" + i;
       }
-      return str2.substr(2);
+      return str3.substr(2);
     }
     function createStackString(stack) {
-      var str2 = this.name + ": " + this.namespace;
+      var str3 = this.name + ": " + this.namespace;
       if (this.message) {
-        str2 += " deprecated " + this.message;
+        str3 += " deprecated " + this.message;
       }
       for (var i = 0; i < stack.length; i++) {
-        str2 += "\n    at " + stack[i].toString();
+        str3 += "\n    at " + stack[i].toString();
       }
-      return str2;
+      return str3;
     }
     function depd(namespace) {
       if (!namespace) {
@@ -1058,15 +1058,15 @@ var require_depd = __commonJS({
       if (process.noDeprecation) {
         return true;
       }
-      var str2 = process.env.NO_DEPRECATION || "";
-      return containsNamespace(str2, namespace);
+      var str3 = process.env.NO_DEPRECATION || "";
+      return containsNamespace(str3, namespace);
     }
     function istraced(namespace) {
       if (process.traceDeprecation) {
         return true;
       }
-      var str2 = process.env.TRACE_DEPRECATION || "";
-      return containsNamespace(str2, namespace);
+      var str3 = process.env.TRACE_DEPRECATION || "";
+      return containsNamespace(str3, namespace);
     }
     function log(message, site) {
       var haslisteners = eehaslisteners(process, "deprecation");
@@ -1500,8 +1500,8 @@ var require_toidentifier = __commonJS({
   "../../node_modules/.pnpm/toidentifier@1.0.1/node_modules/toidentifier/index.js"(exports, module) {
     "use strict";
     module.exports = toIdentifier;
-    function toIdentifier(str2) {
-      return str2.split(" ").map(function(token) {
+    function toIdentifier(str3) {
+      return str3.split(" ").map(function(token) {
         return token.slice(0, 1).toUpperCase() + token.slice(1);
       }).join("").replace(/[^ _0-9a-z]/gi, "");
     }
@@ -1725,16 +1725,16 @@ var require_bytes = __commonJS({
         }
       }
       var val = value / map[unit.toLowerCase()];
-      var str2 = val.toFixed(decimalPlaces);
+      var str3 = val.toFixed(decimalPlaces);
       if (!fixedDecimals) {
-        str2 = str2.replace(formatDecimalsRegExp, "$1");
+        str3 = str3.replace(formatDecimalsRegExp, "$1");
       }
       if (thousandsSeparator) {
-        str2 = str2.split(".").map(function(s, i) {
+        str3 = str3.split(".").map(function(s, i) {
           return i === 0 ? s.replace(formatThousandsRegExp, thousandsSeparator) : s;
         }).join(".");
       }
-      return str2 + unitSeparator + unit;
+      return str3 + unitSeparator + unit;
     }
     function parse(val) {
       if (typeof val === "number" && !isNaN(val)) {
@@ -1839,12 +1839,12 @@ var require_bom_handling = __commonJS({
       this.encoder = encoder;
       this.addBOM = true;
     }
-    PrependBOMWrapper.prototype.write = function(str2) {
+    PrependBOMWrapper.prototype.write = function(str3) {
       if (this.addBOM) {
-        str2 = BOMChar + str2;
+        str3 = BOMChar + str3;
         this.addBOM = false;
       }
-      return this.encoder.write(str2);
+      return this.encoder.write(str3);
     };
     PrependBOMWrapper.prototype.end = function() {
       return this.encoder.end();
@@ -1943,31 +1943,31 @@ var require_internal = __commonJS({
     function InternalEncoder(options, codec) {
       this.enc = codec.enc;
     }
-    InternalEncoder.prototype.write = function(str2) {
-      return Buffer2.from(str2, this.enc);
+    InternalEncoder.prototype.write = function(str3) {
+      return Buffer2.from(str3, this.enc);
     };
     InternalEncoder.prototype.end = function() {
     };
     function InternalEncoderBase64(options, codec) {
       this.prevStr = "";
     }
-    InternalEncoderBase64.prototype.write = function(str2) {
-      str2 = this.prevStr + str2;
-      var completeQuads = str2.length - str2.length % 4;
-      this.prevStr = str2.slice(completeQuads);
-      str2 = str2.slice(0, completeQuads);
-      return Buffer2.from(str2, "base64");
+    InternalEncoderBase64.prototype.write = function(str3) {
+      str3 = this.prevStr + str3;
+      var completeQuads = str3.length - str3.length % 4;
+      this.prevStr = str3.slice(completeQuads);
+      str3 = str3.slice(0, completeQuads);
+      return Buffer2.from(str3, "base64");
     };
     InternalEncoderBase64.prototype.end = function() {
       return Buffer2.from(this.prevStr, "base64");
     };
     function InternalEncoderCesu8(options, codec) {
     }
-    InternalEncoderCesu8.prototype.write = function(str2) {
-      var buf = Buffer2.alloc(str2.length * 3);
+    InternalEncoderCesu8.prototype.write = function(str3) {
+      var buf = Buffer2.alloc(str3.length * 3);
       var bufIdx = 0;
-      for (var i = 0; i < str2.length; i++) {
-        var charCode = str2.charCodeAt(i);
+      for (var i = 0; i < str3.length; i++) {
+        var charCode = str3.charCodeAt(i);
         if (charCode < 128) {
           buf[bufIdx++] = charCode;
         } else if (charCode < 2048) {
@@ -2048,25 +2048,25 @@ var require_internal = __commonJS({
     function InternalEncoderUtf8(options, codec) {
       this.highSurrogate = "";
     }
-    InternalEncoderUtf8.prototype.write = function(str2) {
+    InternalEncoderUtf8.prototype.write = function(str3) {
       if (this.highSurrogate) {
-        str2 = this.highSurrogate + str2;
+        str3 = this.highSurrogate + str3;
         this.highSurrogate = "";
       }
-      if (str2.length > 0) {
-        var charCode = str2.charCodeAt(str2.length - 1);
+      if (str3.length > 0) {
+        var charCode = str3.charCodeAt(str3.length - 1);
         if (charCode >= 55296 && charCode < 56320) {
-          this.highSurrogate = str2[str2.length - 1];
-          str2 = str2.slice(0, str2.length - 1);
+          this.highSurrogate = str3[str3.length - 1];
+          str3 = str3.slice(0, str3.length - 1);
         }
       }
-      return Buffer2.from(str2, this.enc);
+      return Buffer2.from(str3, this.enc);
     };
     InternalEncoderUtf8.prototype.end = function() {
       if (this.highSurrogate) {
-        var str2 = this.highSurrogate;
+        var str3 = this.highSurrogate;
         this.highSurrogate = "";
-        return Buffer2.from(str2, this.enc);
+        return Buffer2.from(str3, this.enc);
       }
     };
   }
@@ -2093,8 +2093,8 @@ var require_utf32 = __commonJS({
       this.isLE = codec.isLE;
       this.highSurrogate = 0;
     }
-    Utf32Encoder.prototype.write = function(str2) {
-      var src = Buffer2.from(str2, "ucs2");
+    Utf32Encoder.prototype.write = function(str3) {
+      var src = Buffer2.from(str3, "ucs2");
       var dst = Buffer2.alloc(src.length * 2 + 4);
       var write32 = this.isLE ? dst.writeUInt32LE : dst.writeUInt32BE;
       var offset = 0;
@@ -2219,8 +2219,8 @@ var require_utf32 = __commonJS({
       }
       this.encoder = codec.iconv.getEncoder(options.defaultEncoding || "utf-32le", options);
     }
-    Utf32AutoEncoder.prototype.write = function(str2) {
-      return this.encoder.write(str2);
+    Utf32AutoEncoder.prototype.write = function(str3) {
+      return this.encoder.write(str3);
     };
     Utf32AutoEncoder.prototype.end = function() {
       return this.encoder.end();
@@ -2320,8 +2320,8 @@ var require_utf16 = __commonJS({
     Utf16BECodec.prototype.bomAware = true;
     function Utf16BEEncoder() {
     }
-    Utf16BEEncoder.prototype.write = function(str2) {
-      var buf = Buffer2.from(str2, "ucs2");
+    Utf16BEEncoder.prototype.write = function(str3) {
+      var buf = Buffer2.from(str3, "ucs2");
       for (var i = 0; i < buf.length; i += 2) {
         var tmp = buf[i];
         buf[i] = buf[i + 1];
@@ -2370,8 +2370,8 @@ var require_utf16 = __commonJS({
       }
       this.encoder = codec.iconv.getEncoder("utf-16le", options);
     }
-    Utf16Encoder.prototype.write = function(str2) {
-      return this.encoder.write(str2);
+    Utf16Encoder.prototype.write = function(str3) {
+      return this.encoder.write(str3);
     };
     Utf16Encoder.prototype.end = function() {
       return this.encoder.end();
@@ -2467,8 +2467,8 @@ var require_utf7 = __commonJS({
     function Utf7Encoder(options, codec) {
       this.iconv = codec.iconv;
     }
-    Utf7Encoder.prototype.write = function(str2) {
-      return Buffer2.from(str2.replace(nonDirectChars, function(chunk) {
+    Utf7Encoder.prototype.write = function(str3) {
+      return Buffer2.from(str3.replace(nonDirectChars, function(chunk) {
         return "+" + (chunk === "+" ? "" : this.iconv.encode(chunk, "utf16-be").toString("base64").replace(/=+$/, "")) + "-";
       }.bind(this)));
     };
@@ -2552,14 +2552,14 @@ var require_utf7 = __commonJS({
       this.base64Accum = Buffer2.alloc(6);
       this.base64AccumIdx = 0;
     }
-    Utf7IMAPEncoder.prototype.write = function(str2) {
+    Utf7IMAPEncoder.prototype.write = function(str3) {
       var inBase64 = this.inBase64;
       var base64Accum = this.base64Accum;
       var base64AccumIdx = this.base64AccumIdx;
-      var buf = Buffer2.alloc(str2.length * 5 + 10);
+      var buf = Buffer2.alloc(str3.length * 5 + 10);
       var bufIdx = 0;
-      for (var i2 = 0; i2 < str2.length; i2++) {
-        var uChar = str2.charCodeAt(i2);
+      for (var i2 = 0; i2 < str3.length; i2++) {
+        var uChar = str3.charCodeAt(i2);
         if (uChar >= 32 && uChar <= 126) {
           if (inBase64) {
             if (base64AccumIdx > 0) {
@@ -2700,10 +2700,10 @@ var require_sbcs_codec = __commonJS({
     function SBCSEncoder(options, codec) {
       this.encodeBuf = codec.encodeBuf;
     }
-    SBCSEncoder.prototype.write = function(str2) {
-      var buf = Buffer2.alloc(str2.length);
-      for (var i = 0; i < str2.length; i++) {
-        buf[i] = this.encodeBuf[str2.charCodeAt(i)];
+    SBCSEncoder.prototype.write = function(str3) {
+      var buf = Buffer2.alloc(str3.length);
+      for (var i = 0; i < str3.length; i++) {
+        buf[i] = this.encodeBuf[str3.charCodeAt(i)];
       }
       return buf;
     };
@@ -3579,8 +3579,8 @@ var require_dbcs_codec = __commonJS({
       this.defaultCharSingleByte = codec.defCharSB;
       this.gb18030 = codec.gb18030;
     }
-    DBCSEncoder.prototype.write = function(str2) {
-      var newBuf = Buffer2.alloc(str2.length * (this.gb18030 ? 4 : 3));
+    DBCSEncoder.prototype.write = function(str3) {
+      var newBuf = Buffer2.alloc(str3.length * (this.gb18030 ? 4 : 3));
       var leadSurrogate = this.leadSurrogate;
       var seqObj = this.seqObj;
       var nextChar = -1;
@@ -3588,8 +3588,8 @@ var require_dbcs_codec = __commonJS({
       var j = 0;
       while (true) {
         if (nextChar === -1) {
-          if (i2 == str2.length) break;
-          var uCode = str2.charCodeAt(i2++);
+          if (i2 == str3.length) break;
+          var uCode = str3.charCodeAt(i2++);
         } else {
           var uCode = nextChar;
           nextChar = -1;
@@ -5427,10 +5427,10 @@ var require_lib = __commonJS({
     module.exports.encodings = null;
     module.exports.defaultCharUnicode = "\uFFFD";
     module.exports.defaultCharSingleByte = "?";
-    module.exports.encode = function encode(str2, encoding, options) {
-      str2 = "" + (str2 || "");
+    module.exports.encode = function encode(str3, encoding, options) {
+      str3 = "" + (str3 || "");
       var encoder = module.exports.getEncoder(encoding, options);
-      var res = encoder.write(str2);
+      var res = encoder.write(str3);
       var trail = encoder.end();
       return trail && trail.length > 0 ? Buffer2.concat([res, trail]) : res;
     };
@@ -6038,9 +6038,9 @@ var require_dist = __commonJS({
       }
       return { type, index: index2, parameters };
     }
-    function skipValue(str2, index2, len, stopChar) {
+    function skipValue(str3, index2, len, stopChar) {
       while (index2 < len) {
-        const code = str2.charCodeAt(index2);
+        const code = str3.charCodeAt(index2);
         if (code === SEMI || code === stopChar)
           break;
         index2++;
@@ -6065,12 +6065,12 @@ var require_dist = __commonJS({
       }
       return end;
     }
-    function qstring(str2) {
-      if (TOKEN_REGEXP.test(str2))
-        return str2;
-      if (TEXT_REGEXP.test(str2))
-        return `"${str2.replace(QUOTE_REGEXP, "\\$&")}"`;
-      throw new TypeError(`Invalid parameter value: ${str2}`);
+    function qstring(str3) {
+      if (TOKEN_REGEXP.test(str3))
+        return str3;
+      if (TEXT_REGEXP.test(str3))
+        return `"${str3.replace(QUOTE_REGEXP, "\\$&")}"`;
+      throw new TypeError(`Invalid parameter value: ${str3}`);
     }
   }
 });
@@ -15506,11 +15506,11 @@ var require_mime_types = __commonJS({
       }
       return false;
     }
-    function contentType(str2) {
-      if (!str2 || typeof str2 !== "string") {
+    function contentType(str3) {
+      if (!str3 || typeof str3 !== "string") {
         return false;
       }
-      var mime = str2.indexOf("/") === -1 ? exports.lookup(str2) : str2;
+      var mime = str3.indexOf("/") === -1 ? exports.lookup(str3) : str3;
       if (!mime) {
         return false;
       }
@@ -15883,14 +15883,14 @@ var require_read = __commonJS({
             return;
           }
         }
-        let str2 = body;
+        let str3 = body;
         try {
           debug("parse body");
-          str2 = typeof body !== "string" && encoding !== null ? iconv.decode(body, encoding) : body;
-          req.body = parse(str2, encoding);
+          str3 = typeof body !== "string" && encoding !== null ? iconv.decode(body, encoding) : body;
+          req.body = parse(str3, encoding);
         } catch (err) {
           next(createError(400, err, {
-            body: str2,
+            body: str3,
             type: err.type || "entity.parse.failed"
           }));
           return;
@@ -16007,11 +16007,11 @@ var require_json = __commonJS({
         }
       };
     }
-    function createStrictSyntaxError(str2, char2) {
-      const index2 = str2.indexOf(char2);
+    function createStrictSyntaxError(str3, char2) {
+      const index2 = str3.indexOf(char2);
       let partial = "";
       if (index2 !== -1) {
-        partial = str2.substring(0, index2) + JSON_SYNTAX_CHAR.repeat(str2.length - index2);
+        partial = str3.substring(0, index2) + JSON_SYNTAX_CHAR.repeat(str3.length - index2);
       }
       try {
         JSON.parse(partial);
@@ -16019,14 +16019,14 @@ var require_json = __commonJS({
       } catch (e) {
         return normalizeJsonSyntaxError(e, {
           message: e.message.replace(JSON_SYNTAX_REGEXP, function(placeholder) {
-            return str2.substring(index2, index2 + placeholder.length);
+            return str3.substring(index2, index2 + placeholder.length);
           }),
           stack: e.stack
         });
       }
     }
-    function firstchar(str2) {
-      const match = FIRST_CHAR_REGEXP.exec(str2);
+    function firstchar(str3) {
+      const match = FIRST_CHAR_REGEXP.exec(str3);
       return match ? match[1] : void 0;
     }
     function normalizeJsonSyntaxError(error, obj) {
@@ -16137,20 +16137,20 @@ var require_object_inspect = __commonJS({
     var gPO = (typeof Reflect === "function" ? Reflect.getPrototypeOf : Object.getPrototypeOf) || ([].__proto__ === Array.prototype ? function(O) {
       return O.__proto__;
     } : null);
-    function addNumericSeparator(num2, str2) {
-      if (num2 === Infinity || num2 === -Infinity || num2 !== num2 || num2 && num2 > -1e3 && num2 < 1e3 || $test.call(/e/, str2)) {
-        return str2;
+    function addNumericSeparator(num2, str3) {
+      if (num2 === Infinity || num2 === -Infinity || num2 !== num2 || num2 && num2 > -1e3 && num2 < 1e3 || $test.call(/e/, str3)) {
+        return str3;
       }
       var sepRegex = /[0-9](?=(?:[0-9]{3})+(?![0-9]))/g;
       if (typeof num2 === "number") {
         var int = num2 < 0 ? -$floor(-num2) : $floor(num2);
         if (int !== num2) {
           var intStr = String(int);
-          var dec = $slice.call(str2, intStr.length + 1);
+          var dec = $slice.call(str3, intStr.length + 1);
           return $replace.call(intStr, sepRegex, "$&_") + "." + $replace.call($replace.call(dec, /([0-9]{3})/g, "$&_"), /_$/, "");
         }
       }
-      return $replace.call(str2, sepRegex, "$&_");
+      return $replace.call(str3, sepRegex, "$&_");
     }
     var utilInspect = require_util_inspect();
     var inspectCustom = utilInspect.custom;
@@ -16200,8 +16200,8 @@ var require_object_inspect = __commonJS({
         if (obj === 0) {
           return Infinity / obj > 0 ? "0" : "-0";
         }
-        var str2 = String(obj);
-        return numericSeparator ? addNumericSeparator(obj, str2) : str2;
+        var str3 = String(obj);
+        return numericSeparator ? addNumericSeparator(obj, str3) : str3;
       }
       if (typeof obj === "bigint") {
         var bigIntStr = String(obj) + "n";
@@ -16521,15 +16521,15 @@ var require_object_inspect = __commonJS({
       }
       return typeof x.nodeName === "string" && typeof x.getAttribute === "function";
     }
-    function inspectString(str2, opts) {
-      if (str2.length > opts.maxStringLength) {
-        var remaining = str2.length - opts.maxStringLength;
+    function inspectString(str3, opts) {
+      if (str3.length > opts.maxStringLength) {
+        var remaining = str3.length - opts.maxStringLength;
         var trailer = "... " + remaining + " more character" + (remaining > 1 ? "s" : "");
-        return inspectString($slice.call(str2, 0, opts.maxStringLength), opts) + trailer;
+        return inspectString($slice.call(str3, 0, opts.maxStringLength), opts) + trailer;
       }
       var quoteRE = quoteREs[opts.quoteStyle || "single"];
       quoteRE.lastIndex = 0;
-      var s = $replace.call($replace.call(str2, quoteRE, "\\$1"), /[\x00-\x1f]/g, lowbyte);
+      var s = $replace.call($replace.call(str3, quoteRE, "\\$1"), /[\x00-\x1f]/g, lowbyte);
       return wrapQuotes(s, "single", opts);
     }
     function lowbyte(c) {
@@ -16546,8 +16546,8 @@ var require_object_inspect = __commonJS({
       }
       return "\\x" + (n < 16 ? "0" : "") + $toUpperCase.call(n.toString(16));
     }
-    function markBoxed(str2) {
-      return "Object(" + str2 + ")";
+    function markBoxed(str3) {
+      return "Object(" + str3 + ")";
     }
     function weakCollectionOf(type) {
       return type + " { ? }";
@@ -17012,14 +17012,14 @@ var require_implementation = __commonJS({
       return arr;
     };
     var joiny = function(arr, joiner) {
-      var str2 = "";
+      var str3 = "";
       for (var i = 0; i < arr.length; i += 1) {
-        str2 += arr[i];
+        str3 += arr[i];
         if (i + 1 < arr.length) {
-          str2 += joiner;
+          str3 += joiner;
         }
       }
-      return str2;
+      return str3;
     };
     module.exports = function bind(that) {
       var target = this;
@@ -17899,8 +17899,8 @@ var require_utils2 = __commonJS({
         return acc;
       }, target);
     };
-    var decode = function(str2, defaultDecoder, charset) {
-      var strWithoutPlus = str2.replace(/\+/g, " ");
+    var decode = function(str3, defaultDecoder, charset) {
+      var strWithoutPlus = str3.replace(/\+/g, " ");
       if (charset === "iso-8859-1") {
         return strWithoutPlus.replace(/%[0-9a-f]{2}/gi, unescape);
       }
@@ -17911,15 +17911,15 @@ var require_utils2 = __commonJS({
       }
     };
     var limit = 1024;
-    var encode = function encode2(str2, defaultEncoder, charset, kind, format) {
-      if (str2.length === 0) {
-        return str2;
+    var encode = function encode2(str3, defaultEncoder, charset, kind, format) {
+      if (str3.length === 0) {
+        return str3;
       }
-      var string = str2;
-      if (typeof str2 === "symbol") {
-        string = Symbol.prototype.toString.call(str2);
-      } else if (typeof str2 !== "string") {
-        string = String(str2);
+      var string = str3;
+      if (typeof str3 === "symbol") {
+        string = Symbol.prototype.toString.call(str3);
+      } else if (typeof str3 !== "string") {
+        string = String(str3);
       }
       if (charset === "iso-8859-1") {
         return escape(string).replace(/%u[0-9a-f]{4}/gi, function($0) {
@@ -18369,8 +18369,8 @@ var require_parse = __commonJS({
       strictNullHandling: false,
       throwOnLimitExceeded: false
     };
-    var interpretNumericEntities = function(str2) {
-      return str2.replace(/&#(\d+);/g, function($0, numberStr) {
+    var interpretNumericEntities = function(str3) {
+      return str3.replace(/&#(\d+);/g, function($0, numberStr) {
         return String.fromCharCode(parseInt(numberStr, 10));
       });
     };
@@ -18396,9 +18396,9 @@ var require_parse = __commonJS({
     };
     var isoSentinel = "utf8=%26%2310003%3B";
     var charsetSentinel = "utf8=%E2%9C%93";
-    var parseValues = function parseQueryStringValues(str2, options) {
+    var parseValues = function parseQueryStringValues(str3, options) {
       var obj = { __proto__: null };
-      var cleanStr = options.ignoreQueryPrefix ? str2.replace(/^\?/, "") : str2;
+      var cleanStr = options.ignoreQueryPrefix ? str3.replace(/^\?/, "") : str3;
       cleanStr = cleanStr.replace(/%5B/gi, "[").replace(/%5D/gi, "]");
       var limit = options.parameterLimit === Infinity ? void 0 : options.parameterLimit;
       var parts = cleanStr.split(
@@ -18645,17 +18645,17 @@ var require_parse = __commonJS({
         throwOnLimitExceeded: typeof opts.throwOnLimitExceeded === "boolean" ? opts.throwOnLimitExceeded : false
       };
     };
-    module.exports = function(str2, opts) {
+    module.exports = function(str3, opts) {
       var options = normalizeParseOptions(opts);
-      if (str2 === "" || str2 === null || typeof str2 === "undefined") {
+      if (str3 === "" || str3 === null || typeof str3 === "undefined") {
         return options.plainObjects ? { __proto__: null } : {};
       }
-      var tempObj = typeof str2 === "string" ? parseValues(str2, options) : str2;
+      var tempObj = typeof str3 === "string" ? parseValues(str3, options) : str3;
       var obj = options.plainObjects ? { __proto__: null } : {};
       var keys = Object.keys(tempObj);
       for (var i = 0; i < keys.length; ++i) {
         var key = keys[i];
-        var newObj = parseKeys(key, tempObj[key], options, typeof str2 === "string");
+        var newObj = parseKeys(key, tempObj[key], options, typeof str3 === "string");
         obj = utils.merge(obj, newObj, options);
       }
       if (options.allowSparse === true) {
@@ -18825,19 +18825,19 @@ var require_escape_html = __commonJS({
   "../../node_modules/.pnpm/escape-html@1.0.3/node_modules/escape-html/index.js"(exports, module) {
     "use strict";
     var matchHtmlRegExp = /["'&<>]/;
-    module.exports = escapeHtml;
-    function escapeHtml(string) {
-      var str2 = "" + string;
-      var match = matchHtmlRegExp.exec(str2);
+    module.exports = escapeHtml2;
+    function escapeHtml2(string) {
+      var str3 = "" + string;
+      var match = matchHtmlRegExp.exec(str3);
       if (!match) {
-        return str2;
+        return str3;
       }
       var escape2;
       var html = "";
       var index2 = 0;
       var lastIndex = 0;
-      for (index2 = match.index; index2 < str2.length; index2++) {
-        switch (str2.charCodeAt(index2)) {
+      for (index2 = match.index; index2 < str3.length; index2++) {
+        switch (str3.charCodeAt(index2)) {
           case 34:
             escape2 = "&quot;";
             break;
@@ -18857,12 +18857,12 @@ var require_escape_html = __commonJS({
             continue;
         }
         if (lastIndex !== index2) {
-          html += str2.substring(lastIndex, index2);
+          html += str3.substring(lastIndex, index2);
         }
         lastIndex = index2 + 1;
         html += escape2;
       }
-      return lastIndex !== index2 ? html + str2.substring(lastIndex, index2) : html;
+      return lastIndex !== index2 ? html + str3.substring(lastIndex, index2) : html;
     }
   }
 });
@@ -18902,20 +18902,20 @@ var require_parseurl = __commonJS({
       parsed._raw = url2;
       return req._parsedOriginalUrl = parsed;
     }
-    function fastparse(str2) {
-      if (typeof str2 !== "string" || str2.charCodeAt(0) !== 47) {
-        return parse(str2);
+    function fastparse(str3) {
+      if (typeof str3 !== "string" || str3.charCodeAt(0) !== 47) {
+        return parse(str3);
       }
-      var pathname = str2;
+      var pathname = str3;
       var query = null;
       var search = null;
-      for (var i = 1; i < str2.length; i++) {
-        switch (str2.charCodeAt(i)) {
+      for (var i = 1; i < str3.length; i++) {
+        switch (str3.charCodeAt(i)) {
           case 63:
             if (search === null) {
-              pathname = str2.substring(0, i);
-              query = str2.substring(i + 1);
-              search = str2.substring(i);
+              pathname = str3.substring(0, i);
+              query = str3.substring(i + 1);
+              search = str3.substring(i);
             }
             break;
           case 9:
@@ -18932,12 +18932,12 @@ var require_parseurl = __commonJS({
           /* #  */
           case 160:
           case 65279:
-            return parse(str2);
+            return parse(str3);
         }
       }
       var url2 = Url !== void 0 ? new Url() : {};
-      url2.path = str2;
-      url2.href = str2;
+      url2.path = str3;
+      url2.href = str3;
       url2.pathname = pathname;
       if (search !== null) {
         url2.query = query;
@@ -18957,13 +18957,13 @@ var require_finalhandler = __commonJS({
     "use strict";
     var debug = require_src()("finalhandler");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var onFinished = require_on_finished();
     var parseUrl = require_parseurl();
     var statuses = require_statuses();
     var isFinished = onFinished.isFinished;
     function createHtmlDocument(message) {
-      var body = escapeHtml(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
+      var body = escapeHtml2(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
       return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>Error</title>\n</head>\n<body>\n<pre>' + body + "</pre>\n</body>\n</html>\n";
     }
     module.exports = finalhandler;
@@ -19950,11 +19950,11 @@ var require_proxy_addr = __commonJS({
     }
     function parseipNotation(note) {
       var pos = note.lastIndexOf("/");
-      var str2 = pos !== -1 ? note.substring(0, pos) : note;
-      if (!isip(str2)) {
-        throw new TypeError("invalid IP address: " + str2);
+      var str3 = pos !== -1 ? note.substring(0, pos) : note;
+      if (!isip(str3)) {
+        throw new TypeError("invalid IP address: " + str3);
       }
-      var ip = parseip(str2);
+      var ip = parseip(str3);
       if (pos === -1 && ip.kind() === "ipv6" && ip.isIPv4MappedAddress()) {
         ip = ip.toIPv4Address();
       }
@@ -20079,22 +20079,22 @@ var require_utils3 = __commonJS({
     exports.normalizeTypes = function(types3) {
       return types3.map(exports.normalizeType);
     };
-    function acceptParams(str2) {
-      var length = str2.length;
-      var colonIndex = str2.indexOf(";");
+    function acceptParams(str3) {
+      var length = str3.length;
+      var colonIndex = str3.indexOf(";");
       var index2 = colonIndex === -1 ? length : colonIndex;
-      var ret = { value: str2.slice(0, index2).trim(), quality: 1, params: {} };
+      var ret = { value: str3.slice(0, index2).trim(), quality: 1, params: {} };
       while (index2 < length) {
-        var splitIndex = str2.indexOf("=", index2);
+        var splitIndex = str3.indexOf("=", index2);
         if (splitIndex === -1) break;
-        var colonIndex = str2.indexOf(";", index2);
+        var colonIndex = str3.indexOf(";", index2);
         var endIndex = colonIndex === -1 ? length : colonIndex;
         if (splitIndex > endIndex) {
-          index2 = str2.lastIndexOf(";", splitIndex - 1) + 1;
+          index2 = str3.lastIndexOf(";", splitIndex - 1) + 1;
           continue;
         }
-        var key = str2.slice(index2, splitIndex).trim();
-        var value = str2.slice(splitIndex + 1, endIndex).trim();
+        var key = str3.slice(index2, splitIndex).trim();
+        var value = str3.slice(splitIndex + 1, endIndex).trim();
         if (key === "q") {
           ret.quality = parseFloat(value);
         } else {
@@ -20177,8 +20177,8 @@ var require_utils3 = __commonJS({
         return etag(buf, options);
       };
     }
-    function parseExtendedQueryString(str2) {
-      return qs.parse(str2, {
+    function parseExtendedQueryString(str3) {
+      return qs.parse(str3, {
         allowPrototypes: true
       });
     }
@@ -20286,11 +20286,11 @@ var require_dist2 = __commonJS({
     var ID_START = /^[$_\p{ID_Start}]$/u;
     var ID_CONTINUE = /^[$\u200c\u200d\p{ID_Continue}]$/u;
     var ID = /^[$_\p{ID_Start}][$\u200c\u200d\p{ID_Continue}]*$/u;
-    function escapeText(str2) {
-      return str2.replace(/[{}()\[\]+?!:*\\]/g, "\\$&");
+    function escapeText(str3) {
+      return str3.replace(/[{}()\[\]+?!:*\\]/g, "\\$&");
     }
-    function escape2(str2) {
-      return str2.replace(/[.+*?^${}()[\]|/\\]/g, "\\$&");
+    function escape2(str3) {
+      return str3.replace(/[.+*?^${}()[\]|/\\]/g, "\\$&");
     }
     var TokenData = class {
       constructor(tokens, originalPath) {
@@ -20310,9 +20310,9 @@ var require_dist2 = __commonJS({
       }
     };
     exports.PathError = PathError;
-    function parse(str2, options = {}) {
+    function parse(str3, options = {}) {
       const { encodePath = NOOP_VALUE } = options;
-      const chars = [...str2];
+      const chars = [...str3];
       let index2 = 0;
       function consumeUntil(end) {
         const output = [];
@@ -20334,7 +20334,7 @@ var require_dist2 = __commonJS({
           }
           if (value === "\\") {
             if (index2 === chars.length) {
-              throw new PathError(`Unexpected end after \\ at index ${index2}`, str2);
+              throw new PathError(`Unexpected end after \\ at index ${index2}`, str3);
             }
             path += chars[index2++];
             continue;
@@ -20359,11 +20359,11 @@ var require_dist2 = __commonJS({
                 name += chars[index2];
               }
               if (quoteStart) {
-                throw new PathError(`Unterminated quote at index ${quoteStart}`, str2);
+                throw new PathError(`Unterminated quote at index ${quoteStart}`, str3);
               }
             }
             if (!name) {
-              throw new PathError(`Missing parameter name at index ${index2}`, str2);
+              throw new PathError(`Missing parameter name at index ${index2}`, str3);
             }
             writePath();
             output.push({ type, name });
@@ -20378,17 +20378,17 @@ var require_dist2 = __commonJS({
             continue;
           }
           if (value === "}" || value === "(" || value === ")" || value === "[" || value === "]" || value === "+" || value === "?" || value === "!") {
-            throw new PathError(`Unexpected ${value} at index ${index2 - 1}`, str2);
+            throw new PathError(`Unexpected ${value} at index ${index2 - 1}`, str3);
           }
           path += value;
         }
         if (end) {
-          throw new PathError(`Unexpected end at index ${index2}, expected ${end}`, str2);
+          throw new PathError(`Unexpected end at index ${index2}, expected ${end}`, str3);
         }
         writePath();
         return output;
       }
-      return new TokenData(consumeUntil(""), str2);
+      return new TokenData(consumeUntil(""), str3);
     }
     function compile(path, options = {}) {
       const { encode = encodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
@@ -20923,27 +20923,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router7;
+    module.exports = Router16;
     module.exports.Route = Route;
-    function Router7(options) {
-      if (!(this instanceof Router7)) {
-        return new Router7(options);
+    function Router16(options) {
+      if (!(this instanceof Router16)) {
+        return new Router16(options);
       }
       const opts = options || {};
-      function router7(req, res, next) {
-        router7.handle(req, res, next);
+      function router16(req, res, next) {
+        router16.handle(req, res, next);
       }
-      Object.setPrototypeOf(router7, this);
-      router7.caseSensitive = opts.caseSensitive;
-      router7.mergeParams = opts.mergeParams;
-      router7.params = {};
-      router7.strict = opts.strict;
-      router7.stack = [];
-      return router7;
+      Object.setPrototypeOf(router16, this);
+      router16.caseSensitive = opts.caseSensitive;
+      router16.mergeParams = opts.mergeParams;
+      router16.params = {};
+      router16.strict = opts.strict;
+      router16.stack = [];
+      return router16;
     }
-    Router7.prototype = function() {
+    Router16.prototype = function() {
     };
-    Router7.prototype.param = function param(name, fn) {
+    Router16.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20963,7 +20963,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router7.prototype.handle = function handle(req, res, callback) {
+    Router16.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -21090,7 +21090,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router7.prototype.use = function use(handler) {
+    Router16.prototype.use = function use(handler) {
       let offset = 0;
       let path = "/";
       if (typeof handler !== "function") {
@@ -21123,7 +21123,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router7.prototype.route = function route(path) {
+    Router16.prototype.route = function route(path) {
       const route2 = new Route(path);
       const layer = new Layer(path, {
         sensitive: this.caseSensitive,
@@ -21138,7 +21138,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router7.prototype[method] = function(path) {
+      Router16.prototype[method] = function(path) {
         const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21321,13 +21321,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router7 = require_router();
+    var Router16 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router7 = null;
+      var router16 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21336,13 +21336,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router7 === null) {
-            router7 = new Router7({
+          if (router16 === null) {
+            router16 = new Router16({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router7;
+          return router16;
         }
       });
     };
@@ -21413,15 +21413,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router7 = this.router;
+      var router16 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router7.use(path, fn2);
+          return router16.use(path, fn2);
         }
         debug(".use app under %s", path);
         fn2.mountpath = path;
         fn2.parent = this;
-        router7.use(path, function mounted_app(req, res, next) {
+        router16.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -22132,19 +22132,19 @@ var require_fresh = __commonJS({
       var timestamp2 = date2 && Date.parse(date2);
       return typeof timestamp2 === "number" ? timestamp2 : NaN;
     }
-    function parseTokenList(str2) {
+    function parseTokenList(str3) {
       var end = 0;
       var list = [];
       var start = 0;
-      for (var i = 0, len = str2.length; i < len; i++) {
-        switch (str2.charCodeAt(i)) {
+      for (var i = 0, len = str3.length; i < len; i++) {
+        switch (str3.charCodeAt(i)) {
           case 32:
             if (start === end) {
               start = end = i + 1;
             }
             break;
           case 44:
-            list.push(str2.substring(start, end));
+            list.push(str3.substring(start, end));
             start = end = i + 1;
             break;
           default:
@@ -22152,7 +22152,7 @@ var require_fresh = __commonJS({
             break;
         }
       }
-      list.push(str2.substring(start, end));
+      list.push(str3.substring(start, end));
       return list;
     }
   }
@@ -22163,17 +22163,17 @@ var require_range_parser = __commonJS({
   "../../node_modules/.pnpm/range-parser@1.3.0/node_modules/range-parser/index.js"(exports, module) {
     "use strict";
     module.exports = rangeParser;
-    function rangeParser(size, str2, options) {
-      if (typeof str2 !== "string") {
+    function rangeParser(size, str3, options) {
+      if (typeof str3 !== "string") {
         throw new TypeError("argument str must be a string");
       }
-      var index2 = str2.indexOf("=");
+      var index2 = str3.indexOf("=");
       if (index2 === -1) {
         return -2;
       }
-      var arr = str2.slice(index2 + 1).split(",");
+      var arr = str3.slice(index2 + 1).split(",");
       var ranges = [];
-      ranges.type = str2.slice(0, index2);
+      ranges.type = str3.slice(0, index2);
       for (var i = 0; i < arr.length; i++) {
         var indexOf = arr[i].indexOf("-");
         if (indexOf === -1) {
@@ -22208,8 +22208,8 @@ var require_range_parser = __commonJS({
       }
       return options && options.combine ? combineRanges(ranges) : ranges;
     }
-    function parsePos(str2) {
-      if (/^\d+$/.test(str2)) return Number(str2);
+    function parsePos(str3) {
+      if (/^\d+$/.test(str3)) return Number(str3);
       return NaN;
     }
     function combineRanges(ranges) {
@@ -22551,17 +22551,17 @@ var require_dist3 = __commonJS({
         "filename*": encodeExtended(filename)
       };
     }
-    function decodeExtended(str2) {
-      const charsetEnd = str2.indexOf("'");
+    function decodeExtended(str3) {
+      const charsetEnd = str3.indexOf("'");
       if (charsetEnd <= 0) {
         return void 0;
       }
-      const languageEnd = str2.indexOf("'", charsetEnd + 1);
+      const languageEnd = str3.indexOf("'", charsetEnd + 1);
       if (languageEnd === -1) {
         return void 0;
       }
-      const charset = str2.slice(0, charsetEnd).toLowerCase();
-      const encoded = str2.slice(languageEnd + 1);
+      const charset = str3.slice(0, charsetEnd).toLowerCase();
+      const encoded = str3.slice(languageEnd + 1);
       switch (charset) {
         case "iso-8859-1": {
           return decodeHexEscapes(encoded);
@@ -22573,34 +22573,34 @@ var require_dist3 = __commonJS({
       }
       return void 0;
     }
-    function tryDecodeURIComponent(str2) {
+    function tryDecodeURIComponent(str3) {
       try {
-        return decodeURIComponent(str2);
+        return decodeURIComponent(str3);
       } catch {
         return void 0;
       }
     }
-    function parseToken(str2, index2, len) {
+    function parseToken(str3, index2, len) {
       while (index2 < len) {
-        const char2 = str2.charCodeAt(index2);
+        const char2 = str3.charCodeAt(index2);
         if (char2 === SEMI)
           break;
         index2++;
       }
       return index2;
     }
-    function skipOWS(str2, index2, len) {
+    function skipOWS(str3, index2, len) {
       while (index2 < len) {
-        const char2 = str2.charCodeAt(index2);
+        const char2 = str3.charCodeAt(index2);
         if (char2 !== SP && char2 !== HTAB)
           break;
         index2++;
       }
       return index2;
     }
-    function trailingOWS(str2, start, end) {
+    function trailingOWS(str3, start, end) {
       while (end > start) {
-        const char2 = str2.charCodeAt(end - 1);
+        const char2 = str3.charCodeAt(end - 1);
         if (char2 !== SP && char2 !== HTAB)
           break;
         end--;
@@ -22647,11 +22647,11 @@ var require_dist3 = __commonJS({
     function pencode(char2) {
       return "%" + char2.charCodeAt(0).toString(16).toUpperCase();
     }
-    function qstring(str2) {
-      return '"' + str2.replace(QUOTE_REGEXP, "\\$&") + '"';
+    function qstring(str3) {
+      return '"' + str3.replace(QUOTE_REGEXP, "\\$&") + '"';
     }
-    function qmultipart(str2) {
-      return '"' + str2.replace(/[\n\r"]/g, multipartEscape) + '"';
+    function qmultipart(str3) {
+      return '"' + str3.replace(/[\n\r"]/g, multipartEscape) + '"';
     }
     function multipartEscape(char2) {
       if (char2 === "\n")
@@ -22660,8 +22660,8 @@ var require_dist3 = __commonJS({
         return "%0D";
       return "%22";
     }
-    function encodeExtended(str2) {
-      const encoded = encodeURIComponent(str2).replace(ENCODE_URL_ATTR_CHAR_REGEXP, pencode);
+    function encodeExtended(str3) {
+      const encoded = encodeURIComponent(str3).replace(ENCODE_URL_ATTR_CHAR_REGEXP, pencode);
       return "UTF-8''" + encoded;
     }
     function isHexDigit(char2) {
@@ -22670,17 +22670,17 @@ var require_dist3 = __commonJS({
       code >= 65 && code <= 70 || // A-F
       code >= 97 && code <= 102;
     }
-    function decodeHexEscapes(str2) {
-      const firstEscape = str2.indexOf("%");
+    function decodeHexEscapes(str3) {
+      const firstEscape = str3.indexOf("%");
       if (firstEscape === -1)
-        return str2;
-      let result = str2.slice(0, firstEscape);
-      for (let idx = firstEscape; idx < str2.length; idx++) {
-        if (str2[idx] === "%" && idx + 2 < str2.length && isHexDigit(str2[idx + 1]) && isHexDigit(str2[idx + 2])) {
-          result += String.fromCharCode(Number.parseInt(str2[idx + 1] + str2[idx + 2], 16));
+        return str3;
+      let result = str3.slice(0, firstEscape);
+      for (let idx = firstEscape; idx < str3.length; idx++) {
+        if (str3[idx] === "%" && idx + 2 < str3.length && isHexDigit(str3[idx + 1]) && isHexDigit(str3[idx + 2])) {
+          result += String.fromCharCode(Number.parseInt(str3[idx + 1] + str3[idx + 2], 16));
           idx += 2;
         } else {
-          result += str2[idx];
+          result += str3[idx];
         }
       }
       return result;
@@ -22713,7 +22713,7 @@ var require_send = __commonJS({
     var createError = require_http_errors();
     var debug = require_src()("send");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
     var fs = __require("fs");
@@ -22766,7 +22766,7 @@ var require_send = __commonJS({
       }
       var res = this.res;
       var msg = statuses.message[status] || String(status);
-      var doc = createHtmlDocument("Error", escapeHtml(msg));
+      var doc = createHtmlDocument("Error", escapeHtml2(msg));
       clearHeaders(res);
       if (err && err.headers) {
         setHeaders(res, err.headers);
@@ -22866,7 +22866,7 @@ var require_send = __commonJS({
         return;
       }
       var loc = encodeUrl(collapseLeadingSlashes(this.path + "/"));
-      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
       res.statusCode = 301;
       res.setHeader("Content-Type", "text/html; charset=UTF-8");
       res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23099,13 +23099,13 @@ var require_send = __commonJS({
         res.removeHeader(header);
       }
     }
-    function collapseLeadingSlashes(str2) {
-      for (var i = 0; i < str2.length; i++) {
-        if (str2[i] !== "/") {
+    function collapseLeadingSlashes(str3) {
+      for (var i = 0; i < str3.length; i++) {
+        if (str3[i] !== "/") {
           break;
         }
       }
-      return i > 1 ? "/" + str2.substr(i) : str2;
+      return i > 1 ? "/" + str3.substr(i) : str3;
     }
     function containsDotFile(parts) {
       for (var i = 0; i < parts.length; i++) {
@@ -23152,12 +23152,12 @@ var require_send = __commonJS({
       var timestamp2 = date2 && Date.parse(date2);
       return typeof timestamp2 === "number" ? timestamp2 : NaN;
     }
-    function parseTokenList(str2) {
+    function parseTokenList(str3) {
       var end = 0;
       var list = [];
       var start = 0;
-      for (var i = 0, len = str2.length; i < len; i++) {
-        switch (str2.charCodeAt(i)) {
+      for (var i = 0, len = str3.length; i < len; i++) {
+        switch (str3.charCodeAt(i)) {
           case 32:
             if (start === end) {
               start = end = i + 1;
@@ -23165,7 +23165,7 @@ var require_send = __commonJS({
             break;
           case 44:
             if (start !== end) {
-              list.push(str2.substring(start, end));
+              list.push(str3.substring(start, end));
             }
             start = end = i + 1;
             break;
@@ -23175,7 +23175,7 @@ var require_send = __commonJS({
         }
       }
       if (start !== end) {
-        list.push(str2.substring(start, end));
+        list.push(str3.substring(start, end));
       }
       return list;
     }
@@ -23270,7 +23270,7 @@ var require_response = __commonJS({
     var createError = require_http_errors();
     var deprecate = require_depd()("express");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
@@ -23609,7 +23609,7 @@ var require_response = __commonJS({
           body = statuses.message[status] + ". Redirecting to " + address;
         },
         html: function() {
-          var u = escapeHtml(address);
+          var u = escapeHtml2(address);
           body = "<!DOCTYPE html><head><title>" + statuses.message[status] + "</title></head><body><p>" + statuses.message[status] + ". Redirecting to " + u + "</p></body>";
         },
         default: function() {
@@ -23639,9 +23639,9 @@ var require_response = __commonJS({
         opts = {};
       }
       opts._locals = self.locals;
-      done = done || function(err, str2) {
+      done = done || function(err, str3) {
         if (err) return req.next(err);
-        self.send(str2);
+        self.send(str3);
       };
       app2.render(view, opts, done);
     };
@@ -23737,7 +23737,7 @@ var require_serve_static = __commonJS({
   "../../node_modules/.pnpm/serve-static@2.2.1/node_modules/serve-static/index.js"(exports, module) {
     "use strict";
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var parseUrl = require_parseurl();
     var resolve = __require("path").resolve;
     var send = require_send();
@@ -23797,13 +23797,13 @@ var require_serve_static = __commonJS({
         stream.pipe(res);
       };
     }
-    function collapseLeadingSlashes(str2) {
-      for (var i = 0; i < str2.length; i++) {
-        if (str2.charCodeAt(i) !== 47) {
+    function collapseLeadingSlashes(str3) {
+      for (var i = 0; i < str3.length; i++) {
+        if (str3.charCodeAt(i) !== 47) {
           break;
         }
       }
-      return i > 1 ? "/" + str2.substr(i) : str2;
+      return i > 1 ? "/" + str3.substr(i) : str3;
     }
     function createHtmlDocument(title, body) {
       return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>' + title + "</title>\n</head>\n<body>\n<pre>" + body + "</pre>\n</body>\n</html>\n";
@@ -23823,7 +23823,7 @@ var require_serve_static = __commonJS({
         originalUrl.path = null;
         originalUrl.pathname = collapseLeadingSlashes(originalUrl.pathname + "/");
         var loc = encodeUrl(url.format(originalUrl));
-        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
         res.statusCode = 301;
         res.setHeader("Content-Type", "text/html; charset=UTF-8");
         res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23844,7 +23844,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router7 = require_router();
+    var Router16 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23866,8 +23866,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router7.Route;
-    exports.Router = Router7;
+    exports.Route = Router16.Route;
+    exports.Router = Router16;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -25077,10 +25077,10 @@ var require_redaction = __commonJS({
     var strict = false;
     function redaction(opts, serialize) {
       const { paths, censor, remove } = handle(opts);
-      const shape = paths.reduce((o, str2) => {
+      const shape = paths.reduce((o, str3) => {
         rx.lastIndex = 0;
-        const first = rx.exec(str2);
-        const next = rx.exec(str2);
+        const first = rx.exec(str3);
+        const next = rx.exec(str3);
         let ns = first[1] !== void 0 ? first[1].replace(/^(?:"|'|`)(.*)(?:"|'|`)$/, "$1") : first[0];
         if (ns === "*") {
           ns = wildcardFirstSym;
@@ -25093,7 +25093,7 @@ var require_redaction = __commonJS({
           return o;
         }
         const { index: index2 } = next;
-        const nextPath = `${str2.substr(index2, str2.length - 1)}`;
+        const nextPath = `${str3.substr(index2, str3.length - 1)}`;
         o[ns] = o[ns] || [];
         if (ns !== wildcardFirstSym && o[ns].length === 0) {
           o[ns].push(...o[wildcardFirstSym] || []);
@@ -25169,11 +25169,11 @@ var require_time = __commonJS({
       const date2 = new Date(msSinceEpoch);
       const year = date2.getUTCFullYear();
       const month = (date2.getUTCMonth() + 1).toString().padStart(2, "0");
-      const day = date2.getUTCDate().toString().padStart(2, "0");
+      const day2 = date2.getUTCDate().toString().padStart(2, "0");
       const hours = date2.getUTCHours().toString().padStart(2, "0");
       const minutes = date2.getUTCMinutes().toString().padStart(2, "0");
       const seconds = date2.getUTCSeconds().toString().padStart(2, "0");
-      return `,"time":"${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${nanosWithinSecond.toString().padStart(9, "0")}Z"`;
+      return `,"time":"${year}-${month}-${day2}T${hours}:${minutes}:${seconds}.${nanosWithinSecond.toString().padStart(9, "0")}Z"`;
     };
     module.exports = { nullTime, epochTime, unixTime, isoTime, isoTimeNano };
   }
@@ -25209,7 +25209,7 @@ var require_quick_format_unescaped = __commonJS({
       }
       var argLen = args.length;
       if (argLen === 0) return f;
-      var str2 = "";
+      var str3 = "";
       var a = 1 - offset;
       var lastPos = -1;
       var flen = f && f.length || 0;
@@ -25224,8 +25224,8 @@ var require_quick_format_unescaped = __commonJS({
                 break;
               if (args[a] == null) break;
               if (lastPos < i)
-                str2 += f.slice(lastPos, i);
-              str2 += Number(args[a]);
+                str3 += f.slice(lastPos, i);
+              str3 += Number(args[a]);
               lastPos = i + 2;
               i++;
               break;
@@ -25234,8 +25234,8 @@ var require_quick_format_unescaped = __commonJS({
                 break;
               if (args[a] == null) break;
               if (lastPos < i)
-                str2 += f.slice(lastPos, i);
-              str2 += Math.floor(Number(args[a]));
+                str3 += f.slice(lastPos, i);
+              str3 += Math.floor(Number(args[a]));
               lastPos = i + 2;
               i++;
               break;
@@ -25248,21 +25248,21 @@ var require_quick_format_unescaped = __commonJS({
                 break;
               if (args[a] === void 0) break;
               if (lastPos < i)
-                str2 += f.slice(lastPos, i);
+                str3 += f.slice(lastPos, i);
               var type = typeof args[a];
               if (type === "string") {
-                str2 += "'" + args[a] + "'";
+                str3 += "'" + args[a] + "'";
                 lastPos = i + 2;
                 i++;
                 break;
               }
               if (type === "function") {
-                str2 += args[a].name || "<anonymous>";
+                str3 += args[a].name || "<anonymous>";
                 lastPos = i + 2;
                 i++;
                 break;
               }
-              str2 += ss(args[a]);
+              str3 += ss(args[a]);
               lastPos = i + 2;
               i++;
               break;
@@ -25270,15 +25270,15 @@ var require_quick_format_unescaped = __commonJS({
               if (a >= argLen)
                 break;
               if (lastPos < i)
-                str2 += f.slice(lastPos, i);
-              str2 += String(args[a]);
+                str3 += f.slice(lastPos, i);
+              str3 += String(args[a]);
               lastPos = i + 2;
               i++;
               break;
             case 37:
               if (lastPos < i)
-                str2 += f.slice(lastPos, i);
-              str2 += "%";
+                str3 += f.slice(lastPos, i);
+              str3 += "%";
               lastPos = i + 2;
               i++;
               a--;
@@ -25291,9 +25291,9 @@ var require_quick_format_unescaped = __commonJS({
       if (lastPos === -1)
         return f;
       else if (lastPos < flen) {
-        str2 += f.slice(lastPos);
+        str3 += f.slice(lastPos);
       }
-      return str2;
+      return str3;
     }
   }
 });
@@ -26779,29 +26779,29 @@ var require_tools = __commonJS({
         }
       }
     }
-    function asString(str2) {
+    function asString(str3) {
       let result = "";
       let last = 0;
       let found = false;
       let point2 = 255;
-      const l = str2.length;
+      const l = str3.length;
       if (l > 100) {
-        return JSON.stringify(str2);
+        return JSON.stringify(str3);
       }
       for (var i = 0; i < l && point2 >= 32; i++) {
-        point2 = str2.charCodeAt(i);
+        point2 = str3.charCodeAt(i);
         if (point2 === 34 || point2 === 92) {
-          result += str2.slice(last, i) + "\\";
+          result += str3.slice(last, i) + "\\";
           last = i;
           found = true;
         }
       }
       if (!found) {
-        result = str2;
+        result = str3;
       } else {
-        result += str2.slice(last);
+        result += str3.slice(last);
       }
-      return point2 < 32 ? JSON.stringify(str2) : '"' + result + '"';
+      return point2 < 32 ? JSON.stringify(str3) : '"' + result + '"';
     }
     function asJson(obj, msg, num2, time2) {
       if (asJsonChan.hasSubscribers === false) {
@@ -27506,11 +27506,11 @@ var require_safe_stable_stringify = __commonJS({
     exports.configure = configure;
     module.exports = stringify;
     var strEscapeSequencesRegExp = /[\u0000-\u001f\u0022\u005c\ud800-\udfff]/;
-    function strEscape(str2) {
-      if (str2.length < 5e3 && !strEscapeSequencesRegExp.test(str2)) {
-        return `"${str2}"`;
+    function strEscape(str3) {
+      if (str3.length < 5e3 && !strEscapeSequencesRegExp.test(str3)) {
+        return `"${str3}"`;
       }
-      return JSON.stringify(str2);
+      return JSON.stringify(str3);
     }
     function sort(array, comparator) {
       if (array.length > 200 || comparator) {
@@ -28263,7 +28263,7 @@ var require_pino = __commonJS({
     function pinoBundlerAbsolutePath(p) {
       try {
         const path = __require("path");
-        const outputDir = "D:\\MyData\\Desktop\\eduverse-uz\\.claude\\worktrees\\eduverse-audit-fixes-90b31c\\artifacts\\api-server\\dist";
+        const outputDir = "/home/user/eduverse-uz/artifacts/api-server/dist";
         return path.resolve(outputDir, p.replace(/^\.\//, ""));
       } catch (e) {
         const f = new Function("p", "return new URL(p, import.meta.url).pathname");
@@ -29896,8 +29896,8 @@ var init_sql = __esm({
         return new SQL(list);
       }
       sql2.fromList = fromList;
-      function raw(str2) {
-        return new SQL([new StringChunk(str2)]);
+      function raw(str3) {
+        return new SQL([new StringChunk(str3)]);
       }
       sql2.raw = raw;
       function join(chunks, separator) {
@@ -32720,7 +32720,7 @@ var require_postgres_date = __commonJS({
         year = bcYearToNegativeYear(year);
       }
       var month = parseInt(matches[2], 10) - 1;
-      var day = matches[3];
+      var day2 = matches[3];
       var hour = parseInt(matches[4], 10);
       var minute = parseInt(matches[5], 10);
       var second = parseInt(matches[6], 10);
@@ -32729,7 +32729,7 @@ var require_postgres_date = __commonJS({
       var date2;
       var offset = timeZoneOffset(isoDate);
       if (offset != null) {
-        date2 = new Date(Date.UTC(year, month, day, hour, minute, second, ms));
+        date2 = new Date(Date.UTC(year, month, day2, hour, minute, second, ms));
         if (is0To99(year)) {
           date2.setUTCFullYear(year);
         }
@@ -32737,7 +32737,7 @@ var require_postgres_date = __commonJS({
           date2.setTime(date2.getTime() - offset);
         }
       } else {
-        date2 = new Date(year, month, day, hour, minute, second, ms);
+        date2 = new Date(year, month, day2, hour, minute, second, ms);
         if (is0To99(year)) {
           date2.setFullYear(year);
         }
@@ -32755,8 +32755,8 @@ var require_postgres_date = __commonJS({
         year = bcYearToNegativeYear(year);
       }
       var month = parseInt(matches[2], 10) - 1;
-      var day = matches[3];
-      var date2 = new Date(year, month, day);
+      var day2 = matches[3];
+      var date2 = new Date(year, month, day2);
       if (is0To99(year)) {
         date2.setFullYear(year);
       }
@@ -33713,20 +33713,20 @@ var require_utils4 = __commonJS({
       }
       return Object.defineProperties(Object.create(Object.getPrototypeOf(config)), Object.getOwnPropertyDescriptors(config));
     }
-    var escapeIdentifier2 = function(str2) {
-      return '"' + str2.replace(/"/g, '""') + '"';
+    var escapeIdentifier2 = function(str3) {
+      return '"' + str3.replace(/"/g, '""') + '"';
     };
-    var escapeLiteral2 = function(str2) {
+    var escapeLiteral2 = function(str3) {
       let hasBackslash = false;
       let escaped = "'";
-      if (str2 == null) {
+      if (str3 == null) {
         return "''";
       }
-      if (typeof str2 !== "string") {
+      if (typeof str3 !== "string") {
         return "''";
       }
-      for (let i = 0; i < str2.length; i++) {
-        const c = str2[i];
+      for (let i = 0; i < str3.length; i++) {
+        const c = str3[i];
         if (c === "'") {
           escaped += c + c;
         } else if (c === "\\") {
@@ -33759,7 +33759,7 @@ var require_utils5 = __commonJS({
     var nodeCrypto = __require("crypto");
     module.exports = {
       postgresMd5PasswordHash,
-      randomBytes: randomBytes6,
+      randomBytes: randomBytes7,
       deriveKey: deriveKey2,
       sha256,
       hashByName,
@@ -33769,7 +33769,7 @@ var require_utils5 = __commonJS({
     var webCrypto = nodeCrypto.webcrypto || globalThis.crypto;
     var subtleCrypto = webCrypto.subtle;
     var textEncoder = new TextEncoder();
-    function randomBytes6(length) {
+    function randomBytes7(length) {
       return webCrypto.getRandomValues(Buffer.alloc(length));
     }
     async function md5(string) {
@@ -34141,22 +34141,22 @@ var require_type_overrides = __commonJS({
 var require_pg_connection_string = __commonJS({
   "../../node_modules/.pnpm/pg-connection-string@2.14.1/node_modules/pg-connection-string/index.js"(exports, module) {
     "use strict";
-    function parse(str2, options = {}) {
-      if (str2.charAt(0) === "/") {
-        const config2 = str2.split(" ");
+    function parse(str3, options = {}) {
+      if (str3.charAt(0) === "/") {
+        const config2 = str3.split(" ");
         return { host: config2[0], database: config2[1] };
       }
       const config = /* @__PURE__ */ Object.create(null);
       let result;
       let dummyHost = false;
-      if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(str2)) {
-        str2 = encodeURI(str2).replace(/%25(\d\d)/g, "%$1");
+      if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(str3)) {
+        str3 = encodeURI(str3).replace(/%25(\d\d)/g, "%$1");
       }
       try {
         try {
-          result = new URL(str2, "postgres://base");
+          result = new URL(str3, "postgres://base");
         } catch (e) {
-          result = new URL(str2.replace("@/", "@___DUMMY___/"), "postgres://base");
+          result = new URL(str3.replace("@/", "@___DUMMY___/"), "postgres://base");
           dummyHost = true;
         }
       } catch (err) {
@@ -34302,8 +34302,8 @@ var require_pg_connection_string = __commonJS({
       }, /* @__PURE__ */ Object.create(null));
       return poolConfig;
     }
-    function parseIntoClientConfig(str2) {
-      return toClientConfig(parse(str2));
+    function parseIntoClientConfig(str3) {
+      return toClientConfig(parse(str3));
     }
     function deprecatedSslModeWarning(sslmode) {
       if (!deprecatedSslModeWarning.warned && typeof process !== "undefined" && process.emitWarning) {
@@ -36729,11 +36729,11 @@ var require_client = __commonJS({
       // escapeIdentifier and escapeLiteral moved to utility functions & exported
       // on PG
       // re-exported here for backwards compatibility
-      escapeIdentifier(str2) {
-        return utils.escapeIdentifier(str2);
+      escapeIdentifier(str3) {
+        return utils.escapeIdentifier(str3);
       }
-      escapeLiteral(str2) {
-        return utils.escapeLiteral(str2);
+      escapeLiteral(str3) {
+        return utils.escapeLiteral(str3);
       }
       _pulseQueryQueue() {
         if (this.pipeline) {
@@ -38361,8 +38361,8 @@ var init_dialect = __esm({
       escapeParam(num2) {
         return `$${num2 + 1}`;
       }
-      escapeString(str2) {
-        return `'${str2.replace(/'/g, "''")}'`;
+      escapeString(str3) {
+        return `'${str3.replace(/'/g, "''")}'`;
       }
       buildWithCTE(queries) {
         if (!queries?.length) return void 0;
@@ -42527,10 +42527,34 @@ var init_auth = __esm({
         loginNormalized: text("login_normalized").notNull(),
         passwordHash: text("password_hash").notNull(),
         role: accountRoleEnum("role").notNull().default("student"),
+        /** Contact phone (parents), set by the school on import. */
+        phone: text("phone"),
+        /**
+         * Study status: active | transferred | expelled | graduated. Only EDUVERSE (the owner)
+         * changes it, on the school's request. Grades and attendance are never deleted.
+         */
+        status: text("status").notNull().default("active"),
+        statusReason: text("status_reason").notNull().default(""),
+        statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
+        /** True for accounts created by the school: the first sign-in asks to change the password. */
+        mustChangePassword: boolean("must_change_password").notNull().default(false),
+        /** Optional profile photo: a small JPEG/PNG/WebP data URL (≤ 80 KB), resized in the browser. */
+        avatar: text("avatar"),
+        /** Contact email the user entered in the profile (optional). */
+        email: text("email"),
+        /** Subjects a teacher teaches, e.g. ["Физика", "Химия"]. */
+        subjects: jsonb("subjects").notNull().default([]),
+        /** Notification settings: { grades, homework, messages, announcements, lessons, telegram, push, newDevice } → boolean. */
+        notifyPrefs: jsonb("notify_prefs").notNull().default({}),
         /** AES-256-GCM encrypted TOTP secret (base32 outside crypto layer). */
         twoFactorSecret: text("two_factor_secret"),
         /** Telegram chat id that is allowed to receive 2FA codes. */
         twoFactorTelegramId: text("two_factor_telegram_id"),
+        /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
+        googleSub: text("google_sub"),
+        googleEmail: text("google_email"),
+        /** After recovery through Google: until this moment a new password can be set without the old one. */
+        recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
         twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
         /** One-time nonce used to bind the Telegram bot to this account. */
         twoFactorPendingNonce: text("two_factor_pending_nonce"),
@@ -42549,6 +42573,7 @@ var init_auth = __esm({
         uniqueIndex("users_login_normalized_unique").on(table.loginNormalized),
         uniqueIndex("users_two_factor_pending_nonce_unique").on(table.twoFactorPendingNonce).where(sql`${table.twoFactorPendingNonce} is not null`),
         uniqueIndex("users_two_factor_telegram_id_unique").on(table.twoFactorTelegramId).where(sql`${table.twoFactorTelegramId} is not null`),
+        uniqueIndex("users_google_sub_unique").on(table.googleSub).where(sql`${table.googleSub} is not null`),
         index("users_two_factor_pending_expires_at_idx").on(
           table.twoFactorPendingExpiresAt
         )
@@ -42562,7 +42587,12 @@ var init_auth = __esm({
         tokenHash: text("token_hash").notNull(),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
         expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-        revokedAt: timestamp("revoked_at", { withTimezone: true })
+        revokedAt: timestamp("revoked_at", { withTimezone: true }),
+        /** Browser and system of the device, e.g. "Chrome · Windows". */
+        device: text("device"),
+        /** Partly hidden address, e.g. "213.230.*.*". */
+        ipMasked: text("ip_masked"),
+        lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
       },
       (table) => [
         uniqueIndex("sessions_token_hash_unique").on(table.tokenHash),
@@ -42658,6 +42688,15 @@ var init_school = __esm({
       region: text("region").notNull(),
       district: text("district"),
       address: text("address"),
+      /**
+       * free  — journal, attendance, homework, grades (always free);
+       * pilot — everything, free until plan_until (trial for one quarter);
+       * pro   — everything, paid (3D topics, 3D library, online lessons, trainer).
+       */
+      plan: text("plan").notNull().default("free"),
+      /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
+      isDemo: boolean("is_demo").notNull().default(false),
+      planUntil: timestamp("plan_until", { withTimezone: true }),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("schools_region_idx").on(table.region)]);
@@ -42702,11 +42741,13 @@ var init_school = __esm({
       description: text("description").notNull(),
       topicId: text("topic_id"),
       topicTitle: text("topic_title"),
+      /** Set on homework given automatically from the textbook after a lesson: "book:<classId>:<topicKey>". */
+      autoKey: text("auto_key"),
       dueAt: timestamp("due_at", { withTimezone: true }),
       status: assignmentStatusEnum("status").notNull().default("assigned"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
-    }, (table) => [index("assignments_class_idx").on(table.classId), index("assignments_creator_idx").on(table.createdBy)]);
+    }, (table) => [index("assignments_class_idx").on(table.classId), index("assignments_creator_idx").on(table.createdBy), uniqueIndex("assignments_auto_key_unique").on(table.autoKey)]);
     assignmentSubmissionsTable = pgTable("assignment_submissions", {
       id: uuid("id").defaultRandom().primaryKey(),
       assignmentId: uuid("assignment_id").notNull().references(() => assignmentsTable.id, { onDelete: "cascade" }),
@@ -42749,7 +42790,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable, journalMarksTable, noticeMarksTable, lessonStageProgressTable, lessonContentTable, lessonLiveTable, lessonLiveAnswersTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -42770,16 +42811,19 @@ var init_learning = __esm({
         studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
         markedBy: uuid("marked_by").notNull().references(() => usersTable.id, { onDelete: "restrict" }),
         attendanceDate: text("attendance_date").notNull(),
+        /** The lesson's subject: every teacher marks their own lesson ("" = old whole-day mark). */
+        subject: text("subject").notNull().default(""),
         status: attendanceStatusEnum("status").notNull().default("present"),
         note: text("note").notNull().default(""),
         createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
       },
       (table) => [
-        uniqueIndex("attendance_class_student_date_unique").on(
+        uniqueIndex("attendance_class_student_date_subject_unique").on(
           table.classId,
           table.studentId,
-          table.attendanceDate
+          table.attendanceDate,
+          table.subject
         ),
         index("attendance_class_date_idx").on(table.classId, table.attendanceDate),
         index("attendance_student_idx").on(table.studentId)
@@ -42855,6 +42899,8 @@ var init_learning = __esm({
         hostId: uuid("host_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
         subject: text("subject").notNull().default(""),
         title: text("title").notNull().default(""),
+        // Topic from the class textbook (course-data key) shown in the lesson.
+        courseKey: text("course_key"),
         status: lessonRoomStatusEnum("status").notNull().default("open"),
         startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
         endedAt: timestamp("ended_at", { withTimezone: true }),
@@ -42882,6 +42928,8 @@ var init_learning = __esm({
         testExplanation: text("test_explanation").notNull().default(""),
         testAnswer: text("test_answer"),
         testScore: integer("test_score"),
+        // Several questions per student: [{prompt, choices, correct, explanation, answer}]
+        testItems: jsonb("test_items").notNull().default([]),
         joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
         leftAt: timestamp("left_at", { withTimezone: true })
       },
@@ -42973,6 +43021,264 @@ var init_learning = __esm({
         index("qr_login_sessions_expires_idx").on(table.expiresAt)
       ]
     );
+    classAnnouncementsTable = pgTable(
+      "class_announcements",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+        authorId: uuid("author_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        body: text("body").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => [index("class_announcements_class_idx").on(table.classId)]
+    );
+    parentLinksTable = pgTable(
+      "parent_links",
+      {
+        id: uuid("id").defaultRandom().primaryKey(),
+        parentId: uuid("parent_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        createdBy: uuid("created_by").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+      },
+      (table) => [
+        uniqueIndex("parent_links_parent_student_unique").on(table.parentId, table.studentId),
+        index("parent_links_student_idx").on(table.studentId)
+      ]
+    );
+    telegramNotifyTable = pgTable("telegram_notify", {
+      userId: uuid("user_id").primaryKey().references(() => usersTable.id, { onDelete: "cascade" }),
+      chatId: text("chat_id"),
+      nonce: text("nonce"),
+      nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+      /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
+      lang: text("lang"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
+    labReportsTable = pgTable("lab_reports", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      lab: text("lab").notNull(),
+      data: jsonb("data").notNull().default({}),
+      result: text("result").notNull().default(""),
+      errorPercent: integer("error_percent"),
+      grade: integer("grade"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("lab_reports_student_idx").on(table.studentId)]);
+    bookAnnotationsTable = pgTable("book_annotations", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      book: text("book").notNull(),
+      page: integer("page").notNull(),
+      /** Strokes in page-relative coordinates (0…1), so they fit any zoom. */
+      strokes: jsonb("strokes").notNull().default([]),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("book_annotations_user_book_page_unique").on(table.userId, table.book, table.page)]);
+    courseProgressTable = pgTable("course_progress", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      topicKey: text("topic_key").notNull(),
+      /** Lesson date, YYYY-MM-DD. */
+      doneOn: text("done_on").notNull(),
+      markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("course_progress_class_topic_unique").on(table.classId, table.topicKey),
+      index("course_progress_class_idx").on(table.classId)
+    ]);
+    coursePaceTable = pgTable("course_pace", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      book: text("book").notNull(),
+      lessonsPerWeek: integer("lessons_per_week").notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("course_pace_class_book_unique").on(table.classId, table.book)]);
+    userNotificationsTable = pgTable("user_notifications", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      kind: text("kind").notNull(),
+      title: text("title").notNull(),
+      body: text("body").notNull().default(""),
+      link: text("link"),
+      readAt: timestamp("read_at", { withTimezone: true }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("user_notifications_user_created_idx").on(table.userId, table.createdAt)]);
+    supportMessagesTable = pgTable("support_messages", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      threadUserId: uuid("thread_user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      channel: text("channel").notNull(),
+      schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+      authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+      fromStaff: boolean("from_staff").notNull().default(false),
+      body: text("body").notNull(),
+      readByOwner: boolean("read_by_owner").notNull().default(false),
+      readByStaff: boolean("read_by_staff").notNull().default(false),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      index("support_messages_thread_idx").on(table.threadUserId, table.channel, table.createdAt),
+      index("support_messages_school_idx").on(table.schoolId, table.channel)
+    ]);
+    schoolCalendarTable = pgTable("school_calendar", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      /** [{ start: "2026-09-02", end: "2026-10-31" }, ...] — exactly four, in order. */
+      quarters: jsonb("quarters").notNull(),
+      /** [{ from: "2026-12-31", to: "2027-01-02", name: "Новый год" }, ...] */
+      holidays: jsonb("holidays").notNull().default([]),
+      updatedBy: uuid("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("school_calendar_school_unique").on(table.schoolId)]);
+    schoolRequestsTable = pgTable("school_requests", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      authorId: uuid("author_id").references(() => usersTable.id, { onDelete: "set null" }),
+      /** enroll | expel | transfer | graduate | restore | edit */
+      kind: text("kind").notNull(),
+      /** The person the request is about (null for enroll). */
+      targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+      payload: jsonb("payload").notNull().default({}),
+      reason: text("reason").notNull().default(""),
+      /** pending | approved | rejected */
+      status: text("status").notNull().default("pending"),
+      decidedBy: uuid("decided_by").references(() => usersTable.id, { onDelete: "set null" }),
+      decidedAt: timestamp("decided_at", { withTimezone: true }),
+      decisionNote: text("decision_note").notNull().default(""),
+      /** What approving did, e.g. created logins (without passwords). */
+      result: jsonb("result").notNull().default({}),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      index("school_requests_status_idx").on(table.status, table.createdAt),
+      index("school_requests_school_idx").on(table.schoolId, table.createdAt)
+    ]);
+    auditLogTable = pgTable("audit_log", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").references(() => schoolsTable.id, { onDelete: "set null" }),
+      actorId: uuid("actor_id").references(() => usersTable.id, { onDelete: "set null" }),
+      action: text("action").notNull(),
+      targetUserId: uuid("target_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+      details: jsonb("details").notNull().default({}),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("audit_log_school_idx").on(table.schoolId, table.createdAt)]);
+    trainerResultsTable = pgTable("trainer_results", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+      /** YYYY-MM-DD */
+      day: text("day").notNull(),
+      score: integer("score").notNull(),
+      total: integer("total").notNull(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("trainer_results_user_day_unique").on(table.userId, table.day),
+      index("trainer_results_class_day_idx").on(table.classId, table.day)
+    ]);
+    trainerTestsTable = pgTable("trainer_tests", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+      /** YYYY-MM-DD: the lesson day */
+      day: text("day").notNull(),
+      /** textbook subject key: physics / chemistry / biology / math */
+      subject: text("subject").notNull(),
+      topicKey: text("topic_key").notNull().default(""),
+      score: integer("score").notNull(),
+      total: integer("total").notNull(),
+      attempts: integer("attempts").notNull().default(1),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("trainer_tests_user_day_subject_unique").on(table.userId, table.day, table.subject),
+      index("trainer_tests_class_day_idx").on(table.classId, table.day)
+    ]);
+    timetableSlotsTable = pgTable("timetable_slots", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      weekday: integer("weekday").notNull(),
+      period: integer("period").notNull(),
+      subject: text("subject").notNull(),
+      teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+      room: text("room"),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("timetable_slots_class_day_period_unique").on(table.classId, table.weekday, table.period),
+      index("timetable_slots_teacher_idx").on(table.teacherId, table.weekday),
+      index("timetable_slots_school_idx").on(table.schoolId)
+    ]);
+    schoolBellsTable = pgTable("school_bells", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      periods: jsonb("periods").notNull(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [uniqueIndex("school_bells_school_unique").on(table.schoolId)]);
+    journalMarksTable = pgTable("journal_marks", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      studentId: uuid("student_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      subject: text("subject").notNull(),
+      /** Lesson date, YYYY-MM-DD (Tashkent). */
+      date: text("date").notNull(),
+      mark: integer("mark"),
+      absent: boolean("absent").notNull().default(false),
+      markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("journal_marks_cell_unique").on(table.classId, table.studentId, table.subject, table.date),
+      index("journal_marks_class_subject_idx").on(table.classId, table.subject)
+    ]);
+    noticeMarksTable = pgTable("notice_marks", {
+      key: text("key").primaryKey(),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    });
+    lessonStageProgressTable = pgTable("lesson_stage_progress", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      classId: uuid("class_id").references(() => classesTable.id, { onDelete: "set null" }),
+      topicKey: text("topic_key").notNull(),
+      stage: integer("stage").notNull(),
+      score: integer("score").notNull().default(0),
+      total: integer("total").notNull().default(0),
+      done: boolean("done").notNull().default(false),
+      answers: jsonb("answers").notNull().default([]),
+      attempts: integer("attempts").notNull().default(1),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("lesson_stage_progress_user_topic_stage_unique").on(table.userId, table.topicKey, table.stage),
+      index("lesson_stage_progress_class_topic_idx").on(table.classId, table.topicKey)
+    ]);
+    lessonContentTable = pgTable("lesson_content", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      teacherId: uuid("teacher_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      topicKey: text("topic_key").notNull(),
+      content: jsonb("content").notNull().default({}),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("lesson_content_teacher_topic_unique").on(table.teacherId, table.topicKey)
+    ]);
+    lessonLiveTable = pgTable("lesson_live", {
+      classId: uuid("class_id").primaryKey().references(() => classesTable.id, { onDelete: "cascade" }),
+      teacherId: uuid("teacher_id").references(() => usersTable.id, { onDelete: "set null" }),
+      topicKey: text("topic_key").notNull(),
+      stage: integer("stage").notNull().default(1),
+      /** the question shown to the class: { id, prompt, choices[], correct } or null */
+      question: jsonb("question"),
+      reveal: boolean("reveal").notNull().default(false),
+      active: boolean("active").notNull().default(true),
+      updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+    });
+    lessonLiveAnswersTable = pgTable("lesson_live_answers", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      questionId: text("question_id").notNull(),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      choice: integer("choice").notNull(),
+      correct: boolean("correct").notNull().default(false),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("lesson_live_answers_unique").on(table.classId, table.questionId, table.userId)
+    ]);
   }
 });
 
@@ -42986,30 +43292,52 @@ __export(schema_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  auditLogTable: () => auditLogTable,
+  bookAnnotationsTable: () => bookAnnotationsTable,
+  classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  coursePaceTable: () => coursePaceTable,
+  courseProgressTable: () => courseProgressTable,
+  journalMarksTable: () => journalMarksTable,
+  labReportsTable: () => labReportsTable,
+  lessonContentTable: () => lessonContentTable,
+  lessonLiveAnswersTable: () => lessonLiveAnswersTable,
+  lessonLiveTable: () => lessonLiveTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
   lessonRoomSignalsTable: () => lessonRoomSignalsTable,
   lessonRoomStatusEnum: () => lessonRoomStatusEnum,
   lessonRoomsTable: () => lessonRoomsTable,
+  lessonStageProgressTable: () => lessonStageProgressTable,
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  noticeMarksTable: () => noticeMarksTable,
+  parentLinksTable: () => parentLinksTable,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
+  schoolBellsTable: () => schoolBellsTable,
+  schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
+  schoolRequestsTable: () => schoolRequestsTable,
   schoolsTable: () => schoolsTable,
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  supportMessagesTable: () => supportMessagesTable,
+  telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  timetableSlotsTable: () => timetableSlotsTable,
+  trainerResultsTable: () => trainerResultsTable,
+  trainerTestsTable: () => trainerTestsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
+  userNotificationsTable: () => userNotificationsTable,
   usersTable: () => usersTable
 });
 var init_schema2 = __esm({
@@ -43031,33 +43359,55 @@ __export(src_exports, {
   assignmentsTable: () => assignmentsTable,
   attendanceStatusEnum: () => attendanceStatusEnum,
   attendanceTable: () => attendanceTable,
+  auditLogTable: () => auditLogTable,
+  bookAnnotationsTable: () => bookAnnotationsTable,
+  classAnnouncementsTable: () => classAnnouncementsTable,
   classMemberRoleEnum: () => classMemberRoleEnum,
   classMembersTable: () => classMembersTable,
   classesTable: () => classesTable,
+  coursePaceTable: () => coursePaceTable,
+  courseProgressTable: () => courseProgressTable,
   databaseIsConfigured: () => databaseIsConfigured,
   db: () => db,
+  journalMarksTable: () => journalMarksTable,
+  labReportsTable: () => labReportsTable,
+  lessonContentTable: () => lessonContentTable,
+  lessonLiveAnswersTable: () => lessonLiveAnswersTable,
+  lessonLiveTable: () => lessonLiveTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
   lessonRoomSignalsTable: () => lessonRoomSignalsTable,
   lessonRoomStatusEnum: () => lessonRoomStatusEnum,
   lessonRoomsTable: () => lessonRoomsTable,
+  lessonStageProgressTable: () => lessonStageProgressTable,
   lessonTopicStatusEnum: () => lessonTopicStatusEnum,
   lessonTopicsTable: () => lessonTopicsTable,
   lessonsTable: () => lessonsTable,
+  noticeMarksTable: () => noticeMarksTable,
+  parentLinksTable: () => parentLinksTable,
   pool: () => pool,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
+  schoolBellsTable: () => schoolBellsTable,
+  schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
+  schoolRequestsTable: () => schoolRequestsTable,
   schoolsTable: () => schoolsTable,
   sessionsTable: () => sessionsTable,
   subjectsTable: () => subjectsTable,
   submissionFilesTable: () => submissionFilesTable,
+  supportMessagesTable: () => supportMessagesTable,
+  telegramNotifyTable: () => telegramNotifyTable,
   telegramOutboxTable: () => telegramOutboxTable,
+  timetableSlotsTable: () => timetableSlotsTable,
+  trainerResultsTable: () => trainerResultsTable,
+  trainerTestsTable: () => trainerTestsTable,
   twoFactorChallengesTable: () => twoFactorChallengesTable,
   twoFactorRecoveryTable: () => twoFactorRecoveryTable,
+  userNotificationsTable: () => userNotificationsTable,
   usersTable: () => usersTable
 });
 var Pool3, configured, poolInstance, dbInstance, databaseIsConfigured, pool, db;
@@ -43101,12 +43451,20 @@ var init_src = __esm({
 var ai_content_exports = {};
 __export(ai_content_exports, {
   SUPPORTED_SUBJECTS: () => SUPPORTED_SUBJECTS,
+  analyzeHomework: () => analyzeHomework,
+  answerTutorQuestion: () => answerTutorQuestion,
+  checkPhotoIsAi: () => checkPhotoIsAi,
+  explainWord: () => explainWord,
   fetchWikipediaFact: () => fetchWikipediaFact,
+  generateLessonPlan: () => generateLessonPlan,
   generateLocalPackage: () => generateLocalPackage,
+  generatePracticeTest: () => generatePracticeTest,
   generateStudentQuestion: () => generateStudentQuestion,
   generateTopicPackage: () => generateTopicPackage,
   generateTopicTest: () => generateTopicTest,
-  isAiConfigured: () => isAiConfigured
+  isAiConfigured: () => isAiConfigured,
+  lessonHelp: () => lessonHelp,
+  reviewHomework: () => reviewHomework
 });
 function isAiConfigured() {
   return AI_ENABLED && EFFECTIVE_MODEL.length > 0;
@@ -43120,34 +43478,45 @@ function blueprintFor(subject) {
   }
   return SUBJECT_BLUEPRINTS.geography;
 }
+async function callOneModel(model, messages, signal) {
+  const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.6,
+      response_format: { type: "json_object" },
+      // Gemini 2.5 "thinks" for 8-15 s by default: longer than a serverless request may run.
+      ...USE_GEMINI && model.startsWith("gemini-2.5") ? { reasoning_effort: "none" } : {}
+    }),
+    signal
+  });
+  if (!response.ok) return { text: null, retry: [400, 404, 408, 429, 500, 502, 503, 504].includes(response.status) };
+  const payload = await response.json();
+  const choices = typeof payload === "object" && payload !== null ? payload.choices : null;
+  const first = Array.isArray(choices) && choices.length ? choices[0] : null;
+  const content = first?.message?.content;
+  return typeof content === "string" && content.trim() ? { text: content, retry: false } : { text: null, retry: true };
+}
 async function callModel(messages) {
   if (!isAiConfigured()) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
   try {
-    const response = await fetch(`${EFFECTIVE_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...EFFECTIVE_API_KEY ? { Authorization: `Bearer ${EFFECTIVE_API_KEY}` } : {}
-      },
-      body: JSON.stringify({
-        model: EFFECTIVE_MODEL,
-        messages,
-        temperature: 0.6,
-        response_format: { type: "json_object" }
-      }),
-      signal: controller.signal
-    });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    if (typeof payload !== "object" || payload === null) return null;
-    const choices = payload.choices;
-    if (!Array.isArray(choices) || choices.length === 0) return null;
-    const first = choices[0];
-    const content = first?.message?.content;
-    return typeof content === "string" && content.trim() ? content : null;
-  } catch {
+    for (const model of MODEL_CHAIN) {
+      if (controller.signal.aborted) break;
+      try {
+        const result = await callOneModel(model, messages, controller.signal);
+        if (result.text) return result.text;
+        if (!result.retry) break;
+      } catch {
+        if (controller.signal.aborted) break;
+      }
+    }
     return null;
   } finally {
     clearTimeout(timeout);
@@ -43509,6 +43878,92 @@ async function enrichFacts(pkg) {
   if (!wiki) return pkg;
   return { ...pkg, facts: [wiki, ...pkg.facts].slice(0, 5) };
 }
+async function answerTutorQuestion(question, context) {
+  const raw = await callModel([
+    {
+      role: "system",
+      content: "\u0422\u044B \u2014 \u0448\u043A\u043E\u043B\u044C\u043D\u044B\u0439 \u0418\u0418-\u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A EDUVERSE \u0434\u043B\u044F \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u043A\u0440\u0430\u0442\u043A\u043E (\u0434\u043E 120 \u0441\u043B\u043E\u0432), \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u044F\u0437\u044B\u043A\u043E\u043C, \u043D\u0430 \u044F\u0437\u044B\u043A\u0435 \u0432\u043E\u043F\u0440\u043E\u0441\u0430 (\u0443\u0437\u0431\u0435\u043A\u0441\u043A\u0438\u0439, \u0440\u0443\u0441\u0441\u043A\u0438\u0439 \u0438\u043B\u0438 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439). \u041E\u0431\u044A\u044F\u0441\u043D\u044F\u0439 \u043F\u043E \u0448\u0430\u0433\u0430\u043C, \u043F\u0440\u0438\u0432\u043E\u0434\u0438 \u043E\u0434\u0438\u043D \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0439 \u043F\u0440\u0438\u043C\u0435\u0440. \u041D\u0435 \u0432\u044B\u0434\u0443\u043C\u044B\u0432\u0430\u0439 \u0444\u0430\u043A\u0442\u044B, \u043D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0439 \u043D\u0430 \u0442\u0435\u043C\u044B \u0432\u043D\u0435 \u0448\u043A\u043E\u043B\u044C\u043D\u043E\u0439 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u2014 \u0432\u0435\u0436\u043B\u0438\u0432\u043E \u0432\u0435\u0440\u043D\u0438 \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440 \u043A \u0443\u0447\u0451\u0431\u0435."
+    },
+    {
+      role: "user",
+      content: `\u0422\u0435\u043C\u0430 \u0443\u0440\u043E\u043A\u0430: ${context.title ?? "\u043D\u0435 \u0432\u044B\u0431\u0440\u0430\u043D\u0430"} (${context.subject ?? "\u043F\u0440\u0435\u0434\u043C\u0435\u0442 \u043D\u0435 \u0443\u043A\u0430\u0437\u0430\u043D"}). ${context.facts?.length ? `\u0424\u0430\u043A\u0442\u044B \u0442\u0435\u043C\u044B: ${context.facts.slice(0, 5).join(" | ")}. ` : ""}\u0412\u043E\u043F\u0440\u043E\u0441: ${question}`
+    }
+  ]);
+  return raw ? raw.trim().slice(0, 2e3) : null;
+}
+async function generateLessonPlan(input) {
+  const m = input.minutes;
+  const fallback = {
+    title: input.topic,
+    goals: [`${input.topic}: asosiy tushunchalar / \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u043F\u043E\u043D\u044F\u0442\u0438\u044F`, "Mustaqil misol yechish / \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u043C\u0435\u0440\u0430"],
+    steps: [
+      { minutes: Math.round(m * 0.1), title: "Kirish / \u0412\u0441\u0442\u0443\u043F\u043B\u0435\u043D\u0438\u0435", activity: "Savol bilan qiziqtirish, oldingi mavzuni eslash." },
+      { minutes: Math.round(m * 0.3), title: "Yangi mavzu / \u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u0430", activity: "Darslik paragrafi, 3D model yoki doskada tushuntirish." },
+      { minutes: Math.round(m * 0.3), title: "Amaliyot / \u041F\u0440\u0430\u043A\u0442\u0438\u043A\u0430", activity: "Juftlikda misollar, o\u2018qituvchi yordami." },
+      { minutes: Math.round(m * 0.2), title: "Test / \u0422\u0435\u0441\u0442", activity: "Onlayn darsda individual test." },
+      { minutes: Math.round(m * 0.1), title: "Yakun / \u0418\u0442\u043E\u0433", activity: "Xulosa va uy vazifasi." }
+    ],
+    questions: [`${input.topic} nima?`, "Hayotdan misol keltiring.", "Asosiy qoida qanday?"],
+    homework: "Paragrafni o\u2018qing va 3 ta savolga daftarda javob yozing.",
+    experiment: "",
+    source: "local"
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u2014 \u043C\u0435\u0442\u043E\u0434\u0438\u0441\u0442 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u0439 \u0448\u043A\u043E\u043B\u044B. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u043F\u043B\u0430\u043D \u0443\u0440\u043E\u043A\u0430 \u0441\u0442\u0440\u043E\u0433\u043E \u0432 JSON: {"title":"","goals":["",""],"steps":[{"minutes":5,"title":"","activity":""}],"questions":["","",""],"homework":"","experiment":""}. \u0421\u0443\u043C\u043C\u0430 minutes = ${m}. 4\u20136 \u0448\u0430\u0433\u043E\u0432. experiment \u2014 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u043E\u043F\u044B\u0442 \u0438\u043B\u0438 3D-\u0434\u0435\u043C\u043E\u043D\u0441\u0442\u0440\u0430\u0446\u0438\u044F, \u0435\u0441\u043B\u0438 \u0443\u043C\u0435\u0441\u0442\u043D\u043E, \u0438\u043D\u0430\u0447\u0435 \u043F\u0443\u0441\u0442\u0430\u044F \u0441\u0442\u0440\u043E\u043A\u0430. \u042F\u0437\u044B\u043A \u043E\u0442\u0432\u0435\u0442\u0430: ${input.language === "Uzbek" ? "\u0443\u0437\u0431\u0435\u043A\u0441\u043A\u0438\u0439 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : input.language === "English" ? "\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439" : "\u0440\u0443\u0441\u0441\u043A\u0438\u0439"}.`
+    },
+    { role: "user", content: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject}. \u041A\u043B\u0430\u0441\u0441: ${input.grade}. \u0422\u0435\u043C\u0430/\u043F\u0430\u0440\u0430\u0433\u0440\u0430\u0444 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430: ${input.topic}. \u0414\u043B\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C: ${m} \u043C\u0438\u043D\u0443\u0442.` }
+  ]);
+  if (!raw) return fallback;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return fallback;
+  const list = (value) => Array.isArray(value) ? value.map((item) => str(item)).filter(Boolean).slice(0, 8) : [];
+  const steps = Array.isArray(parsed.steps) ? parsed.steps.map((step) => typeof step === "object" && step !== null ? step : null).filter((step) => step !== null).map((step) => ({ minutes: Math.max(1, Math.min(90, Math.round(Number(step.minutes) || 5))), title: str(step.title), activity: str(step.activity) })).filter((step) => step.title).slice(0, 8) : [];
+  if (!steps.length) return fallback;
+  return {
+    title: str(parsed.title) || input.topic,
+    goals: list(parsed.goals),
+    steps,
+    questions: list(parsed.questions),
+    homework: str(parsed.homework),
+    experiment: str(parsed.experiment),
+    source: "ai"
+  };
+}
+async function analyzeHomework(input) {
+  if (!isAiConfigured()) return null;
+  const content = [
+    {
+      type: "text",
+      text: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject}. \u0417\u0430\u0434\u0430\u043D\u0438\u0435: ${input.task}. \u0423\u0447\u0435\u043D\u0438\u043A 7 \u043A\u043B\u0430\u0441\u0441\u0430: ${input.studentName}.
+\u041E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u0441\u0432\u043E\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438: \xAB${input.explanation.slice(0, 1500)}\xBB.
+\u0424\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u043F\u0440\u0438\u043A\u0440\u0435\u043F\u043B\u0435\u043D\u044B (${input.photos.length}).`
+    },
+    ...input.photos.slice(0, 2).map((url) => ({ type: "image_url", image_url: { url } }))
+  ];
+  const raw = await callModel([
+    {
+      role: "system",
+      content: '\u0422\u044B \u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A \u0443\u0447\u0438\u0442\u0435\u043B\u044F. \u041E\u0446\u0435\u043D\u0438, \u043F\u043E\u0445\u043E\u0436\u0435 \u043B\u0438, \u0447\u0442\u043E \u0443\u0447\u0435\u043D\u0438\u043A \u0441\u0434\u0435\u043B\u0430\u043B \u0440\u0430\u0431\u043E\u0442\u0443 \u0441\u0430\u043C. \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0441\u0430\u043C\u043E\u0441\u0442\u043E\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B: \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u043E\u0442 \u0440\u0443\u043A\u0438 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438, \u0435\u0441\u0442\u044C \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u044F \u0438 \u0447\u0435\u0440\u043D\u043E\u0432\u044B\u0435 \u0448\u0430\u0433\u0438, \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u0434\u0435\u0442\u0441\u043A\u0438\u043C \u044F\u0437\u044B\u043A\u043E\u043C, \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442 \u0441 \u0440\u0435\u0448\u0435\u043D\u0438\u0435\u043C \u043D\u0430 \u0444\u043E\u0442\u043E. \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u043E\u0442\u0432\u0435\u0442\u0430 \u0418\u0418: \u0438\u0434\u0435\u0430\u043B\u044C\u043D\u044B\u0439 \xAB\u0432\u0437\u0440\u043E\u0441\u043B\u044B\u0439\xBB \u0442\u0435\u043A\u0441\u0442 \u0441 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043C\u0438 \u043D\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0443, \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u044B\u0435 \u0444\u0440\u0430\u0437\u044B, \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u043D\u0435 \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442 \u0441 \u0442\u0435\u0442\u0440\u0430\u0434\u044C\u044E, \u043D\u0430 \u0444\u043E\u0442\u043E \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442 \u0438\u043B\u0438 \u044D\u043A\u0440\u0430\u043D. \u042D\u0442\u043E \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u0443\u0447\u0438\u0442\u0435\u043B\u044E, \u043D\u0435 \u043E\u0431\u0432\u0438\u043D\u0435\u043D\u0438\u0435. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"verdict":"self|unclear|ai","confidence":0-100,"handwritten":true|false,"matchesTask":true|false,"reasons":["...","..."],"advice":"\u0447\u0442\u043E \u0441\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0443 \u0443\u0447\u0435\u043D\u0438\u043A\u0430"}. \u041F\u0438\u0448\u0438 \u043F\u043E-\u0440\u0443\u0441\u0441\u043A\u0438 \u043A\u0440\u0430\u0442\u043A\u043E.'
+    },
+    { role: "user", content }
+  ]);
+  if (!raw) return null;
+  const parsed = safeJsonObject(raw);
+  if (!parsed) return null;
+  const verdict = parsed.verdict === "self" || parsed.verdict === "ai" ? parsed.verdict : "unclear";
+  const confidence = Math.max(0, Math.min(100, Math.round(Number(parsed.confidence) || 50)));
+  return {
+    verdict,
+    // never claim certainty: an AI detector cannot prove authorship
+    confidence: Math.min(confidence, 90),
+    handwritten: parsed.handwritten === true,
+    matchesTask: parsed.matchesTask !== false,
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice)
+  };
+}
 async function generateTopicTest(subject, grade, title, count = 5) {
   const questionCount = Math.max(1, Math.min(10, count));
   if (!isAiConfigured()) return localTestQuestions(subject, grade, title, questionCount);
@@ -43571,7 +44026,119 @@ async function generateStudentQuestion(subject, title, studentName, options = {}
   if (!quiz) return fallback;
   return { ...quiz, focus: str(parsed.focus) || fallback.focus };
 }
-var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES;
+async function checkPhotoIsAi(photos, language) {
+  if (!isAiConfigured() || photos.length === 0) return null;
+  const lang = language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : language === "en" ? "in English" : "\u043F\u043E-\u0440\u0443\u0441\u0441\u043A\u0438";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u044D\u043A\u0441\u043F\u0435\u0440\u0442 \u043F\u043E \u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u044F\u043C. \u0423\u0447\u0438\u0442\u0435\u043B\u044C \u043F\u043E\u043B\u0443\u0447\u0438\u043B \u0444\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u0441 \u0434\u043E\u043C\u0430\u0448\u043D\u0438\u043C \u0437\u0430\u0434\u0430\u043D\u0438\u0435\u043C \u0443\u0447\u0435\u043D\u0438\u043A\u0430. \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438: \u044D\u0442\u043E \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0435\u0435 \u0444\u043E\u0442\u043E \u0431\u0443\u043C\u0430\u0436\u043D\u043E\u0439 \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \u0441 \u0440\u0443\u043A\u043E\u043F\u0438\u0441\u043D\u044B\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C (\u0441\u0434\u0435\u043B\u0430\u043D\u043D\u043E\u0435 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u043E\u043C) \u0438\u043B\u0438 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u0435, \u0441\u043E\u0437\u0434\u0430\u043D\u043D\u043E\u0435 \u0438\u043B\u0438 \u0441\u0438\u043B\u044C\u043D\u043E \u0438\u0437\u043C\u0435\u043D\u0451\u043D\u043D\u043E\u0435 \u0418\u0418, \u043B\u0438\u0431\u043E \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442/\u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442. \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0418\u0418: \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0440\u043E\u0432\u043D\u044B\u0439 \xAB\u0440\u0443\u043A\u043E\u043F\u0438\u0441\u043D\u044B\u0439\xBB \u0448\u0440\u0438\u0444\u0442, \u0431\u0443\u043A\u0432\u044B \u0431\u0435\u0437 \u043D\u0430\u0436\u0438\u043C\u0430, \u0441\u0442\u0440\u0430\u043D\u043D\u044B\u0435 \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u044B, \u0431\u0435\u0441\u0441\u043C\u044B\u0441\u043B\u0435\u043D\u043D\u044B\u0435 \u0441\u0438\u043C\u0432\u043E\u043B\u044B, \u043D\u0435\u0435\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435 \u0442\u0435\u043D\u0438, \u0438\u0434\u0435\u0430\u043B\u044C\u043D\u0430\u044F \u0431\u0443\u043C\u0430\u0433\u0430 \u0431\u0435\u0437 \u043F\u0435\u0440\u0441\u043F\u0435\u043A\u0442\u0438\u0432\u044B. \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0435\u0433\u043E \u0444\u043E\u0442\u043E: \u043F\u0435\u0440\u0441\u043F\u0435\u043A\u0442\u0438\u0432\u0430 \u0438 \u0442\u0435\u043D\u0438, \u043A\u043B\u0435\u0442\u043A\u0430/\u043B\u0438\u043D\u0435\u0439\u043A\u0430 \u0442\u0435\u0442\u0440\u0430\u0434\u0438, \u043F\u043E\u043C\u0430\u0440\u043A\u0438, \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u044F, \u0440\u0430\u0437\u043D\u044B\u0439 \u043D\u0430\u0436\u0438\u043C \u0440\u0443\u0447\u043A\u0438. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"aiMade":"yes|no|unsure","confidence":0-100,"reasons":["\u043A\u043E\u0440\u043E\u0442\u043A\u043E","\u043A\u043E\u0440\u043E\u0442\u043A\u043E"]}. \u041F\u0440\u0438\u0447\u0438\u043D\u044B \u043F\u0438\u0448\u0438 ${lang}, 2-3 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u043F\u0443\u043D\u043A\u0442\u0430.`
+    },
+    { role: "user", content: [{ type: "text", text: `\u0424\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438: ${photos.length}.` }, ...photos.slice(0, 3).map((url) => ({ type: "image_url", image_url: { url } }))] }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const aiMade = parsed.aiMade === "yes" || parsed.aiMade === "no" ? parsed.aiMade : "unsure";
+  return {
+    aiMade,
+    confidence: Math.min(90, Math.max(0, Math.round(Number(parsed.confidence) || 50))),
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 3) : []
+  };
+}
+async function explainWord(word, topic, subject, language) {
+  if (!isAiConfigured()) return null;
+  const lang = language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : language === "en" ? "in simple English" : "\u043D\u0430 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u0434\u043E\u0431\u0440\u044B\u0439 \u0443\u0447\u0438\u0442\u0435\u043B\u044C \u0434\u043B\u044F \u0443\u0447\u0435\u043D\u0438\u043A\u0430 7 \u043A\u043B\u0430\u0441\u0441\u0430. \u041E\u0431\u044A\u044F\u0441\u043D\u0438 \u043E\u0434\u043D\u043E \u0441\u043B\u043E\u0432\u043E \u0438\u043B\u0438 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u043E\u0447\u0435\u043D\u044C \u043F\u0440\u043E\u0441\u0442\u043E, \u043A\u0430\u043A \u0434\u0440\u0443\u0433\u0443, \u0431\u0435\u0437 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0442\u0435\u0440\u043C\u0438\u043D\u043E\u0432, ${lang}. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"word":"...","simple":"1-2 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F","example":"\u043E\u0434\u0438\u043D \u043F\u0440\u0438\u043C\u0435\u0440 \u0438\u0437 \u0436\u0438\u0437\u043D\u0438"}. \u0415\u0441\u043B\u0438 \u044D\u0442\u043E \u043D\u0435 \u0443\u0447\u0435\u0431\u043D\u043E\u0435 \u0441\u043B\u043E\u0432\u043E \u0438\u043B\u0438 \u0447\u0442\u043E-\u0442\u043E \u043D\u0435\u043F\u0440\u0438\u043B\u0438\u0447\u043D\u043E\u0435 \u2014 \u0432\u0435\u0440\u043D\u0438 {"word":"","simple":"","example":""}.`
+    },
+    { role: "user", content: `\u0421\u043B\u043E\u0432\u043E: \xAB${word.slice(0, 60)}\xBB. \u0422\u0435\u043C\u0430 \u0443\u0440\u043E\u043A\u0430: ${topic.slice(0, 120)}. \u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${subject.slice(0, 40)}.` }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed || !str(parsed.simple)) return null;
+  return { word: str(parsed.word) || word, simple: str(parsed.simple).slice(0, 400), example: str(parsed.example).slice(0, 300) };
+}
+async function generatePracticeTest(topics, language) {
+  if (!isAiConfigured() || topics.length === 0) return null;
+  const lang = language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : language === "en" ? "in English" : "\u043D\u0430 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u0443\u0447\u0438\u0442\u0435\u043B\u044C 7 \u043A\u043B\u0430\u0441\u0441\u0430. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043E\u0447\u043D\u044B\u0439 \u0442\u0435\u0441\u0442 \u0434\u043B\u044F \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043F\u043E \u0442\u0435\u043C\u0430\u043C, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0435\u043C\u0443 \u0442\u0440\u0443\u0434\u043D\u043E \u0434\u0430\u044E\u0442\u0441\u044F. 5 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432, \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443, ${lang}. \u0412 \u043A\u0430\u0436\u0434\u043E\u043C 4 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430, \u0440\u043E\u0432\u043D\u043E \u043E\u0434\u0438\u043D \u0432\u0435\u0440\u043D\u044B\u0439. \u041F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u2014 \u043E\u0434\u043D\u043E \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0435 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u0435, \u043A\u0430\u043A \u0440\u0435\u0448\u0430\u0442\u044C, \u0431\u0435\u0437 \u043E\u0442\u0432\u0435\u0442\u0430. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`
+    },
+    { role: "user", content: topics.slice(0, 3).map((topic, index2) => `${index2 + 1}) ${topic.subject}: ${topic.title}. \u0421\u0443\u0442\u044C: ${topic.essence.slice(0, 400)}`).join("\n") }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed || !Array.isArray(parsed.questions)) return null;
+  const out = [];
+  for (const item of parsed.questions) {
+    if (typeof item !== "object" || item === null) continue;
+    const row = item;
+    const choices = Array.isArray(row.choices) ? row.choices.map((choice) => str(choice)).filter(Boolean).slice(0, 4) : [];
+    const correct = Number(row.correct);
+    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3) continue;
+    out.push({ prompt: str(row.prompt).slice(0, 400), choices: choices.map((choice) => choice.slice(0, 200)), correct, hint: str(row.hint).slice(0, 240) });
+  }
+  return out.length ? out.slice(0, 5) : null;
+}
+async function reviewHomework(input) {
+  if (!isAiConfigured() || input.photos.length === 0) return null;
+  const lang = input.language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : input.language === "en" ? "in English" : "\u043F\u043E-\u0440\u0443\u0441\u0441\u043A\u0438";
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u043E\u043F\u044B\u0442\u043D\u044B\u0439 \u0443\u0447\u0438\u0442\u0435\u043B\u044C 7 \u043A\u043B\u0430\u0441\u0441\u0430 \u0432 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0435 \u0438 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0448\u044C \u043A\u043E\u043B\u043B\u0435\u0433\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0434\u043E\u043C\u0430\u0448\u043D\u044E\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u043F\u043E \u0444\u043E\u0442\u043E \u0442\u0435\u0442\u0440\u0430\u0434\u0438. \u041F\u0440\u043E\u0447\u0438\u0442\u0430\u0439 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043D\u0430 \u0444\u043E\u0442\u043E, \u0441\u0440\u0430\u0432\u043D\u0438 \u0441 \u0437\u0430\u0434\u0430\u043D\u0438\u0435\u043C. \u041D\u0430\u0439\u0434\u0438 \u043E\u0448\u0438\u0431\u043A\u0438: \u0433\u0434\u0435, \u043F\u043E\u0447\u0435\u043C\u0443 \u044D\u0442\u043E \u043E\u0448\u0438\u0431\u043A\u0430 \u0438 \u043A\u0430\u043A \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C (\u043E\u0431\u044A\u044F\u0441\u043D\u044F\u0439 \u043A\u0430\u043A \u0443\u0447\u0438\u0442\u0435\u043B\u044C, \u0447\u0442\u043E\u0431\u044B \u0443\u0447\u0435\u043D\u0438\u043A \u043F\u043E\u043D\u044F\u043B, \u0430 \u043D\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \u0434\u0430\u0439 \u043E\u0442\u0432\u0435\u0442). \u041E\u0442\u043C\u0435\u0442\u044C, \u0447\u0442\u043E \u0441\u0434\u0435\u043B\u0430\u043D\u043E \u0445\u043E\u0440\u043E\u0448\u043E. \u041F\u0440\u0435\u0434\u043B\u043E\u0436\u0438 \u043E\u0446\u0435\u043D\u043A\u0443 \u043F\u043E 10-\u0431\u0430\u043B\u043B\u044C\u043D\u043E\u0439 \u0448\u043A\u0430\u043B\u0435 (10 \u2014 \u0431\u0435\u0437 \u043E\u0448\u0438\u0431\u043E\u043A). \u0422\u0430\u043A\u0436\u0435 \u043E\u0446\u0435\u043D\u0438, \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0435\u0435 \u043B\u0438 \u044D\u0442\u043E \u0444\u043E\u0442\u043E \u0431\u0443\u043C\u0430\u0436\u043D\u043E\u0439 \u0442\u0435\u0442\u0440\u0430\u0434\u0438 (\u043D\u0435 \u0441\u043A\u0440\u0438\u043D\u0448\u043E\u0442 \u0438 \u043D\u0435 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0418\u0418). \u0415\u0441\u043B\u0438 \u043D\u0430 \u0444\u043E\u0442\u043E \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u2014 \u0442\u0430\u043A \u0438 \u043D\u0430\u043F\u0438\u0448\u0438 \u0432 summary \u0438 \u043F\u043E\u0441\u0442\u0430\u0432\u044C suggestedMark null. \u041F\u0438\u0448\u0438 ${lang}, \u043A\u043E\u0440\u043E\u0442\u043A\u043E. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"summary":"1-2 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F","mistakes":[{"where":"\u043D\u043E\u043C\u0435\u0440 \u0437\u0430\u0434\u0430\u0447\u0438 \u0438\u043B\u0438 \u0441\u0442\u0440\u043E\u043A\u0430","why":"\u043F\u043E\u0447\u0435\u043C\u0443 \u043E\u0448\u0438\u0431\u043A\u0430","fix":"\u043A\u0430\u043A \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C"}],"good":["..."],"advice":"\u0447\u0442\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u0443\u0447\u0435\u043D\u0438\u043A\u0443","suggestedMark":0-10|null,"realPhoto":"yes|no|unsure"}`
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject.slice(0, 60)}. \u0417\u0430\u0434\u0430\u043D\u0438\u0435: ${input.task.slice(0, 1200)}.${input.explanation ? ` \u0423\u0447\u0435\u043D\u0438\u043A \u043D\u0430\u043F\u0438\u0441\u0430\u043B \u0441\u0432\u043E\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438: \xAB${input.explanation.slice(0, 800)}\xBB.` : ""}` },
+        ...input.photos.slice(0, 3).map((url) => ({ type: "image_url", image_url: { url } }))
+      ]
+    }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const mistakes = Array.isArray(parsed.mistakes) ? parsed.mistakes.filter((item) => typeof item === "object" && item !== null).map((item) => ({ where: str(item.where).slice(0, 120), why: str(item.why).slice(0, 400), fix: str(item.fix).slice(0, 400) })).filter((item) => item.why).slice(0, 6) : [];
+  const markRaw = Number(parsed.suggestedMark);
+  return {
+    summary: str(parsed.summary).slice(0, 500),
+    mistakes,
+    good: Array.isArray(parsed.good) ? parsed.good.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice).slice(0, 400),
+    suggestedMark: parsed.suggestedMark === null || !Number.isFinite(markRaw) ? null : Math.max(1, Math.min(10, Math.round(markRaw))),
+    realPhoto: parsed.realPhoto === "yes" || parsed.realPhoto === "no" ? parsed.realPhoto : "unsure"
+  };
+}
+async function lessonHelp(input) {
+  const lang = input.language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : input.language === "en" ? "in simple English" : "\u043D\u0430 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435";
+  const task = {
+    simple: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438 \u0442\u0435\u043C\u0443 \u0441\u043E\u0432\u0441\u0435\u043C \u043F\u0440\u043E\u0441\u0442\u043E, \u043A\u0430\u043A \u0434\u0440\u0443\u0433\u0443, 3-4 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F.",
+    detail: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438 \u0442\u0435\u043C\u0443 \u043F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435: 2-3 \u0430\u0431\u0437\u0430\u0446\u0430, \u043F\u043E \u0448\u0430\u0433\u0430\u043C, \u0441 \u043E\u0434\u043D\u043E\u0439 \u0444\u043E\u0440\u043C\u0443\u043B\u043E\u0439 \u0438\u043B\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u043E\u043C, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C.",
+    example: "\u0414\u0430\u0439 \u043E\u0434\u0438\u043D \u043D\u043E\u0432\u044B\u0439 \u043F\u0440\u0438\u043C\u0435\u0440 \u0438\u0437 \u0436\u0438\u0437\u043D\u0438 \u0432 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0435 (\u043D\u0435 \u0438\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430), \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u0442\u0435\u043C\u0443.",
+    word: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438 \u044D\u0442\u043E \u0441\u043B\u043E\u0432\u043E \u0438\u043B\u0438 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u043E\u0447\u0435\u043D\u044C \u043F\u0440\u043E\u0441\u0442\u043E \u0438 \u0434\u0430\u0439 \u043F\u0440\u0438\u043C\u0435\u0440.",
+    practice: "\u041F\u0440\u0438\u0434\u0443\u043C\u0430\u0439 3 \u043D\u043E\u0432\u044B\u0445 \u0443\u043F\u0440\u0430\u0436\u043D\u0435\u043D\u0438\u044F \u043F\u043E \u0442\u0435\u043C\u0435 \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443. \u041E\u0442\u0432\u0435\u0442\u044B \u041D\u0415 \u043F\u0438\u0448\u0438, \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0443 \u043A \u043A\u0430\u0436\u0434\u043E\u043C\u0443.",
+    mistake: "\u0423\u0447\u0435\u043D\u0438\u043A \u043E\u0448\u0438\u0431\u0441\u044F \u0432 \u044D\u0442\u0438\u0445 \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u0445. \u041F\u043E\u043C\u043E\u0433\u0438 \u043F\u043E\u043D\u044F\u0442\u044C, \u0433\u0434\u0435 \u043E\u0431\u044B\u0447\u043D\u043E \u043E\u0448\u0438\u0431\u0430\u044E\u0442\u0441\u044F \u0438 \u043A\u0430\u043A \u0440\u0430\u0441\u0441\u0443\u0436\u0434\u0430\u0442\u044C, \u043D\u043E \u043D\u0435 \u043D\u0430\u0437\u044B\u0432\u0430\u0439 \u0433\u043E\u0442\u043E\u0432\u044B\u0439 \u043E\u0442\u0432\u0435\u0442 \u2014 \u0437\u0430\u0434\u0430\u0439 \u043D\u0430\u0432\u043E\u0434\u044F\u0449\u0438\u0439 \u0432\u043E\u043F\u0440\u043E\u0441.",
+    review: "\u041F\u043E \u043E\u0448\u0438\u0431\u043A\u0430\u043C \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u0441\u043A\u0430\u0436\u0438, \u0447\u0442\u043E \u0438\u043C\u0435\u043D\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C (2-3 \u043F\u0443\u043D\u043A\u0442\u0430) \u0438 \u0432 \u043A\u0430\u043A\u043E\u043C \u043F\u043E\u0440\u044F\u0434\u043A\u0435.",
+    ask: "\u041E\u0442\u0432\u0435\u0442\u044C \u043D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043F\u043E \u0442\u0435\u043C\u0435. \u0415\u0441\u043B\u0438 \u043E\u043D \u043F\u0440\u043E\u0441\u0438\u0442 \u0433\u043E\u0442\u043E\u0432\u044B\u0439 \u043E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 \u043D\u0435 \u0434\u0430\u0432\u0430\u0439 \u0435\u0433\u043E, \u0430 \u043E\u0431\u044A\u044F\u0441\u043D\u0438 \u043F\u0443\u0442\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0438 \u0437\u0430\u0434\u0430\u0439 \u043D\u0430\u0432\u043E\u0434\u044F\u0449\u0438\u0439 \u0432\u043E\u043F\u0440\u043E\u0441."
+  };
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u2014 \u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A \u043D\u0430 \u0443\u0440\u043E\u043A\u0435 EDUVERSE \u0434\u043B\u044F \u0443\u0447\u0435\u043D\u0438\u043A\u0430 ${input.grade} \u043A\u043B\u0430\u0441\u0441\u0430 \u0432 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0435. \u0422\u044B \u0443\u0447\u0438\u0448\u044C, \u0430 \u043D\u0435 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0448\u044C \u043E\u0442\u0432\u0435\u0442\u044B. \u041F\u0438\u0448\u0438 ${lang}, \u043A\u043E\u0440\u043E\u0442\u043A\u043E \u0438 \u043F\u043E\u043D\u044F\u0442\u043D\u043E, \u0431\u0435\u0437 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0442\u0435\u0440\u043C\u0438\u043D\u043E\u0432, \u0431\u0435\u0437 \u0432\u044B\u0434\u0443\u043C\u0430\u043D\u043D\u044B\u0445 \u0444\u0430\u043A\u0442\u043E\u0432. \u0422\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u0442\u0435\u043C\u0435 \u0443\u0440\u043E\u043A\u0430; \u043D\u0430 \u043F\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0435 \u0442\u0435\u043C\u044B \u0432\u0435\u0436\u043B\u0438\u0432\u043E \u0432\u0435\u0440\u043D\u0438 \u043A \u0443\u0440\u043E\u043A\u0443. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"answer":"\u0442\u0435\u043A\u0441\u0442"}`
+    },
+    {
+      role: "user",
+      content: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject}. \u0422\u0435\u043C\u0430: ${input.topic.slice(0, 160)}. \u0421\u0443\u0442\u044C \u0442\u0435\u043C\u044B: ${input.essence.slice(0, 900)}. \u0421\u0435\u0439\u0447\u0430\u0441 \u0443\u0447\u0435\u043D\u0438\u043A \u043D\u0430 \u044D\u0442\u0430\u043F\u0435: ${input.stage.slice(0, 60)}.${input.mistakes.length ? ` \u041E\u0448\u0438\u0431\u043A\u0438 \u0443\u0447\u0435\u043D\u0438\u043A\u0430: ${input.mistakes.slice(0, 6).map((item) => item.slice(0, 160)).join(" | ")}.` : ""}${input.question ? ` \u0412\u043E\u043F\u0440\u043E\u0441/\u0441\u043B\u043E\u0432\u043E \u0443\u0447\u0435\u043D\u0438\u043A\u0430: \xAB${input.question.slice(0, 400)}\xBB.` : ""}
+\u0417\u0430\u0434\u0430\u0447\u0430: ${task[input.action]}`
+    }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  const answer = parsed ? str(parsed.answer) : "";
+  return answer ? answer.slice(0, 2500) : null;
+}
+var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, GEMINI_FALLBACKS, MODEL_CHAIN, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES;
 var init_ai_content = __esm({
   "src/lib/ai-content.ts"() {
     "use strict";
@@ -43582,7 +44149,7 @@ var init_ai_content = __esm({
     AI_API_KEY = process.env.AI_API_KEY ?? "";
     AI_MODEL = process.env.AI_MODEL ?? "";
     AI_ENABLED = process.env.AI_ENABLED !== "0";
-    AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? "45000");
+    AI_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS ?? "25000");
     GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? "";
     GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
     GEMINI_BASE_URL = process.env.GEMINI_BASE_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai";
@@ -43661,6 +44228,8 @@ var init_ai_content = __esm({
       }
     };
     SUPPORTED_SUBJECTS = Object.keys(SUBJECT_BLUEPRINTS);
+    GEMINI_FALLBACKS = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.5-flash-lite"];
+    MODEL_CHAIN = USE_GEMINI ? [.../* @__PURE__ */ new Set([EFFECTIVE_MODEL, ...GEMINI_FALLBACKS])] : [EFFECTIVE_MODEL];
     SYSTEM_PROMPT = `\u0422\u044B \u2014 \u043C\u0435\u0442\u043E\u0434\u0438\u0441\u0442 \u0448\u043A\u043E\u043B\u044B \u0438 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440 \u0443\u0447\u0435\u0431\u043D\u043E\u0433\u043E \u043A\u043E\u043D\u0442\u0435\u043D\u0442\u0430 EDUVERSE-UZ.
 \u0422\u044B \u0441\u043E\u0437\u0434\u0430\u0451\u0448\u044C \u043E\u0434\u0438\u043D \u0443\u0447\u0435\u0431\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442 \u043F\u043E \u0442\u0435\u043C\u0435 \u0434\u043B\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u043A\u043B\u0430\u0441\u0441\u0430.
 \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0422\u041E\u041B\u042C\u041A\u041E \u0432\u0430\u043B\u0438\u0434\u043D\u044B\u043C JSON \u0431\u0435\u0437 markdown \u0438 \u0431\u0435\u0437 \u043A\u043E\u043C\u043C\u0435\u043D\u0442\u0430\u0440\u0438\u0435\u0432, \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u044B:
@@ -43702,18 +44271,110 @@ var init_ai_content = __esm({
 
 // src/app.ts
 var import_cookie_parser = __toESM(require_cookie_parser(), 1);
-var import_express7 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
 
 // src/routes/index.ts
-var import_express6 = __toESM(require_express2(), 1);
+var import_express15 = __toESM(require_express2(), 1);
 
 // src/routes/auth.ts
 init_drizzle_orm();
 var import_express = __toESM(require_express2(), 1);
 init_src();
 import { createHash as createHash3, randomBytes as randomBytes3 } from "node:crypto";
+
+// src/lib/inbox.ts
+init_drizzle_orm();
+init_src();
+
+// src/lib/logger.ts
+var import_pino = __toESM(require_pino(), 1);
+var isProduction = process.env.NODE_ENV === "production";
+var logger = (0, import_pino.default)({
+  level: process.env.LOG_LEVEL ?? "info",
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "res.headers['set-cookie']"
+  ],
+  ...isProduction ? {} : {
+    transport: {
+      target: "pino-pretty",
+      options: { colorize: true }
+    }
+  }
+});
+
+// src/lib/inbox.ts
+function deviceLabel(userAgent) {
+  const ua = userAgent ?? "";
+  const browser = /Edg\//.test(ua) ? "Edge" : /YaBrowser/.test(ua) ? "Yandex" : /OPR\/|Opera/.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : ua ? "\u0411\u0440\u0430\u0443\u0437\u0435\u0440" : "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E";
+  const os = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Linux/.test(ua) ? "Linux" : "";
+  return os ? `${browser} \xB7 ${os}` : browser;
+}
+function maskIp(ip) {
+  if (!ip) return null;
+  const clean = ip.replace(/^::ffff:/, "");
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(clean)) return clean.split(".").slice(0, 2).join(".") + ".*.*";
+  if (clean.includes(":")) return clean.split(":").slice(0, 2).join(":") + ":\u2026";
+  return null;
+}
+function sessionMeta(req) {
+  const ua = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"].slice(0, 300) : void 0;
+  return { device: deviceLabel(ua), ipMasked: maskIp(req.ip) };
+}
+var NOTIFY_KINDS = ["grades", "homework", "messages", "announcements", "lessons", "telegram", "push", "newDevice"];
+var DEFAULT_PREFS = { grades: true, homework: true, messages: true, announcements: true, lessons: true, telegram: true, push: false, newDevice: true };
+function mergePrefs(value) {
+  const out = { ...DEFAULT_PREFS };
+  if (value && typeof value === "object") {
+    for (const key of NOTIFY_KINDS) {
+      const v = value[key];
+      if (typeof v === "boolean") out[key] = v;
+    }
+  }
+  return out;
+}
+async function usersWanting(userIds, kind) {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return [];
+  const rows = await db.select({ id: usersTable.id, prefs: usersTable.notifyPrefs }).from(usersTable).where(inArray(usersTable.id, ids));
+  return rows.filter((row) => mergePrefs(row.prefs)[kind]).map((row) => row.id);
+}
+async function pushNotice(userIds, kind, title, body = "", link) {
+  try {
+    const targets = await usersWanting(userIds, kind);
+    if (targets.length === 0) return;
+    await db.insert(userNotificationsTable).values(targets.map((userId) => ({ userId, kind, title: title.slice(0, 160), body: body.slice(0, 400), link: link ?? null })));
+  } catch (error) {
+    logger.error({ err: error }, "in-app notification failed");
+  }
+}
+async function checkNewDevice(userId, sessionId, device) {
+  try {
+    const [earlier] = await db.select({ total: sql`count(*)`, same: sql`count(*) filter (where ${sessionsTable.device} = ${device ?? ""})` }).from(sessionsTable).where(and(eq(sessionsTable.userId, userId), ne(sessionsTable.id, sessionId)));
+    if (Number(earlier?.total ?? 0) > 0 && Number(earlier?.same ?? 0) === 0) {
+      await pushNotice([userId], "newDevice", `\u041D\u043E\u0432\u044B\u0439 \u0432\u0445\u043E\u0434: ${device ?? "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E"}`, "\u0415\u0441\u043B\u0438 \u044D\u0442\u043E \u0431\u044B\u043B\u0438 \u043D\u0435 \u0432\u044B, \u043E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u041F\u0440\u043E\u0444\u0438\u043B\u044C \u2192 \u0411\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u044C \u0438 \u0432\u044B\u0439\u0434\u0438\u0442\u0435 \u0441\u043E \u0432\u0441\u0435\u0445 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432.", "/profile");
+    }
+  } catch (error) {
+    logger.error({ err: error }, "new device check failed");
+  }
+}
+async function studentsOfClasses(classIds) {
+  if (classIds.length === 0) return [];
+  const rows = await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student")));
+  return [...new Set(rows.map((row) => row.id))];
+}
+async function teacherClassIds(teacherId) {
+  const rows = await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, teacherId), eq(classMembersTable.role, "teacher")));
+  return rows.map((row) => row.id);
+}
+async function withParents(studentIds) {
+  if (studentIds.length === 0) return [];
+  const rows = await db.select({ id: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds));
+  return [.../* @__PURE__ */ new Set([...studentIds, ...rows.map((row) => row.id)])];
+}
 
 // src/lib/auth-crypto.ts
 import {
@@ -43788,6 +44449,7 @@ var DUMMY_PASSWORD_HASH = hashPassword(
 );
 
 // src/lib/telegram.ts
+var API_BASE = "https://api.telegram.org";
 var botToken = () => (process.env.TELEGRAM_BOT_TOKEN ?? "").trim();
 var telegramBotConfigured = () => botToken().length > 0;
 var telegramBotUsername = () => {
@@ -43799,10 +44461,71 @@ var telegramWebhookSecret = () => {
   return /^[A-Za-z0-9_-]{1,256}$/.test(secret) ? secret : "";
 };
 var devEchoCodes = () => process.env.NODE_ENV !== "production" && process.env.EDUVERSE_DEV_2FA_ECHO === "1";
+async function sendTelegramMessage(chatId, text2, options = {}) {
+  const token = options.token ?? botToken();
+  if (!token) {
+    return { ok: false, errorCode: "not_configured", retryable: false };
+  }
+  const fetcher = options.fetcher ?? fetch;
+  let response;
+  try {
+    response = await fetcher(`${API_BASE}/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text2,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        ...options.replyMarkup ? { reply_markup: options.replyMarkup } : {}
+      }),
+      signal: AbortSignal.timeout(5e3)
+    });
+  } catch {
+    return {
+      ok: false,
+      errorCode: "network_error",
+      retryable: true
+    };
+  }
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    return {
+      ok: false,
+      errorCode: "telegram_error",
+      retryable: response.status >= 500 || response.status === 408
+    };
+  }
+  if (response.ok && result.ok) return { ok: true };
+  if (response.status === 429 || result.error_code === 429) {
+    const retryAfterSeconds = result.parameters?.retry_after;
+    return {
+      ok: false,
+      errorCode: "rate_limited",
+      retryable: true,
+      ...typeof retryAfterSeconds === "number" && retryAfterSeconds > 0 ? { retryAfterSeconds } : {}
+    };
+  }
+  return {
+    ok: false,
+    errorCode: "telegram_error",
+    retryable: response.status >= 500 || response.status === 408
+  };
+}
 function buildBindLink(nonce) {
   const username = telegramBotUsername();
   if (!username) return null;
   return `https://t.me/${username}?start=bind_${nonce}`;
+}
+async function answerTelegramCallback(callbackId, text2 = "") {
+  const token = botToken();
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE}/bot${token}/answerCallbackQuery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callback_query_id: callbackId, text: text2 }), signal: AbortSignal.timeout(5e3) });
+  } catch {
+  }
 }
 
 // src/lib/telegram-outbox.ts
@@ -43977,23 +44700,15 @@ async function enqueueTelegramMessage(input) {
   });
 }
 
-// src/lib/logger.ts
-var import_pino = __toESM(require_pino(), 1);
-var isProduction = process.env.NODE_ENV === "production";
-var logger = (0, import_pino.default)({
-  level: process.env.LOG_LEVEL ?? "info",
-  redact: [
-    "req.headers.authorization",
-    "req.headers.cookie",
-    "res.headers['set-cookie']"
-  ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
-    }
+// src/lib/audit.ts
+init_src();
+async function writeAudit(schoolId, actorId, action, targetUserId, details = {}) {
+  try {
+    await db.insert(auditLogTable).values({ schoolId, actorId, action, targetUserId, details });
+  } catch (error) {
+    logger.error({ err: error, action }, "audit log write failed");
   }
-});
+}
 
 // src/lib/telegram-security.ts
 import { timingSafeEqual as timingSafeEqual3 } from "node:crypto";
@@ -44014,6 +44729,8 @@ function isActiveTelegramBindNonce(input) {
 
 // src/routes/auth.ts
 var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1e3;
+var ACCOUNT_BLOCKED = ["expelled", "transferred", "disabled"];
+var SHORT_SESSION_MS = 12 * 60 * 60 * 1e3;
 var isProduction2 = process.env.NODE_ENV === "production";
 var allowPublicRegistration = process.env.EDUVERSE_ALLOW_PUBLIC_REGISTRATION === "1";
 var sessionCookieName = "eduverse.sid";
@@ -44100,10 +44817,10 @@ var requireAllowedOrigin = (req, res, next) => {
   }
   res.status(403).json({ error: "Request origin is not allowed." });
 };
-function createRateLimiter(limit, windowMs, message, scope = message, keyOf) {
+function createRateLimiter(limit, windowMs, message, scope = message, keyOf2) {
   return (req, res, next) => {
     void (async () => {
-      const identifier = keyOf ? keyOf(req) : rateLimitIdentifier(req);
+      const identifier = keyOf2 ? keyOf2(req) : rateLimitIdentifier(req);
       const retryAfterSeconds = await consumeRateLimitBucket(scope, identifier, limit, windowMs);
       if (retryAfterSeconds === null) {
         next();
@@ -44173,8 +44890,13 @@ async function applyUserRateLimit(userId, scope, limit, windowMs, res, message) 
   sendRateLimitResponse(res, message, retryAfterSeconds);
   return false;
 }
-function setSessionCookie(res, token) {
-  res.cookie(sessionCookieName, token, cookieOptions);
+function setSessionCookie(res, token, remember = true) {
+  if (remember) {
+    res.cookie(sessionCookieName, token, cookieOptions);
+    return;
+  }
+  const { maxAge: _maxAge, ...browserSession } = cookieOptions;
+  res.cookie(sessionCookieName, token, browserSession);
 }
 function clearSessionCookie(res) {
   res.clearCookie(sessionCookieName, {
@@ -44194,6 +44916,7 @@ async function authenticatedUserForRequest(req) {
       gt(sessionsTable.expiresAt, /* @__PURE__ */ new Date())
     )
   ).limit(1);
+  if (user3 && ACCOUNT_BLOCKED.includes(user3.account.status)) return null;
   return user3?.account ?? null;
 }
 function challengeTokenFrom(value) {
@@ -44216,7 +44939,10 @@ function requireAuthenticatedRole(...allowedRoles) {
     }
     const [user3] = await db.select({
       id: usersTable.id,
-      role: usersTable.role
+      role: usersTable.role,
+      sessionId: sessionsTable.id,
+      lastSeenAt: sessionsTable.lastSeenAt,
+      device: sessionsTable.device
     }).from(sessionsTable).innerJoin(usersTable, eq(sessionsTable.userId, usersTable.id)).where(
       and(
         eq(sessionsTable.tokenHash, hashSessionToken(token)),
@@ -44233,7 +44959,14 @@ function requireAuthenticatedRole(...allowedRoles) {
       res.status(403).json({ error: "You do not have permission to access this resource." });
       return;
     }
-    res.locals.authenticatedUser = user3;
+    const now = Date.now();
+    if (!user3.lastSeenAt || now - user3.lastSeenAt.getTime() > 5 * 60 * 1e3) {
+      await db.update(sessionsTable).set({ lastSeenAt: new Date(now) }).where(eq(sessionsTable.id, user3.sessionId)).catch(() => {
+      });
+      if (!user3.lastSeenAt) await checkNewDevice(user3.id, user3.sessionId, user3.device);
+    }
+    res.locals.authenticatedUser = { id: user3.id, role: user3.role };
+    res.locals.sessionId = user3.sessionId;
     next();
   };
 }
@@ -44304,6 +45037,7 @@ router.post(
         await transaction.insert(sessionsTable).values({
           userId: createdUser.id,
           tokenHash: hashSessionToken(sessionToken),
+          ...sessionMeta(req),
           expiresAt
         });
         return createdUser;
@@ -44325,7 +45059,7 @@ router.post(
   loginRateLimiter,
   loginAddressLimiter,
   async (req, res) => {
-    if (!hasOnlyFields(req.body, ["login", "password"])) {
+    if (!hasOnlyFields(req.body, ["login", "password", "remember"])) {
       res.status(400).json({ error: "Unexpected sign-in fields." });
       return;
     }
@@ -44340,6 +45074,10 @@ router.post(
     const passwordIsValid = await verifyPassword(password, passwordHash);
     if (!user3 || !passwordIsValid) {
       res.status(401).json({ error: "Login or password is incorrect." });
+      return;
+    }
+    if (ACCOUNT_BLOCKED.includes(user3.status)) {
+      res.status(403).json({ error: "This account is closed by the school. Contact the school administration." });
       return;
     }
     if (user3.twoFactorEnabled) {
@@ -44388,13 +45126,20 @@ router.post(
       });
       return;
     }
+    const curatorLogins = (process.env.EDUVERSE_CURATOR_LOGINS ?? "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+    if (curatorLogins.includes(user3.loginNormalized) && user3.role !== "platform_superadmin") {
+      await db.update(usersTable).set({ role: "platform_superadmin", updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, user3.id));
+      user3.role = "platform_superadmin";
+    }
+    const remember = req.body.remember === true;
     const sessionToken = createSessionToken();
     await db.insert(sessionsTable).values({
       userId: user3.id,
       tokenHash: hashSessionToken(sessionToken),
-      expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
+      ...sessionMeta(req),
+      expiresAt: new Date(Date.now() + (remember ? SESSION_DURATION_MS : SHORT_SESSION_MS))
     });
-    setSessionCookie(res, sessionToken);
+    setSessionCookie(res, sessionToken, remember);
     res.json({ user: publicUser(user3) });
   }
 );
@@ -44824,6 +45569,7 @@ router.post("/auth/2fa/login/verify", requireAllowedOrigin, twoFactorCodeLimiter
       await tx.insert(sessionsTable).values({
         userId: account.id,
         tokenHash: hashSessionToken(sessionToken),
+        ...sessionMeta(req),
         expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
       });
       return account;
@@ -44953,7 +45699,7 @@ router.post("/auth/qr/start", requireAllowedOrigin, qrStartLimiter, async (req, 
     res.status(400).json({ error: "Unexpected QR request fields." });
     return;
   }
-  const deviceLabel = getString(req.body, "deviceLabel")?.trim().slice(0, 80) ?? "";
+  const deviceLabel2 = getString(req.body, "deviceLabel")?.trim().slice(0, 80) ?? "";
   const deviceToken = createSessionToken();
   const approveToken = createSessionToken();
   const code = randomCode();
@@ -44963,7 +45709,7 @@ router.post("/auth/qr/start", requireAllowedOrigin, qrStartLimiter, async (req, 
     approveTokenHash: hashSessionToken(approveToken),
     code: hashSessionToken(code).slice(0, 12),
     status: "pending",
-    deviceLabel,
+    deviceLabel: deviceLabel2,
     expiresAt
   });
   res.status(201).json({
@@ -45087,12 +45833,175 @@ router.post("/auth/qr/consume", requireAllowedOrigin, qrConsumeLimiter, async (r
     await tx.insert(sessionsTable).values({
       userId: account.id,
       tokenHash: hashSessionToken(freshToken),
+      ...sessionMeta(req),
       expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
     });
     await tx.update(qrLoginSessionsTable).set({ status: "consumed", consumedAt: /* @__PURE__ */ new Date(), issuedSessionToken: null }).where(eq(qrLoginSessionsTable.id, row.id));
   });
   setSessionCookie(res, freshToken);
   res.json({ user: publicUser(account) });
+});
+var GOOGLE_COOKIE = "eduverse.goauth";
+var googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+var base64url = (buffer) => buffer.toString("base64url");
+function googleRedirectUri(req) {
+  if (process.env.GOOGLE_REDIRECT_URI) return process.env.GOOGLE_REDIRECT_URI;
+  const host = req.get("x-forwarded-host") || req.get("host") || "";
+  const proto = req.get("x-forwarded-proto") || req.protocol;
+  return `${proto}://${host}/api/auth/google/callback`;
+}
+router.get("/auth/google/status", async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ enabled: googleConfigured(), linkedEmail: viewer?.googleEmail ?? null });
+});
+router.get("/auth/google/start", loginAddressLimiter, async (req, res) => {
+  if (!googleConfigured()) {
+    res.redirect(302, "/login?google=off");
+    return;
+  }
+  const mode = req.query.mode === "link" ? "link" : req.query.mode === "recover" ? "recover" : "login";
+  if (mode === "link" && !await authenticatedUserForRequest(req)) {
+    res.redirect(302, "/login");
+    return;
+  }
+  const state = base64url(randomBytes3(24));
+  const verifier = base64url(randomBytes3(48));
+  const challenge = base64url(createHash3("sha256").update(verifier).digest());
+  res.cookie(GOOGLE_COOKIE, JSON.stringify({ state, verifier, mode }), { httpOnly: true, secure: isProduction2, sameSite: "lax", path: "/api/auth/google", maxAge: 10 * 60 * 1e3 });
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: googleRedirectUri(req),
+    response_type: "code",
+    scope: "openid email",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    prompt: "select_account"
+  });
+  res.redirect(302, `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+router.get("/auth/google/callback", loginAddressLimiter, async (req, res) => {
+  const fail = (reason) => {
+    res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" });
+    res.redirect(302, `/login?google=${reason}`);
+  };
+  if (!googleConfigured()) {
+    fail("off");
+    return;
+  }
+  let saved = {};
+  try {
+    saved = JSON.parse(String(req.cookies?.[GOOGLE_COOKIE] ?? "{}"));
+  } catch {
+    saved = {};
+  }
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  const state = typeof req.query.state === "string" ? req.query.state : "";
+  if (!code || !state || !saved.state || !saved.verifier || state !== saved.state) {
+    fail("error");
+    return;
+  }
+  let claims = {};
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: googleRedirectUri(req),
+        grant_type: "authorization_code",
+        code_verifier: saved.verifier
+      }).toString()
+    });
+    if (!response.ok) {
+      logger.warn({ status: response.status }, "google token exchange failed");
+      fail("error");
+      return;
+    }
+    const body = await response.json();
+    const payload = body.id_token?.split(".")[1];
+    claims = payload ? JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) : {};
+  } catch (error) {
+    logger.warn({ err: error }, "google sign-in failed");
+    fail("error");
+    return;
+  }
+  const validIssuer = claims.iss === "https://accounts.google.com" || claims.iss === "accounts.google.com";
+  if (!claims.sub || claims.aud !== process.env.GOOGLE_CLIENT_ID || !validIssuer || !claims.exp || claims.exp * 1e3 < Date.now() || claims.email_verified !== true) {
+    fail("error");
+    return;
+  }
+  res.clearCookie(GOOGLE_COOKIE, { path: "/api/auth/google" });
+  if (saved.mode === "link") {
+    const viewer = await authenticatedUserForRequest(req);
+    if (!viewer) {
+      res.redirect(302, "/login");
+      return;
+    }
+    const [taken] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+    if (taken && taken.id !== viewer.id) {
+      res.redirect(302, "/profile?google=taken");
+      return;
+    }
+    await db.update(usersTable).set({ googleSub: claims.sub, googleEmail: claims.email ?? null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+    if (claims.email) await db.update(usersTable).set({ email: claims.email }).where(and(eq(usersTable.id, viewer.id), isNull(usersTable.email)));
+    res.redirect(302, "/profile?google=linked");
+    return;
+  }
+  const [user3] = await db.select().from(usersTable).where(eq(usersTable.googleSub, claims.sub)).limit(1);
+  if (!user3) {
+    res.redirect(302, "/login?google=notlinked");
+    return;
+  }
+  if (ACCOUNT_BLOCKED.includes(user3.status)) {
+    res.redirect(302, "/login?google=blocked");
+    return;
+  }
+  if (user3.twoFactorEnabled) {
+    res.redirect(302, "/login?google=twofactor");
+    return;
+  }
+  if (saved.mode === "recover") {
+    const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, user3.id)).returning({ id: sessionsTable.id });
+    await db.update(usersTable).set({ mustChangePassword: true, recoveryUntil: new Date(Date.now() + 15 * 60 * 1e3), updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, user3.id));
+    await writeAudit(null, user3.id, "recover-google", user3.id, { sessionsClosed: closed.length });
+    const recoveryToken = createSessionToken();
+    await db.insert(sessionsTable).values({
+      userId: user3.id,
+      tokenHash: hashSessionToken(recoveryToken),
+      ...sessionMeta(req),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1e3)
+    });
+    setSessionCookie(res, recoveryToken, false);
+    res.redirect(302, `/profile?google=recovered&closed=${closed.length}`);
+    return;
+  }
+  const sessionToken = createSessionToken();
+  await db.insert(sessionsTable).values({
+    userId: user3.id,
+    tokenHash: hashSessionToken(sessionToken),
+    ...sessionMeta(req),
+    expiresAt: new Date(Date.now() + SESSION_DURATION_MS)
+  });
+  setSessionCookie(res, sessionToken, true);
+  res.redirect(302, "/dashboard");
+});
+router.post("/auth/google/unlink", requireAllowedOrigin, loginAddressLimiter, async (req, res) => {
+  const viewer = await authenticatedUserForRequest(req);
+  if (!viewer) {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  const password = getString(req.body, "password") ?? "";
+  if (!await verifyPassword(password, viewer.passwordHash)) {
+    res.status(400).json({ error: "The current password is wrong." });
+    return;
+  }
+  await db.update(usersTable).set({ googleSub: null, googleEmail: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ unlinked: true });
 });
 var auth_default = router;
 
@@ -50123,6 +51032,59 @@ var import_express3 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes4, scrypt as scryptCallback2 } from "node:crypto";
 
+// src/lib/notify.ts
+init_drizzle_orm();
+init_src();
+var tl = (lang, uz, ru, en) => lang === "ru" ? ru : lang === "en" ? en : uz;
+var SUBJECTS = [
+  [["physics", "\u0444\u0438\u0437\u0438\u043A\u0430", "fizika"], ["Fizika", "\u0424\u0438\u0437\u0438\u043A\u0430", "Physics"]],
+  [["chemistry", "\u0445\u0438\u043C\u0438\u044F", "kimyo"], ["Kimyo", "\u0425\u0438\u043C\u0438\u044F", "Chemistry"]],
+  [["biology", "\u0431\u0438\u043E\u043B\u043E\u0433\u0438\u044F", "biologiya"], ["Biologiya", "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", "Biology"]],
+  [["math", "mathematics", "\u043C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", "matematika"], ["Matematika", "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", "Maths"]]
+];
+function subjectText(lang, value) {
+  const found = SUBJECTS.find(([names]) => names.includes(value.trim().toLowerCase()));
+  return found ? tl(lang, ...found[1]) : escapeHtml(value);
+}
+var dateText = (iso) => iso.slice(0, 10).split("-").reverse().join(".");
+async function notifyUsers(userIds, notice) {
+  if (!telegramBotConfigured() || userIds.length === 0) return 0;
+  try {
+    const wanted = await usersWanting(userIds, "telegram");
+    if (wanted.length === 0) return 0;
+    const rows = await db.select({ chatId: telegramNotifyTable.chatId, lang: telegramNotifyTable.lang }).from(telegramNotifyTable).where(and(inArray(telegramNotifyTable.userId, wanted), isNotNull(telegramNotifyTable.chatId)));
+    let sent = 0;
+    await Promise.all(
+      rows.map(async (row) => {
+        if (!row.chatId) return;
+        const lang = row.lang === "uz" || row.lang === "en" ? row.lang : "ru";
+        const result = await sendTelegramMessage(row.chatId, typeof notice === "function" ? notice(lang) : notice);
+        if (result.ok) sent += 1;
+        else logger.warn({ errorCode: result.errorCode }, "telegram notification not delivered");
+      })
+    );
+    return sent;
+  } catch (error) {
+    logger.error({ err: error }, "telegram notification failed");
+    return 0;
+  }
+}
+async function parentsOf(studentIds) {
+  if (studentIds.length === 0) return [];
+  return db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds));
+}
+async function notifyFamily(studentId, notice, includeStudent = false) {
+  try {
+    const parents = await parentsOf([studentId]);
+    const [pupil] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+    const name = escapeHtml(pupil?.name ?? "");
+    await notifyUsers([...parents.map((row) => row.parentId), ...includeStudent ? [studentId] : []], typeof notice === "function" ? (lang) => notice(lang, name) : notice);
+  } catch (error) {
+    logger.error({ err: error }, "family notification failed");
+  }
+}
+var escapeHtml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 // src/lib/school-access.ts
 var GLOBAL_ADMIN_ROLES = [
   "education_admin",
@@ -50230,7 +51192,22 @@ function isUniqueConstraintViolation2(error) {
 
 // src/routes/learning.ts
 init_ai_content();
+
+// src/lib/grade.ts
+var MIN_MARK = 2;
+var MAX_MARK = 10;
+var gradeOf = (score) => Math.max(MIN_MARK, Math.min(MAX_MARK, Math.round(Number(score) / 10)));
+
+// src/routes/learning.ts
 var router3 = (0, import_express3.Router)();
+var aiLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many requests. Wait a few minutes.", "ai-heavy", (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
+var perSession = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
 var ATTENDANCE_STATUSES = ["present", "absent", "late", "excused"];
 function user(res) {
   return res.locals.authenticatedUser;
@@ -50283,6 +51260,19 @@ async function canManage(userId, role, classId) {
     classRole(userId, classId)
   ]);
   return canManageClass(role, sRole, cRole);
+}
+async function canManagePeople(userId, role, classId) {
+  const ctx = await classContext(classId);
+  if (!ctx) return false;
+  void userId;
+  return isGlobalAdminRole(role);
+}
+async function isClassSchoolManager(userId, role, classId) {
+  const ctx = await classContext(classId);
+  if (!ctx) return false;
+  if (isGlobalAdminRole(role)) return true;
+  const sRole = await schoolRole(userId, ctx.schoolId);
+  return Boolean(sRole) && isSchoolManagementRole(sRole);
 }
 async function canViewClass(userId, role, classId) {
   if (await canManage(userId, role, classId)) return true;
@@ -50402,7 +51392,7 @@ router3.get(
       return;
     }
     if (topic.status !== "published" || topic.classId) {
-      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? await canManage(viewer.id, viewer.role, topic.classId) : false);
+      const allowed = topic.createdBy === viewer.id || isGlobalAdminRole(viewer.role) || (topic.classId ? topic.status === "published" ? await canViewClass(viewer.id, viewer.role, topic.classId) : await canManage(viewer.id, viewer.role, topic.classId) : false);
       if (!allowed) {
         res.status(403).json({ error: "You cannot read this topic." });
         return;
@@ -50414,6 +51404,7 @@ router3.get(
 router3.post(
   "/topics/:topicId/student-questions",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  aiLimiter,
   async (req, res) => {
     if (!isValidUuid(req.params.topicId)) {
       res.status(400).json({ error: "Invalid topic identifier." });
@@ -50449,7 +51440,7 @@ router3.post(
 );
 router3.post(
   "/classes/:classId/members/by-login",
-  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
     const classId = String(req.params.classId);
     if (!isValidUuid(classId)) {
@@ -50457,8 +51448,8 @@ router3.post(
       return;
     }
     const viewer = user(res);
-    if (!await canManage(viewer.id, viewer.role, classId)) {
-      res.status(403).json({ error: "You cannot manage this class." });
+    if (!await canManagePeople(viewer.id, viewer.role, classId)) {
+      res.status(403).json({ error: "Only the director or deputy can add people to a class." });
       return;
     }
     const login = readString(req.body, "login", 64);
@@ -50526,7 +51517,6 @@ function loginCandidate(username) {
 router3.post(
   "/classes/:classId/accounts",
   requireAuthenticatedRole(
-    "teacher",
     "school_director",
     "school_admin",
     "education_admin",
@@ -50540,8 +51530,8 @@ router3.post(
       return;
     }
     const viewer = user(res);
-    if (!await canManage(viewer.id, viewer.role, classId)) {
-      res.status(403).json({ error: "You cannot manage this class." });
+    if (!await canManagePeople(viewer.id, viewer.role, classId)) {
+      res.status(403).json({ error: "Only the director or deputy can create accounts." });
       return;
     }
     const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
@@ -50609,6 +51599,7 @@ router3.get(
     "ministry_admin",
     "platform_superadmin"
   ),
+  aiLimiter,
   async (req, res) => {
     const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
     if (!query || query.length > 140) {
@@ -50671,6 +51662,7 @@ router3.get(
     "ministry_admin",
     "platform_superadmin"
   ),
+  aiLimiter,
   async (req, res) => {
     const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
     if (!query || query.length > 140) {
@@ -50716,6 +51708,7 @@ router3.post(
     "ministry_admin",
     "platform_superadmin"
   ),
+  aiLimiter,
   async (req, res) => {
     const topicId = String(req.params.topicId);
     if (!isValidUuid(topicId)) {
@@ -50815,12 +51808,14 @@ router3.get(
       userId: usersTable.id,
       username: usersTable.username,
       login: usersTable.login
-    }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
-    const marks = await db.select().from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2)));
+    }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active"))).orderBy(asc(usersTable.username));
+    const subject = typeof req.query.subject === "string" ? req.query.subject.trim().slice(0, 40) : "";
+    const marks = await db.select().from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2), eq(attendanceTable.subject, subject)));
     const byStudent = new Map(marks.map((m) => [m.studentId, m]));
     const mayManage = await canManage(viewer.id, viewer.role, classId);
     res.json({
       date: date2,
+      subject,
       canManage: mayManage,
       records: members.map((member) => {
         const mark = byStudent.get(member.userId);
@@ -50860,6 +51855,7 @@ router3.put(
       return;
     }
     const date2 = readString(req.body, "date", 20) ?? todayIso();
+    const subject = (cleanText(isRecord2(req.body) ? req.body.subject : "", 40) ?? "").trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date2)) {
       res.status(400).json({ error: "Date must be YYYY-MM-DD." });
       return;
@@ -50898,6 +51894,7 @@ router3.put(
       res.status(400).json({ error: "No students in this class matched the records." });
       return;
     }
+    const before = new Map((await db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.attendanceDate, date2), eq(attendanceTable.subject, subject), inArray(attendanceTable.studentId, finalEntries.map((entry) => entry.studentId))))).map((row) => [row.studentId, row.status]));
     await db.transaction(async (tx) => {
       for (const entry of finalEntries) {
         await tx.insert(attendanceTable).values({
@@ -50905,14 +51902,29 @@ router3.put(
           studentId: entry.studentId,
           markedBy: viewer.id,
           attendanceDate: date2,
+          subject,
           status: entry.status,
           note: entry.note
         }).onConflictDoUpdate({
-          target: [attendanceTable.classId, attendanceTable.studentId, attendanceTable.attendanceDate],
+          target: [attendanceTable.classId, attendanceTable.studentId, attendanceTable.attendanceDate, attendanceTable.subject],
           set: { status: entry.status, note: entry.note, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }
         });
       }
     });
+    const flagged = finalEntries.filter((entry) => (entry.status === "absent" || entry.status === "late") && before.get(entry.studentId) !== entry.status);
+    if (flagged.length) {
+      const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+      const names = await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, flagged.map((entry) => entry.studentId)));
+      await Promise.all(flagged.map((entry) => {
+        const klass = escapeHtml(ctx?.name ?? "");
+        const lesson = escapeHtml(subject);
+        return notifyFamily(entry.studentId, (lang, name) => entry.status === "absent" ? `\u26A0\uFE0F <b>${tl(lang, "Darsga kelmadi", "\u041D\u0435\u0442 \u043D\u0430 \u0443\u0440\u043E\u043A\u0435", "Absent from the lesson")}</b>
+\u{1F464} ${name} \xB7 ${klass}
+\u{1F4D6} ${subjectText(lang, lesson)} \xB7 ${dateText(date2)}` : `\u23F0 <b>${tl(lang, "Darsga kechikdi", "\u041E\u043F\u043E\u0437\u0434\u0430\u043B \u043D\u0430 \u0443\u0440\u043E\u043A", "Late for the lesson")}</b>
+\u{1F464} ${name} \xB7 ${klass}
+\u{1F4D6} ${subjectText(lang, lesson)} \xB7 ${dateText(date2)}`);
+      }));
+    }
     res.json({ saved: finalEntries.length, date: date2 });
   }
 );
@@ -50954,6 +51966,7 @@ router3.get(
       status: attendanceTable.status,
       note: attendanceTable.note,
       attendanceDate: attendanceTable.attendanceDate,
+      subject: attendanceTable.subject,
       updatedAt: attendanceTable.updatedAt
     }).from(attendanceTable).innerJoin(classesTable, eq(attendanceTable.classId, classesTable.id)).where(eq(attendanceTable.studentId, studentId)).orderBy(desc(attendanceTable.attendanceDate)).limit(60);
     const total = rows.length;
@@ -50968,6 +51981,301 @@ router3.get(
     });
   }
 );
+var everyRole = [
+  "student",
+  "teacher",
+  "parent",
+  "school_director",
+  "school_admin",
+  "education_admin",
+  "ministry_admin",
+  "platform_superadmin"
+];
+var staffRoles = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router3.get("/me/announcements", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const memberClasses = (await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))).map((row) => row.classId);
+  if (!memberClasses.length) {
+    res.json({ announcements: [] });
+    return;
+  }
+  const rows = await db.select({
+    id: classAnnouncementsTable.id,
+    classId: classAnnouncementsTable.classId,
+    className: classesTable.name,
+    authorId: classAnnouncementsTable.authorId,
+    authorName: usersTable.username,
+    body: classAnnouncementsTable.body,
+    createdAt: classAnnouncementsTable.createdAt
+  }).from(classAnnouncementsTable).innerJoin(classesTable, eq(classAnnouncementsTable.classId, classesTable.id)).innerJoin(usersTable, eq(classAnnouncementsTable.authorId, usersTable.id)).where(inArray(classAnnouncementsTable.classId, memberClasses)).orderBy(desc(classAnnouncementsTable.createdAt)).limit(20);
+  res.json({ announcements: rows });
+});
+router3.post("/classes/:classId/announcements", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!await canManage(viewer.id, viewer.role, classId)) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const body = readString(req.body, "body", 600);
+  if (!body) {
+    res.status(400).json({ error: "The announcement text is required." });
+    return;
+  }
+  const [created] = await db.insert(classAnnouncementsTable).values({ classId, authorId: viewer.id, body }).returning();
+  const members = await db.select({ userId: classMembersTable.userId, role: classMembersTable.role }).from(classMembersTable).where(eq(classMembersTable.classId, classId));
+  const studentIds = members.filter((row) => row.role === "student").map((row) => row.userId);
+  const parentRows = studentIds.length ? await db.select({ parentId: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, studentIds)) : [];
+  const [ctx] = await db.select({ name: classesTable.name }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  await notifyUsers([...studentIds, ...parentRows.map((row) => row.parentId)], (lang) => `\u{1F4E2} <b>${tl(lang, "E\u2019lon", "\u041E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435", "Announcement")} \xB7 ${escapeHtml(ctx?.name ?? "")}</b>
+
+${escapeHtml(body)}`);
+  await pushNotice([...studentIds, ...parentRows.map((row) => row.parentId)], "announcements", `\u041E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u0435 \xB7 ${ctx?.name ?? ""}`, body, "/dashboard");
+  res.status(201).json({ announcement: created });
+});
+router3.delete("/announcements/:announcementId", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const id = String(req.params.announcementId);
+  if (!isValidUuid(id)) {
+    res.status(400).json({ error: "Invalid announcement identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [row] = await db.select().from(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id)).limit(1);
+  if (!row) {
+    res.status(404).json({ error: "Announcement not found." });
+    return;
+  }
+  if (row.authorId !== viewer.id && !await isClassSchoolManager(viewer.id, viewer.role, row.classId)) {
+    res.status(403).json({ error: "You cannot delete this announcement." });
+    return;
+  }
+  await db.delete(classAnnouncementsTable).where(eq(classAnnouncementsTable.id, id));
+  res.status(204).end();
+});
+router3.get("/classes/:classId/journal", requireAuthenticatedRole(...staffRoles), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class identifier." });
+    return;
+  }
+  const viewer = user(res);
+  if (!await canManage(viewer.id, viewer.role, classId)) {
+    res.status(403).json({ error: "You cannot manage this class." });
+    return;
+  }
+  const [students, assignments, attendance] = await Promise.all([
+    db.select({ id: usersTable.id, name: usersTable.username }).from(classMembersTable).innerJoin(usersTable, eq(classMembersTable.userId, usersTable.id)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username)),
+    db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, topicId: assignmentsTable.topicId, createdAt: assignmentsTable.createdAt, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(eq(assignmentsTable.classId, classId)).orderBy(desc(assignmentsTable.createdAt)).limit(60).then((rows2) => rows2.reverse()),
+    db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(eq(attendanceTable.classId, classId))
+  ]);
+  const submissions = assignments.length ? await db.select({
+    assignmentId: assignmentSubmissionsTable.assignmentId,
+    studentId: assignmentSubmissionsTable.studentId,
+    score: assignmentSubmissionsTable.score
+  }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const rows = students.map((student) => {
+    const cells = assignments.map((assignment) => {
+      const submission = submissions.find((item) => item.assignmentId === assignment.id && item.studentId === student.id);
+      if (!submission) return { state: "missing", grade: null };
+      if (submission.score === null) return { state: "review", grade: null };
+      return { state: "graded", grade: gradeOf(submission.score) };
+    });
+    const grades2 = cells.map((cell) => cell.grade).filter((grade) => grade !== null);
+    const marks = attendance.filter((item) => item.studentId === student.id);
+    const attended = marks.filter((item) => item.status === "present" || item.status === "late").length;
+    return {
+      studentId: student.id,
+      studentName: student.name,
+      cells,
+      average: grades2.length ? Math.round(grades2.reduce((sum, grade) => sum + grade, 0) / grades2.length * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null
+    };
+  });
+  res.json({ assignments, rows });
+});
+var tutorLimiter = createRateLimiter(30, 10 * 60 * 1e3, "Too many AI questions. Wait a few minutes.", "ai-tutor", perSession);
+router3.post("/ai/tutor", requireAuthenticatedRole(...everyRole), tutorLimiter, async (req, res) => {
+  const question = readString(req.body, "question", 500);
+  if (!question) {
+    res.status(400).json({ error: "A question is required." });
+    return;
+  }
+  const topicId = readString(req.body, "topicId", 64);
+  let context = {};
+  if (topicId && isValidUuid(topicId)) {
+    const [topic] = await db.select({ subject: lessonTopicsTable.subject, title: lessonTopicsTable.title, facts: lessonTopicsTable.facts }).from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+    if (topic) {
+      context = {
+        subject: topic.subject,
+        title: topic.title,
+        facts: Array.isArray(topic.facts) ? topic.facts.map((fact) => fact?.text ?? "").filter(Boolean) : []
+      };
+    }
+  }
+  const answer = await answerTutorQuestion(question, context);
+  if (!answer) {
+    res.status(503).json({ error: "The AI assistant is not available right now." });
+    return;
+  }
+  res.json({ answer });
+});
+router3.get("/me/attendance-summary", requireAuthenticatedRole(...everyRole), async (_req, res) => {
+  const viewer = user(res);
+  const rows = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, viewer.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(200);
+  const count = (status) => rows.filter((row) => row.status === status).length;
+  res.json({
+    total: rows.length,
+    present: count("present"),
+    late: count("late"),
+    absent: count("absent"),
+    excused: count("excused"),
+    recent: rows.slice(0, 10)
+  });
+});
+router3.post("/parents/links", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const viewer = user(res);
+  const parentLogin = readString(req.body, "parentLogin", 64)?.toLowerCase();
+  const studentLogin = readString(req.body, "studentLogin", 64)?.toLowerCase();
+  if (!parentLogin || !studentLogin) {
+    res.status(400).json({ error: "Parent and student logins are required." });
+    return;
+  }
+  const [parent] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, parentLogin)).limit(1);
+  const [student] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.loginNormalized, studentLogin)).limit(1);
+  if (!parent || parent.role !== "parent" || !student || student.role !== "student") {
+    res.status(404).json({ error: "No matching parent and student accounts were found." });
+    return;
+  }
+  const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, student.id));
+  const allowed = isGlobalAdminRole(viewer.role) || (await Promise.all(classes.map((row) => canManagePeople(viewer.id, viewer.role, row.classId)))).some(Boolean);
+  if (!allowed) {
+    res.status(403).json({ error: "Only the director or deputy of the student's school can link a parent." });
+    return;
+  }
+  await db.insert(parentLinksTable).values({ parentId: parent.id, studentId: student.id, createdBy: viewer.id }).onConflictDoNothing();
+  for (const row of classes) {
+    const [ctx] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, row.classId)).limit(1);
+    if (ctx) await db.insert(schoolMembersTable).values({ schoolId: ctx.schoolId, userId: parent.id, role: "parent" }).onConflictDoNothing();
+  }
+  res.status(201).json({ linked: true, parent: parent.name, student: student.name });
+});
+router3.get("/me/children", requireAuthenticatedRole("parent"), async (_req, res) => {
+  const viewer = user(res);
+  const links = await db.select({ id: usersTable.id, name: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(parentLinksTable.studentId, usersTable.id)).where(eq(parentLinksTable.parentId, viewer.id));
+  const children = [];
+  for (const child of links) {
+    const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(eq(classMembersTable.userId, child.id), eq(classMembersTable.role, "student")));
+    const classIds = classes.map((item) => item.id);
+    const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)).orderBy(desc(assignmentsTable.createdAt)).limit(20) : [];
+    const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, feedback: assignmentSubmissionsTable.feedback }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, child.id), inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))) : [];
+    const homework2 = assignments.map((item) => {
+      const sub = submissions.find((row) => row.assignmentId === item.id);
+      return {
+        ...item,
+        state: !sub ? "missing" : sub.score === null ? "review" : "graded",
+        grade: sub && sub.score !== null ? gradeOf(sub.score) : null,
+        feedback: sub?.feedback ?? ""
+      };
+    });
+    const marks = await db.select({ status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(eq(attendanceTable.studentId, child.id)).orderBy(desc(attendanceTable.attendanceDate)).limit(60);
+    const attended = marks.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades2 = homework2.map((item) => item.grade).filter((grade) => grade !== null);
+    children.push({
+      id: child.id,
+      name: child.name,
+      classes: classes.map((item) => item.name),
+      average: grades2.length ? Math.round(grades2.reduce((a, b) => a + b, 0) / grades2.length * 10) / 10 : null,
+      attendancePercent: marks.length ? Math.round(attended / marks.length * 100) : null,
+      absences: marks.filter((row) => row.status === "absent").slice(0, 5).map((row) => row.date),
+      homework: homework2
+    });
+  }
+  res.json({ children });
+});
+router3.get("/schools/:schoolId/export.csv", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot export this school." });
+    return;
+  }
+  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role }).from(schoolMembersTable).innerJoin(usersTable, eq(schoolMembersTable.userId, usersTable.id)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(asc(schoolMembersTable.role), asc(usersTable.username));
+  const ids = people.map((row) => row.id);
+  const memberships = ids.length ? await db.select({ userId: classMembersTable.userId, name: classesTable.name }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(and(inArray(classMembersTable.userId, ids), eq(classesTable.schoolId, schoolId))) : [];
+  const marks = ids.length ? await db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(inArray(attendanceTable.studentId, ids)) : [];
+  const scores = ids.length ? await db.select({ studentId: assignmentSubmissionsTable.studentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.studentId, ids)) : [];
+  const cell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+  const lines = ["role;name;login;classes;average_grade;attendance_percent"];
+  for (const person of people) {
+    const classes = memberships.filter((row) => row.userId === person.id).map((row) => row.name).join(", ");
+    const own = marks.filter((row) => row.studentId === person.id);
+    const attended = own.filter((row) => row.status === "present" || row.status === "late").length;
+    const grades2 = scores.filter((row) => row.studentId === person.id && row.score !== null).map((row) => gradeOf(row.score));
+    const average = grades2.length ? (grades2.reduce((a, b) => a + b, 0) / grades2.length).toFixed(1) : "";
+    lines.push([person.role, person.name, person.login, classes, average, own.length ? Math.round(attended / own.length * 100) : ""].map(cell).join(";"));
+  }
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="eduverse-school.csv"');
+  res.send("\uFEFF" + lines.join("\n"));
+});
+router3.get("/schools/:schoolId/dashboard", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school identifier." });
+    return;
+  }
+  const viewer = user(res);
+  const [membership] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!isGlobalAdminRole(viewer.role) && membership?.role !== "school_director" && membership?.role !== "school_admin") {
+    res.status(403).json({ error: "You cannot view this school." });
+    return;
+  }
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  const classIds = classes.map((item) => item.id);
+  const members = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(eq(schoolMembersTable.schoolId, schoolId));
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3).toISOString().slice(0, 10);
+  const marks = classIds.length ? await db.select({ classId: attendanceTable.classId, status: attendanceTable.status, date: attendanceTable.attendanceDate }).from(attendanceTable).where(inArray(attendanceTable.classId, classIds)) : [];
+  const recent = marks.filter((row) => row.date >= since);
+  const assignments = classIds.length ? await db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId }).from(assignmentsTable).where(inArray(assignmentsTable.classId, classIds)) : [];
+  const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
+  const lessons = await db.select({ id: lessonRoomsTable.id, classId: lessonRoomsTable.classId, createdAt: lessonRoomsTable.createdAt }).from(lessonRoomsTable).where(eq(lessonRoomsTable.schoolId, schoolId));
+  const percent = (rows) => rows.length ? Math.round(rows.filter((row) => row.status === "present" || row.status === "late").length / rows.length * 100) : null;
+  const graded = submissions.filter((row) => row.score !== null).map((row) => gradeOf(row.score));
+  const perClass = classes.map((item) => {
+    const classAssignments = assignments.filter((row) => row.classId === item.id).map((row) => row.id);
+    const classGrades = submissions.filter((row) => row.score !== null && classAssignments.includes(row.assignmentId)).map((row) => gradeOf(row.score));
+    return {
+      id: item.id,
+      name: item.name,
+      attendancePercent: percent(recent.filter((row) => row.classId === item.id)),
+      assignments: classAssignments.length,
+      average: classGrades.length ? Math.round(classGrades.reduce((a, b) => a + b, 0) / classGrades.length * 10) / 10 : null,
+      lessons: lessons.filter((row) => row.classId === item.id).length
+    };
+  });
+  res.json({
+    students: members.filter((row) => row.role === "student").length,
+    teachers: members.filter((row) => row.role === "teacher").length,
+    parents: members.filter((row) => row.role === "parent").length,
+    classes: classes.length,
+    attendancePercent: percent(recent),
+    absentToday: marks.filter((row) => row.date === (/* @__PURE__ */ new Date()).toISOString().slice(0, 10) && row.status === "absent").length,
+    assignments: assignments.length,
+    toReview: submissions.filter((row) => row.score === null).length,
+    average: graded.length ? Math.round(graded.reduce((a, b) => a + b, 0) / graded.length * 10) / 10 : null,
+    lessons30d: lessons.filter((row) => row.createdAt.getTime() > Date.now() - 30 * 24 * 60 * 60 * 1e3).length,
+    perClass
+  });
+});
 var learning_default = router3;
 
 // src/routes/lesson-rooms.ts
@@ -50975,7 +52283,30 @@ init_drizzle_orm();
 var import_express4 = __toESM(require_express2(), 1);
 init_src();
 import { randomBytes as randomBytes5 } from "node:crypto";
+
+// src/lib/plans.ts
+init_drizzle_orm();
+init_src();
+function planIsPro(plan, until) {
+  if (plan === "pro") return !until || until.getTime() > Date.now();
+  if (plan === "pilot") return Boolean(until) && until.getTime() > Date.now();
+  return false;
+}
+async function userPlan(userId, role) {
+  if (isGlobalAdminRole(role)) return { plan: "pro", until: null, pro: true };
+  const memberships = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, userId));
+  if (memberships.length === 0) return { plan: "free", until: null, pro: false };
+  const rows = await db.select({ plan: schoolsTable.plan, until: schoolsTable.planUntil }).from(schoolsTable).where(inArray(schoolsTable.id, memberships.map((row) => row.schoolId)));
+  const best = rows.map((row) => ({ plan: row.plan, until: row.until, pro: planIsPro(row.plan, row.until) })).sort((a, b) => Number(b.pro) - Number(a.pro))[0];
+  return best ?? { plan: "free", until: null, pro: false };
+}
+
+// src/routes/lesson-rooms.ts
 var router4 = (0, import_express4.Router)();
+var aiLimiter2 = createRateLimiter(60, 10 * 60 * 1e3, "Too many requests. Wait a few minutes.", "ai-heavy", (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
 function user2(res) {
   return res.locals.authenticatedUser;
 }
@@ -51204,8 +52535,13 @@ router4.get(
       res.json({ rooms: rows2 });
       return;
     }
-    const rows = await db.select().from(lessonRoomsTable).orderBy(desc(lessonRoomsTable.createdAt)).limit(40);
-    res.json({ rooms: rows });
+    const global2 = viewer.role === "education_admin" || viewer.role === "ministry_admin" || viewer.role === "platform_superadmin";
+    const rows = await db.select().from(lessonRoomsTable).where(global2 ? void 0 : or(
+      eq(lessonRoomsTable.hostId, viewer.id),
+      inArray(lessonRoomsTable.classId, db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(eq(classMembersTable.userId, viewer.id))),
+      inArray(lessonRoomsTable.schoolId, db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, viewer.id)))
+    )).orderBy(desc(lessonRoomsTable.createdAt)).limit(40);
+    res.json({ rooms: rows.map((room) => room.hostId === viewer.id || global2 ? room : { ...room, code: "" }) });
   }
 );
 router4.post(
@@ -51225,6 +52561,10 @@ router4.post(
     }
     if (!await canOpenRoom(host.id, host.role, classId ?? null)) {
       res.status(403).json({ error: "You cannot open a lesson for this class." });
+      return;
+    }
+    if (!(await userPlan(host.id, host.role)).pro) {
+      res.status(402).json({ error: "Online lessons are available on the EDUVERSE Pro plan or during a pilot." });
       return;
     }
     let subject = readString2(req.body, "subject", 60) ?? "";
@@ -51252,6 +52592,14 @@ router4.post(
       title: title || "\u0416\u0438\u0432\u043E\u0439 \u0443\u0440\u043E\u043A",
       status: "open"
     }).returning();
+    if (host.role === "teacher") {
+      const students = await studentsOfClasses(classId ? [classId] : await teacherClassIds(host.id));
+      await pushNotice(students, "lessons", `\u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A: ${room?.title ?? ""}`, `\u041A\u043E\u0434: ${room?.code ?? ""}`, "/lesson");
+      await notifyUsers(await withParents(students), (lang) => `\u{1F3A5} <b>${tl(lang, "Onlayn dars boshlandi", "\u041D\u0430\u0447\u0430\u043B\u0441\u044F \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A", "An online lesson has started")}</b>
+\u{1F4D6} ${escapeHtml(room?.title ?? "")}
+
+${tl(lang, "Kirish", "\u0412\u043E\u0439\u0442\u0438 \u043D\u0430 \u0443\u0440\u043E\u043A", "Join")}: https://eduverse-uz1.vercel.app/lesson`);
+    }
     res.status(201).json({ room });
   }
 );
@@ -51361,6 +52709,20 @@ router4.post(
   }
 );
 router4.post(
+  "/rooms/end-all",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (_req, res) => {
+    const viewer = user2(res);
+    const open = await db.select({ id: lessonRoomsTable.id }).from(lessonRoomsTable).where(and(eq(lessonRoomsTable.hostId, viewer.id), ne(lessonRoomsTable.status, "ended")));
+    for (const row of open) {
+      await db.update(lessonRoomsTable).set({ status: "ended", endedAt: /* @__PURE__ */ new Date() }).where(eq(lessonRoomsTable.id, row.id));
+      await appendSignal(row.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "ended" } });
+      await dropSignals(row.id);
+    }
+    res.json({ ended: open.length });
+  }
+);
+router4.post(
   "/rooms/:roomId/leave",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
@@ -51426,6 +52788,103 @@ router4.post(
   }
 );
 router4.get(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user2(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room) && !await isParticipant(viewer.id, room.id)) {
+      res.status(403).json({ error: "You are not a member of this lesson." });
+      return;
+    }
+    if (!room.topicId) {
+      res.json({ topic: null, courseKey: room.courseKey ?? null });
+      return;
+    }
+    const [topic] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, room.topicId)).limit(1);
+    res.json({ topic: topic ?? null, courseKey: room.courseKey ?? null });
+  }
+);
+router4.put(
+  "/rooms/:roomId/topic",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const viewer = user2(res);
+    const room = await roomById(String(req.params.roomId));
+    if (!room) {
+      res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (room.hostId !== viewer.id && !await canManage2(viewer.id, viewer.role, room.classId)) {
+      res.status(403).json({ error: "Only the host can change the lesson topic." });
+      return;
+    }
+    const courseKeyRaw = readString2(req.body, "courseKey", 40);
+    if (courseKeyRaw !== void 0) {
+      if (!/^[a-z0-9][a-z0-9.\-]{1,39}$/.test(courseKeyRaw)) {
+        res.status(400).json({ error: "Invalid course topic." });
+        return;
+      }
+      const courseTitle = readString2(req.body, "title", 180) ?? "";
+      await db.update(lessonRoomsTable).set({ courseKey: courseKeyRaw, topicId: null, ...courseTitle ? { title: courseTitle } : {} }).where(eq(lessonRoomsTable.id, room.id));
+      await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "topic", courseKey: courseKeyRaw } });
+      res.json({ topic: null, courseKey: courseKeyRaw });
+      return;
+    }
+    const topicId = readString2(req.body, "topicId", 64) ?? null;
+    if (topicId && !isValidUuid(topicId)) {
+      res.status(400).json({ error: "Invalid topic identifier." });
+      return;
+    }
+    let topic = null;
+    if (topicId) {
+      const [row] = await db.select().from(lessonTopicsTable).where(eq(lessonTopicsTable.id, topicId)).limit(1);
+      if (!row) {
+        res.status(404).json({ error: "Topic not found." });
+        return;
+      }
+      topic = row;
+    }
+    await db.update(lessonRoomsTable).set({
+      topicId,
+      courseKey: null,
+      ...topic ? { subject: topic.subject, title: topic.title } : {}
+    }).where(eq(lessonRoomsTable.id, room.id));
+    await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "topic", topicId } });
+    res.json({ topic });
+  }
+);
+function readItems(value) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => isRecord3(item) && typeof item.prompt === "string" && Array.isArray(item.choices) && typeof item.correct === "string");
+}
+function shuffled(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = randomBytes5(1)[0] % (i + 1);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+function studentView(items) {
+  return items.map((item) => ({
+    prompt: item.prompt,
+    choices: item.choices,
+    answer: item.answer ?? null,
+    correct: item.answer ? item.correct : null,
+    explanation: item.answer ? item.explanation : null
+  }));
+}
+function scoreOf(items) {
+  if (!items.length) return 0;
+  const right = items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length;
+  return Math.round(right / items.length * 100);
+}
+router4.get(
   "/rooms/:roomId/my-test",
   requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
   async (req, res) => {
@@ -51441,15 +52900,13 @@ router4.get(
         eq(lessonRoomParticipantsTable.userId, viewer.id)
       )
     ).limit(1);
+    const items = readItems(me?.testItems);
+    const done = items.length > 0 && items.every((item) => item.answer !== null);
     res.json({
-      question: me && me.testPrompt ? {
-        prompt: me.testPrompt,
-        choices: me.testChoices,
-        correct: me.testCorrect,
-        explanation: me.testExplanation
-      } : null,
-      answer: me?.testAnswer ?? null,
-      score: me?.testScore ?? null
+      items: studentView(items),
+      question: null,
+      answer: done ? "done" : null,
+      score: done ? scoreOf(items) : null
     });
   }
 );
@@ -51473,20 +52930,31 @@ router4.put(
       res.status(409).json({ error: "Join the lesson before answering the test." });
       return;
     }
+    const items = readItems(me.testItems);
     const answer = readString2(req.body, "answer", 300);
-    if (!answer) {
+    const indexRaw = isRecord3(req.body) ? Number(req.body.index ?? 0) : 0;
+    const index2 = Number.isInteger(indexRaw) ? indexRaw : 0;
+    const item = items[index2];
+    if (!answer || !item) {
       res.status(400).json({ error: "An answer is required." });
       return;
     }
-    const correct = me.testCorrect && answer.trim() === me.testCorrect.trim();
-    const score = correct ? 100 : 0;
-    await db.update(lessonRoomParticipantsTable).set({ testAnswer: answer, testScore: score }).where(eq(lessonRoomParticipantsTable.id, me.id));
-    res.json({ correct, score, explanation: me.testExplanation });
+    if (item.answer !== null) {
+      res.status(409).json({ error: "This question is already answered." });
+      return;
+    }
+    item.answer = answer;
+    const correct = answer.trim() === item.correct.trim();
+    const done = items.every((entry) => entry.answer !== null);
+    await db.update(lessonRoomParticipantsTable).set({ testItems: items, testAnswer: done ? "done" : null, testScore: scoreOf(items) }).where(eq(lessonRoomParticipantsTable.id, me.id));
+    await appendSignal(room.id, { from: viewer.id, to: room.hostId, kind: "control", payload: { event: "test-progress" } });
+    res.json({ correct, score: scoreOf(items), explanation: item.explanation, items: studentView(items), done });
   }
 );
 router4.post(
   "/rooms/:roomId/tests",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  aiLimiter2,
   async (req, res) => {
     const viewer = user2(res);
     const room = await roomById(String(req.params.roomId));
@@ -51527,6 +52995,7 @@ router4.post(
 router4.post(
   "/rooms/:roomId/tests/individual",
   requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  aiLimiter2,
   async (req, res) => {
     const viewer = user2(res);
     const room = await roomById(String(req.params.roomId));
@@ -51553,20 +53022,19 @@ router4.post(
       res.status(409).json({ error: "No students have joined this lesson yet." });
       return;
     }
-    const { generateStudentQuestion: generateStudentQuestion2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const { generateTopicTest: generateTopicTest2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const pool2 = await generateTopicTest2(room.subject || "\u0413\u0435\u043E\u0433\u0440\u0430\u0444\u0438\u044F", 7, room.title, 8);
+    const perStudent = Math.min(5, pool2.length);
     let assigned = 0;
     for (const student of students) {
-      const question = await generateStudentQuestion2(room.subject || "\u0413\u0435\u043E\u0433\u0440\u0430\u0444\u0438\u044F", room.title, student.username, {
-        difficulty: "core"
-      });
-      await db.update(lessonRoomParticipantsTable).set({
-        testPrompt: question.prompt,
-        testChoices: question.choices,
-        testCorrect: question.correct,
-        testExplanation: question.explanation,
-        testAnswer: null,
-        testScore: null
-      }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
+      const items = shuffled(pool2).slice(0, perStudent).map((question) => ({
+        prompt: question.prompt,
+        choices: shuffled(question.choices),
+        correct: question.correct,
+        explanation: question.explanation,
+        answer: null
+      }));
+      await db.update(lessonRoomParticipantsTable).set({ testItems: items, testAnswer: null, testScore: null }).where(eq(lessonRoomParticipantsTable.id, student.participantId));
       assigned += 1;
     }
     await appendSignal(room.id, { from: viewer.id, to: "all", kind: "control", payload: { event: "individual-tests-started" } });
@@ -51592,9 +53060,28 @@ router4.get(
       username: usersTable.username,
       score: lessonRoomParticipantsTable.testScore,
       answer: lessonRoomParticipantsTable.testAnswer,
-      role: lessonRoomParticipantsTable.role
+      role: lessonRoomParticipantsTable.role,
+      items: lessonRoomParticipantsTable.testItems
     }).from(lessonRoomParticipantsTable).innerJoin(usersTable, eq(lessonRoomParticipantsTable.userId, usersTable.id)).where(eq(lessonRoomParticipantsTable.roomId, room.id));
-    const students = rows.filter((r) => r.role === "student").map((r) => ({ studentId: r.userId, studentName: r.username, score: r.score ?? 0, answered: r.answer !== null })).sort((a, b) => b.score - a.score);
+    const detailed = room.hostId === viewer.id || await canManage2(viewer.id, viewer.role, room.classId);
+    const students = rows.filter((r) => r.role === "student").map((r) => {
+      const items = readItems(r.items);
+      return {
+        studentId: r.userId,
+        studentName: r.username,
+        score: r.score ?? 0,
+        answered: r.answer !== null,
+        total: items.length,
+        answeredCount: items.filter((item) => item.answer !== null).length,
+        correctCount: items.filter((item) => item.answer !== null && item.answer.trim() === item.correct.trim()).length,
+        items: detailed ? items.map((item) => ({
+          prompt: item.prompt,
+          answer: item.answer,
+          correct: item.correct,
+          isCorrect: item.answer !== null && item.answer.trim() === item.correct.trim()
+        })) : []
+      };
+    }).sort((a, b) => b.score - a.score);
     const attempts = await db.select().from(quizAttemptsTable).where(eq(quizAttemptsTable.roomId, room.id)).orderBy(desc(quizAttemptsTable.score)).limit(3);
     res.json({ room, ranking: students, bonusWinners: attempts });
   }
@@ -51607,6 +53094,10 @@ router4.post(
     const room = await roomById(String(req.params.roomId));
     if (!room) {
       res.status(404).json({ error: "Lesson room not found." });
+      return;
+    }
+    if (!await canAccessRoom(viewer, room)) {
+      res.status(403).json({ error: "This lesson is not for your class." });
       return;
     }
     const score = isRecord3(req.body) && Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : 0;
@@ -51774,6 +53265,10 @@ init_drizzle_orm();
 var import_express5 = __toESM(require_express2(), 1);
 init_src();
 var router5 = (0, import_express5.Router)();
+var aiLimiter3 = createRateLimiter(60, 10 * 60 * 1e3, "Too many requests. Wait a few minutes.", "ai-heavy", (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+});
 var IMAGE_DATA_URL = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 var MAX_PHOTOS = 4;
 var MAX_PHOTO_CHARS = 9e5;
@@ -51911,8 +53406,10 @@ router5.get(
       district: schoolsTable.district,
       address: schoolsTable.address,
       createdAt: schoolsTable.createdAt,
-      memberCount: sql`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-      classCount: sql`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`
+      plan: schoolsTable.plan,
+      planUntil: schoolsTable.planUntil,
+      memberCount: sql`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+      classCount: sql`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`
     }).from(schoolsTable).orderBy(schoolsTable.name);
     res.json({ schools });
   }
@@ -51930,8 +53427,8 @@ router5.post(
       return;
     }
     try {
-      const [school] = await db.insert(schoolsTable).values({ name, region, district, address }).returning();
-      res.status(201).json({ school });
+      const [school2] = await db.insert(schoolsTable).values({ name, region, district, address }).returning();
+      res.status(201).json({ school: school2 });
     } catch (error) {
       if (isUniqueConstraintViolation2(error)) {
         res.status(409).json({ error: "This school already exists." });
@@ -51948,17 +53445,17 @@ router5.get(
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
     const user3 = currentUser(res);
-    const [school] = await db.select({
+    const [school2] = await db.select({
       id: schoolsTable.id,
       name: schoolsTable.name,
       region: schoolsTable.region,
       district: schoolsTable.district,
       address: schoolsTable.address,
       createdAt: schoolsTable.createdAt,
-      memberCount: sql`(select count(*)::int from ${schoolMembersTable} where ${schoolMembersTable.schoolId} = ${schoolsTable.id})`,
-      classCount: sql`(select count(*)::int from ${classesTable} where ${classesTable.schoolId} = ${schoolsTable.id})`
+      memberCount: sql`(select count(*)::int from school_members sm where sm.school_id = "schools"."id")`,
+      classCount: sql`(select count(*)::int from school_classes sc where sc.school_id = "schools"."id")`
     }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
-    if (!school) {
+    if (!school2) {
       res.status(404).json({ error: "School not found." });
       return;
     }
@@ -51967,7 +53464,7 @@ router5.get(
       forbidden(res);
       return;
     }
-    res.json({ school, role: schoolRole3 });
+    res.json({ school: school2, role: schoolRole3 });
   }
 );
 router5.get(
@@ -51995,7 +53492,7 @@ router5.get(
 );
 router5.post(
   "/schools/:schoolId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId")) return;
     const schoolId = String(req.params.schoolId);
@@ -52038,7 +53535,7 @@ router5.post(
 );
 router5.delete(
   "/schools/:schoolId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "schoolId", "userId")) return;
     const schoolId = String(req.params.schoolId);
@@ -52052,6 +53549,17 @@ router5.delete(
     if (userId === user3.id && !isGlobalAdminRole(user3.role)) {
       res.status(400).json({ error: "Managers cannot remove their own school membership." });
       return;
+    }
+    const targetRole = await schoolMembershipRole(userId, schoolId);
+    if (!isGlobalAdminRole(user3.role)) {
+      if (targetRole === "school_director") {
+        forbidden(res, "Only EDUVERSE staff can remove a school director.");
+        return;
+      }
+      if (targetRole === "school_admin" && schoolRole3 !== "school_director") {
+        forbidden(res, "Only the director can remove a deputy.");
+        return;
+      }
     }
     await db.transaction(async (transaction) => {
       const schoolClassIds = await transaction.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
@@ -52225,7 +53733,7 @@ router5.get(
 );
 router5.post(
   "/classes/:classId/members",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId")) return;
     const classId = String(req.params.classId);
@@ -52286,7 +53794,7 @@ router5.post(
 );
 router5.delete(
   "/classes/:classId/members/:userId",
-  requireAuthenticatedRole(...SCHOOL_MANAGEMENT_ROLES),
+  requireAuthenticatedRole(...GLOBAL_ADMIN_ROLES),
   async (req, res) => {
     if (!requireUuidParams(res, "classId", "userId")) return;
     const classId = String(req.params.classId);
@@ -52411,6 +53919,7 @@ router5.post(
       dueAt: dueAtResult.value,
       status: requestedStatus
     }).returning();
+    await pushNotice(await studentsOfClasses([classId]), "homework", `\u041D\u043E\u0432\u043E\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${title}`, `${subject}${dueAtResult.value ? ` \xB7 \u0434\u043E ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes");
     res.status(201).json({ assignment });
   }
 );
@@ -52510,6 +54019,8 @@ router5.delete(
       forbidden(res, "Assignment delete access denied.");
       return;
     }
+    const [auto] = await db.select({ autoKey: assignmentsTable.autoKey }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (auto?.autoKey) await db.insert(noticeMarksTable).values({ key: `hw-cancel:${auto.autoKey}` }).onConflictDoNothing();
     await db.delete(assignmentsTable).where(eq(assignmentsTable.id, assignmentId));
     res.status(204).end();
   }
@@ -52565,6 +54076,11 @@ router5.post(
       forbidden(res, "Only a student in this class can submit this assignment.");
       return;
     }
+    const [deadline] = await db.select({ dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    if (deadline?.dueAt && deadline.dueAt.getTime() < Date.now()) {
+      res.status(409).json({ error: "The deadline has passed. Homework is accepted until 00:00 on the lesson day." });
+      return;
+    }
     const content = readString3(req.body, "content", 1e4);
     if (!content) {
       res.status(400).json({ error: "A short written explanation is required." });
@@ -52615,6 +54131,129 @@ router5.post(
       );
     }
     res.status(201).json({ submission });
+  }
+);
+router5.post(
+  "/assignments/:assignmentId/submissions/:studentId/ai-check",
+  requireAuthenticatedRole(...ACCOUNT_ROLES),
+  aiLimiter3,
+  async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const user3 = currentUser(res);
+    const context = await authorizeAssignment(user3, assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    if (!context.authorization.canReview) {
+      forbidden(res, "Only the teacher can run this check.");
+      return;
+    }
+    const [submission] = await db.select({ id: assignmentSubmissionsTable.id, content: assignmentSubmissionsTable.content }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId))).limit(1);
+    if (!submission) {
+      res.status(404).json({ error: "Submission not found." });
+      return;
+    }
+    const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    const [student] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
+    const photos = await db.select({ data: submissionFilesTable.data }).from(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id)).orderBy(submissionFilesTable.position).limit(2);
+    const { analyzeHomework: analyzeHomework2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const check = await analyzeHomework2({
+      subject: info?.subject ?? "",
+      task: `${info?.title ?? ""}. ${info?.description ?? ""}`.slice(0, 600),
+      studentName: student?.name ?? "",
+      explanation: submission.content,
+      photos: photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"))
+    });
+    if (!check) {
+      res.status(503).json({ error: "The AI check is not available right now." });
+      return;
+    }
+    res.json({ check });
+  }
+);
+router5.post(
+  "/assignments/:assignmentId/submissions/:studentId/photo-check",
+  requireAuthenticatedRole("teacher", ...SCHOOL_MANAGEMENT_ROLES),
+  aiLimiter3,
+  async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const context = await authorizeAssignment(currentUser(res), assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    if (!context.authorization.canReview) {
+      forbidden(res, "Only the teacher can run this check.");
+      return;
+    }
+    const photos = await db.select({ data: submissionFilesTable.data }).from(submissionFilesTable).innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id)).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId))).orderBy(submissionFilesTable.position).limit(3);
+    const images = photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    if (!images.length) {
+      res.status(404).json({ error: "No photos in this work." });
+      return;
+    }
+    const { checkPhotoIsAi: checkPhotoIsAi2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const lang = typeof req.body?.lang === "string" ? String(req.body.lang) : "ru";
+    const check = await checkPhotoIsAi2(images, lang);
+    if (!check) {
+      res.status(503).json({ error: "The check is not available right now. Try again in a minute." });
+      return;
+    }
+    res.json({ check });
+  }
+);
+router5.post(
+  "/assignments/:assignmentId/submissions/:studentId/ai-review",
+  requireAuthenticatedRole("teacher", ...SCHOOL_MANAGEMENT_ROLES),
+  aiLimiter3,
+  async (req, res) => {
+    if (!requireUuidParams(res, "assignmentId", "studentId")) return;
+    const assignmentId = String(req.params.assignmentId);
+    const studentId = String(req.params.studentId);
+    const context = await authorizeAssignment(currentUser(res), assignmentId);
+    if (!context) {
+      res.status(404).json({ error: "Assignment not found." });
+      return;
+    }
+    if (!context.authorization.canReview) {
+      forbidden(res, "Only the teacher can run this check.");
+      return;
+    }
+    const [details] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    const [submission] = await db.select({ id: assignmentSubmissionsTable.id, content: assignmentSubmissionsTable.content }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId))).limit(1);
+    if (!submission) {
+      res.status(404).json({ error: "The pupil has not handed in this work." });
+      return;
+    }
+    const photos = await db.select({ data: submissionFilesTable.data }).from(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id)).orderBy(submissionFilesTable.position).limit(3);
+    const images = photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    if (!images.length) {
+      res.status(404).json({ error: "No photos in this work." });
+      return;
+    }
+    const { isAiConfigured: isAiConfigured2, reviewHomework: reviewHomework2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    if (!isAiConfigured2()) {
+      res.status(503).json({ error: "not-configured" });
+      return;
+    }
+    const body = req.body ?? {};
+    const review = await reviewHomework2({
+      subject: details?.subject ?? "",
+      task: `${details?.title ?? ""}. ${details?.description ?? ""}`,
+      explanation: submission.content ?? "",
+      photos: images,
+      language: typeof body.lang === "string" ? body.lang : "ru"
+    });
+    if (!review) {
+      res.status(503).json({ error: "The check is not available right now. Try again in a minute." });
+      return;
+    }
+    res.json({ review });
   }
 );
 router5.get(
@@ -52692,6 +54331,10 @@ router5.patch(
         res.status(400).json({ error: "Score must be an integer from 0 to 100." });
         return;
       }
+      if (score !== null && score < 40) {
+        res.status(400).json({ error: "The lowest mark is 2." });
+        return;
+      }
       changes.score = score;
     }
     if (hasField(req.body, "feedback")) {
@@ -52703,15 +54346,34 @@ router5.patch(
       }
       changes.feedback = feedback;
     }
-    const [updated] = await db.update(assignmentSubmissionsTable).set(changes).where(
+    const [before] = await db.select({ score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), eq(assignmentSubmissionsTable.studentId, studentId))).limit(1);
+    let [updated] = await db.update(assignmentSubmissionsTable).set(changes).where(
       and(
         eq(assignmentSubmissionsTable.assignmentId, assignmentId),
         eq(assignmentSubmissionsTable.studentId, studentId)
       )
     ).returning();
+    if (!updated && typeof changes.score === "number") {
+      const [member] = await db.select({ id: classMembersTable.id }).from(classMembersTable).where(and(eq(classMembersTable.classId, context.assignment.classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
+      if (member) {
+        [updated] = await db.insert(assignmentSubmissionsTable).values({ assignmentId, studentId, status: "checked", content: "", score: changes.score, feedback: changes.feedback ?? "" }).onConflictDoNothing().returning();
+      }
+    }
     if (!updated) {
       res.status(404).json({ error: "Submission not found." });
       return;
+    }
+    if (typeof changes.score === "number" && before?.score !== changes.score) {
+      const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+      const grade = gradeOf(changes.score);
+      await pushNotice(await withParents([studentId]), "grades", `\u041D\u043E\u0432\u0430\u044F \u043E\u0446\u0435\u043D\u043A\u0430: ${grade}/10`, info?.subject ?? "", "/classes");
+      await notifyFamily(
+        studentId,
+        (lang, name) => `\u{1F4DD} <b>${tl(lang, "Uy vazifasi", "\u0414\u043E\u043C\u0430\u0448\u043A\u0430", "Homework")}: ${grade}/10</b> \xB7 ${subjectText(lang, info?.subject ?? "")}
+\u{1F464} ${name}${changes.feedback ? `
+\u{1F4AC} ${escapeHtml(changes.feedback.slice(0, 120))}` : ""}`,
+        true
+      );
     }
     res.json({ submission: updated });
   }
@@ -52770,6 +54432,2855 @@ router5.get(
 );
 var schools_default = router5;
 
+// src/routes/school-tools.ts
+init_drizzle_orm();
+var import_express8 = __toESM(require_express2(), 1);
+init_src();
+import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
+
+// src/lib/bot-commands.ts
+init_drizzle_orm();
+init_src();
+
+// src/routes/timetable.ts
+init_drizzle_orm();
+var import_express7 = __toESM(require_express2(), 1);
+init_src();
+
+// src/routes/course.ts
+init_drizzle_orm();
+var import_express6 = __toESM(require_express2(), 1);
+init_src();
+var router6 = (0, import_express6.Router)();
+var viewerOf = (res) => res.locals.authenticatedUser;
+var isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var perSession2 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var everyRole2 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var BOOK_RE = /^[a-z0-9][a-z0-9-]{1,59}$/;
+var TOPIC_RE = /^[a-z0-9][a-z0-9.\-]{1,39}$/;
+var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+var MAX_STROKES = 400;
+var MAX_POINTS = 1600;
+var MAX_JSON = 300 * 1024;
+function cleanStrokes(value) {
+  if (!Array.isArray(value) || value.length > MAX_STROKES) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord5(item)) return null;
+    const c = typeof item.c === "string" && /^#[0-9a-fA-F]{6}$/.test(item.c) ? item.c : null;
+    const w = typeof item.w === "number" && Number.isFinite(item.w) ? Math.min(0.06, Math.max(5e-4, item.w)) : null;
+    const m = item.m === "marker" ? "marker" : item.m === "pen" ? "pen" : null;
+    if (!c || w === null || !m || !Array.isArray(item.p) || item.p.length < 2 || item.p.length > MAX_POINTS || item.p.length % 2) return null;
+    const p = [];
+    for (const n of item.p) {
+      if (typeof n !== "number" || !Number.isFinite(n)) return null;
+      p.push(Math.round(Math.min(1, Math.max(0, n)) * 1e4) / 1e4);
+    }
+    out.push({ c, w: Math.round(w * 1e5) / 1e5, m, p });
+  }
+  return out;
+}
+var annotationLimiter = createRateLimiter(240, 10 * 60 * 1e3, "Too many saves. Try again in a minute.", "annotations", perSession2);
+router6.get("/me/annotations/:book", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const book = String(req.params.book ?? "");
+  if (!BOOK_RE.test(book)) {
+    res.status(400).json({ error: "Invalid book." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const rows = await db.select({ page: bookAnnotationsTable.page, count: sql`jsonb_array_length(${bookAnnotationsTable.strokes})` }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book))).orderBy(asc(bookAnnotationsTable.page));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ pages: rows.filter((row) => Number(row.count) > 0).map((row) => ({ page: row.page, strokes: Number(row.count) })) });
+});
+router6.get("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const book = String(req.params.book ?? "");
+  const page = Number(req.params.page);
+  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
+    res.status(400).json({ error: "Invalid page." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const [row] = await db.select({ strokes: bookAnnotationsTable.strokes, updatedAt: bookAnnotationsTable.updatedAt }).from(bookAnnotationsTable).where(and(eq(bookAnnotationsTable.userId, viewer.id), eq(bookAnnotationsTable.book, book), eq(bookAnnotationsTable.page, page))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ strokes: Array.isArray(row?.strokes) ? row.strokes : [], updatedAt: row?.updatedAt ?? null });
+});
+router6.put("/me/annotations/:book/:page", requireAuthenticatedRole(...everyRole2), annotationLimiter, async (req, res) => {
+  const book = String(req.params.book ?? "");
+  const page = Number(req.params.page);
+  if (!BOOK_RE.test(book) || !Number.isInteger(page) || page < 1 || page > 2e3) {
+    res.status(400).json({ error: "Invalid page." });
+    return;
+  }
+  const strokes = cleanStrokes(isRecord5(req.body) ? req.body.strokes : null);
+  if (!strokes || JSON.stringify(strokes).length > MAX_JSON) {
+    res.status(400).json({ error: "The drawing is too large or invalid." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(bookAnnotationsTable).values({ userId: viewer.id, book, page, strokes, updatedAt: now }).onConflictDoUpdate({ target: [bookAnnotationsTable.userId, bookAnnotationsTable.book, bookAnnotationsTable.page], set: { strokes, updatedAt: now } });
+  res.json({ saved: true, strokes: strokes.length, updatedAt: now });
+});
+async function classAccess(viewer, classId) {
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  if (!klass) return { read: false, edit: false };
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [schoolRow] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  const [classRow] = await db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1);
+  const edit = canManageClass(viewer.role, schoolRow?.role ?? null, classRow?.role ?? null);
+  return { read: edit || Boolean(classRow), edit };
+}
+var progressLimiter = createRateLimiter(200, 10 * 60 * 1e3, "Too many changes. Try again later.", "course-progress", perSession2);
+router6.get("/classes/:classId/course", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access2 = await classAccess(viewerOf(res), classId);
+  if (!access2.read) {
+    res.status(403).json({ error: "You are not in this class." });
+    return;
+  }
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  const [progress, pace, calendar] = await Promise.all([
+    db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(eq(courseProgressTable.classId, classId)).orderBy(asc(courseProgressTable.doneOn)),
+    db.select({ book: coursePaceTable.book, lessonsPerWeek: coursePaceTable.lessonsPerWeek }).from(coursePaceTable).where(eq(coursePaceTable.classId, classId)),
+    klass ? loadCalendar(klass.schoolId) : Promise.resolve(null)
+  ]);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ progress, pace, calendar, canEdit: access2.edit });
+});
+router6.put("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  const doneOn = isRecord5(req.body) && typeof req.body.doneOn === "string" ? req.body.doneOn : "";
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey) || !DATE_RE.test(doneOn) || Number.isNaN(Date.parse(doneOn))) {
+    res.status(400).json({ error: "Invalid topic or date." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const access2 = await classAccess(viewer, classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can mark topics." });
+    return;
+  }
+  await db.insert(courseProgressTable).values({ classId, topicKey, doneOn, markedBy: viewer.id }).onConflictDoUpdate({ target: [courseProgressTable.classId, courseProgressTable.topicKey], set: { doneOn, markedBy: viewer.id } });
+  res.json({ topicKey, doneOn });
+});
+router6.delete("/classes/:classId/course/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey)) {
+    res.status(400).json({ error: "Invalid topic." });
+    return;
+  }
+  const access2 = await classAccess(viewerOf(res), classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can mark topics." });
+    return;
+  }
+  await db.delete(courseProgressTable).where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.topicKey, topicKey)));
+  res.json({ removed: true });
+});
+router6.put("/classes/:classId/course-pace/:book", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const book = String(req.params.book ?? "");
+  const lessonsPerWeek = isRecord5(req.body) ? Number(req.body.lessonsPerWeek) : NaN;
+  if (!isValidUuid(classId) || !BOOK_RE.test(book) || !Number.isInteger(lessonsPerWeek) || lessonsPerWeek < 1 || lessonsPerWeek > 10) {
+    res.status(400).json({ error: "Lessons per week must be 1 to 10." });
+    return;
+  }
+  const access2 = await classAccess(viewerOf(res), classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can change this." });
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(coursePaceTable).values({ classId, book, lessonsPerWeek, updatedAt: now }).onConflictDoUpdate({ target: [coursePaceTable.classId, coursePaceTable.book], set: { lessonsPerWeek, updatedAt: now } });
+  res.json({ book, lessonsPerWeek });
+});
+var validDate = (value) => typeof value === "string" && DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
+async function loadCalendar(schoolId) {
+  const [row] = await db.select({ quarters: schoolCalendarTable.quarters, holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable).where(eq(schoolCalendarTable.schoolId, schoolId)).limit(1);
+  return row ? { quarters: row.quarters, holidays: row.holidays } : null;
+}
+async function schoolAccess(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true };
+  const [member] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  if (!member) return { read: false, edit: false };
+  return { read: true, edit: member.role === "school_director" || member.role === "school_admin" };
+}
+function readCalendar(body) {
+  if (!isRecord5(body) || !Array.isArray(body.quarters) || body.quarters.length !== 4) return null;
+  const quarters = [];
+  for (const item of body.quarters) {
+    if (!isRecord5(item) || !validDate(item.start) || !validDate(item.end) || item.start > item.end) return null;
+    if (quarters.length && quarters[quarters.length - 1].end >= item.start) return null;
+    quarters.push({ start: item.start, end: item.end });
+  }
+  const rawHolidays = Array.isArray(body.holidays) ? body.holidays : [];
+  if (rawHolidays.length > 40) return null;
+  const holidays = [];
+  for (const item of rawHolidays) {
+    if (!isRecord5(item) || !validDate(item.from) || !validDate(item.to) || item.from > item.to) return null;
+    const name = typeof item.name === "string" ? item.name.trim().slice(0, 60) : "";
+    holidays.push({ from: item.from, to: item.to, name });
+  }
+  holidays.sort((a, b) => a.from.localeCompare(b.from));
+  return { quarters, holidays };
+}
+router6.get("/schools/:schoolId/calendar", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const access2 = await schoolAccess(viewerOf(res), schoolId);
+  if (!access2.read) {
+    res.status(403).json({ error: "You are not in this school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ calendar: await loadCalendar(schoolId), canEdit: access2.edit });
+});
+router6.put("/schools/:schoolId/calendar", requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), progressLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId ?? "");
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf(res);
+  const access2 = await schoolAccess(viewer, schoolId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the director can change the calendar." });
+    return;
+  }
+  const calendar = readCalendar(req.body);
+  if (!calendar) {
+    res.status(400).json({ error: "Four quarters in order, each with a start and end date." });
+    return;
+  }
+  const now = /* @__PURE__ */ new Date();
+  await db.insert(schoolCalendarTable).values({ schoolId, quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now }).onConflictDoUpdate({ target: schoolCalendarTable.schoolId, set: { quarters: calendar.quarters, holidays: calendar.holidays, updatedBy: viewer.id, updatedAt: now } });
+  res.json({ calendar });
+});
+var trainerLimiter = createRateLimiter(30, 60 * 60 * 1e3, "Too many attempts.", "trainer", perSession2);
+var isoDay = (date2) => date2.toISOString().slice(0, 10);
+async function pupilClass(userId) {
+  const [row] = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, userId), eq(classMembersTable.role, "student"))).limit(1);
+  return row?.classId ?? null;
+}
+router6.post("/trainer/results", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const body = isRecord5(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const day2 = tashkentDay(0);
+  const classId = await pupilClass(viewer.id);
+  const [row] = await db.insert(trainerResultsTable).values({ userId: viewer.id, classId, day: day2, score, total }).onConflictDoNothing().returning({ id: trainerResultsTable.id });
+  if (row) await announceTrainer(viewer.id, score, total, "");
+  res.status(row ? 201 : 200).json({ counted: Boolean(row), day: day2 });
+});
+router6.get("/trainer/rating", requireAuthenticatedRole(...everyRole2), async (req, res) => {
+  const viewer = viewerOf(res);
+  let classId = typeof req.query.classId === "string" && isValidUuid(req.query.classId) ? req.query.classId : null;
+  if (viewer.role === "student") classId = await pupilClass(viewer.id);
+  if (!classId) {
+    res.json({ rating: [], doneToday: false });
+    return;
+  }
+  if (viewer.role !== "student") {
+    const access2 = await classAccess(viewer, classId);
+    if (!access2.read) {
+      res.status(403).json({ error: "Not your class." });
+      return;
+    }
+  }
+  const since = isoDay(new Date(Date.now() - 6 * 864e5));
+  const rows = await db.select({ userId: trainerResultsTable.userId, name: usersTable.username, points: sql`sum(${trainerResultsTable.score})::int`, days: sql`count(*)::int` }).from(trainerResultsTable).innerJoin(usersTable, eq(usersTable.id, trainerResultsTable.userId)).where(and(eq(trainerResultsTable.classId, classId), gte(trainerResultsTable.day, since))).groupBy(trainerResultsTable.userId, usersTable.username).orderBy(desc(sql`sum(${trainerResultsTable.score})`)).limit(30);
+  const [today2] = await db.select({ id: trainerResultsTable.id }).from(trainerResultsTable).where(and(eq(trainerResultsTable.userId, viewer.id), eq(trainerResultsTable.day, tashkentDay(0)))).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ rating: rows.map((row) => ({ ...row, me: row.userId === viewer.id })), doneToday: Boolean(today2) });
+});
+var TRAINER_SUBJECTS = /* @__PURE__ */ new Set(["math", "physics", "chemistry", "biology"]);
+var tashkentDay = (offsetDays = 0) => new Date(Date.now() + 5 * 36e5 + offsetDays * 864e5).toISOString().slice(0, 10);
+router6.get("/trainer/tests", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const days = String(req.query.days ?? "").split(",").filter((day2) => /^\d{4}-\d{2}-\d{2}$/.test(day2)).slice(0, 4);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!days.length) {
+    res.json({ tests: [] });
+    return;
+  }
+  const rows = await db.select({ day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.userId, viewer.id), inArray(trainerTestsTable.day, days)));
+  res.json({ tests: rows });
+});
+router6.post("/trainer/tests", requireAuthenticatedRole("student"), trainerLimiter, async (req, res) => {
+  const viewer = viewerOf(res);
+  const body = isRecord5(req.body) ? req.body : {};
+  const total = Number(body.total);
+  const score = Number(body.score);
+  const day2 = typeof body.day === "string" ? body.day : "";
+  const subject = typeof body.subject === "string" ? body.subject : "";
+  const topicKey = typeof body.topicKey === "string" ? body.topicKey.slice(0, 60) : "";
+  if (!Number.isInteger(total) || total < 1 || total > 20 || !Number.isInteger(score) || score < 0 || score > total || !TRAINER_SUBJECTS.has(subject)) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const allowed = [0, -1, -2, -3].map((offset) => tashkentDay(offset));
+  if (!allowed.includes(day2)) {
+    res.status(400).json({ error: "The time for this test is over." });
+    return;
+  }
+  const classId = await pupilClass(viewer.id);
+  const [saved] = await db.insert(trainerTestsTable).values({ userId: viewer.id, classId, day: day2, subject, topicKey, score, total }).onConflictDoUpdate({
+    target: [trainerTestsTable.userId, trainerTestsTable.day, trainerTestsTable.subject],
+    set: { score: sql`greatest(${trainerTestsTable.score}, ${score})`, attempts: sql`${trainerTestsTable.attempts} + 1`, updatedAt: /* @__PURE__ */ new Date() }
+  }).returning({ attempts: trainerTestsTable.attempts });
+  if (saved?.attempts === 1) await announceTrainer(viewer.id, score, total, subject);
+  res.status(201).json({ saved: true });
+});
+router6.get("/trainer/class/:classId", requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (req, res) => {
+  const viewer = viewerOf(res);
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const access2 = await classAccess(viewer, classId);
+  if (!access2.read) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const since = tashkentDay(-6);
+  const rows = await db.select({ userId: trainerTestsTable.userId, day: trainerTestsTable.day, subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(and(eq(trainerTestsTable.classId, classId), gte(trainerTestsTable.day, since))).orderBy(desc(trainerTestsTable.day));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ tests: rows });
+});
+async function remindTrainer(teacherId, day2, lessons) {
+  try {
+    const book = lessons.filter((lesson) => TRAINER_SUBJECTS.has(lesson.subject));
+    if (!book.length) return;
+    const lastEnd = Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt)));
+    if (Date.now() < lastEnd + 2 * 36e5) return;
+    const title = `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 ${day2}`;
+    const [already] = await db.select({ id: userNotificationsTable.id }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, teacherId), eq(userNotificationsTable.title, title))).limit(1);
+    if (already) return;
+    const [first] = await db.insert(noticeMarksTable).values({ key: `trainer:${teacherId}:${day2}` }).onConflictDoNothing().returning({ key: noticeMarksTable.key });
+    if (!first) return;
+    const parts = [];
+    const seen = /* @__PURE__ */ new Set();
+    for (const lesson of book) {
+      const key = `${lesson.classId}:${lesson.subject}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, lesson.classId), eq(classMembersTable.role, "student"), eq(usersTable.status, "active")));
+      if (!pupils.length) continue;
+      const done = await db.select({ id: trainerTestsTable.userId }).from(trainerTestsTable).where(and(eq(trainerTestsTable.day, day2), eq(trainerTestsTable.subject, lesson.subject), inArray(trainerTestsTable.userId, pupils.map((row) => row.id))));
+      const missing = pupils.length - done.length;
+      if (missing > 0) parts.push(`${lesson.className}: ${missing} \u0438\u0437 ${pupils.length}`);
+    }
+    await db.insert(userNotificationsTable).values({ userId: teacherId, kind: "grades", title, body: parts.length ? `\u041D\u0435 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442: ${parts.join(", ")}. \u041C\u043E\u0433\u0443\u0442 \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 24 \u0447\u0430\u0441\u043E\u0432.` : "\u0412\u0441\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0438 \u043F\u0440\u043E\u0448\u043B\u0438 \u0442\u0435\u0441\u0442.", link: "/teacher" });
+  } catch {
+  }
+}
+var course_default = router6;
+async function announceTrainer(studentId, score, total, subject) {
+  try {
+    const people = await withParents([studentId]);
+    await pushNotice(people, "grades", `\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F: ${score} \u0438\u0437 ${total}`, subjectText("ru", subject), "/trainer");
+    await notifyFamily(studentId, (lang, name) => `\u{1F9E0} <b>${tl(lang, "Kunlik trenajyor", "\u0422\u0440\u0435\u043D\u0430\u0436\u0451\u0440 \u0434\u043D\u044F", "Daily trainer")}: ${score} / ${total}</b>
+\u{1F464} ${name}${subject ? `
+\u{1F4D6} ${subjectText(lang, subject)}` : ""}
+${score / total >= 0.75 ? tl(lang, "\u{1F44F} Zo\u2018r natija!", "\u{1F44F} \u041E\u0442\u043B\u0438\u0447\u043D\u044B\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442!", "\u{1F44F} Great result!") : tl(lang, "Mavzuni yana bir ko\u2018rib chiqing.", "\u0421\u0442\u043E\u0438\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u0442\u0435\u043C\u0443.", "Worth reviewing the topic.")}`, true);
+  } catch {
+  }
+}
+
+// src/lib/book-homework.ts
+init_drizzle_orm();
+init_src();
+
+// src/lib/book-topics.json
+var book_topics_default = [{ id: "physics-7", subject: "physics", grade: 7, topics: [{ key: "phys7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0444\u0438\u0437\u0438\u043A\u0430? \u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u044F", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u043F\u043E 2 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u044F\u0432\u043B\u0435\u043D\u0438\u0439 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", essence: "\u0424\u0438\u0437\u0438\u043A\u0430 \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0441\u0430\u043C\u044B\u0435 \u043E\u0431\u0449\u0438\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u044F \u043F\u0440\u0438\u0440\u043E\u0434\u044B. \u042F\u0432\u043B\u0435\u043D\u0438\u0435 \u2014 \u044D\u0442\u043E \u043B\u044E\u0431\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435: \u0442\u0435\u043B\u043E \u043F\u043E\u0435\u0445\u0430\u043B\u043E, \u0432\u043E\u0434\u0430 \u0437\u0430\u043A\u0438\u043F\u0435\u043B\u0430, \u0437\u0430\u0433\u043E\u0440\u0435\u043B\u0430\u0441\u044C \u043B\u0430\u043C\u043F\u0430. \u042F\u0432\u043B\u0435\u043D\u0438\u044F \u0434\u0435\u043B\u044F\u0442 \u043D\u0430 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 (\u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435), \u0442\u0435\u043F\u043B\u043E\u0432\u044B\u0435, \u0441\u0432\u0435\u0442\u043E\u0432\u044B\u0435 \u0438 \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043C\u0430\u0433\u043D\u0438\u0442\u043D\u044B\u0435.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u043C\u0443 \u0432\u0438\u0434\u0443 \u044F\u0432\u043B\u0435\u043D\u0438\u0439 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u0442\u0430\u044F\u043D\u0438\u0435 \u043C\u043E\u0440\u043E\u0436\u0435\u043D\u043E\u0433\u043E?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u043F\u0440\u0438\u043C\u0435\u0440 \u0434\u043B\u044F \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u044F\u0432\u043B\u0435\u043D\u0438\u0439.", "\u041A\u0430\u043A\u0443\u044E \u0440\u043E\u043B\u044C \u0438\u0433\u0440\u0430\u0435\u0442 \u0444\u0438\u0437\u0438\u043A\u0430 \u0432 \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u0438 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0433\u043E \u043C\u0438\u0440\u0430?"] }, { key: "phys7-1.2", code: "1.2", title: "\u0412\u0430\u0436\u043D\u044B\u0435 \u043F\u0440\u0438\u043D\u0446\u0438\u043F\u044B \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u044F \u0444\u0438\u0437\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E \u043E\u0431 \u043E\u0434\u043D\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u043E\u0431 \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u0435) \u0438 \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 3 \u0435\u0433\u043E \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F.", essence: "\u0423\u0447\u0451\u043D\u044B\u0439 \u043B\u044E\u0431\u043E\u0437\u043D\u0430\u0442\u0435\u043B\u0435\u043D, \u0446\u0435\u043B\u0435\u0443\u0441\u0442\u0440\u0435\u043C\u043B\u0451\u043D, \u0447\u0435\u0441\u0442\u0435\u043D \u0438 \u0441\u043A\u0440\u043E\u043C\u0435\u043D, \u0443\u043C\u0435\u0435\u0442 \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0438 \u0441\u043E\u043C\u043D\u0435\u0432\u0430\u0442\u044C\u0441\u044F (\xAB\u0434\u043E\u0432\u0435\u0440\u044F\u0439, \u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0439\xBB). \u041E\u043D \u043D\u0435 \u0441\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u043E\u0448\u0438\u0431\u043A\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043A\u0430\u0436\u0434\u0443\u044E \u0438\u0434\u0435\u044E \u043E\u043F\u044B\u0442\u043E\u043C.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443\u0447\u0451\u043D\u044B\u043C \u0432\u0430\u0436\u043D\u043E \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0438 \u0431\u044B\u0442\u044C \u0431\u0435\u0441\u043F\u0440\u0438\u0441\u0442\u0440\u0430\u0441\u0442\u043D\u044B\u043C\u0438?", "\u041A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0438 \u041C\u0430\u0440\u0438\u0438 \u041A\u044E\u0440\u0438 \u0434\u043E\u0431\u0438\u0442\u044C\u0441\u044F \u0443\u0441\u043F\u0435\u0445\u0430?"] }, { key: "phys7-1.3", code: "1.3", title: "\u041A\u0430\u043A\u0438\u043C\u0438 \u043D\u0430\u0432\u044B\u043A\u0430\u043C\u0438 \u043D\u0435\u043E\u0431\u0445\u043E\u0434\u0438\u043C\u043E \u043E\u0431\u043B\u0430\u0434\u0430\u0442\u044C \u043F\u0440\u0438 \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u0438 \u0444\u0438\u0437\u0438\u043A\u0438?", homework: "\u041F\u0440\u0438\u0434\u0443\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u043E\u043F\u044B\u0442 \u0434\u043E\u043C\u0430 (\u043D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u0441 \u0441\u0430\u0445\u0430\u0440\u043E\u043C \u0432 \u0442\u0451\u043F\u043B\u043E\u0439 \u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0439 \u0432\u043E\u0434\u0435) \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u0438 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", essence: "\u0413\u043B\u0430\u0432\u043D\u044B\u0435 \u043D\u0430\u0432\u044B\u043A\u0438: \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0442\u044C, \u0437\u0430\u0434\u0430\u0432\u0430\u0442\u044C \u0432\u043E\u043F\u0440\u043E\u0441\u044B, \u0432\u044B\u0434\u0432\u0438\u0433\u0430\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u044B, \u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043E\u043F\u044B\u0442, \u043E\u0431\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438 \u0434\u0435\u043B\u0430\u0442\u044C \u0432\u044B\u0432\u043E\u0434\u044B. \u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u043F\u043B\u0430\u043D\u0438\u0440\u0443\u044E\u0442 \u043F\u043E \u0448\u0430\u0433\u0430\u043C: \u0432\u043E\u043F\u0440\u043E\u0441, \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0430, \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435, \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435, \u044D\u0442\u0430\u043F\u044B.", tasks: ["\u0421\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443: \u0432 \u0433\u043E\u0440\u044F\u0447\u0435\u043C \u0447\u0430\u0435 \u0441\u0430\u0445\u0430\u0440 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u044F\u0435\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435, \u0447\u0435\u043C \u0432 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u043C.", "\u0412\u0441\u0435 \u043B\u0438 \u0447\u0430\u0441\u0442\u0438 \u043C\u0430\u0433\u043D\u0438\u0442\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E \u043F\u0440\u0438\u0442\u044F\u0433\u0438\u0432\u0430\u044E\u0442 \u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0435 \u043E\u043F\u0438\u043B\u043A\u0438?", "\u041C\u044F\u0447 \u043A\u0430\u0442\u0438\u0442\u0441\u044F \u043F\u0440\u044F\u043C\u043E \u0438 \u043C\u0435\u043D\u044F\u0435\u0442 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430. \u0412\u0430\u0448\u0430 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0430?"] }, { key: "phys7-1.4", code: "1.4", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0438 \u043F\u0440\u0438\u0431\u043E\u0440\u044B", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u043D\u043E (\u043A\u043E\u043D\u0442\u0443\u0440\u043E\u043C) \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u0438 \u0441\u0435\u043A\u0443\u043D\u0434\u043E\u043C\u0435\u0440.", essence: "\u041A\u0430\u0436\u0434\u044B\u0439 \u043F\u0440\u0438\u0431\u043E\u0440 \u043D\u0443\u0436\u0435\u043D \u0434\u043B\u044F \u0441\u0432\u043E\u0435\u0439 \u0446\u0435\u043B\u0438: \u043C\u0435\u043D\u0437\u0443\u0440\u043A\u0430 \u2014 \u043E\u0431\u044A\u0451\u043C, \u043B\u0438\u043D\u0435\u0439\u043A\u0430 \u2014 \u0434\u043B\u0438\u043D\u0430, \u0432\u0435\u0441\u044B \u2014 \u043C\u0430\u0441\u0441\u0430, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u2014 \u0441\u0438\u043B\u0430 \u0432 \u043D\u044C\u044E\u0442\u043E\u043D\u0430\u0445, \u0441\u0435\u043A\u0443\u043D\u0434\u043E\u043C\u0435\u0440 \u2014 \u0432\u0440\u0435\u043C\u044F. \u041F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0435 \u043E\u0431\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0441 \u043F\u0440\u0438\u0431\u043E\u0440\u0430\u043C\u0438 \u0434\u0430\u0451\u0442 \u0442\u043E\u0447\u043D\u044B\u0439 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u0438 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u044C.", tasks: ["\u041A\u0430\u043A\u0438\u043C \u043F\u0440\u0438\u0431\u043E\u0440\u043E\u043C \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0441\u0438\u043B\u0443 \u0438 \u0432 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435: \u0441\u0442\u0430\u043A\u0430\u043D, \u043A\u043E\u043B\u0431\u0430, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0430, \u0448\u0442\u0430\u0442\u0438\u0432, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440 \u2014 \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u043A\u0430\u0436\u0434\u043E\u0435?"] }, { key: "phys7-1.5", code: "1.5", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 2 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u0441\u043E \u0437\u043D\u0430\u043A\u0430\u043C\u0438 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 (\u0431\u044B\u0442\u043E\u0432\u0430\u044F \u0445\u0438\u043C\u0438\u044F, \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043F\u0440\u0438\u0431\u043E\u0440\u044B) \u0438 \u043F\u0435\u0440\u0435\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0437\u043D\u0430\u043A\u0438.", essence: "\u0412 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u043F\u0440\u0430\u0432\u0438\u043B\u0430: \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u0441 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0443\u0447\u0438\u0442\u0435\u043B\u044F, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u0442\u044C \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u043F\u043E\u0434 \u043D\u0430\u043F\u0440\u044F\u0436\u0435\u043D\u0438\u0435\u043C, \u0434\u0435\u0440\u0436\u0430\u0442\u044C \u0433\u043E\u0440\u044E\u0447\u0435\u0435 \u0432\u0434\u0430\u043B\u0438 \u043E\u0442 \u043E\u0433\u043D\u044F, \u043D\u0438\u0447\u0435\u0433\u043E \u043D\u0435 \u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u043D\u0430 \u0432\u043A\u0443\u0441. \u0417\u043D\u0430\u043A\u0438 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u043F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0430\u044E\u0442 \u043E \u0432\u0440\u0435\u0434\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430\u0445 \u0438 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0438.", tasks: ["\u0427\u0442\u043E \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0437\u043D\u0430\u043A \u0441 \u043C\u043E\u043B\u043D\u0438\u0435\u0439 \u0438 \u043A\u0430\u043A \u0441\u0435\u0431\u044F \u0432\u0435\u0441\u0442\u0438?", "\u0413\u0434\u0435 \u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043B\u0435\u0433\u043A\u043E\u0432\u043E\u0441\u043F\u043B\u0430\u043C\u0435\u043D\u044F\u044E\u0449\u0438\u0435\u0441\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?"] }, { key: "phys7-1.6", code: "1.6", title: "\u0424\u0438\u0437\u0438\u043A\u0430 \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044F", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u043F\u0440\u0438\u0431\u043E\u0440 \u0434\u043E\u043C\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u044F\u0432\u043B\u0435\u043D\u0438\u0435 \u0432 \u043D\u0451\u043C \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442\u0441\u044F.", essence: "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438 \u2014 \u044D\u0442\u043E \u043F\u0440\u0438\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u043E\u043D\u043E\u0432 \u0444\u0438\u0437\u0438\u043A\u0438: \u0441\u0430\u043C\u043E\u043B\u0451\u0442\u044B, \u0441\u043C\u0430\u0440\u0442\u0444\u043E\u043D\u044B, \u0441\u043F\u0443\u0442\u043D\u0438\u043A\u0438, \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0435 \u043F\u0430\u043D\u0435\u043B\u0438. \u041C\u043D\u043E\u0433\u0438\u0435 \u0438\u0434\u0435\u0438 \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u0430\u043B\u0430 \u043F\u0440\u0438\u0440\u043E\u0434\u0430 (\u0431\u0438\u043E\u043D\u0438\u043A\u0430): \u043A\u0440\u044B\u043B\u043E \u043F\u0442\u0438\u0446\u044B, \u043F\u043B\u0430\u0432\u043D\u0438\u043A \u0440\u044B\u0431\u044B, \u0440\u0435\u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u043C\u0435\u0434\u0443\u0437\u044B.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0434\u0430 \u0432 \u0431\u0443\u0442\u044B\u043B\u043A\u0435 \u043D\u0435 \u0437\u0430\u043C\u0451\u0440\u0437\u043B\u0430 \u0432 \u043C\u043E\u0440\u043E\u0437\u0438\u043B\u043A\u0435, \u0430 \u043F\u0440\u0438 \u0432\u0441\u0442\u0440\u044F\u0445\u0438\u0432\u0430\u043D\u0438\u0438 \u0441\u0440\u0430\u0437\u0443 \u0441\u0442\u0430\u043B\u0430 \u043B\u044C\u0434\u043E\u043C?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044E, \u043F\u043E\u0434\u0441\u043C\u043E\u0442\u0440\u0435\u043D\u043D\u0443\u044E \u0443 \u043F\u0440\u0438\u0440\u043E\u0434\u044B."] }, { key: "phys7-2.1", code: "2.1", title: "\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442\u0441\u044F \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0448\u0430\u0433\u0430\u043C\u0438 \u0434\u043B\u0438\u043D\u0443 \u043A\u043E\u0440\u0438\u0434\u043E\u0440\u0430 3 \u0440\u0430\u0437\u0430 \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0440\u0435\u0434\u043D\u0435\u0435.", essence: "\u0418\u0437\u043C\u0435\u0440\u0438\u0442\u044C \u2014 \u0437\u043D\u0430\u0447\u0438\u0442 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u044C \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u0443 \u0441 \u044D\u0442\u0430\u043B\u043E\u043D\u043E\u043C (\u0435\u0434\u0438\u043D\u0438\u0446\u0435\u0439). \u0418\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0442 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0438 \u0431\u0435\u0440\u0443\u0442 \u0441\u0440\u0435\u0434\u043D\u0435\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435: \u0442\u0430\u043A \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0435\u0442\u0441\u044F \u0441\u043B\u0443\u0447\u0430\u0439\u043D\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430.", tasks: ["\u041E\u0431\u0438\u0434\u0436\u043E\u043D \u043D\u0430\u0441\u0447\u0438\u0442\u0430\u043B \u043E\u0442 \u0434\u043E\u043C\u0430 \u0434\u043E \u0448\u043A\u043E\u043B\u044B 946 \u0448\u0430\u0433\u043E\u0432, \u0430 \u043E\u0431\u0440\u0430\u0442\u043D\u043E \u2014 943. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0448\u0430\u0433\u043E\u0432 \u0432 \u0441\u0440\u0435\u0434\u043D\u0435\u043C?", "\u0417\u0430\u0447\u0435\u043C \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437?"] }, { key: "phys7-2.2", code: "2.2", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B \u0438 \u041C\u0435\u0436\u0434\u0443\u043D\u0430\u0440\u043E\u0434\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u0435\u0434\u0438\u043D\u0438\u0446 (\u0421\u0418)", homework: "\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0446\u0435\u043D\u0443 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u0438 \u043F\u0440\u0435\u0434\u0435\u043B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u0441\u0432\u043E\u0435\u0439 \u043B\u0438\u043D\u0435\u0439\u043A\u0438 \u0438 \u0442\u0435\u0440\u043C\u043E\u043C\u0435\u0442\u0440\u0430.", essence: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u0430 \u0438\u043C\u0435\u0435\u0442 \u0447\u0438\u0441\u043B\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438 \u0435\u0434\u0438\u043D\u0438\u0446\u0443: 5 m, 3 kg. \u0412 \u0421\u0418 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u0435\u0434\u0438\u043D\u0438\u0446\u044B \u2014 \u043C\u0435\u0442\u0440, \u043A\u0438\u043B\u043E\u0433\u0440\u0430\u043C\u043C, \u0441\u0435\u043A\u0443\u043D\u0434\u0430, \u0430\u043C\u043F\u0435\u0440, \u043A\u0435\u043B\u044C\u0432\u0438\u043D, \u043C\u043E\u043B\u044C, \u043A\u0430\u043D\u0434\u0435\u043B\u0430. \u041F\u0440\u0438\u0441\u0442\u0430\u0432\u043A\u0438 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C: \u043A\u0438\u043B\u043E = 1000, \u0441\u0430\u043D\u0442\u0438 = 0,01, \u043C\u0438\u043B\u043B\u0438 = 0,001.", tasks: ["\u041C\u0435\u0436\u0434\u0443 \u043E\u0442\u043C\u0435\u0442\u043A\u0430\u043C\u0438 \xAB1 cm\xBB \u0438 \xAB2 cm\xBB 10 \u0434\u0435\u043B\u0435\u043D\u0438\u0439. \u041A\u0430\u043A\u043E\u0432\u0430 \u0446\u0435\u043D\u0430 \u0434\u0435\u043B\u0435\u043D\u0438\u044F?", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435: 2,5 km \u0432 \u043C\u0435\u0442\u0440\u044B; 350 mm \u0432 \u043C\u0435\u0442\u0440\u044B.", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043F\u0440\u0435\u0434\u0435\u043B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438\u0431\u043E\u0440\u0430?"] }, { key: "phys7-2.3", code: "2.3", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0434\u043B\u0438\u043D\u0443?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u0441\u0432\u043E\u0435\u0439 \u043F\u0430\u0440\u0442\u044B \u0438 \u0442\u043E\u043B\u0449\u0438\u043D\u0443 \u043B\u0438\u0441\u0442\u0430 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430 (\u0447\u0435\u0440\u0435\u0437 100 \u043B\u0438\u0441\u0442\u043E\u0432).", essence: "\u0414\u043B\u0438\u043D\u0443 \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439, \u0440\u0443\u043B\u0435\u0442\u043A\u043E\u0439, \u0448\u0442\u0430\u043D\u0433\u0435\u043D\u0446\u0438\u0440\u043A\u0443\u043B\u0435\u043C. \u041F\u043E\u0433\u0440\u0435\u0448\u043D\u043E\u0441\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u043E\u0431\u044B\u0447\u043D\u043E \u0440\u0430\u0432\u043D\u0430 \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0435 \u0446\u0435\u043D\u044B \u0434\u0435\u043B\u0435\u043D\u0438\u044F. \u0421\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u043D\u0430 \u0448\u043A\u0430\u043B\u0443 \u043D\u0443\u0436\u043D\u043E \u043F\u0440\u044F\u043C\u043E, \u0438\u043D\u0430\u0447\u0435 \u0432\u043E\u0437\u043D\u0438\u043A\u0430\u0435\u0442 \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u0440\u0430\u043B\u043B\u0430\u043A\u0441\u0430.", tasks: ["\u0426\u0435\u043D\u0430 \u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043B\u0438\u043D\u0435\u0439\u043A\u0438 1 mm. \u041A\u0430\u043A\u043E\u0432\u0430 \u043F\u043E\u0433\u0440\u0435\u0448\u043D\u043E\u0441\u0442\u044C \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F?", "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u0440\u0438\u0442\u044C \u0442\u043E\u043B\u0449\u0438\u043D\u0443 \u043A\u0430\u0442\u0443\u0448\u0435\u0447\u043D\u043E\u0439 \u043D\u0438\u0442\u0438 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043E\u0448\u0438\u0431\u043A\u0430 \u043F\u0430\u0440\u0430\u043B\u043B\u0430\u043A\u0441\u0430?"] }, { key: "phys7-2.4", code: "2.4", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043F\u043B\u043E\u0449\u0430\u0434\u044C?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u043E\u043B\u0430 \u0432 m\xB2.", essence: "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 S = a \xB7 b. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u0432 \u0421\u0418 \u2014 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u043C\u0435\u0442\u0440 (m\xB2). \u0421\u043B\u043E\u0436\u043D\u0443\u044E \u0444\u0438\u0433\u0443\u0440\u0443 \u0434\u0435\u043B\u044F\u0442 \u043D\u0430 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0438 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442 \u0438\u0445 \u043F\u043B\u043E\u0449\u0430\u0434\u0438. 1 m\xB2 = 10 000 cm\xB2.", tasks: ["\u0414\u0432\u043E\u0440 20 m \xD7 15 m \u043F\u043E\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u043F\u043B\u0438\u0442\u043A\u043E\u0439 \u043F\u043B\u043E\u0449\u0430\u0434\u044C\u044E 600 cm\xB2. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043B\u0438\u0442\u043E\u043A \u043D\u0443\u0436\u043D\u043E?", "\u0421\u043A\u043E\u043B\u044C\u043A\u043E cm\xB2 \u0432 1 m\xB2?"] }, { key: "phys7-2.5", code: "2.5", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043E\u0431\u044A\u0451\u043C?", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439 \u0441\u0432\u043E\u044E \u043A\u043E\u0440\u043E\u0431\u043A\u0443 (\u043E\u0431\u0443\u0432\u044C, \u0447\u0430\u0439) \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0435\u0451 \u043E\u0431\u044A\u0451\u043C \u0432 \u0441\u043C\xB3 \u0438 \u0432 \u043B\u0438\u0442\u0440\u0430\u0445. \u0421\u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0440\u0443\u0439\u0442\u0435 \u0440\u0430\u0441\u0447\u0451\u0442 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", essence: "\u041E\u0431\u044A\u0451\u043C \u2014 \u044D\u0442\u043E \u043C\u0435\u0441\u0442\u043E, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u0442\u0435\u043B\u043E. \u0414\u043B\u044F \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u043E\u0433\u043E \u0442\u0435\u043B\u0430 (\u043A\u043E\u0440\u043E\u0431\u043A\u0430, \u043A\u0438\u0440\u043F\u0438\u0447, \u0430\u043A\u0432\u0430\u0440\u0438\u0443\u043C) \u043E\u0431\u044A\u0451\u043C \u0440\u0430\u0432\u0435\u043D \u0434\u043B\u0438\u043D\u0435 \xD7 \u0448\u0438\u0440\u0438\u043D\u0435 \xD7 \u0432\u044B\u0441\u043E\u0442\u0435. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u043E\u0431\u044A\u0451\u043C\u0430 \u0432 \u0421\u0418 \u2014 \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043C\u0435\u0442\u0440 (\u043C\xB3), \u0432 \u0431\u044B\u0442\u0443 \u0447\u0430\u0441\u0442\u043E \u043B\u0438\u0442\u0440: 1 \u043B = 1 \u0434\u043C\xB3 = 1000 \u0441\u043C\xB3. \u041E\u0431\u044A\u0451\u043C \u0442\u0435\u043B\u0430 \u043D\u0435\u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0439 \u0444\u043E\u0440\u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u043C\u0435\u043D\u0437\u0443\u0440\u043A\u043E\u0439: \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u043E\u0434\u044B \u043E\u043D\u043E \u0432\u044B\u0442\u0435\u0441\u043D\u0438\u043B\u043E, \u0442\u0430\u043A\u043E\u0439 \u0443 \u043D\u0435\u0433\u043E \u0438 \u043E\u0431\u044A\u0451\u043C.", tasks: ["\u0410\u043A\u0432\u0430\u0440\u0438\u0443\u043C 50 \u0441\u043C \xD7 30 \u0441\u043C \xD7 40 \u0441\u043C. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0438\u0442\u0440\u043E\u0432 \u0432\u043E\u0434\u044B \u0432 \u043D\u0435\u0433\u043E \u043F\u043E\u043C\u0435\u0449\u0430\u0435\u0442\u0441\u044F?", "\u041A\u0430\u043C\u0435\u043D\u044C \u043E\u043F\u0443\u0441\u0442\u0438\u043B\u0438 \u0432 \u043C\u0435\u043D\u0437\u0443\u0440\u043A\u0443: \u0443\u0440\u043E\u0432\u0435\u043D\u044C \u0432\u043E\u0434\u044B \u043F\u043E\u0434\u043D\u044F\u043B\u0441\u044F \u0441 120 \u043C\u043B \u0434\u043E 155 \u043C\u043B. \u041A\u0430\u043A\u043E\u0432 \u043E\u0431\u044A\u0451\u043C \u043A\u0430\u043C\u043D\u044F?", "\u0412\u043E \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u0441\u044F \u043E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0430, \u0435\u0441\u043B\u0438 \u043A\u0430\u0436\u0434\u043E\u0435 \u0440\u0435\u0431\u0440\u043E \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C \u0432 3 \u0440\u0430\u0437\u0430?"] }, { key: "phys7-2.6", code: "2.6", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u043C\u0430\u0441\u0441\u0443?", homework: "\u0412\u0437\u0432\u0435\u0441\u044C\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u043D\u0430 \u043A\u0443\u0445\u043E\u043D\u043D\u044B\u0445 \u0432\u0435\u0441\u0430\u0445, \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043C\u0430\u0441\u0441\u044B \u0432 \u0433\u0440\u0430\u043C\u043C\u0430\u0445 \u0438 \u043A\u0438\u043B\u043E\u0433\u0440\u0430\u043C\u043C\u0430\u0445.", essence: "\u041C\u0430\u0441\u0441\u0430 \u2014 \u043C\u0435\u0440\u0430 \u043A\u043E\u043B\u0438\u0447\u0435\u0441\u0442\u0432\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0432 \u0442\u0435\u043B\u0435. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u043C\u0430\u0441\u0441\u044B \u0432 \u0421\u0418 \u2014 \u043A\u0438\u043B\u043E\u0433\u0440\u0430\u043C\u043C (kg). \u041C\u0430\u0441\u0441\u0443 \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0432\u0435\u0441\u0430\u043C\u0438: \u0440\u044B\u0447\u0430\u0436\u043D\u044B\u043C\u0438 (\u0441\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u044E\u0442 \u0441 \u0433\u0438\u0440\u044F\u043C\u0438) \u0438\u043B\u0438 \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043D\u043D\u044B\u043C\u0438. \u041F\u0435\u0440\u0435\u0434 \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0435\u043C \u0432\u0435\u0441\u044B \u043E\u0431\u043D\u0443\u043B\u044F\u044E\u0442, \u0438\u043D\u0430\u0447\u0435 \u0431\u0443\u0434\u0435\u0442 \u043E\u0448\u0438\u0431\u043A\u0430. \u0412 \u0444\u0438\u0437\u0438\u043A\u0435 \xAB\u043C\u0430\u0441\u0441\u0430\xBB \u0438 \xAB\u0432\u0435\u0441\xBB \u2014 \u0440\u0430\u0437\u043D\u044B\u0435 \u043F\u043E\u043D\u044F\u0442\u0438\u044F: \u0432\u0435\u0441 \u2014 \u044D\u0442\u043E \u0441\u0438\u043B\u0430, \u0441 \u043A\u043E\u0442\u043E\u0440\u043E\u0439 \u0442\u0435\u043B\u043E \u0434\u0430\u0432\u0438\u0442 \u043D\u0430 \u043E\u043F\u043E\u0440\u0443, \u043E\u043D\u0430 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u0432 \u043D\u044C\u044E\u0442\u043E\u043D\u0430\u0445.", tasks: ["\u0427\u0435\u043C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043C\u0430\u0441\u0441\u0430 \u043E\u0442 \u0432\u0435\u0441\u0430?", "\u041A\u0430\u043A \u043E\u0434\u043D\u0438\u043C \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u0435\u043C \u043D\u0430 \u0447\u0430\u0448\u0435\u0447\u043D\u044B\u0445 \u0432\u0435\u0441\u0430\u0445 \u043D\u0430\u0439\u0442\u0438 \u0444\u0430\u043B\u044C\u0448\u0438\u0432\u0443\u044E (\u0431\u043E\u043B\u0435\u0435 \u043B\u0451\u0433\u043A\u0443\u044E) \u043C\u043E\u043D\u0435\u0442\u0443 \u0438\u0437 \u0442\u0440\u0451\u0445?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0435\u0440\u0435\u0434 \u0432\u0437\u0432\u0435\u0448\u0438\u0432\u0430\u043D\u0438\u0435\u043C \u0432\u0435\u0441\u044B \u043E\u0431\u043D\u0443\u043B\u044F\u044E\u0442?"] }, { key: "phys7-2.7", code: "2.7", title: "\u041A\u0430\u043A \u043C\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0432\u0440\u0435\u043C\u044F?", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u0438\u0437 \u043D\u0438\u0442\u043A\u0438 \u0438 \u043A\u043B\u044E\u0447\u0430. \u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F 10 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u0439 \u0434\u043B\u044F \u0434\u0432\u0443\u0445 \u0434\u043B\u0438\u043D \u043D\u0438\u0442\u0438 \u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043F\u0435\u0440\u0438\u043E\u0434\u044B.", essence: "\u0412\u0440\u0435\u043C\u044F \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u043F\u0440\u043E\u0446\u0435\u0441\u0441\u0430\u043C\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0442\u0441\u044F \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E: \u0432\u0440\u0430\u0449\u0435\u043D\u0438\u0435 \u0417\u0435\u043C\u043B\u0438 (\u0441\u0443\u0442\u043A\u0438), \u043A\u0430\u0447\u0430\u043D\u0438\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A\u0430, \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u044F \u043A\u0432\u0430\u0440\u0446\u0430 \u0432 \u0447\u0430\u0441\u0430\u0445. \u041C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0435\u0442 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u044F \u0441 \u043F\u043E\u0441\u0442\u043E\u044F\u043D\u043D\u044B\u043C \u043F\u0435\u0440\u0438\u043E\u0434\u043E\u043C T \u2014 \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u043E\u0434\u043D\u043E\u0433\u043E \u043F\u043E\u043B\u043D\u043E\u0433\u043E \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u044F. \u041F\u0435\u0440\u0438\u043E\u0434 \u0437\u0430\u0432\u0438\u0441\u0438\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u0442 \u0434\u043B\u0438\u043D\u044B \u043D\u0438\u0442\u0438 \u0438 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0433\u043E \u043F\u0430\u0434\u0435\u043D\u0438\u044F: T = 2\u03C0\u221A(L/g). \u041F\u043E\u044D\u0442\u043E\u043C\u0443 \u043C\u0430\u044F\u0442\u043D\u0438\u043A\u043E\u043C \u0443\u0434\u043E\u0431\u043D\u043E \u043E\u0442\u043C\u0435\u0440\u044F\u0442\u044C \u0432\u0440\u0435\u043C\u044F.", tasks: ["\u041C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u0434\u0435\u043B\u0430\u043B 20 \u043A\u043E\u043B\u0435\u0431\u0430\u043D\u0438\u0439 \u0437\u0430 40 \u0441. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u043F\u0435\u0440\u0438\u043E\u0434?", "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u043F\u0435\u0440\u0438\u043E\u0434, \u0435\u0441\u043B\u0438 \u0434\u043B\u0438\u043D\u0443 \u043D\u0438\u0442\u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0442\u044C \u0432 4 \u0440\u0430\u0437\u0430?", "\u0417\u0430\u0432\u0438\u0441\u0438\u0442 \u043B\u0438 \u043F\u0435\u0440\u0438\u043E\u0434 \u043E\u0442 \u043C\u0430\u0441\u0441\u044B \u0433\u0440\u0443\u0437\u0430?"] }, { key: "phys7-3.1", code: "3.1", title: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u0442\u0435\u043B", homework: "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 3 \u043F\u0440\u0438\u043C\u0435\u0440\u0430: \u0442\u0435\u043B\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043B\u0430 \u0438 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0434\u0440\u0443\u0433\u043E\u0433\u043E.", essence: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u2014 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0442\u0435\u043B\u0430 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0434\u0440\u0443\u0433\u0438\u0445 \u0442\u0435\u043B \u0441\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C. \u0414\u0432\u0438\u0436\u0435\u043D\u0438\u0435 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E: \u043F\u0430\u0441\u0441\u0430\u0436\u0438\u0440 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0430\u0432\u0442\u043E\u0431\u0443\u0441\u0430, \u043D\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0434\u043E\u0440\u043E\u0433\u0438. \u041B\u0438\u043D\u0438\u044F \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u2014 \u0442\u0440\u0430\u0435\u043A\u0442\u043E\u0440\u0438\u044F, \u0435\u0451 \u0434\u043B\u0438\u043D\u0430 \u2014 \u043F\u0443\u0442\u044C.", tasks: ["\u041E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0447\u0435\u0433\u043E \u043F\u0430\u0441\u0441\u0430\u0436\u0438\u0440 \u0435\u0434\u0443\u0449\u0435\u0433\u043E \u0430\u0432\u0442\u043E\u0431\u0443\u0441\u0430 \u043F\u043E\u043A\u043E\u0438\u0442\u0441\u044F, \u0430 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0447\u0435\u0433\u043E \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F?", "\u0427\u0435\u043C \u043F\u0443\u0442\u044C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0442\u0440\u0430\u0435\u043A\u0442\u043E\u0440\u0438\u0438?"] }, { key: "phys7-3.2", code: "3.2", title: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u044B \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442\u0435 50 \u043C. \u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0432 m/s \u0438 km/h.", essence: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442, \u043A\u0430\u043A\u043E\u0439 \u043F\u0443\u0442\u044C \u0442\u0435\u043B\u043E \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0432\u0440\u0435\u043C\u0435\u043D\u0438: v = s / t. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u0432 \u0421\u0418 \u2014 \u043C\u0435\u0442\u0440 \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443 (m/s), \u0432 \u0431\u044B\u0442\u0443 \u2014 \u043A\u043C/\u0447 (1 m/s = 3,6 km/h). \u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0438\u043C\u0435\u0435\u0442 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435: \u0435\u0441\u043B\u0438 \u0434\u0432\u0435 \u043C\u0430\u0448\u0438\u043D\u044B \u0435\u0434\u0443\u0442 \u043D\u0430\u0432\u0441\u0442\u0440\u0435\u0447\u0443, \u0438\u0445 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B. \u0427\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0438 \u043C\u0430\u0441\u0441\u0430 \u043C\u0430\u0448\u0438\u043D\u044B, \u0442\u0435\u043C \u0441\u0438\u043B\u044C\u043D\u0435\u0435 \u0443\u0434\u0430\u0440 \u043F\u0440\u0438 \u0441\u0442\u043E\u043B\u043A\u043D\u043E\u0432\u0435\u043D\u0438\u0438.", tasks: ["\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u043E\u0435\u0445\u0430\u043B 90 km \u0437\u0430 1,5 \u0447\u0430\u0441\u0430. \u041A\u0430\u043A\u043E\u0432\u0430 \u0435\u0433\u043E \u0441\u0440\u0435\u0434\u043D\u044F\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 20 m/s \u0432 km/h.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0430 \u0434\u043E\u0440\u043E\u0433\u0430\u0445 \u0443 \u0448\u043A\u043E\u043B \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0438\u0432\u0430\u044E\u0442 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0434\u043E 40 km/h?"] }, { key: "phys7-3.3", code: "3.3", title: "\u041A\u0430\u043A \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F, \u0437\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0432\u044B \u0438\u0434\u0451\u0442\u0435 100 \u0448\u0430\u0433\u043E\u0432, \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u0448\u0430\u0433\u0430 \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C.", essence: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442, \u043A\u0430\u043A\u043E\u0439 \u043F\u0443\u0442\u044C \u0442\u0435\u043B\u043E \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442 \u0437\u0430 \u0435\u0434\u0438\u043D\u0438\u0446\u0443 \u0432\u0440\u0435\u043C\u0435\u043D\u0438: v = s / t. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u0432 \u0421\u0418 \u2014 m/s. \u0427\u0442\u043E\u0431\u044B \u043F\u0435\u0440\u0435\u0432\u0435\u0441\u0442\u0438 km/h \u0432 m/s, \u0434\u0435\u043B\u044F\u0442 \u043D\u0430 3,6.", tasks: ["\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 72 km/h \u0432 m/s.", "\u0411\u0435\u0433\u0443\u043D \u043F\u0440\u043E\u0431\u0435\u0436\u0430\u043B 100 m \u0437\u0430 12,5 s. \u0415\u0433\u043E \u0441\u0440\u0435\u0434\u043D\u044F\u044F \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u0435\u0434\u0435\u0442 2 h \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 60 km/h. \u041A\u0430\u043A\u043E\u0439 \u043F\u0443\u0442\u044C \u043E\u043D \u043F\u0440\u043E\u0435\u0434\u0435\u0442?"] }, { key: "phys7-3.4", code: "3.4", title: "\u0413\u0440\u0430\u0444\u0438\u043A\u0438 \u043F\u0443\u0442\u0438 \u0438 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438", homework: "\u041F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0433\u0440\u0430\u0444\u0438\u043A \u043F\u0443\u0442\u0438 \u0434\u043B\u044F \u043F\u0435\u0448\u0435\u0445\u043E\u0434\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0438\u0434\u0451\u0442 \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 1,5 m/s \u0432 \u0442\u0435\u0447\u0435\u043D\u0438\u0435 10 s.", essence: "\u0413\u0440\u0430\u0444\u0438\u043A \u043F\u0443\u0442\u0438 s(t) \u043F\u0440\u0438 \u0440\u0430\u0432\u043D\u043E\u043C\u0435\u0440\u043D\u043E\u043C \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0438 \u2014 \u043F\u0440\u044F\u043C\u0430\u044F: \u0447\u0435\u043C \u043A\u0440\u0443\u0447\u0435, \u0442\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C. \u0413\u0440\u0430\u0444\u0438\u043A \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u0438 v(t) \u2014 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u0430\u044F \u043B\u0438\u043D\u0438\u044F, \u0430 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u043E\u0434 \u043D\u0438\u043C \u0440\u0430\u0432\u043D\u0430 \u043F\u0440\u043E\u0439\u0434\u0435\u043D\u043D\u043E\u043C\u0443 \u043F\u0443\u0442\u0438.", tasks: ["\u041F\u043E \u0433\u0440\u0430\u0444\u0438\u043A\u0443 \u0442\u0435\u043B\u043E \u0437\u0430 4 s \u043F\u0440\u043E\u0448\u043B\u043E 20 m. \u041A\u0430\u043A\u043E\u0432\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C?", "\u0427\u0442\u043E \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442 \u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C\u043D\u044B\u0439 \u0443\u0447\u0430\u0441\u0442\u043E\u043A \u043D\u0430 \u0433\u0440\u0430\u0444\u0438\u043A\u0435 \u043F\u0443\u0442\u0438?"] }, { key: "phys7-4.1", code: "4.1", title: "\u0421\u0438\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0441\u0438\u043B\u044B \u0438 \u043D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0442\u0440\u0435\u043B\u043A\u0438 \u0441\u0438\u043B.", essence: "\u0421\u0438\u043B\u0430 \u2014 \u044D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u0442\u0435\u043B\u0430 \u043D\u0430 \u0434\u0440\u0443\u0433\u043E\u0435. \u0421\u0438\u043B\u0430 \u043C\u043E\u0436\u0435\u0442 \u0438\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0442\u0435\u043B\u0430 (\u0440\u0430\u0437\u043E\u0433\u043D\u0430\u0442\u044C, \u0437\u0430\u0442\u043E\u0440\u043C\u043E\u0437\u0438\u0442\u044C, \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u044C) \u0438\u043B\u0438 \u0435\u0433\u043E \u0444\u043E\u0440\u043C\u0443. \u0421\u0438\u043B\u0443 \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0432 \u043D\u044C\u044E\u0442\u043E\u043D\u0430\u0445 (N) \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440\u043E\u043C.", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u043E\u0433\u0434\u0430 \u0441\u0438\u043B\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0444\u043E\u0440\u043C\u0443 \u0442\u0435\u043B\u0430, \u0438 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u043E\u0433\u0434\u0430 \u043C\u0435\u043D\u044F\u0435\u0442 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C.", "\u0412 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445 \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0441\u0438\u043B\u0443 \u0438 \u043A\u0430\u043A\u0438\u043C \u043F\u0440\u0438\u0431\u043E\u0440\u043E\u043C?"] }, { key: "phys7-4.2", code: "4.2", title: "\u0427\u0438\u0441\u043B\u043E\u0432\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u0438 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0438\u043B\u044B", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0432 \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0435 1 cm = 10 N \u0441\u0438\u043B\u044B 30 N \u0438 50 N, \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0438\u0435 \u0432 \u0440\u0430\u0437\u043D\u044B\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B, \u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0440\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0443\u044E.", essence: "\u0421\u0438\u043B\u0430 \u2014 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u0430\u044F \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u0430: \u0432\u0430\u0436\u043D\u044B \u0435\u0451 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435, \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0438 \u0442\u043E\u0447\u043A\u0430 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u044F. \u0421\u0438\u043B\u044B \u0432 \u043E\u0434\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u0443 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442\u0441\u044F, \u0432 \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B\u0435 \u2014 \u0432\u044B\u0447\u0438\u0442\u0430\u044E\u0442\u0441\u044F. \u0418\u0445 \u0441\u0443\u043C\u043C\u0443 \u043D\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u0440\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0435\u0439.", tasks: ["\u041D\u0430 \u0442\u0435\u043B\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0442 \u0441\u0438\u043B\u044B 30 N \u0438 20 N \u0432 \u043E\u0434\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u0443. \u0420\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0430\u044F?", "\u0422\u0435 \u0436\u0435 \u0441\u0438\u043B\u044B \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u044B \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u043E. \u0420\u0430\u0432\u043D\u043E\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u044E\u0449\u0430\u044F?"] }, { key: "phys7-4.3", code: "4.3", title: "\u0421\u0438\u043B\u0430 \u0433\u0440\u0430\u0432\u0438\u0442\u0430\u0446\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0435 g \u0434\u043B\u044F \u0412\u0435\u043D\u0435\u0440\u044B \u0438 \u043F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u044B \u0442\u0430\u043C \u0432\u0435\u0441\u0438\u043B\u0438 \u0431\u044B \u0432 \u043D\u044C\u044E\u0442\u043E\u043D\u0430\u0445.", essence: "\u0412\u0441\u0435 \u0442\u0435\u043B\u0430 \u043F\u0440\u0438\u0442\u044F\u0433\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u0434\u0440\u0443\u0433 \u043A \u0434\u0440\u0443\u0433\u0443. \u0417\u0435\u043C\u043B\u044E \u043F\u0440\u0438\u0442\u044F\u0433\u0438\u0432\u0430\u0435\u0442 \u043A \u0421\u043E\u043B\u043D\u0446\u0443, \u043D\u0430\u0441 \u2014 \u043A \u0417\u0435\u043C\u043B\u0435. \u0421\u0438\u043B\u0430 \u0442\u044F\u0436\u0435\u0441\u0442\u0438 \u0443 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0438 \u0417\u0435\u043C\u043B\u0438 \u0440\u0430\u0432\u043D\u0430 F = m\xB7g, \u0433\u0434\u0435 g \u2248 9,8 N/kg. \u041D\u0430 \u0434\u0440\u0443\u0433\u0438\u0445 \u043F\u043B\u0430\u043D\u0435\u0442\u0430\u0445 g \u0434\u0440\u0443\u0433\u043E\u0435: \u043D\u0430 \u041B\u0443\u043D\u0435 \u0432 6 \u0440\u0430\u0437 \u043C\u0435\u043D\u044C\u0448\u0435, \u043D\u0430 \u042E\u043F\u0438\u0442\u0435\u0440\u0435 \u0432 2,5 \u0440\u0430\u0437\u0430 \u0431\u043E\u043B\u044C\u0448\u0435. \u041F\u043E\u044D\u0442\u043E\u043C\u0443 \u0438 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u043D\u0430 \u0440\u0430\u0437\u043D\u044B\u0445 \u043F\u043B\u0430\u043D\u0435\u0442\u0430\u0445 \u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u043F\u043E-\u0440\u0430\u0437\u043D\u043E\u043C\u0443.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0441\u0438\u043B\u0430 \u0442\u044F\u0436\u0435\u0441\u0442\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u043D\u0430 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043C\u0430\u0441\u0441\u043E\u0439 45 kg?", "\u0413\u0434\u0435 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u043A\u0430\u0447\u0430\u0435\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435: \u043D\u0430 \u041B\u0443\u043D\u0435 \u0438\u043B\u0438 \u043D\u0430 \u042E\u043F\u0438\u0442\u0435\u0440\u0435?", "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u0441\u044F \u043B\u0438 \u043C\u0430\u0441\u0441\u0430 \u043A\u043E\u0441\u043C\u043E\u043D\u0430\u0432\u0442\u0430 \u043D\u0430 \u041B\u0443\u043D\u0435?"] }, { key: "phys7-4.4", code: "4.4", title: "\u0421\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F", homework: "\u041F\u043E\u0442\u044F\u043D\u0438\u0442\u0435 \u043A\u043D\u0438\u0433\u0443 \u043F\u043E \u0441\u0442\u043E\u043B\u0443 \u0438 \u043F\u043E \u043F\u043E\u043B\u0443. \u0413\u0434\u0435 \u0442\u044F\u043D\u0443\u0442\u044C \u0442\u0440\u0443\u0434\u043D\u0435\u0435? \u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435, \u043F\u043E\u0447\u0435\u043C\u0443.", essence: "\u0421\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F \u0432\u043E\u0437\u043D\u0438\u043A\u0430\u0435\u0442, \u043A\u043E\u0433\u0434\u0430 \u043E\u0434\u043D\u043E \u0442\u0435\u043B\u043E \u0441\u043A\u043E\u043B\u044C\u0437\u0438\u0442 \u0438\u043B\u0438 \u043A\u0430\u0442\u0438\u0442\u0441\u044F \u043F\u043E \u0434\u0440\u0443\u0433\u043E\u043C\u0443, \u0438 \u0432\u0441\u0435\u0433\u0434\u0430 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0430 \u043F\u0440\u043E\u0442\u0438\u0432 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F. \u041E\u043D\u0430 \u0437\u0430\u0432\u0438\u0441\u0438\u0442 \u043E\u0442 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B\u043E\u0432 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0435\u0439 \u0438 \u043E\u0442 \u0442\u043E\u0433\u043E, \u043A\u0430\u043A \u0441\u0438\u043B\u044C\u043D\u043E \u0442\u0435\u043B\u043E \u043F\u0440\u0438\u0436\u0430\u0442\u043E. \u0422\u0440\u0435\u043D\u0438\u0435 \u0442\u043E\u0440\u043C\u043E\u0437\u0438\u0442 \u043C\u0430\u0448\u0438\u043D\u0443 \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430, \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u043D\u0430\u043C \u0445\u043E\u0434\u0438\u0442\u044C \u0438 \u0434\u0435\u0440\u0436\u0438\u0442 \u0433\u0432\u043E\u0437\u0434\u044C \u0432 \u0434\u043E\u0441\u043A\u0435. \u041D\u0430 \u043B\u044C\u0434\u0443 \u0442\u0440\u0435\u043D\u0438\u0435 \u043C\u0430\u043B\u043E \u2014 \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u0441\u043A\u043E\u043B\u044C\u0437\u043A\u043E.", tasks: ["\u041A\u0443\u0434\u0430 \u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0430 \u0441\u0438\u043B\u0430 \u0442\u0440\u0435\u043D\u0438\u044F?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u0438\u043C\u043E\u0439 \u0434\u043E\u0440\u043E\u0433\u0438 \u043F\u043E\u0441\u044B\u043F\u0430\u044E\u0442 \u043F\u0435\u0441\u043A\u043E\u043C?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043F\u043E\u043B\u0435\u0437\u043D\u043E\u0433\u043E \u0438 \u0432\u0440\u0435\u0434\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u043D\u0438\u044F."] }, { key: "phys7-4.5", code: "4.5", title: "\u0421\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435 \u0432\u043E\u0437\u0434\u0443\u0445\u0430", homework: "\u0411\u0440\u043E\u0441\u044C\u0442\u0435 \u043E\u0434\u043D\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u0440\u043E\u0432\u043D\u044B\u0439 \u0438 \u0441\u043A\u043E\u043C\u043A\u0430\u043D\u043D\u044B\u0439 \u043B\u0438\u0441\u0442 \u0431\u0443\u043C\u0430\u0433\u0438. \u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", essence: "\u0412\u043E\u0437\u0434\u0443\u0445 \u043C\u0435\u0448\u0430\u0435\u0442 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044E \u0442\u0435\u043B \u2014 \u044D\u0442\u043E \u0441\u0438\u043B\u0430 \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u044F \u0432\u043E\u0437\u0434\u0443\u0445\u0430. \u041E\u043D\u0430 \u0442\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435, \u0447\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0438 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u0442\u0435\u043B\u0430. \u0424\u043E\u0440\u043C\u0443 \u043C\u0430\u0448\u0438\u043D \u0438 \u0441\u0430\u043C\u043E\u043B\u0451\u0442\u043E\u0432 \u0434\u0435\u043B\u0430\u044E\u0442 \u043E\u0431\u0442\u0435\u043A\u0430\u0435\u043C\u043E\u0439, \u0447\u0442\u043E\u0431\u044B \u0443\u043C\u0435\u043D\u044C\u0448\u0438\u0442\u044C \u0441\u043E\u043F\u0440\u043E\u0442\u0438\u0432\u043B\u0435\u043D\u0438\u0435.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043B\u0438\u0441\u0442 \u0431\u0443\u043C\u0430\u0433\u0438 \u043F\u0430\u0434\u0430\u0435\u0442 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435, \u0447\u0435\u043C \u0441\u043A\u043E\u043C\u043A\u0430\u043D\u043D\u044B\u0439 \u0442\u0430\u043A\u043E\u0439 \u0436\u0435 \u043B\u0438\u0441\u0442?", "\u0417\u0430\u0447\u0435\u043C \u0430\u0432\u0442\u043E\u043C\u043E\u0431\u0438\u043B\u044F\u043C \u043E\u0431\u0442\u0435\u043A\u0430\u0435\u043C\u0430\u044F \u0444\u043E\u0440\u043C\u0430?"] }, { key: "phys7-4.6", code: "4.6", title: "\u0421\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430, \u0433\u0434\u0435 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438, \u0438 \u043E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u0435\u0451 \u0440\u043E\u043B\u044C.", essence: "\u041A\u043E\u0433\u0434\u0430 \u0442\u0435\u043B\u043E \u0434\u0435\u0444\u043E\u0440\u043C\u0438\u0440\u0443\u044E\u0442, \u0432\u043E\u0437\u043D\u0438\u043A\u0430\u0435\u0442 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438, \u043A\u043E\u0442\u043E\u0440\u0430\u044F \u0441\u0442\u0440\u0435\u043C\u0438\u0442\u0441\u044F \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u0435\u043C\u0443 \u0444\u043E\u0440\u043C\u0443. \u0414\u043B\u044F \u043F\u0440\u0443\u0436\u0438\u043D\u044B \u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0437\u0430\u043A\u043E\u043D \u0413\u0443\u043A\u0430: F = k \xB7 \u0394l, \u0433\u0434\u0435 k \u2014 \u0436\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u044C, \u0394l \u2014 \u0443\u0434\u043B\u0438\u043D\u0435\u043D\u0438\u0435.", tasks: ["\u0416\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u044C \u043F\u0440\u0443\u0436\u0438\u043D\u044B 200 N/m, \u0443\u0434\u043B\u0438\u043D\u0435\u043D\u0438\u0435 5 cm. \u041A\u0430\u043A\u043E\u0432\u0430 \u0441\u0438\u043B\u0430 \u0443\u043F\u0440\u0443\u0433\u043E\u0441\u0442\u0438?", "\u041F\u0440\u0443\u0436\u0438\u043D\u0443 \u0440\u0430\u0441\u0442\u044F\u043D\u0443\u043B\u0438 \u0441\u0438\u043B\u043E\u0439 6 N, \u043E\u043D\u0430 \u0443\u0434\u043B\u0438\u043D\u0438\u043B\u0430\u0441\u044C \u043D\u0430 3 cm. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 k."] }, { key: "phys7-4.7", code: "4.7", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430. \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0436\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0443\u0436\u0438\u043D\u044B", homework: "\u041E\u0444\u043E\u0440\u043C\u0438\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: F (N), \u0394l (m), k (N/m) \u0434\u043B\u044F \u0442\u0440\u0451\u0445 \u043E\u043F\u044B\u0442\u043E\u0432 \u0438 \u043F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0433\u0440\u0430\u0444\u0438\u043A.", essence: "\u041F\u043E\u0434\u0432\u0435\u0448\u0438\u0432\u0430\u0435\u043C \u043A \u043F\u0440\u0443\u0436\u0438\u043D\u0435 \u0433\u0440\u0443\u0437\u044B \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0433\u043E \u0432\u0435\u0441\u0430 \u0438 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C \u0443\u0434\u043B\u0438\u043D\u0435\u043D\u0438\u0435. \u0416\u0451\u0441\u0442\u043A\u043E\u0441\u0442\u044C k = F / \u0394l. \u041F\u043E\u0432\u0442\u043E\u0440\u044F\u0435\u043C \u043E\u043F\u044B\u0442 \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0433\u0440\u0443\u0437\u0430\u043C\u0438 \u0438 \u043D\u0430\u0445\u043E\u0434\u0438\u043C \u0441\u0440\u0435\u0434\u043D\u0435\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 k.", tasks: ["\u0413\u0440\u0443\u0437 1 N \u0440\u0430\u0441\u0442\u044F\u043D\u0443\u043B \u043F\u0440\u0443\u0436\u0438\u043D\u0443 \u043D\u0430 2 cm, \u0433\u0440\u0443\u0437 2 N \u2014 \u043D\u0430 4 cm. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 k.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043E\u043F\u044B\u0442 \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u044E\u0442 \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u0433\u0440\u0443\u0437\u0430\u043C\u0438?"] }, { key: "phys7-5.1", code: "5.1", title: "\u0427\u0442\u043E \u043C\u044B \u043F\u043E\u043D\u0438\u043C\u0430\u0435\u043C \u043F\u043E\u0434 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u043E\u0439?", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0440\u0430\u0431\u043E\u0442\u0443, \u043A\u043E\u0442\u043E\u0440\u0443\u044E \u0432\u044B \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0435\u0442\u0435, \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u044F \u0440\u044E\u043A\u0437\u0430\u043A (\u0435\u0433\u043E \u0432\u0435\u0441 \u2248 50 N) \u043D\u0430 \u0432\u044B\u0441\u043E\u0442\u0443 1 m.", essence: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0435\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 \u0441\u0438\u043B\u0430 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0430\u0435\u0442 \u0442\u0435\u043B\u043E: A = F \xB7 s. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u2014 \u0434\u0436\u043E\u0443\u043B\u044C (J). \u0415\u0441\u043B\u0438 \u0442\u0435\u043B\u043E \u043D\u0435 \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u043E\u0441\u044C, \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B \u043D\u0435\u0442, \u043A\u0430\u043A \u0431\u044B \u043C\u044B \u043D\u0438 \u0443\u0441\u0442\u0430\u043B\u0438.", tasks: ["\u042F\u0449\u0438\u043A \u0442\u044F\u043D\u0443\u0442 \u0441\u0438\u043B\u043E\u0439 50 N \u043D\u0430 4 m. \u041A\u0430\u043A\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u044E\u0442?", "\u0427\u0435\u043B\u043E\u0432\u0435\u043A \u0441\u0442\u043E\u0438\u0442 \u0441 \u0441\u0443\u043C\u043A\u043E\u0439 10 minutes. \u041A\u0430\u043A\u043E\u0432\u0430 \u043C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430?"] }, { key: "phys7-5.2", code: "5.2", title: "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0430\u0445 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u044D\u043D\u0435\u0440\u0433\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0443\u044E \u0446\u0435\u043D\u043D\u043E\u0441\u0442\u044C \u0438 \u043F\u0435\u0440\u0435\u0432\u0435\u0434\u0438\u0442\u0435 100 kcal \u0432 \u0434\u0436\u043E\u0443\u043B\u0438.", essence: "\u042D\u043D\u0435\u0440\u0433\u0438\u044F \u2014 \u0441\u043F\u043E\u0441\u043E\u0431\u043D\u043E\u0441\u0442\u044C \u0442\u0435\u043B\u0430 \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0442\u044C \u0440\u0430\u0431\u043E\u0442\u0443. \u041E\u043D\u0430 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u0432 \u0434\u0436\u043E\u0443\u043B\u044F\u0445. \u042D\u043D\u0435\u0440\u0433\u0438\u044F \u043D\u0435 \u0438\u0441\u0447\u0435\u0437\u0430\u0435\u0442, \u0430 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442 \u0438\u0437 \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u0432 \u0434\u0440\u0443\u0433\u043E\u0439.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u0442\u0435\u043B\u0430 \u043E\u0431\u043B\u0430\u0434\u0430\u044E\u0442 \u044D\u043D\u0435\u0440\u0433\u0438\u0435\u0439: \u043B\u0435\u0442\u044F\u0449\u0438\u0439 \u043C\u044F\u0447, \u0441\u0436\u0430\u0442\u0430\u044F \u043F\u0440\u0443\u0436\u0438\u043D\u0430, \u043A\u043D\u0438\u0433\u0430 \u043D\u0430 \u043F\u043E\u043B\u043A\u0435?", "\u0412 \u043A\u0430\u043A\u0438\u0445 \u0435\u0434\u0438\u043D\u0438\u0446\u0430\u0445 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442\u0441\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?"] }, { key: "phys7-5.3", code: "5.3", title: "\u041A\u0430\u043A\u0438\u0435 \u0432\u0438\u0434\u044B \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044E\u0442?", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u043F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0443\u044E \u044D\u043D\u0435\u0440\u0433\u0438\u044E \u043D\u0430 \u0442\u0440\u0435\u0442\u044C\u0435\u043C \u044D\u0442\u0430\u0436\u0435 (h \u2248 9 m).", essence: "\u041A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u2014 \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F: E\u043A = m\xB7v\xB2/2. \u041F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0430\u044F \u2014 \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044F: E\u043F = m\xB7g\xB7h. \u041A\u0440\u043E\u043C\u0435 \u0442\u043E\u0433\u043E, \u0431\u044B\u0432\u0430\u0435\u0442 \u0442\u0435\u043F\u043B\u043E\u0432\u0430\u044F, \u0441\u0432\u0435\u0442\u043E\u0432\u0430\u044F, \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0430\u044F, \u044D\u043B\u0435\u043A\u0442\u0440\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F.", tasks: ["\u041C\u044F\u0447 1 kg \u043B\u0435\u0442\u0438\u0442 \u0441\u043E \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C\u044E 10 m/s. \u0415\u0433\u043E \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", "\u041A\u043D\u0438\u0433\u0430 2 kg \u043D\u0430 \u043F\u043E\u043B\u043A\u0435 \u0432\u044B\u0441\u043E\u0442\u043E\u0439 5 m. \u041F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F (g \u2248 10 N/kg)?"] }, { key: "phys7-5.4", code: "5.4", title: "\u041F\u0435\u0440\u0435\u0434\u0430\u0447\u0430 \u0438 \u043F\u0440\u0435\u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041E\u043F\u0438\u0448\u0438\u0442\u0435 3 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u0438, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432\u044B \u0432\u0438\u0434\u0435\u043B\u0438 \u0441\u0435\u0433\u043E\u0434\u043D\u044F \u0434\u043E\u043C\u0430.", essence: "\u042D\u043D\u0435\u0440\u0433\u0438\u044F \u043D\u0435 \u0438\u0441\u0447\u0435\u0437\u0430\u0435\u0442, \u0430 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442 \u0438\u0437 \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u0432 \u0434\u0440\u0443\u0433\u043E\u0439. \u041F\u043E\u0434\u043D\u044F\u0442\u044B\u0439 \u0433\u0440\u0443\u0437 \u043C\u0430\u044F\u0442\u043D\u0438\u043A\u0430 \u0438\u043C\u0435\u0435\u0442 \u043F\u043E\u0442\u0435\u043D\u0446\u0438\u0430\u043B\u044C\u043D\u0443\u044E \u044D\u043D\u0435\u0440\u0433\u0438\u044E, \u043F\u0440\u0438 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0438 \u0432\u043D\u0438\u0437 \u043E\u043D\u0430 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u0432 \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0443\u044E (\u044D\u043D\u0435\u0440\u0433\u0438\u044E \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F), \u0430 \u0432\u043D\u0438\u0437\u0443 \u2014 \u043E\u0431\u0440\u0430\u0442\u043D\u043E. \u041F\u0440\u0438 \u0443\u0434\u0430\u0440\u0435 \u043C\u0430\u0448\u0438\u043D \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u0432 \u0440\u0430\u0431\u043E\u0442\u0443 \u0441\u043C\u044F\u0442\u0438\u044F \u043A\u0443\u0437\u043E\u0432\u0430 \u0438 \u0432 \u0442\u0435\u043F\u043B\u043E.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u043F\u0440\u043E\u0438\u0441\u0445\u043E\u0434\u044F\u0442 \u043F\u0440\u0438 \u043A\u0430\u0447\u0430\u043D\u0438\u0438 \u043C\u0430\u044F\u0442\u043D\u0438\u043A\u0430?", "\u0412\u043E \u0447\u0442\u043E \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u043F\u0440\u0438 \u0443\u0434\u0430\u0440\u0435 \u043C\u0430\u0448\u0438\u043D?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043C\u0430\u044F\u0442\u043D\u0438\u043A \u0441\u043E \u0432\u0440\u0435\u043C\u0435\u043D\u0435\u043C \u043E\u0441\u0442\u0430\u043D\u0430\u0432\u043B\u0438\u0432\u0430\u0435\u0442\u0441\u044F?"] }, { key: "phys7-5.5", code: "5.5", title: "\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041F\u0440\u043E\u043A\u0430\u0442\u0438\u0442\u0435 \u0434\u0432\u0435 \u0438\u0433\u0440\u0443\u0448\u0435\u0447\u043D\u044B\u0435 \u043C\u0430\u0448\u0438\u043D\u043A\u0438 \u043D\u0430\u0432\u0441\u0442\u0440\u0435\u0447\u0443 \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0443. \u041E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u043F\u0440\u043E\u0438\u0437\u043E\u0448\u043B\u043E \u043F\u043E\u0441\u043B\u0435 \u0443\u0434\u0430\u0440\u0430 \u0438 \u043F\u043E\u0447\u0435\u043C\u0443.", essence: "\u041F\u043E\u043B\u043D\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u0437\u0430\u043C\u043A\u043D\u0443\u0442\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F. \u041F\u0440\u0438 \u0441\u0442\u043E\u043B\u043A\u043D\u043E\u0432\u0435\u043D\u0438\u0438 \u043C\u0430\u0448\u0438\u043D \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u0438 \u0438\u043C\u043F\u0443\u043B\u044C\u0441 p = m\xB7v: \u0441\u0443\u043C\u043C\u0430 \u0438\u043C\u043F\u0443\u043B\u044C\u0441\u043E\u0432 \u0434\u043E \u0443\u0434\u0430\u0440\u0430 \u0440\u0430\u0432\u043D\u0430 \u0441\u0443\u043C\u043C\u0435 \u043F\u043E\u0441\u043B\u0435. \u0410 \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F \u0447\u0430\u0441\u0442\u0438\u0447\u043D\u043E \xAB\u0442\u0435\u0440\u044F\u0435\u0442\u0441\u044F\xBB \u2014 \u043E\u043D\u0430 \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442 \u0432 \u0441\u043C\u044F\u0442\u0438\u0435 \u0438 \u0442\u0435\u043F\u043B\u043E. \u041F\u043E\u044D\u0442\u043E\u043C\u0443 \u043C\u0430\u0448\u0438\u043D\u044B \u0434\u0435\u043B\u0430\u044E\u0442 \u0441 \u0437\u043E\u043D\u043E\u0439 \u0434\u0435\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u0438: \u0447\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435 \u044D\u043D\u0435\u0440\u0433\u0438\u0438 \u043F\u043E\u0433\u043B\u043E\u0442\u0438\u0442 \u043A\u0443\u0437\u043E\u0432, \u0442\u0435\u043C \u043C\u0435\u043D\u044C\u0448\u0435 \u0434\u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u043F\u0430\u0441\u0441\u0430\u0436\u0438\u0440\u0430\u043C.", tasks: ["\u041C\u0430\u0448\u0438\u043D\u0430 1000 kg \u0435\u0434\u0435\u0442 20 m/s. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u0435\u0451 \u0438\u043C\u043F\u0443\u043B\u044C\u0441?", "\u0427\u0442\u043E \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043B\u044E\u0431\u043E\u043C \u0441\u0442\u043E\u043B\u043A\u043D\u043E\u0432\u0435\u043D\u0438\u0438 \u2014 \u0438\u043C\u043F\u0443\u043B\u044C\u0441 \u0438\u043B\u0438 \u043A\u0438\u043D\u0435\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u044D\u043D\u0435\u0440\u0433\u0438\u044F?", "\u0417\u0430\u0447\u0435\u043C \u043C\u0430\u0448\u0438\u043D\u0435 \u0437\u043E\u043D\u0430 \u0434\u0435\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u0438?"] }, { key: "phys7-5.6", code: "5.6", title: "\u041C\u0435\u0445\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C", homework: "\u0417\u0430\u0441\u0435\u043A\u0438\u0442\u0435, \u0437\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u043A\u0443\u043D\u0434 \u0432\u044B \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442\u0435\u0441\u044C \u043D\u0430 \u044D\u0442\u0430\u0436 (h \u2248 3 m), \u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0441\u0432\u043E\u044E \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C (A = \u0432\u0435\u0441 \xB7 h).", essence: "\u041C\u043E\u0449\u043D\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442, \u043A\u0430\u043A \u0431\u044B\u0441\u0442\u0440\u043E \u0441\u043E\u0432\u0435\u0440\u0448\u0430\u0435\u0442\u0441\u044F \u0440\u0430\u0431\u043E\u0442\u0430: N = A / t. \u0415\u0434\u0438\u043D\u0438\u0446\u0430 \u2014 \u0432\u0430\u0442\u0442 (W): 1 W = 1 J/s. \u041E\u0434\u0438\u043D \u0438 \u0442\u043E\u0442 \u0436\u0435 \u0433\u0440\u0443\u0437 \u043C\u043E\u0436\u043D\u043E \u043F\u043E\u0434\u043D\u044F\u0442\u044C \u0437\u0430 \u043C\u0438\u043D\u0443\u0442\u0443 \u0438\u043B\u0438 \u0437\u0430 \u0447\u0430\u0441 \u2014 \u0440\u0430\u0431\u043E\u0442\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u0430, \u0430 \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C \u0440\u0430\u0437\u043D\u0430\u044F.", tasks: ["\u0420\u0430\u0431\u043E\u0442\u0430 6000 J \u0441\u043E\u0432\u0435\u0440\u0448\u0435\u043D\u0430 \u0437\u0430 30 s. \u041C\u043E\u0449\u043D\u043E\u0441\u0442\u044C?", "\u041D\u0430\u0441\u043E\u0441 \u043C\u043E\u0449\u043D\u043E\u0441\u0442\u044C\u044E 500 W \u0440\u0430\u0431\u043E\u0442\u0430\u043B 2 minutes. \u041A\u0430\u043A\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u043E\u043D \u0441\u043E\u0432\u0435\u0440\u0448\u0438\u043B?"] }, { key: "phys7-5.7", code: "5.7", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430. \u0420\u0430\u0431\u043E\u0442\u0430 \u043F\u0440\u0438 \u043F\u043E\u0434\u044A\u0451\u043C\u0435 \u0438 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u0438 \u0442\u0435\u043B\u0430", homework: "\u041E\u0444\u043E\u0440\u043C\u0438\u0442\u0435 \u043E\u0442\u0447\u0451\u0442 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B: \u0446\u0435\u043B\u044C, \u043F\u0440\u0438\u0431\u043E\u0440\u044B, \u0442\u0430\u0431\u043B\u0438\u0446\u0430, \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u044F, \u0432\u044B\u0432\u043E\u0434.", essence: "\u041F\u0440\u0438 \u043F\u043E\u0434\u044A\u0451\u043C\u0435 \u0440\u0430\u0431\u043E\u0442\u0430 A = m\xB7g\xB7h (\u043F\u0440\u043E\u0442\u0438\u0432 \u0441\u0438\u043B\u044B \u0442\u044F\u0436\u0435\u0441\u0442\u0438). \u041F\u0440\u0438 \u043F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u0438 \u043F\u043E \u0441\u0442\u043E\u043B\u0443 \u0440\u0430\u0431\u043E\u0442\u0430 A = F\u0442\u0440 \xB7 s (\u043F\u0440\u043E\u0442\u0438\u0432 \u0442\u0440\u0435\u043D\u0438\u044F, \u0441\u0438\u043B\u0430 \u043F\u043E \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440\u0443). \u0421\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u0435\u043C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u044B \u0438 \u0434\u0435\u043B\u0430\u0435\u043C \u0432\u044B\u0432\u043E\u0434.", tasks: ["\u0411\u0440\u0443\u0441\u043E\u043A \u0432\u0435\u0441\u043E\u043C 2 N \u043F\u043E\u0434\u043D\u044F\u043B\u0438 \u043D\u0430 0,5 m. \u0420\u0430\u0431\u043E\u0442\u0430?", "\u0422\u043E\u0442 \u0436\u0435 \u0431\u0440\u0443\u0441\u043E\u043A \u043F\u0440\u043E\u0442\u0430\u0449\u0438\u043B\u0438 0,5 m, \u0434\u0438\u043D\u0430\u043C\u043E\u043C\u0435\u0442\u0440 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u043B 0,6 N. \u0420\u0430\u0431\u043E\u0442\u0430?"] }, { key: "phys7-6.1", code: "6.1", title: "\u0421\u043E\u043B\u043D\u0446\u0435, \u0417\u0435\u043C\u043B\u044F \u0438 \u041B\u0443\u043D\u0430", homework: "\u041D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0440\u0438\u0441\u043E\u0432\u044B\u0432\u0430\u0439\u0442\u0435 \u041B\u0443\u043D\u0443 \u043A\u0430\u0436\u0434\u044B\u0439 \u0432\u0435\u0447\u0435\u0440 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 \u0444\u0430\u0437\u044B.", essence: "\u0417\u0435\u043C\u043B\u044F \u0432\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u0432\u043E\u043A\u0440\u0443\u0433 \u043E\u0441\u0438 \u0437\u0430 \u0441\u0443\u0442\u043A\u0438 (\u0434\u0435\u043D\u044C \u0438 \u043D\u043E\u0447\u044C) \u0438 \u0432\u043E\u043A\u0440\u0443\u0433 \u0421\u043E\u043B\u043D\u0446\u0430 \u0437\u0430 \u0433\u043E\u0434. \u041B\u0443\u043D\u0430 \u043E\u0431\u0445\u043E\u0434\u0438\u0442 \u0417\u0435\u043C\u043B\u044E \u043F\u0440\u0438\u043C\u0435\u0440\u043D\u043E \u0437\u0430 29,5 \u0441\u0443\u0442\u043E\u043A, \u0438 \u043C\u044B \u0432\u0438\u0434\u0438\u043C \u0440\u0430\u0437\u043D\u044B\u0435 \u0435\u0451 \u0444\u0430\u0437\u044B. \u0417\u0430\u0442\u043C\u0435\u043D\u0438\u0435 \u2014 \u043A\u043E\u0433\u0434\u0430 \u043E\u0434\u043D\u043E \u0442\u0435\u043B\u043E \u0437\u0430\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0434\u0440\u0443\u0433\u043E\u0435.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0430 \u0417\u0435\u043C\u043B\u0435 \u0441\u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u0434\u0435\u043D\u044C \u0438 \u043D\u043E\u0447\u044C?", "\u041A\u043E\u0433\u0434\u0430 \u0431\u044B\u0432\u0430\u0435\u0442 \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0435 \u0437\u0430\u0442\u043C\u0435\u043D\u0438\u0435?"] }, { key: "phys7-6.2", code: "6.2", title: "\u0421\u043E\u043B\u043D\u0435\u0447\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u043E\u0434\u0435\u043B\u044C \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B \u0438\u0437 \u0431\u0443\u043C\u0430\u0433\u0438 \u0438\u043B\u0438 \u043F\u043B\u0430\u0441\u0442\u0438\u043B\u0438\u043D\u0430 \u0441 \u043F\u043E\u0434\u043F\u0438\u0441\u044F\u043C\u0438.", essence: "\u0412\u043E\u043A\u0440\u0443\u0433 \u0421\u043E\u043B\u043D\u0446\u0430 \u0434\u0432\u0438\u0436\u0443\u0442\u0441\u044F 8 \u043F\u043B\u0430\u043D\u0435\u0442: \u041C\u0435\u0440\u043A\u0443\u0440\u0438\u0439, \u0412\u0435\u043D\u0435\u0440\u0430, \u0417\u0435\u043C\u043B\u044F, \u041C\u0430\u0440\u0441 (\u0437\u0435\u043C\u043D\u0430\u044F \u0433\u0440\u0443\u043F\u043F\u0430) \u0438 \u042E\u043F\u0438\u0442\u0435\u0440, \u0421\u0430\u0442\u0443\u0440\u043D, \u0423\u0440\u0430\u043D, \u041D\u0435\u043F\u0442\u0443\u043D (\u043F\u043B\u0430\u043D\u0435\u0442\u044B-\u0433\u0438\u0433\u0430\u043D\u0442\u044B). \u0415\u0441\u0442\u044C \u0442\u0430\u043A\u0436\u0435 \u0441\u043F\u0443\u0442\u043D\u0438\u043A\u0438, \u0430\u0441\u0442\u0435\u0440\u043E\u0438\u0434\u044B \u0438 \u043A\u043E\u043C\u0435\u0442\u044B.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u043B\u0430\u043D\u0435\u0442\u044B \u043F\u043E \u043F\u043E\u0440\u044F\u0434\u043A\u0443 \u043E\u0442 \u0421\u043E\u043B\u043D\u0446\u0430.", "\u041A\u0430\u043A\u0430\u044F \u043F\u043B\u0430\u043D\u0435\u0442\u0430 \u0441\u0430\u043C\u0430\u044F \u0431\u043E\u043B\u044C\u0448\u0430\u044F \u0438 \u043A\u0430\u043A\u0430\u044F \u0441\u0430\u043C\u0430\u044F \u0431\u043B\u0438\u0437\u043A\u0430\u044F \u043A \u0421\u043E\u043B\u043D\u0446\u0443?"] }, { key: "phys7-6.3", code: "6.3", title: "\u0412\u0441\u0435\u043B\u0435\u043D\u043D\u0430\u044F \u0437\u0430 \u043F\u0440\u0435\u0434\u0435\u043B\u0430\u043C\u0438 \u0421\u043E\u043B\u043D\u0435\u0447\u043D\u043E\u0439 \u0441\u0438\u0441\u0442\u0435\u043C\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u043D\u043E\u0447\u043D\u043E\u043C \u043D\u0435\u0431\u0435 \u0411\u043E\u043B\u044C\u0448\u0443\u044E \u041C\u0435\u0434\u0432\u0435\u0434\u0438\u0446\u0443 \u0438 \u0437\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0435\u0451.", essence: "\u0421\u043E\u043B\u043D\u0446\u0435 \u2014 \u043E\u0434\u043D\u0430 \u0438\u0437 \u0441\u043E\u0442\u0435\u043D \u043C\u0438\u043B\u043B\u0438\u0430\u0440\u0434\u043E\u0432 \u0437\u0432\u0451\u0437\u0434 \u043D\u0430\u0448\u0435\u0439 \u0433\u0430\u043B\u0430\u043A\u0442\u0438\u043A\u0438 \u041C\u043B\u0435\u0447\u043D\u044B\u0439 \u041F\u0443\u0442\u044C. \u0412\u043E \u0412\u0441\u0435\u043B\u0435\u043D\u043D\u043E\u0439 \u043C\u0438\u043B\u043B\u0438\u0430\u0440\u0434\u044B \u0433\u0430\u043B\u0430\u043A\u0442\u0438\u043A. \u0420\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0432 \u0441\u0432\u0435\u0442\u043E\u0432\u044B\u0445 \u0433\u043E\u0434\u0430\u0445 \u2014 \u044D\u0442\u043E \u043F\u0443\u0442\u044C \u0441\u0432\u0435\u0442\u0430 \u0437\u0430 \u0433\u043E\u0434, \u043E\u043A\u043E\u043B\u043E 9,46 \u0442\u0440\u0438\u043B\u043B\u0438\u043E\u043D\u0430 km.", tasks: ["\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0441\u0432\u0435\u0442\u043E\u0432\u043E\u0439 \u0433\u043E\u0434?", "\u041A\u0430\u043A \u043D\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430\u0448\u0430 \u0433\u0430\u043B\u0430\u043A\u0442\u0438\u043A\u0430?"] }, { key: "phys7-6.4", code: "6.4", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0412\u0441\u0435\u043B\u0435\u043D\u043D\u043E\u0439", homework: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0440\u0430\u0441\u0441\u043A\u0430\u0437 \u043E \u043B\u044E\u0431\u043E\u0439 \u043A\u043E\u0441\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043C\u0438\u0441\u0441\u0438\u0438.", essence: "\u0412\u0441\u0435\u043B\u0435\u043D\u043D\u0443\u044E \u0438\u0437\u0443\u0447\u0430\u044E\u0442 \u0442\u0435\u043B\u0435\u0441\u043A\u043E\u043F\u0430\u043C\u0438 (\u043E\u043F\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u043C\u0438 \u0438 \u0440\u0430\u0434\u0438\u043E), \u0441\u043F\u0443\u0442\u043D\u0438\u043A\u0430\u043C\u0438, \u043C\u0435\u0436\u043F\u043B\u0430\u043D\u0435\u0442\u043D\u044B\u043C\u0438 \u0441\u0442\u0430\u043D\u0446\u0438\u044F\u043C\u0438 \u0438 \u043B\u044E\u0434\u044C\u043C\u0438 \u043D\u0430 \u043E\u0440\u0431\u0438\u0442\u0435. \u0412 1957 \u0433\u043E\u0434\u0443 \u0437\u0430\u043F\u0443\u0449\u0435\u043D \u043F\u0435\u0440\u0432\u044B\u0439 \u0441\u043F\u0443\u0442\u043D\u0438\u043A, \u0432 1961 \u0433\u043E\u0434\u0443 \u042E\u0440\u0438\u0439 \u0413\u0430\u0433\u0430\u0440\u0438\u043D \u0432\u043F\u0435\u0440\u0432\u044B\u0435 \u043F\u043E\u043B\u0435\u0442\u0435\u043B \u0432 \u043A\u043E\u0441\u043C\u043E\u0441.", tasks: ["\u041A\u0442\u043E \u043F\u0435\u0440\u0432\u044B\u043C \u043F\u043E\u043B\u0435\u0442\u0435\u043B \u0432 \u043A\u043E\u0441\u043C\u043E\u0441 \u0438 \u043A\u043E\u0433\u0434\u0430?", "\u0417\u0430\u0447\u0435\u043C \u0440\u0430\u0434\u0438\u043E\u0442\u0435\u043B\u0435\u0441\u043A\u043E\u043F\u044B, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C \u043E\u043F\u0442\u0438\u0447\u0435\u0441\u043A\u0438\u0435?"] }, { key: "phys7-6.5", code: "6.5", title: "\u041A\u0440\u0430\u0442\u043A\u0430\u044F \u0438\u0441\u0442\u043E\u0440\u0438\u044F \u0440\u0430\u0437\u0432\u0438\u0442\u0438\u044F \u043D\u0430\u0443\u043A\u0438 \u0430\u0441\u0442\u0440\u043E\u043D\u043E\u043C\u0438\u0438", homework: "\u041F\u043E\u0441\u0435\u0442\u0438\u0442\u0435 (\u0438\u043B\u0438 \u043D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0438\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0435) \u043E\u0431\u0441\u0435\u0440\u0432\u0430\u0442\u043E\u0440\u0438\u044E \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u0430 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 5 \u0444\u0430\u043A\u0442\u043E\u0432 \u043E \u043D\u0435\u0439.", essence: "\u041F\u0442\u043E\u043B\u0435\u043C\u0435\u0439 \u0441\u0447\u0438\u0442\u0430\u043B \u0446\u0435\u043D\u0442\u0440\u043E\u043C \u043C\u0438\u0440\u0430 \u0417\u0435\u043C\u043B\u044E, \u041A\u043E\u043F\u0435\u0440\u043D\u0438\u043A \u0434\u043E\u043A\u0430\u0437\u0430\u043B, \u0447\u0442\u043E \u0432 \u0446\u0435\u043D\u0442\u0440\u0435 \u2014 \u0421\u043E\u043B\u043D\u0446\u0435. \u0413\u0430\u043B\u0438\u043B\u0435\u0439 \u0432 1609 \u0433\u043E\u0434\u0443 \u043D\u0430\u043F\u0440\u0430\u0432\u0438\u043B \u0442\u0435\u043B\u0435\u0441\u043A\u043E\u043F \u0432 \u043D\u0435\u0431\u043E. \u0423\u043B\u0443\u0433\u0431\u0435\u043A \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u043B \u0432 \u0421\u0430\u043C\u0430\u0440\u043A\u0430\u043D\u0434\u0435 \u043E\u0431\u0441\u0435\u0440\u0432\u0430\u0442\u043E\u0440\u0438\u044E \u0438 \u0441\u043E\u0441\u0442\u0430\u0432\u0438\u043B \u043A\u0430\u0442\u0430\u043B\u043E\u0433 1018 \u0437\u0432\u0451\u0437\u0434.", tasks: ["\u0427\u0435\u043C \u043C\u043E\u0434\u0435\u043B\u044C \u041A\u043E\u043F\u0435\u0440\u043D\u0438\u043A\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043C\u043E\u0434\u0435\u043B\u0438 \u041F\u0442\u043E\u043B\u0435\u043C\u0435\u044F?", "\u0427\u0435\u043C \u0437\u043D\u0430\u043C\u0435\u043D\u0438\u0442 \u041C\u0438\u0440\u0437\u043E \u0423\u043B\u0443\u0433\u0431\u0435\u043A?"] }] }, { id: "chemistry-7", subject: "chemistry", grade: 7, topics: [{ key: "chem7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0445\u0438\u043C\u0438\u044F?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u0438\u043B\u0438 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u0432 \u043D\u0438\u0445 \u0433\u043B\u0430\u0432\u043D\u043E\u0435.", essence: "\u0425\u0438\u043C\u0438\u044F \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0441\u043E\u0441\u0442\u0430\u0432, \u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432, \u0430 \u0442\u0430\u043A\u0436\u0435 \u0438\u0445 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0435\u043D\u0438\u044F \u0432 \u0434\u0440\u0443\u0433\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430. \u0425\u0438\u043C\u0438\u044F \u0441\u0432\u044F\u0437\u0430\u043D\u0430 \u0441 \u0435\u0434\u043E\u0439, \u043E\u0434\u0435\u0436\u0434\u043E\u0439, \u043B\u0435\u043A\u0430\u0440\u0441\u0442\u0432\u0430\u043C\u0438, \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u043E\u043C. \u0415\u0451 \u0440\u0430\u0437\u0434\u0435\u043B\u044B: \u043D\u0435\u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F, \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0430\u044F, \u0430\u043D\u0430\u043B\u0438\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F, \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0445\u0438\u043C\u0438\u044F \u0438 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0434\u0430 \u0432 \u0441\u0442\u0430\u043A\u0430\u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0438\u043B\u0430 \u0446\u0432\u0435\u0442, \u043A\u043E\u0433\u0434\u0430 \u0442\u0443\u0434\u0430 \u043E\u043F\u0443\u0441\u0442\u0438\u043B\u0438 \u0447\u0430\u0439\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442\u0438\u043A?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u043D\u0430\u043D\u0438\u0435 \u0445\u0438\u043C\u0438\u0438 \u0432\u0430\u0436\u043D\u043E \u0432 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438?"] }, { key: "chem7-1.2", code: "1.2", title: "\u041A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F", homework: "\u041E\u0442\u043C\u0435\u0442\u044C\u0442\u0435 \u0432 \u0430\u043D\u043A\u0435\u0442\u0435 \u0438\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430, \u043A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0443 \u0432\u0430\u0441 \u0443\u0436\u0435 \u0435\u0441\u0442\u044C, \u0430 \u043A\u0430\u043A\u0438\u0435 \u0445\u043E\u0442\u0438\u0442\u0435 \u0440\u0430\u0437\u0432\u0438\u0442\u044C.", essence: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043B\u044E\u0431\u043E\u0437\u043D\u0430\u0442\u0435\u043B\u0435\u043D, \u0440\u0435\u0448\u0438\u0442\u0435\u043B\u0435\u043D, \u043D\u0435\u043F\u0440\u0435\u0434\u0432\u0437\u044F\u0442, \u0443\u043C\u0435\u0435\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0432 \u043A\u043E\u043C\u0430\u043D\u0434\u0435, \u043E\u0431\u044A\u0435\u043A\u0442\u0438\u0432\u0435\u043D, \u0441\u043A\u0435\u043F\u0442\u0438\u0447\u0435\u043D, \u0441\u043A\u0440\u043E\u043C\u0435\u043D, \u0447\u0435\u0441\u0442\u0435\u043D \u0438 \u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043D\u0435\u043D. \u0423\u0447\u0451\u043D\u044B\u0435 \u0441\u0442\u0430\u0432\u044F\u0442 \u043E\u043F\u044B\u0442\u044B, \u043D\u0435 \u0441\u0434\u0430\u044E\u0442\u0441\u044F \u043F\u0440\u0438 \u043D\u0435\u0443\u0434\u0430\u0447\u0430\u0445 \u0438 \u043E\u0431\u0441\u0443\u0436\u0434\u0430\u044E\u0442 \u0432\u044B\u0432\u043E\u0434\u044B \u043E\u0442\u043A\u0440\u044B\u0442\u043E.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443\u0447\u0451\u043D\u044B\u043C \u0432\u0430\u0436\u043D\u043E \u0441\u043E\u0442\u0440\u0443\u0434\u043D\u0438\u0447\u0430\u0442\u044C \u0434\u0440\u0443\u0433 \u0441 \u0434\u0440\u0443\u0433\u043E\u043C \u0438 \u0431\u044B\u0442\u044C \u0447\u0435\u0441\u0442\u043D\u044B\u043C\u0438?", "\u0427\u0442\u043E \u0437\u043D\u0430\u0447\u0438\u0442 \u0431\u044B\u0442\u044C \u0441\u043A\u0435\u043F\u0442\u0438\u0447\u043D\u044B\u043C \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u0435\u043C?"] }, { key: "chem7-1.3", code: "1.3", title: "\u041D\u0430\u0443\u0447\u043D\u044B\u0435 \u043C\u0435\u0442\u043E\u0434\u044B \u0438\u0437\u0443\u0447\u0435\u043D\u0438\u044F \u0445\u0438\u043C\u0438\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043B\u0430\u043D \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F: \xAB\u0413\u0434\u0435 \u0431\u044B\u0441\u0442\u0440\u0435\u0435 \u0441\u043E\u0445\u043D\u0435\u0442 \u0431\u0435\u043B\u044C\u0451 \u2014 \u043D\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0438\u043B\u0438 \u0432 \u0442\u0435\u043D\u0438?\xBB", essence: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u043D\u0430\u0447\u0438\u043D\u0430\u044E\u0442 \u0441 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u043D\u043E\u0433\u043E \u0432\u043E\u043F\u0440\u043E\u0441\u0430 \u0438 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u044B. \u041F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435: \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u0430\u044F (\u0435\u0451 \u043C\u0435\u043D\u044F\u0435\u043C), \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u0430\u044F (\u0435\u0451 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u043C) \u0438 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0438\u0440\u0443\u0435\u043C\u044B\u0435 (\u0438\u0445 \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u043C \u043D\u0435\u0438\u0437\u043C\u0435\u043D\u043D\u044B\u043C\u0438). \u0417\u0430\u0442\u0435\u043C \u0432\u044B\u0431\u0438\u0440\u0430\u044E\u0442 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0438 \u044D\u0442\u0430\u043F\u044B \u043E\u043F\u044B\u0442\u0430.", tasks: ["\u0412 \u043E\u043F\u044B\u0442\u0435 \xAB\u0432\u043B\u0438\u044F\u0435\u0442 \u043B\u0438 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0432\u043E\u0434\u044B \u043D\u0430 \u0441\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0435\u043D\u0438\u044F \u0441\u0430\u0445\u0430\u0440\u0430\xBB \u043D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435.", "\u0427\u0435\u043C \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u0430\u044F \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u0430\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0439?"] }, { key: "chem7-1.4", code: "1.4", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041F\u0435\u0440\u0435\u0440\u0438\u0441\u0443\u0439\u0442\u0435 5 \u0437\u043D\u0430\u043A\u043E\u0432 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C \u043F\u0440\u0438 \u043A\u0430\u0436\u0434\u043E\u043C.", essence: "\u0417\u043D\u0430\u043A\u0438 \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438: \u043E\u0433\u043E\u043D\u044C \u2014 \u043B\u0435\u0433\u043A\u043E\u0432\u043E\u0441\u043F\u043B\u0430\u043C\u0435\u043D\u044F\u044E\u0449\u0438\u0435\u0441\u044F (\u0431\u0435\u043D\u0437\u0438\u043D, \u0441\u043F\u0438\u0440\u0442), \u0432\u0437\u0440\u044B\u0432 \u2014 \u0432\u0437\u0440\u044B\u0432\u0447\u0430\u0442\u044B\u0435, \u0447\u0435\u0440\u0435\u043F \u2014 \u044F\u0434\u043E\u0432\u0438\u0442\u044B\u0435 (\u0440\u0442\u0443\u0442\u044C, \u0445\u043B\u043E\u0440), \u0432\u043E\u0441\u043A\u043B\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0437\u043D\u0430\u043A \u2014 \u0432\u0440\u0435\u0434\u043D\u044B\u0435 \u0438 \u0443\u0434\u0443\u0448\u0430\u044E\u0449\u0438\u0435, \u043A\u0430\u043F\u043B\u0438 \u043D\u0430 \u0440\u0443\u043A\u0443 \u2014 \u0435\u0434\u043A\u0438\u0435 (\u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0438 \u0449\u0451\u043B\u043E\u0447\u0438). \u041E\u043F\u044B\u0442\u044B \u0441 \u0443\u0434\u0443\u0448\u0430\u044E\u0449\u0438\u043C\u0438 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430\u043C\u0438 \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442 \u0432 \u0432\u044B\u0442\u044F\u0436\u043D\u043E\u043C \u0448\u043A\u0430\u0444\u0443.", tasks: ["\u0418\u0437\u043C\u0430\u0438\u043B\u0443 \u043D\u0443\u0436\u043D\u043E \u043D\u0430\u0433\u0440\u0435\u0442\u044C \u0441\u043F\u0438\u0440\u0442 \u0432 \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0435. \u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0434\u0432\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438.", "\u0427\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u0430 \u043F\u043E\u043F\u0430\u043B\u0430 \u043D\u0430 \u043A\u043E\u0436\u0443?"] }, { key: "chem7-1.5", code: "1.5", title: "\u041E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u043E\u0435 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u041E\u0442\u0432\u0435\u0442\u044C\u0442\u0435 \u043D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u044B \xAB\u041F\u043E\u0432\u0442\u043E\u0440\u0435\u043D\u0438\u0435\xBB \u0433\u043B\u0430\u0432\u044B 1 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", essence: "\u041E\u0441\u043D\u043E\u0432\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435: \u0441\u0442\u0430\u043A\u0430\u043D, \u043A\u043E\u043B\u0431\u0430, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0430, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0432\u043E\u0440\u043E\u043D\u043A\u0430, \u0442\u0440\u0435\u043D\u043E\u0433\u0430, \u0441\u043F\u0438\u0440\u0442\u043E\u0432\u043A\u0430 \u0438\u043B\u0438 \u0433\u043E\u0440\u0435\u043B\u043A\u0430, \u0432\u044B\u043F\u0430\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u0447\u0430\u0448\u043A\u0430, \u0448\u0442\u0430\u0442\u0438\u0432. \u041E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435 \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0430\u044E\u0442 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u2014 \u043A\u043E\u043D\u0442\u0443\u0440\u043E\u043C.", tasks: ["\u0421\u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u0443\u0439\u0442\u0435 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443: \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043B\u043E\u0436\u043A\u0430 \u0432 \u0433\u043E\u0440\u044F\u0447\u0435\u043C \u0447\u0430\u0435 \u043D\u0430\u0433\u0440\u0435\u043B\u0430\u0441\u044C \u0441\u0438\u043B\u044C\u043D\u0435\u0435 \u0434\u0435\u0440\u0435\u0432\u044F\u043D\u043D\u043E\u0439.", "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438: \u0441\u0442\u0430\u043A\u0430\u043D, \u0442\u0440\u0435\u043D\u043E\u0433\u0443, \u043F\u0440\u043E\u0431\u0438\u0440\u043A\u0443, \u043C\u0435\u0440\u043D\u044B\u0439 \u0446\u0438\u043B\u0438\u043D\u0434\u0440, \u0432\u044B\u043F\u0430\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u0447\u0430\u0448\u043A\u0443."] }, { key: "chem7-2.1", code: "2.1", title: "\u0421\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u043F\u043E 2 \u043F\u0440\u0438\u043C\u0435\u0440\u0430 \u0442\u0432\u0451\u0440\u0434\u044B\u0445, \u0436\u0438\u0434\u043A\u0438\u0445 \u0438 \u0433\u0430\u0437\u043E\u043E\u0431\u0440\u0430\u0437\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0443.", essence: "\u0412\u0441\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0441\u043E\u0441\u0442\u043E\u044F\u0442 \u0438\u0437 \u043C\u0435\u043B\u044C\u0447\u0430\u0439\u0448\u0438\u0445 \u0447\u0430\u0441\u0442\u0438\u0446 \u2014 \u043C\u043E\u043B\u0435\u043A\u0443\u043B \u0438 \u0430\u0442\u043E\u043C\u043E\u0432. \u0412\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u0431\u044B\u0432\u0430\u0435\u0442 \u0432 \u0442\u0440\u0451\u0445 \u0430\u0433\u0440\u0435\u0433\u0430\u0442\u043D\u044B\u0445 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F\u0445: \u0442\u0432\u0451\u0440\u0434\u043E\u043C, \u0436\u0438\u0434\u043A\u043E\u043C \u0438 \u0433\u0430\u0437\u043E\u043E\u0431\u0440\u0430\u0437\u043D\u043E\u043C. \u0412 \u0442\u0432\u0451\u0440\u0434\u043E\u043C \u0442\u0435\u043B\u0435 \u0447\u0430\u0441\u0442\u0438\u0446\u044B \u043F\u043B\u043E\u0442\u043D\u043E \u0443\u043F\u0430\u043A\u043E\u0432\u0430\u043D\u044B \u0438 \u043A\u043E\u043B\u0435\u0431\u043B\u044E\u0442\u0441\u044F \u043D\u0430 \u043C\u0435\u0441\u0442\u0435, \u0432 \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u2014 \u0434\u0432\u0438\u0433\u0430\u044E\u0442\u0441\u044F, \u043D\u043E \u0434\u0435\u0440\u0436\u0430\u0442\u0441\u044F \u0431\u043B\u0438\u0437\u043A\u043E, \u0432 \u0433\u0430\u0437\u0435 \u2014 \u043B\u0435\u0442\u0430\u044E\u0442 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E \u0438 \u0434\u0430\u043B\u0435\u043A\u043E \u0434\u0440\u0443\u0433 \u043E\u0442 \u0434\u0440\u0443\u0433\u0430. \u0412\u043E\u0434\u0430 \u043C\u043E\u0436\u0435\u0442 \u0431\u044B\u0442\u044C \u0432\u043E \u0432\u0441\u0435\u0445 \u0442\u0440\u0451\u0445 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F\u0445: \u043B\u0451\u0434, \u0432\u043E\u0434\u0430, \u043F\u0430\u0440.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0440\u0438 \u0430\u0433\u0440\u0435\u0433\u0430\u0442\u043D\u044B\u0445 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0433\u0430\u0437 \u0437\u0430\u043D\u0438\u043C\u0430\u0435\u0442 \u0432\u0435\u0441\u044C \u043E\u0431\u044A\u0451\u043C \u0441\u043E\u0441\u0443\u0434\u0430?", "\u0412 \u043A\u0430\u043A\u043E\u043C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0447\u0430\u0441\u0442\u0438\u0446\u044B \u0440\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u044B \u0442\u0435\u0441\u043D\u0435\u0435 \u0432\u0441\u0435\u0433\u043E?"] }, { key: "chem7-2.2", code: "2.2", title: "\u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043A\u0443\u0431\u0438\u043A \u043B\u044C\u0434\u0430 \u043D\u0430 \u0442\u0430\u0440\u0435\u043B\u043A\u0443 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u0440\u0435\u043C\u044F: \u043A\u043E\u0433\u0434\u0430 \u043E\u043D \u0440\u0430\u0441\u0442\u0430\u0435\u0442 \u0438 \u043A\u043E\u0433\u0434\u0430 \u0432\u044B\u0441\u043E\u0445\u043D\u0435\u0442 \u043B\u0443\u0436\u0438\u0446\u0430.", essence: "\u041F\u0440\u0438 \u043D\u0430\u0433\u0440\u0435\u0432\u0430\u043D\u0438\u0438 \u0447\u0430\u0441\u0442\u0438\u0446\u044B \u0434\u0432\u0438\u0433\u0430\u044E\u0442\u0441\u044F \u0431\u044B\u0441\u0442\u0440\u0435\u0435, \u0438 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442 \u0438\u0437 \u0442\u0432\u0451\u0440\u0434\u043E\u0433\u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u044F \u0432 \u0436\u0438\u0434\u043A\u043E\u0435 (\u043F\u043B\u0430\u0432\u043B\u0435\u043D\u0438\u0435), \u0430 \u0437\u0430\u0442\u0435\u043C \u0432 \u0433\u0430\u0437 (\u043A\u0438\u043F\u0435\u043D\u0438\u0435, \u0438\u0441\u043F\u0430\u0440\u0435\u043D\u0438\u0435). \u041F\u0440\u0438 \u043E\u0445\u043B\u0430\u0436\u0434\u0435\u043D\u0438\u0438 \u2014 \u043E\u0431\u0440\u0430\u0442\u043D\u043E: \u043A\u043E\u043D\u0434\u0435\u043D\u0441\u0430\u0446\u0438\u044F \u0438 \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u043B\u0438\u0437\u0430\u0446\u0438\u044F. \u0412\u043E\u0434\u0430 \u043F\u043B\u0430\u0432\u0438\u0442\u0441\u044F \u043F\u0440\u0438 0 \xB0C \u0438 \u043A\u0438\u043F\u0438\u0442 \u043F\u0440\u0438 100 \xB0C. \u0421\u0430\u043C\u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u044B \u043F\u0440\u0438 \u044D\u0442\u043E\u043C \u043D\u0435 \u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u2014 \u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u0438\u0445 \u0440\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435.", tasks: ["\u041A\u0430\u043A \u043D\u0430\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u043F\u0435\u0440\u0435\u0445\u043E\u0434 \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u0432 \u0433\u0430\u0437?", "\u041C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u043B\u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u044B \u0432\u043E\u0434\u044B \u043F\u0440\u0438 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u043D\u0438\u0438?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0437\u0435\u0440\u043A\u0430\u043B\u043E \u0432 \u0432\u0430\u043D\u043D\u043E\u0439 \u0437\u0430\u043F\u043E\u0442\u0435\u0432\u0430\u0435\u0442?"] }, { key: "chem7-3.1", code: "3.1", title: "\u0425\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u044B", homework: "\u0412\u044B\u043F\u0438\u0448\u0438\u0442\u0435 10 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0435\u0441\u0442\u044C \u0432 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0435 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430, \u0441 \u0438\u0445 \u0441\u0438\u043C\u0432\u043E\u043B\u0430\u043C\u0438.", essence: "\u0425\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u2014 \u0432\u0438\u0434 \u0430\u0442\u043E\u043C\u043E\u0432 \u0441 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u043C\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430\u043C\u0438. \u0423 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u0435\u0441\u0442\u044C \u0441\u0438\u043C\u0432\u043E\u043B \u0438\u0437 \u043F\u0435\u0440\u0432\u043E\u0439 (\u0438\u043B\u0438 \u043F\u0435\u0440\u0432\u043E\u0439 \u0438 \u0432\u0442\u043E\u0440\u043E\u0439) \u0431\u0443\u043A\u0432\u044B \u043B\u0430\u0442\u0438\u043D\u0441\u043A\u043E\u0433\u043E \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F: \u0443\u0433\u043B\u0435\u0440\u043E\u0434 (carboneum) \u2014 C, \u043C\u0430\u0433\u043D\u0438\u0439 (magnesium) \u2014 Mg, \u043C\u0435\u0434\u044C (cuprum) \u2014 Cu.", tasks: ["\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0441\u0438\u043C\u0432\u043E\u043B\u044B: \u0436\u0435\u043B\u0435\u0437\u043E, \u043D\u0430\u0442\u0440\u0438\u0439, \u0441\u0435\u0440\u0430, \u0441\u0435\u0440\u0435\u0431\u0440\u043E, \u0446\u0438\u043D\u043A, \u0430\u0437\u043E\u0442.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0441\u0438\u043C\u0432\u043E\u043B \u0441\u0435\u0440\u0435\u0431\u0440\u0430 Ag?"] }, { key: "chem7-3.2", code: "3.2", title: "\u0410\u0442\u043E\u043C \u0438 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430", homework: "\u0412 3D-\u0441\u0442\u0443\u0434\u0438\u0438 \u0441\u043E\u0431\u0435\u0440\u0438\u0442\u0435 H\u2082O, CO\u2082, NH\u2083 \u0438 CH\u2084. \u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0438\u0445 \u0441\u0445\u0435\u043C\u044B \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", essence: "\u0410\u0442\u043E\u043C \u2014 \u043C\u0435\u043B\u044C\u0447\u0430\u0439\u0448\u0430\u044F \u0447\u0430\u0441\u0442\u0438\u0446\u0430 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430. \u0410\u0442\u043E\u043C\u044B \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u044E\u0442\u0441\u044F \u0432 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u044B \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0441\u0432\u044F\u0437\u0435\u0439. \u041A\u0430\u0436\u0434\u044B\u0439 \u0430\u0442\u043E\u043C \u043C\u043E\u0436\u0435\u0442 \u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u0442\u044C \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0441\u0432\u044F\u0437\u0435\u0439 \u2014 \u044D\u0442\u043E \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C: \u0432\u043E\u0434\u043E\u0440\u043E\u0434 (H) \u2014 1, \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434 (O) \u2014 2, \u0430\u0437\u043E\u0442 (N) \u2014 3, \u0443\u0433\u043B\u0435\u0440\u043E\u0434 (C) \u2014 4. \u041C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u0443\u0441\u0442\u043E\u0439\u0447\u0438\u0432\u0430, \u043A\u043E\u0433\u0434\u0430 \u0443 \u0432\u0441\u0435\u0445 \u0430\u0442\u043E\u043C\u043E\u0432 \xAB\u0437\u0430\u043D\u044F\u0442\u044B\xBB \u0432\u0441\u0435 \u0441\u0432\u044F\u0437\u0438.", tasks: ["\u041A\u0430\u043A\u043E\u0432\u0430 \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C \u0443\u0433\u043B\u0435\u0440\u043E\u0434\u0430? \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0430\u0442\u043E\u043C\u043E\u0432 \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u043E\u043D \u043F\u0440\u0438\u0441\u043E\u0435\u0434\u0438\u043D\u0438\u0442?", "\u041A\u0430\u043A\u043E\u0432\u0430 \u0432\u0430\u043B\u0435\u043D\u0442\u043D\u043E\u0441\u0442\u044C \u0430\u0437\u043E\u0442\u0430? \u041A\u0430\u043A\u0430\u044F \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0441 \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u043E\u043C?", "\u0418\u0437 \u043A\u0430\u043A\u0438\u0445 \u0430\u0442\u043E\u043C\u043E\u0432 \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u043C\u043E\u043B\u0435\u043A\u0443\u043B\u0430 \u0432\u043E\u0434\u044B?"] }, { key: "chem7-3.3", code: "3.3", title: "\u041C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438\u0437 \u043C\u0435\u0442\u0430\u043B\u043B\u0430 \u0438 5 \u2014 \u0438\u0437 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432. \u041A\u0430\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043B\u0438, \u0447\u0442\u043E\u0431\u044B \u0438\u0445 \u043E\u0442\u043B\u0438\u0447\u0438\u0442\u044C?", essence: "\u042D\u043B\u0435\u043C\u0435\u043D\u0442\u044B \u0434\u0435\u043B\u044F\u0442 \u043D\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B. \u041C\u0435\u0442\u0430\u043B\u043B\u044B \u0431\u043B\u0435\u0441\u0442\u044F\u0442, \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442 \u0442\u043E\u043A \u0438 \u0442\u0435\u043F\u043B\u043E, \u0433\u043D\u0443\u0442\u0441\u044F (\u043D\u0430\u0442\u0440\u0438\u0439, \u0436\u0435\u043B\u0435\u0437\u043E, \u043C\u0435\u0434\u044C). \u041D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B \u043E\u0431\u044B\u0447\u043D\u043E \u043D\u0435 \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442 \u0442\u043E\u043A, \u0431\u044B\u0432\u0430\u044E\u0442 \u0433\u0430\u0437\u0430\u043C\u0438 (\u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434, \u0445\u043B\u043E\u0440) \u0438\u043B\u0438 \u0445\u0440\u0443\u043F\u043A\u0438\u043C\u0438 \u0442\u0432\u0451\u0440\u0434\u044B\u043C\u0438 (\u0441\u0435\u0440\u0430). \u041C\u0435\u0442\u0430\u043B\u043B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B \u043C\u043E\u0433\u0443\u0442 \u043E\u0431\u0440\u0430\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u043E\u043B\u044C: \u043D\u0430\u0442\u0440\u0438\u0439 + \u0445\u043B\u043E\u0440 = \u043F\u043E\u0432\u0430\u0440\u0435\u043D\u043D\u0430\u044F \u0441\u043E\u043B\u044C NaCl.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432.", "\u0418\u0437 \u043A\u0430\u043A\u0438\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u043F\u043E\u0432\u0430\u0440\u0435\u043D\u043D\u0430\u044F \u0441\u043E\u043B\u044C?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u0434\u0435\u043B\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0434\u0438?"] }, { key: "chem7-3.4", code: "3.4", title: "\u041F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0442\u0430\u0431\u043B\u0438\u0446\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 5 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432 \u0438 5 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432, \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 \u043D\u043E\u043C\u0435\u0440\u0430 \u0438 \u0441\u0438\u043C\u0432\u043E\u043B\u044B.", essence: "\u042D\u043B\u0435\u043C\u0435\u043D\u0442\u044B \u0432 \u043F\u0435\u0440\u0438\u043E\u0434\u0438\u0447\u0435\u0441\u043A\u043E\u0439 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 \u0440\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u044B \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E \u043F\u043E\u0440\u044F\u0434\u043A\u043E\u0432\u043E\u0433\u043E \u043D\u043E\u043C\u0435\u0440\u0430. \u0412 \u043A\u043B\u0435\u0442\u043A\u0435 \u0443\u043A\u0430\u0437\u0430\u043D\u044B \u043D\u043E\u043C\u0435\u0440, \u0441\u0438\u043C\u0432\u043E\u043B \u0438 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435. \u0421\u043B\u0435\u0432\u0430 \u0438 \u0432 \u0446\u0435\u043D\u0442\u0440\u0435 \u2014 \u043C\u0435\u0442\u0430\u043B\u043B\u044B, \u0441\u043F\u0440\u0430\u0432\u0430 \u2014 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B, \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438 \u2014 \u043F\u043E\u043B\u0443\u043C\u0435\u0442\u0430\u043B\u043B\u044B.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u043D\u043E\u043C\u0435\u0440 \u0443 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430 \u0438 \u0447\u0442\u043E \u043E\u043D \u043E\u0437\u043D\u0430\u0447\u0430\u0435\u0442?", "\u0413\u0434\u0435 \u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0435 \u043D\u0430\u0445\u043E\u0434\u044F\u0442\u0441\u044F \u043C\u0435\u0442\u0430\u043B\u043B\u044B, \u0430 \u0433\u0434\u0435 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B?"] }, { key: "chem7-3.5", code: "3.5", title: "\u0421\u043B\u043E\u0436\u043D\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 (\u0441\u043E\u043B\u044C, \u0441\u043E\u0434\u0430, \u0432\u043E\u0434\u0430) \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0444\u043E\u0440\u043C\u0443\u043B\u044B.", essence: "\u0421\u043B\u043E\u0436\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E (\u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435) \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u0438\u0437 \u0430\u0442\u043E\u043C\u043E\u0432 \u0440\u0430\u0437\u043D\u044B\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432: H\u2082O, CO\u2082, NaCl. \u041D\u0430\u0437\u0432\u0430\u043D\u0438\u044F: \u043C\u0435\u0442\u0430\u043B\u043B \u0441\u0442\u0430\u0432\u044F\u0442 \u0432 \u043A\u043E\u043D\u0446\u0435 (\xAB\u043E\u043A\u0441\u0438\u0434 \u043A\u0430\u043B\u044C\u0446\u0438\u044F\xBB), \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0434\u0432\u0443\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u043E\u043A\u0430\u043D\u0447\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u043D\u0430 \xAB-\u0438\u0434\xBB (\u0445\u043B\u043E\u0440\u0438\u0434 \u043D\u0430\u0442\u0440\u0438\u044F), \u043F\u0440\u0438\u0441\u0442\u0430\u0432\u043A\u0438 \xAB\u043C\u043E\u043D\u043E-\xBB, \xAB\u0434\u0438-\xBB \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u0447\u0438\u0441\u043B\u043E \u0430\u0442\u043E\u043C\u043E\u0432.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F: CaO, NaCl, FeS\u2082, CO.", "\u0427\u0435\u043C \u043F\u0440\u043E\u0441\u0442\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0441\u043B\u043E\u0436\u043D\u043E\u0433\u043E?"] }, { key: "chem7-3.6", code: "3.6", title: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u044F\u043C, \u043F\u043E\u0447\u0435\u043C\u0443 \u0441\u043E\u043B\u044C \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u0430, \u0445\u043E\u0442\u044F \u043D\u0430\u0442\u0440\u0438\u0439 \u0438 \u0445\u043B\u043E\u0440 \u043E\u043F\u0430\u0441\u043D\u044B.", essence: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u043E\u0442 \u0441\u0432\u043E\u0439\u0441\u0442\u0432 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432, \u0438\u0437 \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u043E\u043D\u043E \u0441\u043E\u0441\u0442\u043E\u0438\u0442. \u041D\u0430\u0442\u0440\u0438\u0439 \u2014 \u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u043C\u0435\u0442\u0430\u043B\u043B, \u0445\u043B\u043E\u0440 \u2014 \u044F\u0434\u043E\u0432\u0438\u0442\u044B\u0439 \u0433\u0430\u0437, \u0430 \u0445\u043B\u043E\u0440\u0438\u0434 \u043D\u0430\u0442\u0440\u0438\u044F \u2014 \u043F\u043E\u0432\u0430\u0440\u0435\u043D\u043D\u0430\u044F \u0441\u043E\u043B\u044C. \u042D\u043B\u0435\u043C\u0435\u043D\u0442\u044B \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u044E\u0442\u0441\u044F \u0432 \u043F\u043E\u0441\u0442\u043E\u044F\u043D\u043D\u043E\u043C \u0441\u043E\u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0438 \u043C\u0430\u0441\u0441.", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u043E\u0434\u044B \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0438\u0437 5 g \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u0438 40 g \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430?", "\u0415\u0441\u0442\u044C 5 g \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 \u0438 50 g \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0430. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F \u0432\u043E\u0434\u044B \u0438 \u0447\u0442\u043E \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F?"] }, { key: "chem7-3.7", code: "3.7", title: "\u041F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0435 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u0412 3D-\u0441\u0442\u0443\u0434\u0438\u0438 \u043F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 6 \u0440\u0435\u0430\u043A\u0446\u0438\u0439 \u0438 \u0432\u044B\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", essence: "\u0421\u043B\u043E\u0436\u043D\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0432 \u0445\u0438\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0440\u0435\u0430\u043A\u0446\u0438\u044F\u0445, \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u044F \u043F\u0440\u043E\u0441\u0442\u044B\u0435. \u0412\u043E\u0434\u043E\u0440\u043E\u0434 \u0433\u043E\u0440\u0438\u0442 \u0432 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434\u0435 \u0438 \u043E\u0431\u0440\u0430\u0437\u0443\u0435\u0442 \u0432\u043E\u0434\u0443: 2H\u2082 + O\u2082 \u2192 2H\u2082O. \u0412 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u0430\u0442\u043E\u043C\u044B \u043D\u0435 \u0438\u0441\u0447\u0435\u0437\u0430\u044E\u0442 \u0438 \u043D\u0435 \u043F\u043E\u044F\u0432\u043B\u044F\u044E\u0442\u0441\u044F \u2014 \u043E\u043D\u0438 \u0442\u043E\u043B\u044C\u043A\u043E \u043C\u0435\u043D\u044F\u044E\u0442 \xAB\u043F\u0430\u0440\u0442\u043D\u0451\u0440\u043E\u0432\xBB. \u041F\u043E\u044D\u0442\u043E\u043C\u0443 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0443\u0440\u0430\u0432\u043D\u0438\u0432\u0430\u044E\u0442: \u0441\u043B\u0435\u0432\u0430 \u0438 \u0441\u043F\u0440\u0430\u0432\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0430\u0442\u043E\u043C\u043E\u0432 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0438\u0434\u0430.", tasks: ["\u0423\u0440\u0430\u0432\u043D\u044F\u0439\u0442\u0435: H\u2082 + O\u2082 \u2192 H\u2082O", "\u0427\u0442\u043E \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0433\u043E\u0440\u0435\u043D\u0438\u0438 \u043C\u0435\u0442\u0430\u043D\u0430 CH\u2084?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043C\u0430\u0441\u0441\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0434\u043E \u0438 \u043F\u043E\u0441\u043B\u0435 \u0440\u0435\u0430\u043A\u0446\u0438\u0438 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u0430?"] }, { key: "chem7-4.1", code: "4.1", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432", homework: "\u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E 5 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430\u043C \u0441\u0430\u0445\u0430\u0440 \u0438 \u0441\u043E\u043B\u044C.", essence: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u2014 \u0446\u0432\u0435\u0442, \u0437\u0430\u043F\u0430\u0445, \u0430\u0433\u0440\u0435\u0433\u0430\u0442\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435, \u043F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C, \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u043F\u043B\u0430\u0432\u043B\u0435\u043D\u0438\u044F \u0438 \u043A\u0438\u043F\u0435\u043D\u0438\u044F, \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043C\u043E\u0441\u0442\u044C, \u0442\u0435\u043F\u043B\u043E\u043F\u0440\u043E\u0432\u043E\u0434\u043D\u043E\u0441\u0442\u044C. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C = \u043C\u0430\u0441\u0441\u0430 / \u043E\u0431\u044A\u0451\u043C.", tasks: ["\u041C\u0430\u0441\u0441\u0430 \u0442\u0435\u043B\u0430 54 g, \u043E\u0431\u044A\u0451\u043C 20 cm\xB3. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0433\u0430\u0437\u044B \u0438\u043C\u0435\u044E\u0442 \u043C\u0435\u043D\u044C\u0448\u0443\u044E \u043F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C, \u0447\u0435\u043C \u0436\u0438\u0434\u043A\u043E\u0441\u0442\u0438 \u0438 \u0442\u0432\u0451\u0440\u0434\u044B\u0435 \u0442\u0435\u043B\u0430?"] }, { key: "chem7-4.2", code: "4.2", title: "\u0424\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432 \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u043E\u0432", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0438 3 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430.", essence: "\u041C\u0435\u0442\u0430\u043B\u043B\u044B \u0438\u043C\u0435\u044E\u0442 \u043C\u0435\u0442\u0430\u043B\u043B\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0431\u043B\u0435\u0441\u043A, \u0432\u044B\u0441\u043E\u043A\u0443\u044E \u043F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C, \u0432\u044B\u0441\u043E\u043A\u0438\u0435 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u044B \u043F\u043B\u0430\u0432\u043B\u0435\u043D\u0438\u044F, \u0445\u043E\u0440\u043E\u0448\u043E \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442 \u0442\u0435\u043F\u043B\u043E \u0438 \u044D\u043B\u0435\u043A\u0442\u0440\u0438\u0447\u0435\u0441\u0442\u0432\u043E, \u043E\u043D\u0438 \u043A\u043E\u0432\u043A\u0438\u0435. \u041D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B \u0447\u0430\u0449\u0435 \u043D\u0435 \u0431\u043B\u0435\u0441\u0442\u044F\u0442, \u0445\u0440\u0443\u043F\u043A\u0438\u0435 \u0438 \u043F\u043B\u043E\u0445\u043E \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0442 \u0442\u043E\u043A. \u0420\u0442\u0443\u0442\u044C \u2014 \u0436\u0438\u0434\u043A\u0438\u0439 \u043C\u0435\u0442\u0430\u043B\u043B, \u0433\u0440\u0430\u0444\u0438\u0442 \u2014 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B, \u043F\u0440\u043E\u0432\u043E\u0434\u044F\u0449\u0438\u0439 \u0442\u043E\u043A.", tasks: ["\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043C\u0435\u0442\u0430\u043B\u043B\u044B \u0438 \u043D\u0435\u043C\u0435\u0442\u0430\u043B\u043B\u044B \u043F\u043E \u0431\u043B\u0435\u0441\u043A\u0443 \u0438 \u0442\u0435\u043F\u043B\u043E\u043F\u0440\u043E\u0432\u043E\u0434\u043D\u043E\u0441\u0442\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0432\u043E\u0434\u0430 \u0434\u0435\u043B\u0430\u044E\u0442 \u0438\u0437 \u043C\u0435\u0434\u0438 \u0438\u043B\u0438 \u0430\u043B\u044E\u043C\u0438\u043D\u0438\u044F?"] }, { key: "chem7-4.3", code: "4.3", title: "\u0412\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C\u044B\u0435 \u0432 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438, \u0438 \u0438\u0445 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: 5 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0434\u043E\u043C\u0430 \u2014 \u0434\u043B\u044F \u0447\u0435\u0433\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442 \u2014 \u043A\u0430\u043A \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E \u0445\u0440\u0430\u043D\u0438\u0442\u044C.", essence: "\u0414\u043E\u043C\u0430 \u043C\u044B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u043C \u0441\u043E\u043B\u044C (NaCl), \u0441\u043E\u0434\u0443 (NaHCO\u2083), \u0443\u043A\u0441\u0443\u0441 (\u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0443\u043A\u0441\u0443\u0441\u043D\u043E\u0439 \u043A\u0438\u0441\u043B\u043E\u0442\u044B), \u0441\u0430\u0445\u0430\u0440, \u043C\u044B\u043B\u043E, \u0441\u043F\u0438\u0440\u0442, \u043E\u0442\u0431\u0435\u043B\u0438\u0432\u0430\u0442\u0435\u043B\u044C. \u0423 \u043A\u0430\u0436\u0434\u043E\u0433\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0441\u0432\u043E\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0433\u043E \u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u0441\u043C\u0435\u0448\u0438\u0432\u0430\u0442\u044C \u043E\u0442\u0431\u0435\u043B\u0438\u0432\u0430\u0442\u0435\u043B\u044C \u0438 \u0441\u0440\u0435\u0434\u0441\u0442\u0432\u043E \u0434\u043B\u044F \u0447\u0438\u0441\u0442\u043A\u0438 \u0441 \u043A\u0438\u0441\u043B\u043E\u0442\u043E\u0439?", "\u0417\u0430\u0447\u0435\u043C \u0441\u043E\u0434\u0443 \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u044E\u0442 \u0432 \u0442\u0435\u0441\u0442\u043E?"] }, { key: "chem7-5.1", code: "5.1", title: "\u041A\u0438\u0441\u043B\u043E\u0442\u044B", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0438\u0437 \u0441\u043E\u043A\u0430 \u043A\u0440\u0430\u0441\u043D\u043E\u043A\u043E\u0447\u0430\u043D\u043D\u043E\u0439 \u043A\u0430\u043F\u0443\u0441\u0442\u044B \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A \u0438 \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0441\u043E\u0434\u044B. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0446\u0432\u0435\u0442\u0430.", essence: "\u041A\u0438\u0441\u043B\u043E\u0442\u044B \u2014 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432 \u0432\u043E\u0434\u0435 \u043E\u0442\u0434\u0430\u044E\u0442 \u0438\u043E\u043D\u044B \u0432\u043E\u0434\u043E\u0440\u043E\u0434\u0430 H\u207A. \u041E\u043D\u0438 \u043A\u0438\u0441\u043B\u044B\u0435 \u043D\u0430 \u0432\u043A\u0443\u0441 (\u043B\u0438\u043C\u043E\u043D, \u0443\u043A\u0441\u0443\u0441), \u043C\u0435\u043D\u044F\u044E\u0442 \u0446\u0432\u0435\u0442 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u0432 (\u043B\u0430\u043A\u043C\u0443\u0441 \u043A\u0440\u0430\u0441\u043D\u0435\u0435\u0442) \u0438 \u0440\u0430\u0437\u044A\u0435\u0434\u0430\u044E\u0442 \u043C\u043D\u043E\u0433\u0438\u0435 \u043C\u0435\u0442\u0430\u043B\u043B\u044B. \u0421\u043E\u043B\u044F\u043D\u0430\u044F \u043A\u0438\u0441\u043B\u043E\u0442\u0430 HCl \u0435\u0441\u0442\u044C \u0434\u0430\u0436\u0435 \u0432 \u043D\u0430\u0448\u0435\u043C \u0436\u0435\u043B\u0443\u0434\u043A\u0435 \u0438 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u043F\u0435\u0440\u0435\u0432\u0430\u0440\u0438\u0432\u0430\u0442\u044C \u043F\u0438\u0449\u0443. \u0421 \u0441\u0438\u043B\u044C\u043D\u044B\u043C\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u0430\u043C\u0438 \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0432 \u043F\u0435\u0440\u0447\u0430\u0442\u043A\u0430\u0445 \u0438 \u043E\u0447\u043A\u0430\u0445.", tasks: ["\u041A\u0430\u043A \u0441 \u043F\u043E\u043C\u043E\u0449\u044C\u044E \u043B\u0430\u043A\u043C\u0443\u0441\u0430 \u0443\u0437\u043D\u0430\u0442\u044C \u043A\u0438\u0441\u043B\u043E\u0442\u0443?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0438\u0437 \u043F\u043E\u0432\u0441\u0435\u0434\u043D\u0435\u0432\u043D\u043E\u0439 \u0436\u0438\u0437\u043D\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438 \u043D\u0430 \u0432\u043A\u0443\u0441?"] }, { key: "chem7-5.2", code: "5.2", title: "\u041E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u044F", homework: "\u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u043D\u044B\u043C \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u043E\u043C \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u043C\u044B\u043B\u0430. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0446\u0432\u0435\u0442 \u0441 \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u043C \u0441\u043E\u043A\u043E\u043C.", essence: "\u041E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u044F (\u0449\u0451\u043B\u043E\u0447\u0438) \u2014 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0432 \u0432\u043E\u0434\u0435 \u0434\u0430\u044E\u0442 \u0433\u0438\u0434\u0440\u043E\u043A\u0441\u0438\u0434-\u0438\u043E\u043D\u044B OH\u207B. \u041E\u043D\u0438 \u043C\u044B\u043B\u044C\u043D\u044B\u0435 \u043D\u0430 \u043E\u0449\u0443\u043F\u044C, \u0433\u043E\u0440\u044C\u043A\u0438\u0435 \u0438 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u044E\u0442 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D \u0432 \u043C\u0430\u043B\u0438\u043D\u043E\u0432\u044B\u0439 \u0446\u0432\u0435\u0442. \u0413\u0438\u0434\u0440\u043E\u043A\u0441\u0438\u0434 \u043D\u0430\u0442\u0440\u0438\u044F NaOH \u2014 \u0441\u0438\u043B\u044C\u043D\u0430\u044F \u0449\u0451\u043B\u043E\u0447\u044C, \u0438\u0437 \u043D\u0435\u0451 \u0434\u0435\u043B\u0430\u044E\u0442 \u043C\u044B\u043B\u043E. \u0429\u0451\u043B\u043E\u0447\u044C \u043E\u043F\u0430\u0441\u043D\u0430 \u0434\u043B\u044F \u043A\u043E\u0436\u0438 \u0438 \u0433\u043B\u0430\u0437 \u0442\u0430\u043A \u0436\u0435, \u043A\u0430\u043A \u043A\u0438\u0441\u043B\u043E\u0442\u0430.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u0446\u0432\u0435\u0442 \u0434\u0430\u0451\u0442 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D \u0432 \u0449\u0451\u043B\u043E\u0447\u0438?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u043C\u044B\u043B\u0430 \u0441\u043A\u043E\u043B\u044C\u0437\u043A\u0438\u0439?", "\u0427\u0442\u043E \u043E\u0431\u0449\u0435\u0433\u043E \u0443 \u043A\u0438\u0441\u043B\u043E\u0442 \u0438 \u0449\u0435\u043B\u043E\u0447\u0435\u0439 \u043F\u043E \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438?"] }, { key: "chem7-5.3", code: "5.3", title: "\u0418\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u044B", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u043D\u044B\u0439 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0438\u043C \u0443\u043A\u0441\u0443\u0441, \u0441\u043E\u0434\u0443, \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A, \u043C\u044B\u043B\u043E.", essence: "\u0418\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440\u044B \u043C\u0435\u043D\u044F\u044E\u0442 \u0446\u0432\u0435\u0442 \u0432 \u043A\u0438\u0441\u043B\u043E\u0442\u0435 \u0438 \u0449\u0451\u043B\u043E\u0447\u0438. \u041B\u0430\u043A\u043C\u0443\u0441: \u0432 \u043A\u0438\u0441\u043B\u043E\u0442\u0435 \u043A\u0440\u0430\u0441\u043D\u044B\u0439, \u0432 \u0449\u0451\u043B\u043E\u0447\u0438 \u0441\u0438\u043D\u0438\u0439. \u0424\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D \u0432 \u0449\u0451\u043B\u043E\u0447\u0438 \u043C\u0430\u043B\u0438\u043D\u043E\u0432\u044B\u0439, \u0432 \u043A\u0438\u0441\u043B\u043E\u0442\u0435 \u0431\u0435\u0441\u0446\u0432\u0435\u0442\u043D\u044B\u0439. \u0421\u043E\u043A \u043A\u0440\u0430\u0441\u043D\u043E\u043A\u043E\u0447\u0430\u043D\u043D\u043E\u0439 \u043A\u0430\u043F\u0443\u0441\u0442\u044B \u2014 \u043F\u0440\u0438\u0440\u043E\u0434\u043D\u044B\u0439 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440.", tasks: ["\u041A\u0430\u043A\u043E\u0439 \u0446\u0432\u0435\u0442 \u0431\u0443\u0434\u0435\u0442 \u0443 \u043B\u0430\u043A\u043C\u0443\u0441\u0430 \u0432 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0435 \u0449\u0451\u043B\u043E\u0447\u0438? \u0410 \u0444\u0435\u043D\u043E\u043B\u0444\u0442\u0430\u043B\u0435\u0438\u043D\u0430?", "\u041A\u0430\u043A \u043F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u0438\u0442\u044C \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u0434\u043E\u043C\u0430?"] }, { key: "chem7-5.4", code: "5.4", title: "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0435\u043B\u044C pH", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 3 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0430\u0445 (\u0448\u0430\u043C\u043F\u0443\u043D\u044C, \u043C\u044B\u043B\u043E, \u0441\u043E\u043A) \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 pH \u0438 \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435.", essence: "\u0428\u043A\u0430\u043B\u0430 pH \u043E\u0442 0 \u0434\u043E 14 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u043A\u0438\u0441\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C: \u043C\u0435\u043D\u044C\u0448\u0435 7 \u2014 \u043A\u0438\u0441\u043B\u0430\u044F \u0441\u0440\u0435\u0434\u0430, 7 \u2014 \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u044C\u043D\u0430\u044F (\u0447\u0438\u0441\u0442\u0430\u044F \u0432\u043E\u0434\u0430), \u0431\u043E\u043B\u044C\u0448\u0435 7 \u2014 \u0449\u0435\u043B\u043E\u0447\u043D\u0430\u044F. \u0423\u043D\u0438\u0432\u0435\u0440\u0441\u0430\u043B\u044C\u043D\u044B\u0439 \u0438\u043D\u0434\u0438\u043A\u0430\u0442\u043E\u0440 \u043E\u043A\u0440\u0430\u0448\u0438\u0432\u0430\u0435\u0442\u0441\u044F \u0432 \u0440\u0430\u0437\u043D\u044B\u0435 \u0446\u0432\u0435\u0442\u0430 \u043F\u043E \u0448\u043A\u0430\u043B\u0435.", tasks: ["\u0420\u0430\u0441\u0442\u0432\u043E\u0440 \u0438\u043C\u0435\u0435\u0442 pH 3. \u041A\u0430\u043A\u0430\u044F \u044D\u0442\u043E \u0441\u0440\u0435\u0434\u0430?", "\u0420\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E pH: \u043C\u044B\u043B\u043E (10), \u043B\u0438\u043C\u043E\u043D\u043D\u044B\u0439 \u0441\u043E\u043A (2), \u0432\u043E\u0434\u0430 (7)."] }, { key: "chem7-5.5", code: "5.5", title: "\u041D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F", homework: "\u0414\u043E\u0431\u0430\u0432\u044C\u0442\u0435 \u0441\u043E\u0434\u0443 \u0432 \u0443\u043A\u0441\u0443\u0441 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0432\u0438\u0434\u0438\u0442\u0435. \u042D\u0442\u043E \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F \u0441 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C CO\u2082.", essence: "\u041A\u043E\u0433\u0434\u0430 \u043A\u0438\u0441\u043B\u043E\u0442\u0443 \u0441\u043C\u0435\u0448\u0438\u0432\u0430\u044E\u0442 \u0441\u043E \u0449\u0451\u043B\u043E\u0447\u044C\u044E, \u043E\u043D\u0438 \xAB\u0433\u0430\u0441\u044F\u0442\xBB \u0434\u0440\u0443\u0433 \u0434\u0440\u0443\u0433\u0430 \u2014 \u043E\u0431\u0440\u0430\u0437\u0443\u044E\u0442\u0441\u044F \u0441\u043E\u043B\u044C \u0438 \u0432\u043E\u0434\u0430: HCl + NaOH \u2192 NaCl + H\u2082O. \u042D\u0442\u043E \u0440\u0435\u0430\u043A\u0446\u0438\u044F \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438. \u041E\u043D\u0430 \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442 \u0442\u0435\u043F\u043B\u043E. \u0415\u0439 \u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442\u0441\u044F, \u043A\u043E\u0433\u0434\u0430 \u043D\u0443\u0436\u043D\u043E \u0443\u0431\u0440\u0430\u0442\u044C \u043B\u0438\u0448\u043D\u044E\u044E \u043A\u0438\u0441\u043B\u043E\u0442\u0443: \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430 \u043E\u0442 \u0438\u0437\u0436\u043E\u0433\u0438 \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0443\u0435\u0442 \u043A\u0438\u0441\u043B\u043E\u0442\u0443 \u0432 \u0436\u0435\u043B\u0443\u0434\u043A\u0435.", tasks: ["\u0427\u0442\u043E \u043E\u0431\u0440\u0430\u0437\u0443\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u043D\u0435\u0439\u0442\u0440\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438 \u043A\u0438\u0441\u043B\u043E\u0442\u044B \u0449\u0451\u043B\u043E\u0447\u044C\u044E?", "\u0414\u043E\u043F\u0438\u0448\u0438\u0442\u0435: HCl + NaOH \u2192 \u2026 + \u2026", "\u041A\u0430\u043A \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442 \u0442\u0430\u0431\u043B\u0435\u0442\u043A\u0430 \u043E\u0442 \u0438\u0437\u0436\u043E\u0433\u0438?"] }, { key: "chem7-6.1", code: "6.1", title: "\u0421\u043C\u0435\u0441\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u0441\u043C\u0435\u0441\u0435\u0439 \u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u043D\u0430 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435 \u0438 \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435.", essence: "\u0421\u043C\u0435\u0441\u044C \u0441\u043E\u0441\u0442\u043E\u0438\u0442 \u0438\u0437 \u0434\u0432\u0443\u0445 \u0438\u043B\u0438 \u0431\u043E\u043B\u0435\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u044E\u0442 \u0441\u0432\u043E\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430. \u041E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435 \u0441\u043C\u0435\u0441\u0438 (\u0440\u0430\u0441\u0442\u0432\u043E\u0440\u044B, \u0432\u043E\u0437\u0434\u0443\u0445) \u0432\u044B\u0433\u043B\u044F\u0434\u044F\u0442 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u043E \u0432\u0435\u0437\u0434\u0435, \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u044B\u0435 (\u043F\u0435\u0441\u043E\u043A \u0441 \u0432\u043E\u0434\u043E\u0439) \u2014 \u043D\u0435\u0442. \u0421\u043E\u0441\u0442\u0430\u0432 \u0441\u043C\u0435\u0441\u0438 \u043C\u043E\u0436\u0435\u0442 \u043C\u0435\u043D\u044F\u0442\u044C\u0441\u044F.", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u043E\u0439 \u0438 \u043D\u0435\u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u043E\u0439 \u0441\u043C\u0435\u0441\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u043E\u0437\u0434\u0443\u0445 \u2014 \u044D\u0442\u043E \u0441\u043C\u0435\u0441\u044C, \u0430 \u043D\u0435 \u0441\u043B\u043E\u0436\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E?"] }, { key: "chem7-6.2", code: "6.2", title: "\u0420\u0430\u0437\u043B\u0438\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432, \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0438 \u0441\u043C\u0435\u0441\u0435\u0439", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u0438\u0437 9 \u043F\u0440\u0438\u043C\u0435\u0440\u043E\u0432: \u043F\u043E 3 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0438 \u0441\u043C\u0435\u0441\u0438.", essence: "\u041F\u0440\u043E\u0441\u0442\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u2014 \u0438\u0437 \u043E\u0434\u043D\u043E\u0433\u043E \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 (O\u2082, Fe). \u0421\u043B\u043E\u0436\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u2014 \u0438\u0437 \u0440\u0430\u0437\u043D\u044B\u0445 \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 \u0432 \u043F\u043E\u0441\u0442\u043E\u044F\u043D\u043D\u043E\u043C \u0441\u043E\u0441\u0442\u0430\u0432\u0435 (H\u2082O). \u0421\u043C\u0435\u0441\u044C \u2014 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0432 \u043B\u044E\u0431\u043E\u043C \u0441\u043E\u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0438, \u0435\u0451 \u043C\u043E\u0436\u043D\u043E \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C\u0438 \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438.", tasks: ["\u0420\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435: \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434, \u0432\u043E\u0434\u0430, \u0432\u043E\u0437\u0434\u0443\u0445, \u0436\u0435\u043B\u0435\u0437\u043E, \u0441\u043E\u043B\u044C, \u043C\u043E\u0440\u0441\u043A\u0430\u044F \u0432\u043E\u0434\u0430.", "\u0427\u0435\u043C \u0441\u043C\u0435\u0441\u044C \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0441\u043B\u043E\u0436\u043D\u043E\u0433\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?"] }, { key: "chem7-6.3", code: "6.3", title: "\u0420\u0430\u0437\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0441\u043C\u0435\u0441\u0435\u0439", homework: "\u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 \u0441\u043C\u0435\u0441\u044C \u0441\u043E\u043B\u0438 \u0438 \u043F\u0435\u0441\u043A\u0430, \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u043A\u0430\u0436\u0434\u044B\u0439 \u0448\u0430\u0433.", essence: "\u0421\u043C\u0435\u0441\u0438 \u0440\u0430\u0437\u0434\u0435\u043B\u044F\u044E\u0442 \u0444\u0438\u0437\u0438\u0447\u0435\u0441\u043A\u0438\u043C\u0438 \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u043E\u0442\u0441\u0442\u0430\u0438\u0432\u0430\u043D\u0438\u0435\u043C, \u0444\u0438\u043B\u044C\u0442\u0440\u043E\u0432\u0430\u043D\u0438\u0435\u043C (\u043F\u0435\u0441\u043E\u043A \u0438 \u0432\u043E\u0434\u0430), \u0432\u044B\u043F\u0430\u0440\u0438\u0432\u0430\u043D\u0438\u0435\u043C (\u0441\u043E\u043B\u044C \u0438\u0437 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0430), \u043C\u0430\u0433\u043D\u0438\u0442\u043E\u043C (\u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0435 \u043E\u043F\u0438\u043B\u043A\u0438), \u0434\u0438\u0441\u0442\u0438\u043B\u043B\u044F\u0446\u0438\u0435\u0439 (\u0447\u0438\u0441\u0442\u0430\u044F \u0432\u043E\u0434\u0430 \u0438\u0437 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0430).", tasks: ["\u041A\u0430\u043A \u0440\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u044C \u0441\u043C\u0435\u0441\u044C \u043F\u0435\u0441\u043A\u0430, \u0441\u043E\u043B\u0438 \u0438 \u0436\u0435\u043B\u0435\u0437\u043D\u044B\u0445 \u043E\u043F\u0438\u043B\u043E\u043A?", "\u041A\u0430\u043A\u0438\u043C \u0441\u043F\u043E\u0441\u043E\u0431\u043E\u043C \u043F\u043E\u043B\u0443\u0447\u0430\u044E\u0442 \u0447\u0438\u0441\u0442\u0443\u044E \u0432\u043E\u0434\u0443 \u0438\u0437 \u0441\u043E\u043B\u0451\u043D\u043E\u0439?"] }, { key: "chem7-6.4", code: "6.4", title: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u044B", homework: "\u041F\u0440\u0438\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 5 % \u0440\u0430\u0441\u0442\u0432\u043E\u0440 \u0441\u043E\u043B\u0438: 5 g \u0441\u043E\u043B\u0438 \u0438 95 g \u0432\u043E\u0434\u044B. \u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0430\u0441\u0447\u0451\u0442.", essence: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440 \u2014 \u043E\u0434\u043D\u043E\u0440\u043E\u0434\u043D\u0430\u044F \u0441\u043C\u0435\u0441\u044C \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0435\u043B\u044F (\u0447\u0430\u0441\u0442\u043E \u0432\u043E\u0434\u044B) \u0438 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0433\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430. \u0427\u0430\u0441\u0442\u0438\u0446\u044B \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u044E\u0442\u0441\u044F \u043C\u0435\u0436\u0434\u0443 \u0447\u0430\u0441\u0442\u0438\u0446\u0430\u043C\u0438 \u0432\u043E\u0434\u044B. \u041C\u0430\u0441\u0441\u043E\u0432\u0430\u044F \u0434\u043E\u043B\u044F = \u043C\u0430\u0441\u0441\u0430 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 / \u043C\u0430\u0441\u0441\u0430 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0430.", tasks: ["\u0412 90 g \u0432\u043E\u0434\u044B \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043B\u0438 10 g \u0441\u043E\u043B\u0438. \u041C\u0430\u0441\u0441\u043E\u0432\u0430\u044F \u0434\u043E\u043B\u044F \u0441\u043E\u043B\u0438?", "\u0427\u0442\u043E \u0432 \u0441\u043B\u0430\u0434\u043A\u043E\u043C \u0447\u0430\u0435 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0435\u043B\u044C, \u0430 \u0447\u0442\u043E \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0451\u043D\u043D\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E?"] }, { key: "chem7-6.5", code: "6.5", title: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043C\u043E\u0441\u0442\u044C", homework: "\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u043E\u0436\u0435\u043A \u0441\u0430\u0445\u0430\u0440\u0430 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0441\u044F \u0432 \u0441\u0442\u0430\u043A\u0430\u043D\u0435 \u0445\u043E\u043B\u043E\u0434\u043D\u043E\u0439 \u0438 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u044B.", essence: "\u0420\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043C\u043E\u0436\u0435\u0442 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u044C\u0441\u044F \u0432 100 g \u0432\u043E\u0434\u044B \u043F\u0440\u0438 \u0434\u0430\u043D\u043D\u043E\u0439 \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0435. \u0420\u0430\u0441\u0442\u0432\u043E\u0440\u0438\u043C\u043E\u0441\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0438\u043D\u0441\u0442\u0432\u0430 \u0442\u0432\u0451\u0440\u0434\u044B\u0445 \u0432\u0435\u0449\u0435\u0441\u0442\u0432 \u0440\u0430\u0441\u0442\u0451\u0442 \u043F\u0440\u0438 \u043D\u0430\u0433\u0440\u0435\u0432\u0430\u043D\u0438\u0438, \u0430 \u0433\u0430\u0437\u043E\u0432 \u2014 \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0435\u0442\u0441\u044F.", tasks: ["\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u044B\u0439 \u0440\u0430\u0441\u0442\u0432\u043E\u0440?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u044B\u0431\u0430\u043C \u0432 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u0435 \u0442\u0440\u0443\u0434\u043D\u0435\u0435 \u0434\u044B\u0448\u0430\u0442\u044C?"] }] }, { id: "biology-7", subject: "biology", grade: 7, topics: [{ key: "bio7-1.1", code: "1.1", title: "\u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u044F?", homework: "\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u044C\u0442\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u043E\u0431 \u0418\u0431\u043D \u0421\u0438\u043D\u043E \u0438\u043B\u0438 \u043E \u0434\u0440\u0443\u0433\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C-\u0431\u0438\u043E\u043B\u043E\u0433\u0435.", essence: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F \u2014 \u043D\u0430\u0443\u043A\u0430 \u043E \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0430\u0445: \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F\u0445, \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445, \u0433\u0440\u0438\u0431\u0430\u0445, \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u044F\u0445. \u0412\u0441\u0435 \u0447\u0430\u0441\u0442\u0438 \u043F\u0440\u0438\u0440\u043E\u0434\u044B \u043D\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043E\u0431\u044A\u0435\u043A\u0442\u0430\u043C\u0438 \u043F\u0440\u0438\u0440\u043E\u0434\u044B, \u0430 \u044F\u0432\u043B\u0435\u043D\u0438\u044F, \u0441\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0435 \u0441 \u0436\u0438\u0437\u043D\u044C\u044E \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432, \u2014 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u043C\u0438 \u044F\u0432\u043B\u0435\u043D\u0438\u044F\u043C\u0438.", tasks: ["\u0421\u043E\u043E\u0442\u043D\u0435\u0441\u0438\u0442\u0435 \u0443\u0447\u0451\u043D\u044B\u0445 \u0438 \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u044F: \u0418\u0431\u043D \u0421\u0438\u043D\u043E, \u041F\u0430\u0432\u043B\u043E\u0432, \u041F\u0430\u0441\u0442\u0435\u0440, \u0413\u0430\u0440\u0432\u0435\u0439, \u041B\u0435\u0432\u0435\u043D\u0433\u0443\u043A.", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u044F\u0432\u043B\u0435\u043D\u0438\u044F."] }, { key: "bio7-1.2", code: "1.2", title: "\u041A\u0430\u043A\u0438\u043C\u0438 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430\u043C\u0438 \u0434\u043E\u043B\u0436\u0435\u043D \u043E\u0431\u043B\u0430\u0434\u0430\u0442\u044C \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C?", homework: "\u041F\u043E\u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 3 \u0434\u043D\u044F \u0437\u0430 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435\u043C \u0438\u043B\u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u043C \u0438 \u0432\u0435\u0434\u0438\u0442\u0435 \u0434\u043D\u0435\u0432\u043D\u0438\u043A \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0439.", essence: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u043B\u044E\u0431\u043E\u0437\u043D\u0430\u0442\u0435\u043B\u0435\u043D, \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0442\u0435\u043B\u0435\u043D, \u0442\u0435\u0440\u043F\u0435\u043B\u0438\u0432, \u0447\u0435\u0441\u0442\u0435\u043D \u0438 \u0441\u043A\u0435\u043F\u0442\u0438\u0447\u0435\u043D. \u041E\u043D \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u0438\u0434\u0435\u0438 \u043E\u043F\u044B\u0442\u043E\u043C, \u0430 \u043D\u0435 \u0432\u0435\u0440\u0438\u0442 \u043D\u0430 \u0441\u043B\u043E\u0432\u043E, \u0438 \u0443\u043C\u0435\u0435\u0442 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0432 \u043A\u043E\u043C\u0430\u043D\u0434\u0435.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u043A\u0430\u0447\u0435\u0441\u0442\u0432\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0438 \u041F\u0430\u0441\u0442\u0435\u0440\u0443 \u043E\u043F\u0440\u043E\u0432\u0435\u0440\u0433\u043D\u0443\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u0441\u0430\u043C\u043E\u0437\u0430\u0440\u043E\u0436\u0434\u0435\u043D\u0438\u044F?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u0430\u0436\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0443 \u043E\u043F\u044B\u0442\u043E\u043C?"] }, { key: "bio7-1.3", code: "1.3", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u043D\u0430\u0432\u044B\u043A\u0438 \u0438 \u043C\u0435\u0442\u043E\u0434\u044B \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F", homework: "\u041F\u0440\u043E\u0440\u0430\u0441\u0442\u0438\u0442\u0435 2 \u0444\u0430\u0441\u043E\u043B\u0438: \u043D\u0430 \u0441\u0432\u0435\u0442\u0443 \u0438 \u0432 \u0448\u043A\u0430\u0444\u0443. \u0427\u0435\u0440\u0435\u0437 \u043D\u0435\u0434\u0435\u043B\u044E \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435.", essence: "\u041C\u0435\u0442\u043E\u0434\u044B \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438: \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u0435, \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u0435, \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435, \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u0435, \u044D\u043A\u0441\u043F\u0435\u0440\u0438\u043C\u0435\u043D\u0442. \u041F\u043B\u0430\u043D \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F: \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u043D\u044B\u0439 \u0432\u043E\u043F\u0440\u043E\u0441 \u0438 \u0433\u0438\u043F\u043E\u0442\u0435\u0437\u0430; \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435 (\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u0435, \u043D\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043C\u044B\u0435, \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u0438\u0440\u0443\u0435\u043C\u044B\u0435); \u0441\u043F\u043E\u0441\u043E\u0431 \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u044F; \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435; \u044D\u0442\u0430\u043F\u044B.", tasks: ["\u041E\u043F\u044B\u0442: \xAB\u0412\u043B\u0438\u044F\u0435\u0442 \u043B\u0438 \u0441\u0432\u0435\u0442 \u043D\u0430 \u0440\u043E\u0441\u0442 \u0444\u0430\u0441\u043E\u043B\u0438?\xBB \u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435.", "\u0417\u0430\u0447\u0435\u043C \u043D\u0443\u0436\u043D\u0430 \u043A\u043E\u043D\u0442\u0440\u043E\u043B\u044C\u043D\u0430\u044F \u0433\u0440\u0443\u043F\u043F\u0430?"] }, { key: "bio7-1.4", code: "1.4", title: "\u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0430\u043C\u044F\u0442\u043A\u0443 \u0438\u0437 5 \u043F\u0440\u0430\u0432\u0438\u043B \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0434\u043B\u044F \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0430 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438.", essence: "\u041F\u0440\u0430\u0432\u0438\u043B\u0430: \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u0443\u043A\u0430\u0437\u0430\u043D\u0438\u044E \u0443\u0447\u0438\u0442\u0435\u043B\u044F, \u043D\u0435 \u0442\u0440\u043E\u0433\u0430\u0442\u044C \u043B\u0438\u0446\u043E \u0440\u0443\u043A\u0430\u043C\u0438, \u043D\u0435 \u043F\u0440\u043E\u0431\u043E\u0432\u0430\u0442\u044C \u043D\u0430 \u0432\u043A\u0443\u0441, \u043E\u0441\u0442\u043E\u0440\u043E\u0436\u043D\u043E \u0441 \u043E\u0441\u0442\u0440\u044B\u043C\u0438 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u0430\u043C\u0438 \u0438 \u0441\u0442\u0435\u043A\u043B\u043E\u043C, \u043F\u043E\u0441\u043B\u0435 \u0440\u0430\u0431\u043E\u0442\u044B \u043C\u044B\u0442\u044C \u0440\u0443\u043A\u0438. \u0421 \u0436\u0438\u0432\u044B\u043C\u0438 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0430\u043C\u0438 \u043E\u0431\u0440\u0430\u0449\u0430\u044E\u0442\u0441\u044F \u0431\u0435\u0440\u0435\u0436\u043D\u043E.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043A\u0430\u0431\u0438\u043D\u0435\u0442\u0435 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438.", "\u0427\u0442\u043E \u0434\u0435\u043B\u0430\u0442\u044C, \u0435\u0441\u043B\u0438 \u0440\u0430\u0437\u0431\u0438\u043B\u043E\u0441\u044C \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E?"] }, { key: "bio7-1.5", code: "1.5", title: "\u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u0441\u0445\u0435\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043B\u0443\u043F\u0443, \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F \u0438 \u0447\u0430\u0448\u043A\u0443 \u041F\u0435\u0442\u0440\u0438.", essence: "\u0412 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442 \u043B\u0443\u043F\u0443, \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F, \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043D\u043E\u0435 \u0438 \u043F\u043E\u043A\u0440\u043E\u0432\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E, \u043F\u0438\u043D\u0446\u0435\u0442, \u043F\u0440\u0435\u043F\u0430\u0440\u043E\u0432\u0430\u043B\u044C\u043D\u0443\u044E \u0438\u0433\u043B\u0443, \u043F\u0438\u043F\u0435\u0442\u043A\u0443, \u0447\u0430\u0448\u043A\u0443 \u041F\u0435\u0442\u0440\u0438, \u0433\u043E\u0440\u0435\u043B\u043A\u0443 \u0411\u0443\u043D\u0437\u0435\u043D\u0430. \u041F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u044F \u0432\u0430\u0436\u043D\u043E \u0434\u043B\u044F \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0438 \u0442\u043E\u0447\u043D\u044B\u0445 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u0432.", tasks: ["\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u043D\u0443\u0436\u043D\u043E \u043F\u043E\u043A\u0440\u043E\u0432\u043D\u043E\u0435 \u0441\u0442\u0435\u043A\u043B\u043E?", "\u0427\u0435\u043C \u043B\u0443\u043F\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F\u0430?"] }, { key: "bio7-1.6", code: "1.6", title: "\u041D\u0430\u0443\u043A\u0430 \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0441\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E\u0439 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438 \u0432 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0435 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0435\u0451 \u043F\u043E\u043B\u044C\u0437\u0443.", essence: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F \u0438 \u0442\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0438\u0438 \u0440\u0430\u0437\u0432\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u0432\u043C\u0435\u0441\u0442\u0435: \u0433\u0435\u043D\u0435\u0442\u0438\u043A\u0430, \u0432\u0430\u043A\u0446\u0438\u043D\u044B, \u043F\u0440\u043E\u0442\u0435\u0437\u044B, 3D-\u043F\u0435\u0447\u0430\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u0435\u0439 \u043E\u0440\u0433\u0430\u043D\u043E\u0432. \u0423\u0447\u0451\u043D\u044B\u0435 \u043F\u0440\u043E\u0431\u0443\u044E\u0442 \u043F\u0435\u0447\u0430\u0442\u0430\u0442\u044C \u043E\u0440\u0433\u0430\u043D\u044B \u0438\u0437 \u043A\u043B\u0435\u0442\u043E\u043A \u043F\u0430\u0446\u0438\u0435\u043D\u0442\u0430, \u043D\u043E \u044D\u0442\u043E \u043F\u043E\u043A\u0430 \u0441\u0442\u0430\u0434\u0438\u044F \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0439.", tasks: ["\u0414\u043B\u044F \u043A\u0430\u043A\u0438\u0445 \u0446\u0435\u043B\u0435\u0439 \u043C\u043E\u0436\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C 3D-\u043F\u0435\u0447\u0430\u0442\u044C \u0432 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u0438 \u0438 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0435?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0435\u0440\u0435\u0441\u0430\u0434\u043A\u0430 \u043D\u0430\u043F\u0435\u0447\u0430\u0442\u0430\u043D\u043D\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435 \u043F\u0440\u0438\u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F?"] }, { key: "bio7-2.1", code: "2.1", title: "\u0421\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0435 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 \u0443 \u043D\u0435\u0433\u043E \u0432\u0441\u0435 7 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u043E\u0433\u043E.", essence: "\u0412\u0441\u0435 \u0436\u0438\u0432\u044B\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0441\u043E\u0441\u0442\u043E\u044F\u0442 \u0438\u0437 \u043A\u043B\u0435\u0442\u043E\u043A. \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0436\u0438\u0432\u043E\u0433\u043E: \u043F\u0438\u0442\u0430\u043D\u0438\u0435, \u0440\u043E\u0441\u0442, \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u0435, \u0440\u0430\u0437\u0434\u0440\u0430\u0436\u0438\u043C\u043E\u0441\u0442\u044C, \u0440\u0430\u0437\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435, \u0434\u044B\u0445\u0430\u043D\u0438\u0435, \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435. \u0422\u043E\u043B\u044C\u043A\u043E \u0443 \u0436\u0438\u0432\u044B\u0445 \u0435\u0441\u0442\u044C \u0432\u0441\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u0441\u0440\u0430\u0437\u0443.", tasks: ["\u041F\u0435\u0440\u0435\u0447\u0438\u0441\u043B\u0438\u0442\u0435 7 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u0421\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044F \u043B\u0438 \u0432\u044B\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u043D\u0435\u043F\u0435\u0440\u0435\u0432\u0430\u0440\u0435\u043D\u043D\u044B\u0445 \u043E\u0441\u0442\u0430\u0442\u043A\u043E\u0432 \u043F\u0438\u0449\u0438 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C (\u044D\u043A\u0441\u043A\u0440\u0435\u0446\u0438\u0435\u0439)? \u041F\u043E\u0447\u0435\u043C\u0443?"] }, { key: "bio7-2.2", code: "2.2", title: "\u041A\u043B\u0435\u0442\u043A\u0430 \u2014 \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043D\u043E-\u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0435\u0434\u0438\u043D\u0438\u0446\u0430", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 \u043A\u043B\u0435\u0442\u043A\u0443 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 5 \u043E\u0440\u0433\u0430\u043D\u043E\u0438\u0434\u043E\u0432.", essence: "\u0412\u0441\u0435 \u0436\u0438\u0432\u044B\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0441\u043E\u0441\u0442\u043E\u044F\u0442 \u0438\u0437 \u043A\u043B\u0435\u0442\u043E\u043A. \u041A\u043B\u0435\u0442\u043A\u0430 \u2014 \u044D\u0442\u043E \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0430\u044F \xAB\u0444\u0430\u0431\u0440\u0438\u043A\u0430\xBB: \u043C\u0435\u043C\u0431\u0440\u0430\u043D\u0430 \u043F\u0440\u043E\u043F\u0443\u0441\u043A\u0430\u0435\u0442 \u043D\u0443\u0436\u043D\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430, \u044F\u0434\u0440\u043E \u0445\u0440\u0430\u043D\u0438\u0442 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0443\u044E \u0438\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044E (\u0414\u041D\u041A) \u0438 \u0443\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u0442 \u043A\u043B\u0435\u0442\u043A\u043E\u0439, \u043C\u0438\u0442\u043E\u0445\u043E\u043D\u0434\u0440\u0438\u0438 \u0434\u0430\u044E\u0442 \u044D\u043D\u0435\u0440\u0433\u0438\u044E, \u0440\u0438\u0431\u043E\u0441\u043E\u043C\u044B \u0441\u043E\u0431\u0438\u0440\u0430\u044E\u0442 \u0431\u0435\u043B\u043A\u0438. \u041E\u0434\u043D\u0438 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u2014 \u0438\u0437 \u043E\u0434\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043A\u0438 (\u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438), \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u2014 \u0438\u0437 \u0434\u0435\u0441\u044F\u0442\u043A\u043E\u0432 \u0442\u0440\u0438\u043B\u043B\u0438\u043E\u043D\u043E\u0432.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0447\u0430\u0441\u0442\u044C \u043A\u043B\u0435\u0442\u043A\u0438 \u0445\u0440\u0430\u043D\u0438\u0442 \u0414\u041D\u041A?", "\u0417\u0430\u0447\u0435\u043C \u043A\u043B\u0435\u0442\u043A\u0435 \u043C\u0438\u0442\u043E\u0445\u043E\u043D\u0434\u0440\u0438\u0438?", "\u041A\u0442\u043E \u0432\u043F\u0435\u0440\u0432\u044B\u0435 \u043E\u043F\u0438\u0441\u0430\u043B \u043A\u043B\u0435\u0442\u043A\u0443?"] }, { key: "bio7-2.3", code: "2.3", title: "\u0420\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443 \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043E\u043A.", essence: "\u0423 \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u0438 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043E\u043A \u0435\u0441\u0442\u044C \u044F\u0434\u0440\u043E, \u043C\u0435\u043C\u0431\u0440\u0430\u043D\u0430, \u0446\u0438\u0442\u043E\u043F\u043B\u0430\u0437\u043C\u0430 \u0438 \u043C\u0438\u0442\u043E\u0445\u043E\u043D\u0434\u0440\u0438\u0438. \u041D\u043E \u0443 \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043A\u0438 \u0435\u0441\u0442\u044C \u0435\u0449\u0451 \u043F\u0440\u043E\u0447\u043D\u0430\u044F \u043A\u043B\u0435\u0442\u043E\u0447\u043D\u0430\u044F \u0441\u0442\u0435\u043D\u043A\u0430, \u0445\u043B\u043E\u0440\u043E\u043F\u043B\u0430\u0441\u0442\u044B (\u0432 \u043D\u0438\u0445 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437, \u043E\u043D\u0438 \u0437\u0435\u043B\u0451\u043D\u044B\u0435) \u0438 \u0431\u043E\u043B\u044C\u0448\u0430\u044F \u0432\u0430\u043A\u0443\u043E\u043B\u044C \u0441 \u043A\u043B\u0435\u0442\u043E\u0447\u043D\u044B\u043C \u0441\u043E\u043A\u043E\u043C. \u041F\u043E\u044D\u0442\u043E\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u0434\u0435\u0440\u0436\u0430\u0442 \u0444\u043E\u0440\u043C\u0443 \u0438 \u0441\u0430\u043C\u0438 \u0434\u0435\u043B\u0430\u044E\u0442 \u0441\u0435\u0431\u0435 \u043F\u0438\u0442\u0430\u043D\u0438\u0435 \u0438\u0437 \u0441\u0432\u0435\u0442\u0430.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u043E\u0442\u043B\u0438\u0447\u0438\u044F \u0440\u0430\u0441\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0439 \u043A\u043B\u0435\u0442\u043A\u0438 \u043E\u0442 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0439.", "\u0413\u0434\u0435 \u0432 \u043A\u043B\u0435\u0442\u043A\u0435 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435 \u043D\u0435 \u043F\u0430\u0434\u0430\u0435\u0442 \u0431\u0435\u0437 \u0441\u043A\u0435\u043B\u0435\u0442\u0430?"] }, { key: "bio7-2.4", code: "2.4", title: "\u0424\u0443\u043D\u043A\u0446\u0438\u0438 \u043A\u043B\u0435\u0442\u043E\u043A", homework: "\u041D\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 3 \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438 \u0438 \u043F\u043E\u0434\u043F\u0438\u0448\u0438\u0442\u0435 \u0438\u0445 \u0444\u0443\u043D\u043A\u0446\u0438\u044E.", essence: "\u0412 \u043C\u043D\u043E\u0433\u043E\u043A\u043B\u0435\u0442\u043E\u0447\u043D\u043E\u043C \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0435 \u043A\u043B\u0435\u0442\u043A\u0438 \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D\u044B: \u043D\u0435\u0439\u0440\u043E\u043D \u043F\u0435\u0440\u0435\u0434\u0430\u0451\u0442 \u0441\u0438\u0433\u043D\u0430\u043B\u044B, \u044D\u0440\u0438\u0442\u0440\u043E\u0446\u0438\u0442 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u0442 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434 (\u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0433\u0435\u043C\u043E\u0433\u043B\u043E\u0431\u0438\u043D), \u043C\u044B\u0448\u0435\u0447\u043D\u0430\u044F \u043A\u043B\u0435\u0442\u043A\u0430 \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F, \u043F\u043E\u043B\u043E\u0432\u044B\u0435 \u043A\u043B\u0435\u0442\u043A\u0438 (\u044F\u0439\u0446\u0435\u043A\u043B\u0435\u0442\u043A\u0430 \u0438 \u0441\u043F\u0435\u0440\u043C\u0430\u0442\u043E\u0437\u043E\u0438\u0434) \u043E\u0431\u0435\u0441\u043F\u0435\u0447\u0438\u0432\u0430\u044E\u0442 \u0440\u0430\u0437\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435.", tasks: ["\u041A\u0430\u043A \u0444\u043E\u0440\u043C\u0430 \u044D\u0440\u0438\u0442\u0440\u043E\u0446\u0438\u0442\u0430 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u0435\u043C\u0443 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u0430\u044F \u0441\u043F\u0435\u0446\u0438\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F?"] }, { key: "bio7-2.5", code: "2.5", title: "\u041E\u0442 \u043A\u043B\u0435\u0442\u043A\u0438 \u043A \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0443", homework: "\u0417\u0430\u043F\u043E\u043B\u043D\u0438\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0435 \u043E\u0440\u0433\u0430\u043D\u044B \u2014 \u0444\u0443\u043D\u043A\u0446\u0438\u044F (6 \u0441\u0438\u0441\u0442\u0435\u043C).", essence: "\u041A\u043B\u0435\u0442\u043A\u0438 \u2192 \u0442\u043A\u0430\u043D\u0438 \u2192 \u043E\u0440\u0433\u0430\u043D\u044B \u2192 \u0441\u0438\u0441\u0442\u0435\u043C\u044B \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u2192 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C. \u0421\u0438\u0441\u0442\u0435\u043C\u044B \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430: \u043D\u0435\u0440\u0432\u043D\u0430\u044F, \u043A\u0440\u043E\u0432\u0435\u043D\u043E\u0441\u043D\u0430\u044F, \u043C\u044B\u0448\u0435\u0447\u043D\u0430\u044F, \u0441\u043A\u0435\u043B\u0435\u0442\u043D\u0430\u044F, \u043F\u0438\u0449\u0435\u0432\u0430\u0440\u0438\u0442\u0435\u043B\u044C\u043D\u0430\u044F, \u0434\u044B\u0445\u0430\u0442\u0435\u043B\u044C\u043D\u0430\u044F. \u0423 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0439 \u2014 \u043F\u043E\u0431\u0435\u0433\u043E\u0432\u0430\u044F \u0438 \u043A\u043E\u0440\u043D\u0435\u0432\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u044B.", tasks: ["\u041A\u0430\u043A\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432 \u0434\u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434 \u043A \u043A\u043B\u0435\u0442\u043A\u0430\u043C?", "\u0420\u0430\u0441\u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043F\u043E \u043F\u043E\u0440\u044F\u0434\u043A\u0443: \u043E\u0440\u0433\u0430\u043D, \u043A\u043B\u0435\u0442\u043A\u0430, \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C, \u0442\u043A\u0430\u043D\u044C, \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u043E\u0440\u0433\u0430\u043D\u043E\u0432."] }, { key: "bio7-2.6", code: "2.6", title: "\u041E\u043F\u043E\u0440\u043D\u043E-\u0434\u0432\u0438\u0433\u0430\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u0441\u0438\u0441\u0442\u0435\u043C\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0443 \u0441\u0435\u0431\u044F 5 \u0441\u0443\u0441\u0442\u0430\u0432\u043E\u0432 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u0438\u0435 \u0434\u0432\u0438\u0436\u0435\u043D\u0438\u044F \u043E\u043D\u0438 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u044E\u0442.", essence: "\u0421\u043A\u0435\u043B\u0435\u0442 \u2014 \u043E\u043F\u043E\u0440\u0430 \u0442\u0435\u043B\u0430: \u043E\u043D \u0434\u0435\u0440\u0436\u0438\u0442 \u0444\u043E\u0440\u043C\u0443, \u0437\u0430\u0449\u0438\u0449\u0430\u0435\u0442 \u043E\u0440\u0433\u0430\u043D\u044B (\u0447\u0435\u0440\u0435\u043F \u2014 \u043C\u043E\u0437\u0433, \u0440\u0451\u0431\u0440\u0430 \u2014 \u0441\u0435\u0440\u0434\u0446\u0435 \u0438 \u043B\u0451\u0433\u043A\u0438\u0435) \u0438 \u0432\u043C\u0435\u0441\u0442\u0435 \u0441 \u043C\u044B\u0448\u0446\u0430\u043C\u0438 \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u0435\u0442 \u0434\u0432\u0438\u0433\u0430\u0442\u044C\u0441\u044F. \u0423 \u0432\u0437\u0440\u043E\u0441\u043B\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 206 \u043A\u043E\u0441\u0442\u0435\u0439. \u041A\u043E\u0441\u0442\u0438 \u0441\u043E\u0435\u0434\u0438\u043D\u044F\u044E\u0442\u0441\u044F \u0441\u0443\u0441\u0442\u0430\u0432\u0430\u043C\u0438 \u2014 \u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E (\u043A\u043E\u043B\u0435\u043D\u043E, \u043B\u043E\u043A\u043E\u0442\u044C) \u0438\u043B\u0438 \u043D\u0435\u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E (\u043A\u043E\u0441\u0442\u0438 \u0447\u0435\u0440\u0435\u043F\u0430).", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u0441\u0442\u0435\u0439 \u0443 \u0432\u0437\u0440\u043E\u0441\u043B\u043E\u0433\u043E \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430?", "\u041A\u0430\u043A\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u044B \u0437\u0430\u0449\u0438\u0449\u0430\u044E\u0442 \u0440\u0451\u0431\u0440\u0430?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E\u0433\u043E \u0438 \u043D\u0435\u043F\u043E\u0434\u0432\u0438\u0436\u043D\u043E\u0433\u043E \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u044F \u043A\u043E\u0441\u0442\u0435\u0439."] }, { key: "bio7-2.7", code: "2.7", title: "\u041A\u0430\u043A \u0444\u0443\u043D\u043A\u0446\u0438\u043E\u043D\u0438\u0440\u0443\u044E\u0442 \u043C\u044B\u0448\u0446\u044B?", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043B\u0430\u0434\u043E\u043D\u044C \u043D\u0430 \u043F\u043B\u0435\u0447\u043E \u0438 \u0441\u0433\u0438\u0431\u0430\u0439\u0442\u0435 \u0440\u0443\u043A\u0443: \u043E\u043F\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043E \u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0435\u0442\u0435 \u0432 \u0431\u0438\u0446\u0435\u043F\u0441\u0435 \u0438 \u0442\u0440\u0438\u0446\u0435\u043F\u0441\u0435.", essence: "\u041C\u044B\u0448\u0446\u044B \u0441\u043E\u043A\u0440\u0430\u0449\u0430\u044E\u0442\u0441\u044F \u0438 \u0442\u044F\u043D\u0443\u0442 \u043A\u043E\u0441\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 \u0441\u0443\u0445\u043E\u0436\u0438\u043B\u0438\u044F. \u041C\u044B\u0448\u0446\u0430 \u043C\u043E\u0436\u0435\u0442 \u0442\u043E\u043B\u044C\u043A\u043E \u0442\u044F\u043D\u0443\u0442\u044C, \u043F\u043E\u044D\u0442\u043E\u043C\u0443 \u043C\u044B\u0448\u0446\u044B \u0440\u0430\u0431\u043E\u0442\u0430\u044E\u0442 \u043F\u0430\u0440\u0430\u043C\u0438-\u0430\u043D\u0442\u0430\u0433\u043E\u043D\u0438\u0441\u0442\u0430\u043C\u0438: \u0434\u0432\u0443\u0433\u043B\u0430\u0432\u0430\u044F (\u0431\u0438\u0446\u0435\u043F\u0441) \u0441\u0433\u0438\u0431\u0430\u0435\u0442 \u0440\u0443\u043A\u0443, \u0442\u0440\u0451\u0445\u0433\u043B\u0430\u0432\u0430\u044F (\u0442\u0440\u0438\u0446\u0435\u043F\u0441) \u0440\u0430\u0437\u0433\u0438\u0431\u0430\u0435\u0442.", tasks: ["\u0412 \u043A\u0430\u043A\u043E\u043C \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0433\u043B\u0430\u0432\u0430\u044F \u0438 \u0434\u0432\u0443\u0433\u043B\u0430\u0432\u0430\u044F \u043C\u044B\u0448\u0446\u044B \u0431\u0435\u0434\u0440\u0430 \u043F\u0440\u0438 \u0441\u0433\u0438\u0431\u0430\u043D\u0438\u0438 \u043A\u043E\u043B\u0435\u043D\u0430?", "\u042F\u0432\u043B\u044F\u044E\u0442\u0441\u044F \u043B\u0438 \u043E\u043D\u0438 \u0430\u043D\u0442\u0430\u0433\u043E\u043D\u0438\u0441\u0442\u0430\u043C\u0438?"] }, { key: "bio7-2.8", code: "2.8", title: "\u0414\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u0443\u0447\u0451\u043D\u044B\u0445, \u0438\u0437\u0443\u0447\u0430\u044E\u0449\u0438\u0445 \u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443 \u043E\u0431 \u043E\u0434\u043D\u043E\u043C \u0443\u0447\u0451\u043D\u043E\u043C: \u0433\u043E\u0434\u044B \u0436\u0438\u0437\u043D\u0438, \u043E\u0442\u043A\u0440\u044B\u0442\u0438\u0435, \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", essence: "\u0410\u043D\u0430\u0442\u043E\u043C\u0438\u044F \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0435\u043B\u0430, \u0444\u0438\u0437\u0438\u043E\u043B\u043E\u0433\u0438\u044F \u2014 \u0440\u0430\u0431\u043E\u0442\u0443 \u043E\u0440\u0433\u0430\u043D\u043E\u0432. \u0418\u0431\u043D \u0421\u0438\u043D\u043E \u043E\u043F\u0438\u0441\u0430\u043B \u0431\u043E\u043B\u0435\u0437\u043D\u0438 \u0438 \u043B\u0435\u0447\u0435\u043D\u0438\u0435, \u0410\u043D\u0434\u0440\u0435\u0430\u0441 \u0412\u0435\u0437\u0430\u043B\u0438\u0439 \u0438\u0441\u043F\u0440\u0430\u0432\u0438\u043B \u043E\u0448\u0438\u0431\u043A\u0438 \u0430\u043D\u0430\u0442\u043E\u043C\u0438\u0438, \u0423\u0438\u043B\u044C\u044F\u043C \u0413\u0430\u0440\u0432\u0435\u0439 \u043E\u0442\u043A\u0440\u044B\u043B \u043A\u0440\u043E\u0432\u043E\u043E\u0431\u0440\u0430\u0449\u0435\u043D\u0438\u0435, \u0418\u0432\u0430\u043D \u041F\u0430\u0432\u043B\u043E\u0432 \u0438\u0437\u0443\u0447\u0430\u043B \u0440\u0435\u0444\u043B\u0435\u043A\u0441\u044B.", tasks: ["\u0427\u0442\u043E \u043E\u0442\u043A\u0440\u044B\u043B \u0423\u0438\u043B\u044C\u044F\u043C \u0413\u0430\u0440\u0432\u0435\u0439?", "\u0427\u0435\u043C \u0430\u043D\u0430\u0442\u043E\u043C\u0438\u044F \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u0444\u0438\u0437\u0438\u043E\u043B\u043E\u0433\u0438\u0438?"] }, { key: "bio7-3.1", code: "3.1", title: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432", homework: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0439\u0442\u0435 10 \u0437\u043D\u0430\u043A\u043E\u043C\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043F\u043E \u0446\u0430\u0440\u0441\u0442\u0432\u0430\u043C.", essence: "\u041A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F \u2014 \u0440\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043D\u0430 \u0433\u0440\u0443\u043F\u043F\u044B \u043F\u043E \u0441\u0445\u043E\u0434\u0441\u0442\u0432\u0443. \u041A\u0440\u0443\u043F\u043D\u044B\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u2014 \u0446\u0430\u0440\u0441\u0442\u0432\u0430: \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F, \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0435, \u0433\u0440\u0438\u0431\u044B, \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438, \u043F\u0440\u043E\u0442\u0438\u0441\u0442\u044B. \u0414\u0430\u043B\u044C\u0448\u0435: \u0442\u0438\u043F, \u043A\u043B\u0430\u0441\u0441, \u043E\u0442\u0440\u044F\u0434, \u0441\u0435\u043C\u0435\u0439\u0441\u0442\u0432\u043E, \u0440\u043E\u0434, \u0432\u0438\u0434.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 5 \u0446\u0430\u0440\u0441\u0442\u0432 \u0436\u0438\u0432\u044B\u0445 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u0417\u0430\u0447\u0435\u043C \u043D\u0443\u0436\u043D\u0430 \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F?"] }, { key: "bio7-3.2", code: "3.2", title: "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u0432\u0438\u0434?", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043B\u0430\u0442\u0438\u043D\u0441\u043A\u0438\u0435 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F 5 \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430.", essence: "\u0412\u0438\u0434 \u2014 \u0433\u0440\u0443\u043F\u043F\u0430 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432, \u0441\u0445\u043E\u0434\u043D\u044B\u0445 \u043F\u043E \u0441\u0442\u0440\u043E\u0435\u043D\u0438\u044E, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0441\u043A\u0440\u0435\u0449\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u043C\u0435\u0436\u0434\u0443 \u0441\u043E\u0431\u043E\u0439 \u0438 \u0434\u0430\u044E\u0442 \u043F\u043B\u043E\u0434\u043E\u0432\u0438\u0442\u043E\u0435 \u043F\u043E\u0442\u043E\u043C\u0441\u0442\u0432\u043E. \u041C\u0443\u043B (\u043F\u043E\u0442\u043E\u043C\u0441\u0442\u0432\u043E \u043B\u043E\u0448\u0430\u0434\u0438 \u0438 \u043E\u0441\u043B\u0430) \u0431\u0435\u0441\u043F\u043B\u043E\u0434\u0435\u043D \u2014 \u0437\u043D\u0430\u0447\u0438\u0442, \u043B\u043E\u0448\u0430\u0434\u044C \u0438 \u043E\u0441\u0451\u043B \u0440\u0430\u0437\u043D\u044B\u0435 \u0432\u0438\u0434\u044B.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u0441\u0435 \u043F\u043E\u0440\u043E\u0434\u044B \u0441\u043E\u0431\u0430\u043A \u2014 \u043E\u0434\u0438\u043D \u0432\u0438\u0434?", "\u0427\u0442\u043E \u0437\u043D\u0430\u0447\u0438\u0442 Homo sapiens?"] }, { key: "bio7-3.3", code: "3.3", title: "\u041F\u043E\u0447\u0435\u043C\u0443 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u0434\u0440\u0443\u0433 \u043E\u0442 \u0434\u0440\u0443\u0433\u0430?", homework: "\u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0441\u0435\u0431\u044F \u0438 \u0440\u043E\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u0438\u043A\u043E\u0432 \u043F\u043E 5 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0430\u043C: \u043A\u0430\u043A\u0438\u0435 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435?", essence: "\u041E\u0441\u043E\u0431\u0438 \u043E\u0434\u043D\u043E\u0433\u043E \u0432\u0438\u0434\u0430 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u2014 \u044D\u0442\u043E \u0438\u0437\u043C\u0435\u043D\u0447\u0438\u0432\u043E\u0441\u0442\u044C. \u041E\u043D\u0430 \u0431\u044B\u0432\u0430\u0435\u0442 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 (\u043E\u0442 \u0440\u043E\u0434\u0438\u0442\u0435\u043B\u0435\u0439, \u0447\u0435\u0440\u0435\u0437 \u0433\u0435\u043D\u044B) \u0438 \u043D\u0435\u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 (\u043E\u0442 \u0443\u0441\u043B\u043E\u0432\u0438\u0439 \u0436\u0438\u0437\u043D\u0438: \u043F\u0438\u0442\u0430\u043D\u0438\u0435, \u043A\u043B\u0438\u043C\u0430\u0442, \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043A\u0438).", tasks: ["\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u0438 \u043D\u0435\u043D\u0430\u0441\u043B\u0435\u0434\u0441\u0442\u0432\u0435\u043D\u043D\u043E\u0439 \u0438\u0437\u043C\u0435\u043D\u0447\u0438\u0432\u043E\u0441\u0442\u0438.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u043E\u0434\u043D\u043E\u0433\u043E \u0441\u043E\u0440\u0442\u0430 \u0432 \u0440\u0430\u0437\u043D\u044B\u0445 \u043F\u043E\u043B\u044F\u0445 \u0440\u0430\u0437\u043D\u043E\u0439 \u0432\u044B\u0441\u043E\u0442\u044B?"] }, { key: "bio7-3.4", code: "3.4", title: "\u041A\u0430\u043A \u043C\u044B \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u043C \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F?", homework: "\u0421\u043E\u0431\u0435\u0440\u0438\u0442\u0435 \u0433\u0435\u0440\u0431\u0430\u0440\u0438\u0439 \u0438\u0437 5 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0439 \u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u0433\u0440\u0443\u043F\u043F\u0443.", essence: "\u0420\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u0434\u0435\u043B\u044F\u0442 \u043D\u0430 \u0441\u043F\u043E\u0440\u043E\u0432\u044B\u0435 (\u0432\u043E\u0434\u043E\u0440\u043E\u0441\u043B\u0438, \u043C\u0445\u0438, \u043F\u0430\u043F\u043E\u0440\u043E\u0442\u043D\u0438\u043A\u0438) \u0438 \u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0435 (\u0433\u043E\u043B\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u2014 \u0445\u0432\u043E\u0439\u043D\u044B\u0435, \u043F\u043E\u043A\u0440\u044B\u0442\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u2014 \u0446\u0432\u0435\u0442\u043A\u043E\u0432\u044B\u0435). \u0426\u0432\u0435\u0442\u043A\u043E\u0432\u044B\u0435 \u0438\u043C\u0435\u044E\u0442 \u0446\u0432\u0435\u0442\u043E\u043A \u0438 \u043F\u043B\u043E\u0434 \u0441 \u0441\u0435\u043C\u0435\u043D\u0430\u043C\u0438.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u0439 \u0433\u0440\u0443\u043F\u043F\u0435 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F \u0435\u043B\u044C, \u043C\u043E\u0445, \u0440\u043E\u0437\u0430?", "\u0427\u0435\u043C \u0433\u043E\u043B\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u043E\u0442 \u043F\u043E\u043A\u0440\u044B\u0442\u043E\u0441\u0435\u043C\u0435\u043D\u043D\u044B\u0445?"] }, { key: "bio7-3.5", code: "3.5", title: "\u041A\u0430\u043A \u043C\u044B \u043A\u043B\u0430\u0441\u0441\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u0435\u043C \u0436\u0438\u0432\u043E\u0442\u043D\u044B\u0445?", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0442\u0430\u0431\u043B\u0438\u0446\u0443: 5 \u043A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u0437\u0432\u043E\u043D\u043E\u0447\u043D\u044B\u0445 \u2014 \u043F\u0440\u0438\u043C\u0435\u0440 \u2014 \u0433\u043B\u0430\u0432\u043D\u044B\u0439 \u043F\u0440\u0438\u0437\u043D\u0430\u043A.", essence: "\u0416\u0438\u0432\u043E\u0442\u043D\u044B\u0445 \u0434\u0435\u043B\u044F\u0442 \u043D\u0430 \u0431\u0435\u0441\u043F\u043E\u0437\u0432\u043E\u043D\u043E\u0447\u043D\u044B\u0445 (\u0447\u0435\u0440\u0432\u0438, \u043C\u043E\u043B\u043B\u044E\u0441\u043A\u0438, \u0447\u043B\u0435\u043D\u0438\u0441\u0442\u043E\u043D\u043E\u0433\u0438\u0435) \u0438 \u043F\u043E\u0437\u0432\u043E\u043D\u043E\u0447\u043D\u044B\u0445: \u0440\u044B\u0431\u044B, \u0437\u0435\u043C\u043D\u043E\u0432\u043E\u0434\u043D\u044B\u0435, \u043F\u0440\u0435\u0441\u043C\u044B\u043A\u0430\u044E\u0449\u0438\u0435\u0441\u044F, \u043F\u0442\u0438\u0446\u044B, \u043C\u043B\u0435\u043A\u043E\u043F\u0438\u0442\u0430\u044E\u0449\u0438\u0435. \u041A\u0438\u0442 \u2014 \u043C\u043B\u0435\u043A\u043E\u043F\u0438\u0442\u0430\u044E\u0449\u0435\u0435: \u0434\u044B\u0448\u0438\u0442 \u043B\u0451\u0433\u043A\u0438\u043C\u0438 \u0438 \u043A\u043E\u0440\u043C\u0438\u0442 \u0434\u0435\u0442\u0451\u043D\u044B\u0448\u0435\u0439 \u043C\u043E\u043B\u043E\u043A\u043E\u043C.", tasks: ["\u041A \u043A\u0430\u043A\u043E\u043C\u0443 \u043A\u043B\u0430\u0441\u0441\u0443 \u043E\u0442\u043D\u043E\u0441\u044F\u0442\u0441\u044F: \u043A\u0438\u0442, \u0447\u0435\u0440\u0435\u043F\u0430\u0445\u0430, \u043B\u044F\u0433\u0443\u0448\u043A\u0430, \u043E\u0440\u0451\u043B?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u0438 \u043C\u043B\u0435\u043A\u043E\u043F\u0438\u0442\u0430\u044E\u0449\u0438\u0445."] }, { key: "bio7-4.1", code: "4.1", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B", homework: "\u041F\u043E\u043B\u043E\u0436\u0438\u0442\u0435 \u043A\u0443\u0441\u043E\u0447\u0435\u043A \u0445\u043B\u0435\u0431\u0430 \u0432\u043E \u0432\u043B\u0430\u0436\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430 \u043F\u043B\u0435\u0441\u0435\u043D\u044C\u044E (\u043D\u0435 \u043E\u0442\u043A\u0440\u044B\u0432\u0430\u0442\u044C!).", essence: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0432\u0438\u0434\u043D\u044B \u0442\u043E\u043B\u044C\u043A\u043E \u0432 \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F: \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438, \u043C\u0438\u043A\u0440\u043E\u0441\u043A\u043E\u043F\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0433\u0440\u0438\u0431\u044B (\u0434\u0440\u043E\u0436\u0436\u0438, \u043F\u043B\u0435\u0441\u0435\u043D\u044C), \u043F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435, \u0432\u043E\u0434\u043E\u0440\u043E\u0441\u043B\u0438. \u041E\u043D\u0438 \u0436\u0438\u0432\u0443\u0442 \u0432\u0435\u0437\u0434\u0435: \u0432 \u043F\u043E\u0447\u0432\u0435, \u0432\u043E\u0434\u0435, \u0432\u043E\u0437\u0434\u0443\u0445\u0435 \u0438 \u0432 \u043D\u0430\u0448\u0435\u043C \u0442\u0435\u043B\u0435.", tasks: ["\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 4 \u0433\u0440\u0443\u043F\u043F\u044B \u043C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", "\u041E\u0434\u043D\u0430 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u044F \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u043A\u0430\u0436\u0434\u044B\u0435 20 \u043C\u0438\u043D\u0443\u0442. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0438\u0445 \u0431\u0443\u0434\u0435\u0442 \u0447\u0435\u0440\u0435\u0437 2 \u0447\u0430\u0441\u0430?"] }, { key: "bio7-4.2", code: "4.2", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043F\u0440\u043E\u0446\u0435\u0441\u0441 \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u044F", homework: "\u0421\u0434\u0435\u043B\u0430\u0439\u0442\u0435 \u043C\u0438\u043D\u0438-\u043A\u043E\u043C\u043F\u043E\u0441\u0442 \u0438\u0437 \u043E\u0447\u0438\u0441\u0442\u043A\u043E\u0432 \u0432 \u0431\u0430\u043D\u043A\u0435 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 2 \u043D\u0435\u0434\u0435\u043B\u0438.", essence: "\u0411\u0430\u043A\u0442\u0435\u0440\u0438\u0438 \u0438 \u0433\u0440\u0438\u0431\u044B-\u0440\u0430\u0437\u043B\u0430\u0433\u0430\u0442\u0435\u043B\u0438 \u043F\u0435\u0440\u0435\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u044E\u0442 \u043C\u0451\u0440\u0442\u0432\u044B\u0435 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043E\u0442\u0445\u043E\u0434\u044B \u0432 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0438 \u0432\u043E\u0437\u0432\u0440\u0430\u0449\u0430\u044E\u0442 \u0438\u0445 \u0432 \u043F\u043E\u0447\u0432\u0443. \u0411\u0435\u0437 \u043D\u0438\u0445 \u0417\u0435\u043C\u043B\u044F \u0431\u044B\u043B\u0430 \u0431\u044B \u0437\u0430\u0432\u0430\u043B\u0435\u043D\u0430 \u043C\u0443\u0441\u043E\u0440\u043E\u043C \u0438\u0437 \u043B\u0438\u0441\u0442\u044C\u0435\u0432 \u0438 \u0442\u0440\u0443\u043F\u043E\u0432.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u044B \u0432 \u0445\u043E\u043B\u043E\u0434\u0438\u043B\u044C\u043D\u0438\u043A\u0435 \u043F\u043E\u0440\u0442\u044F\u0442\u0441\u044F \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435?", "\u041A\u0430\u043A\u0443\u044E \u0440\u043E\u043B\u044C \u0438\u0433\u0440\u0430\u044E\u0442 \u0440\u0430\u0437\u043B\u0430\u0433\u0430\u0442\u0435\u043B\u0438 \u0432 \u043F\u0440\u0438\u0440\u043E\u0434\u0435?"] }, { key: "bio7-4.3", code: "4.3", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0441\u0442\u0432\u043E \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u043E\u0432 \u043F\u0438\u0442\u0430\u043D\u0438\u044F", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 2 \u0441\u0442\u0430\u043A\u0430\u043D\u0430 \u0442\u0451\u043F\u043B\u043E\u0439 \u0432\u043E\u0434\u044B \u0441 \u0441\u0430\u0445\u0430\u0440\u043E\u043C \u0438 \u0434\u0440\u043E\u0436\u0436\u0430\u043C\u0438: \u043E\u0434\u0438\u043D \u0432 \u0442\u0435\u043F\u043B\u043E, \u0434\u0440\u0443\u0433\u043E\u0439 \u0432 \u0445\u043E\u043B\u043E\u0434. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u043F\u0435\u043D\u0443.", essence: "\u0414\u0440\u043E\u0436\u0436\u0438 \u0441\u0431\u0440\u0430\u0436\u0438\u0432\u0430\u044E\u0442 \u0441\u0430\u0445\u0430\u0440 \u0438 \u0432\u044B\u0434\u0435\u043B\u044F\u044E\u0442 \u0443\u0433\u043B\u0435\u043A\u0438\u0441\u043B\u044B\u0439 \u0433\u0430\u0437 \u2014 \u0442\u0435\u0441\u0442\u043E \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442\u0441\u044F. \u041C\u043E\u043B\u043E\u0447\u043D\u043E\u043A\u0438\u0441\u043B\u044B\u0435 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u044E\u0442 \u043C\u043E\u043B\u043E\u043A\u043E \u0432 \u043A\u0435\u0444\u0438\u0440, \u0439\u043E\u0433\u0443\u0440\u0442, \u043A\u0430\u0442\u044B\u043A, \u0441\u044B\u0440. \u041A\u0432\u0430\u0448\u0435\u043D\u0438\u0435 \u043A\u0430\u043F\u0443\u0441\u0442\u044B \u2014 \u0442\u043E\u0436\u0435 \u0440\u0430\u0431\u043E\u0442\u0430 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0439.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0442\u0435\u0441\u0442\u043E \u0441 \u0434\u0440\u043E\u0436\u0436\u0430\u043C\u0438 \u0441\u0442\u0430\u0432\u044F\u0442 \u0432 \u0442\u0451\u043F\u043B\u043E\u0435 \u043C\u0435\u0441\u0442\u043E?", "\u041A\u0430\u043A\u0438\u0435 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438 \u043F\u0440\u0435\u0432\u0440\u0430\u0449\u0430\u044E\u0442 \u043C\u043E\u043B\u043E\u043A\u043E \u0432 \u043A\u0430\u0442\u044B\u043A?"] }, { key: "bio7-4.4", code: "4.4", title: "\u041C\u0438\u043A\u0440\u043E\u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u0438 \u0437\u0430\u0431\u043E\u043B\u0435\u0432\u0430\u043D\u0438\u044F", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043B\u0430\u043A\u0430\u0442 \xAB\u041A\u0430\u043A \u0437\u0430\u0449\u0438\u0442\u0438\u0442\u044C\u0441\u044F \u043E\u0442 \u0438\u043D\u0444\u0435\u043A\u0446\u0438\u0439\xBB \u0434\u043B\u044F \u043C\u043B\u0430\u0434\u0448\u0438\u0445 \u043A\u043B\u0430\u0441\u0441\u043E\u0432.", essence: "\u0411\u043E\u043B\u0435\u0437\u043D\u0435\u0442\u0432\u043E\u0440\u043D\u044B\u0435 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0438 \u0438 \u0432\u0438\u0440\u0443\u0441\u044B \u0432\u044B\u0437\u044B\u0432\u0430\u044E\u0442 \u0430\u043D\u0433\u0438\u043D\u0443, \u0433\u0440\u0438\u043F\u043F, \u0442\u0443\u0431\u0435\u0440\u043A\u0443\u043B\u0451\u0437 \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0431\u043E\u043B\u0435\u0437\u043D\u0438. \u041E\u043D\u0438 \u043F\u0435\u0440\u0435\u0434\u0430\u044E\u0442\u0441\u044F \u043F\u043E \u0432\u043E\u0437\u0434\u0443\u0445\u0443, \u0447\u0435\u0440\u0435\u0437 \u0432\u043E\u0434\u0443, \u043F\u0438\u0449\u0443 \u0438 \u0433\u0440\u044F\u0437\u043D\u044B\u0435 \u0440\u0443\u043A\u0438. \u0417\u0430\u0449\u0438\u0442\u0430: \u0433\u0438\u0433\u0438\u0435\u043D\u0430, \u0432\u0430\u043A\u0446\u0438\u043D\u0430\u0446\u0438\u044F, \u0430\u043D\u0442\u0438\u0431\u0438\u043E\u0442\u0438\u043A\u0438 (\u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u043E\u0442\u0438\u0432 \u0431\u0430\u043A\u0442\u0435\u0440\u0438\u0439, \u043F\u043E \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044E \u0432\u0440\u0430\u0447\u0430).", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043B\u0435\u0447\u0438\u0442\u044C \u0433\u0440\u0438\u043F\u043F \u0430\u043D\u0442\u0438\u0431\u0438\u043E\u0442\u0438\u043A\u0430\u043C\u0438?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0441\u043F\u043E\u0441\u043E\u0431\u0430 \u0437\u0430\u0449\u0438\u0442\u044B \u043E\u0442 \u0438\u043D\u0444\u0435\u043A\u0446\u0438\u0439."] }, { key: "bio7-4.5", code: "4.5", title: "\u0418\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u044F \u041B\u0443\u0438 \u041F\u0430\u0441\u0442\u0435\u0440\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430 \u0443\u043F\u0430\u043A\u043E\u0432\u043A\u0435 \u043C\u043E\u043B\u043E\u043A\u0430 \u0441\u043B\u043E\u0432\u043E \xAB\u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u043E\u0432\u0430\u043D\u043D\u043E\u0435\xBB \u0438 \u0443\u0437\u043D\u0430\u0439\u0442\u0435 \u0441\u0440\u043E\u043A \u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", essence: "\u041B\u0443\u0438 \u041F\u0430\u0441\u0442\u0435\u0440 \u0434\u043E\u043A\u0430\u0437\u0430\u043B, \u0447\u0442\u043E \u043C\u0438\u043A\u0440\u043E\u0431\u044B \u043D\u0435 \u0437\u0430\u0440\u043E\u0436\u0434\u0430\u044E\u0442\u0441\u044F \u0441\u0430\u043C\u0438, \u0430 \u043F\u043E\u043F\u0430\u0434\u0430\u044E\u0442 \u0438\u0437\u0432\u043D\u0435 (\u043E\u043F\u044B\u0442 \u0441 \u043A\u043E\u043B\u0431\u043E\u0439 \xAB\u043B\u0435\u0431\u0435\u0434\u0438\u043D\u0430\u044F \u0448\u0435\u044F\xBB). \u041E\u043D \u0441\u043E\u0437\u0434\u0430\u043B \u0432\u0430\u043A\u0446\u0438\u043D\u044B \u043F\u0440\u043E\u0442\u0438\u0432 \u0431\u0435\u0448\u0435\u043D\u0441\u0442\u0432\u0430 \u0438 \u0441\u0438\u0431\u0438\u0440\u0441\u043A\u043E\u0439 \u044F\u0437\u0432\u044B \u0438 \u043C\u0435\u0442\u043E\u0434 \u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u0438 \u2014 \u043D\u0430\u0433\u0440\u0435\u0432\u0430\u043D\u0438\u0435 \u043F\u0440\u043E\u0434\u0443\u043A\u0442\u0430 \u0434\u043B\u044F \u0443\u043D\u0438\u0447\u0442\u043E\u0436\u0435\u043D\u0438\u044F \u043C\u0438\u043A\u0440\u043E\u0431\u043E\u0432.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432 \u043A\u043E\u043B\u0431\u0435 \u0441 \u0438\u0437\u043E\u0433\u043D\u0443\u0442\u044B\u043C \u0433\u043E\u0440\u043B\u043E\u043C \u0431\u0443\u043B\u044C\u043E\u043D \u043D\u0435 \u0438\u0441\u043F\u043E\u0440\u0442\u0438\u043B\u0441\u044F?", "\u0427\u0442\u043E \u0442\u0430\u043A\u043E\u0435 \u043F\u0430\u0441\u0442\u0435\u0440\u0438\u0437\u0430\u0446\u0438\u044F \u0438 \u0437\u0430\u0447\u0435\u043C \u043E\u043D\u0430 \u043D\u0443\u0436\u043D\u0430?"] }, { key: "bio7-5.1", code: "5.1", title: "\u041F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u043D\u043E\u0441\u0442\u044C \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432 \u043A \u0441\u0440\u0435\u0434\u0435 \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F", homework: "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0436\u0438\u0432\u043E\u0442\u043D\u043E\u0435 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0430 \u0438 \u043E\u043F\u0438\u0448\u0438\u0442\u0435 3 \u0435\u0433\u043E \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u0438\u044F.", essence: "\u0421\u0440\u0435\u0434\u044B \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F: \u0432\u043E\u0434\u043D\u0430\u044F, \u043D\u0430\u0437\u0435\u043C\u043D\u043E-\u0432\u043E\u0437\u0434\u0443\u0448\u043D\u0430\u044F, \u043F\u043E\u0447\u0432\u0435\u043D\u043D\u0430\u044F, \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u0435\u043D\u043D\u0430\u044F. \u041E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u044B \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D\u044B \u043A \u0441\u0432\u043E\u0435\u0439 \u0441\u0440\u0435\u0434\u0435: \u0444\u043E\u0440\u043C\u0430 \u0442\u0435\u043B\u0430, \u043F\u043E\u043A\u0440\u043E\u0432\u044B, \u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435. \u0412\u0435\u0440\u0431\u043B\u044E\u0434 \u0445\u0440\u0430\u043D\u0438\u0442 \u0436\u0438\u0440 \u0432 \u0433\u043E\u0440\u0431\u0435 \u0438 \u0434\u043E\u043B\u0433\u043E \u043E\u0431\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u0431\u0435\u0437 \u0432\u043E\u0434\u044B.", tasks: ["\u041A\u0430\u043A \u0432\u0435\u0440\u0431\u043B\u044E\u0434 \u043F\u0440\u0438\u0441\u043F\u043E\u0441\u043E\u0431\u043B\u0435\u043D \u043A \u043F\u0443\u0441\u0442\u044B\u043D\u0435?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 4 \u0441\u0440\u0435\u0434\u044B \u043E\u0431\u0438\u0442\u0430\u043D\u0438\u044F."] }, { key: "bio7-5.2", code: "5.2", title: "\u041F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438 \u0438 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0441\u0435\u0442\u0438", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0441\u0435\u0442\u044C \u043F\u0440\u0443\u0434\u0430 \u0438\u0437 6 \u043E\u0440\u0433\u0430\u043D\u0438\u0437\u043C\u043E\u0432.", essence: "\u041F\u0438\u0449\u0435\u0432\u0430\u044F \u0446\u0435\u043F\u044C \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442, \u043A\u0442\u043E \u043A\u043E\u0433\u043E \u0435\u0441\u0442: \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u0438\u0442\u0435\u043B\u0438 (\u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F) \u2192 \u043F\u043E\u0442\u0440\u0435\u0431\u0438\u0442\u0435\u043B\u0438 (\u0442\u0440\u0430\u0432\u043E\u044F\u0434\u043D\u044B\u0435, \u0445\u0438\u0449\u043D\u0438\u043A\u0438) \u2192 \u0440\u0430\u0437\u043B\u0430\u0433\u0430\u0442\u0435\u043B\u0438. \u0426\u0435\u043F\u0438 \u043F\u0435\u0440\u0435\u043F\u043B\u0435\u0442\u0430\u044E\u0442\u0441\u044F \u0432 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0441\u0435\u0442\u044C. \u041D\u0430 \u043A\u0430\u0436\u0434\u043E\u043C \u0437\u0432\u0435\u043D\u0435 \u043F\u0435\u0440\u0435\u0434\u0430\u0451\u0442\u0441\u044F \u043E\u043A\u043E\u043B\u043E 10 % \u044D\u043D\u0435\u0440\u0433\u0438\u0438.", tasks: ["\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0446\u0435\u043F\u044C \u0438\u0437: \u043B\u0438\u0441\u0430, \u0442\u0440\u0430\u0432\u0430, \u0437\u0430\u044F\u0446.", "\u0422\u0440\u0430\u0432\u0430 \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u0430 10 000 \u0435\u0434\u0438\u043D\u0438\u0446 \u044D\u043D\u0435\u0440\u0433\u0438\u0438. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0434\u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F \u043B\u0438\u0441\u0435 \u0432 \u0446\u0435\u043F\u0438 \u0442\u0440\u0430\u0432\u0430 \u2192 \u0437\u0430\u044F\u0446 \u2192 \u043B\u0438\u0441\u0430?"] }, { key: "bio7-5.3", code: "5.3", title: "\u0412\u043B\u0438\u044F\u043D\u0438\u0435 \u0434\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440, \u043A\u0430\u043A \u0447\u0435\u043B\u043E\u0432\u0435\u043A \u043F\u043E\u043C\u043E\u0433 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0446\u0435\u043F\u044C (\u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A, \u0440\u0430\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435).", essence: "\u0427\u0435\u043B\u043E\u0432\u0435\u043A \u043C\u0435\u043D\u044F\u0435\u0442 \u043F\u0438\u0449\u0435\u0432\u044B\u0435 \u0446\u0435\u043F\u0438: \u043E\u0445\u043E\u0442\u0430, \u0432\u044B\u0440\u0443\u0431\u043A\u0430, \u043F\u0435\u0441\u0442\u0438\u0446\u0438\u0434\u044B, \u0437\u0430\u0432\u043E\u0437 \u0447\u0443\u0436\u0438\u0445 \u0432\u0438\u0434\u043E\u0432. \u042F\u0434\u043E\u0432\u0438\u0442\u044B\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043D\u0430\u043A\u0430\u043F\u043B\u0438\u0432\u0430\u044E\u0442\u0441\u044F \u043F\u043E \u0446\u0435\u043F\u0438: \u0443 \u0445\u0438\u0449\u043D\u0438\u043A\u043E\u0432 \u0438\u0445 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0441\u0435\u0433\u043E.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0443 \u0445\u0438\u0449\u043D\u0438\u043A\u043E\u0432 \u0432 \u043A\u043E\u043D\u0446\u0435 \u0446\u0435\u043F\u0438 \u0431\u043E\u043B\u044C\u0448\u0435 \u0432\u0441\u0435\u0433\u043E \u044F\u0434\u0430?", "\u041F\u0440\u0438\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0440\u0438\u043C\u0435\u0440 \u0432\u043C\u0435\u0448\u0430\u0442\u0435\u043B\u044C\u0441\u0442\u0432\u0430 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0432 \u043F\u0438\u0449\u0435\u0432\u0443\u044E \u0446\u0435\u043F\u044C."] }, { key: "bio7-5.4", code: "5.4", title: "\u0412\u043B\u0438\u044F\u043D\u0438\u0435 \u0434\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u0438 \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0443\u044E \u0441\u0440\u0435\u0434\u0443", homework: "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043B\u0430\u0441\u0442\u0438\u043A\u043E\u0432\u044B\u0445 \u043F\u0430\u043A\u0435\u0442\u043E\u0432 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0435\u0442 \u0432\u0430\u0448\u0430 \u0441\u0435\u043C\u044C\u044F \u0437\u0430 \u043D\u0435\u0434\u0435\u043B\u044E, \u0438 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0438\u0442\u0435 \u0437\u0430\u043C\u0435\u043D\u0443.", essence: "\u0414\u0435\u044F\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C \u0447\u0435\u043B\u043E\u0432\u0435\u043A\u0430 \u0437\u0430\u0433\u0440\u044F\u0437\u043D\u044F\u0435\u0442 \u0432\u043E\u0437\u0434\u0443\u0445, \u0432\u043E\u0434\u0443 \u0438 \u043F\u043E\u0447\u0432\u0443, \u0443\u043C\u0435\u043D\u044C\u0448\u0430\u0435\u0442 \u043B\u0435\u0441\u0430 \u0438 \u0431\u0438\u043E\u0440\u0430\u0437\u043D\u043E\u043E\u0431\u0440\u0430\u0437\u0438\u0435. \u0410\u0440\u0430\u043B\u044C\u0441\u043A\u043E\u0435 \u043C\u043E\u0440\u0435 \u0441\u043E\u043A\u0440\u0430\u0442\u0438\u043B\u043E\u0441\u044C \u0438\u0437-\u0437\u0430 \u0437\u0430\u0431\u043E\u0440\u0430 \u0432\u043E\u0434\u044B \u043D\u0430 \u043F\u043E\u043B\u044F \u2014 \u044D\u0442\u043E \u044D\u043A\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u043A\u0430\u0442\u0430\u0441\u0442\u0440\u043E\u0444\u0430.", tasks: ["\u041F\u043E\u0447\u0435\u043C\u0443 \u0432\u044B\u0441\u044B\u0445\u0430\u0435\u0442 \u0410\u0440\u0430\u043B\u044C\u0441\u043A\u043E\u0435 \u043C\u043E\u0440\u0435?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0432\u0438\u0434\u0430 \u0437\u0430\u0433\u0440\u044F\u0437\u043D\u0435\u043D\u0438\u044F \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044B."] }, { key: "bio7-5.5", code: "5.5", title: "\u041E\u0445\u0440\u0430\u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u0430\u044E\u0449\u0435\u0439 \u0441\u0440\u0435\u0434\u044B", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u044D\u043A\u043E\u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u043B\u0430\u043D \u0441\u0435\u043C\u044C\u0438 \u043D\u0430 \u043C\u0435\u0441\u044F\u0446.", essence: "\u041E\u0445\u0440\u0430\u043D\u0430 \u043F\u0440\u0438\u0440\u043E\u0434\u044B: \u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A\u0438 \u0438 \u043D\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u043F\u0430\u0440\u043A\u0438, \u041A\u0440\u0430\u0441\u043D\u0430\u044F \u043A\u043D\u0438\u0433\u0430, \u043F\u0435\u0440\u0435\u0440\u0430\u0431\u043E\u0442\u043A\u0430 \u043E\u0442\u0445\u043E\u0434\u043E\u0432, \u044D\u043A\u043E\u043D\u043E\u043C\u0438\u044F \u0432\u043E\u0434\u044B \u0438 \u044D\u043D\u0435\u0440\u0433\u0438\u0438, \u043F\u043E\u0441\u0430\u0434\u043A\u0430 \u0434\u0435\u0440\u0435\u0432\u044C\u0435\u0432. \u041A\u0430\u0436\u0434\u044B\u0439 \u043C\u043E\u0436\u0435\u0442 \u043F\u043E\u043C\u043E\u0447\u044C: \u0441\u043E\u0440\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u043C\u0443\u0441\u043E\u0440, \u043D\u0435 \u0442\u0440\u0430\u0442\u0438\u0442\u044C \u0432\u043E\u0434\u0443 \u0437\u0440\u044F.", tasks: ["\u0414\u043B\u044F \u0447\u0435\u0433\u043E \u0441\u043E\u0437\u0434\u0430\u044E\u0442 \u0437\u0430\u043F\u043E\u0432\u0435\u0434\u043D\u0438\u043A\u0438?", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 3 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u043F\u043E\u043C\u043E\u0433\u0430\u044E\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u0435 \u0434\u043E\u043C\u0430."] }, { key: "bio7-5.6", code: "5.6", title: "\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u044D\u043D\u0435\u0440\u0433\u0438\u0438", homework: "\u041F\u043E\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435, \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u044D\u043B\u0435\u043A\u0442\u0440\u043E\u043F\u0440\u0438\u0431\u043E\u0440\u043E\u0432 \u0434\u043E\u043C\u0430 \u043C\u043E\u0436\u043D\u043E \u0432\u044B\u043A\u043B\u044E\u0447\u0430\u0442\u044C, \u043A\u043E\u0433\u0434\u0430 \u043E\u043D\u0438 \u043D\u0435 \u043D\u0443\u0436\u043D\u044B.", essence: "\u041D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0438 \u2014 \u043D\u0435\u0444\u0442\u044C, \u0433\u0430\u0437, \u0443\u0433\u043E\u043B\u044C: \u0438\u0445 \u0437\u0430\u043F\u0430\u0441\u044B \u043A\u043E\u043D\u0447\u0430\u044E\u0442\u0441\u044F, \u0430 \u0441\u0436\u0438\u0433\u0430\u043D\u0438\u0435 \u0437\u0430\u0433\u0440\u044F\u0437\u043D\u044F\u0435\u0442 \u0432\u043E\u0437\u0434\u0443\u0445. \u0412\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435 \u2014 \u0441\u043E\u043B\u043D\u0446\u0435, \u0432\u0435\u0442\u0435\u0440, \u0432\u043E\u0434\u0430: \u043E\u043D\u0438 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0437\u0430\u0433\u0440\u044F\u0437\u043D\u044F\u044E\u0442 \u043F\u0440\u0438\u0440\u043E\u0434\u0443.", tasks: ["\u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u043D\u0430 \u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435 \u0438 \u043D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u0435: \u0441\u043E\u043B\u043D\u0446\u0435, \u043D\u0435\u0444\u0442\u044C, \u0432\u0435\u0442\u0435\u0440, \u0433\u0430\u0437, \u0432\u043E\u0434\u0430.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u0444\u0442\u044C \u043D\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u043D\u0435\u0432\u043E\u0437\u043E\u0431\u043D\u043E\u0432\u043B\u044F\u0435\u043C\u044B\u043C \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u043E\u043C?"] }, { key: "bio7-6.1", code: "6.1", title: "\u0424\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043E\u0434\u043D\u043E \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0435 \u043D\u0430 \u0441\u0432\u0435\u0442, \u0434\u0440\u0443\u0433\u043E\u0435 \u0432 \u0442\u0451\u043C\u043D\u044B\u0439 \u0448\u043A\u0430\u0444 \u043D\u0430 5 \u0434\u043D\u0435\u0439. \u0421\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0438 \u0437\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442.", essence: "\u0424\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437 \u2014 \u043F\u0440\u043E\u0446\u0435\u0441\u0441, \u0432 \u043A\u043E\u0442\u043E\u0440\u043E\u043C \u0437\u0435\u043B\u0451\u043D\u044B\u0435 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u0438\u0437 \u0443\u0433\u043B\u0435\u043A\u0438\u0441\u043B\u043E\u0433\u043E \u0433\u0430\u0437\u0430 \u0438 \u0432\u043E\u0434\u044B \u043D\u0430 \u0441\u0432\u0435\u0442\u0443 \u0434\u0435\u043B\u0430\u044E\u0442 \u0441\u0430\u0445\u0430\u0440 (\u0433\u043B\u044E\u043A\u043E\u0437\u0443) \u0438 \u0432\u044B\u0434\u0435\u043B\u044F\u044E\u0442 \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434: 6CO\u2082 + 6H\u2082O \u2192 C\u2086H\u2081\u2082O\u2086 + 6O\u2082. \u0418\u0434\u0451\u0442 \u043E\u043D \u0432 \u0445\u043B\u043E\u0440\u043E\u043F\u043B\u0430\u0441\u0442\u0430\u0445. \u041F\u043E\u0447\u0442\u0438 \u0432\u0435\u0441\u044C \u043A\u0438\u0441\u043B\u043E\u0440\u043E\u0434, \u043A\u043E\u0442\u043E\u0440\u044B\u043C \u043C\u044B \u0434\u044B\u0448\u0438\u043C, \u0434\u0430\u043B\u0438 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u0438 \u0432\u043E\u0434\u043E\u0440\u043E\u0441\u043B\u0438.", tasks: ["\u041A\u0430\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u043D\u0443\u0436\u043D\u044B \u0434\u043B\u044F \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437\u0430?", "\u0427\u0442\u043E \u0432\u044B\u0434\u0435\u043B\u044F\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437\u0435?", "\u0413\u0434\u0435 \u0432 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u0438 \u0438\u0434\u0451\u0442 \u0444\u043E\u0442\u043E\u0441\u0438\u043D\u0442\u0435\u0437?"] }, { key: "bio7-6.2", code: "6.2", title: "\u0423\u0441\u0432\u043E\u0435\u043D\u0438\u0435 \u0438 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442 \u0432\u043E\u0434\u044B \u0438 \u043C\u0438\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u044B\u0445 \u0441\u043E\u043B\u0435\u0439", homework: "\u041F\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0431\u0435\u043B\u044B\u0439 \u0446\u0432\u0435\u0442\u043E\u043A \u0438\u043B\u0438 \u0441\u0442\u0435\u0431\u0435\u043B\u044C \u0441\u0435\u043B\u044C\u0434\u0435\u0440\u0435\u044F \u0432 \u0432\u043E\u0434\u0443 \u0441 \u043A\u0440\u0430\u0441\u043A\u043E\u0439 \u0438 \u043D\u0430\u0431\u043B\u044E\u0434\u0430\u0439\u0442\u0435 \u0441\u0443\u0442\u043A\u0438.", essence: "\u041A\u043E\u0440\u043D\u0435\u0432\u044B\u0435 \u0432\u043E\u043B\u043E\u0441\u043A\u0438 \u0432\u0441\u0430\u0441\u044B\u0432\u0430\u044E\u0442 \u0432\u043E\u0434\u0443 \u0441 \u043C\u0438\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u044B\u043C\u0438 \u0441\u043E\u043B\u044F\u043C\u0438. \u041F\u043E \u0441\u043E\u0441\u0443\u0434\u0430\u043C \u0434\u0440\u0435\u0432\u0435\u0441\u0438\u043D\u044B \u0432\u043E\u0434\u0430 \u043F\u043E\u0434\u043D\u0438\u043C\u0430\u0435\u0442\u0441\u044F \u043A \u043B\u0438\u0441\u0442\u044C\u044F\u043C, \u0430 \u043F\u043E \u0441\u0438\u0442\u043E\u0432\u0438\u0434\u043D\u044B\u043C \u0442\u0440\u0443\u0431\u043A\u0430\u043C \u043B\u0443\u0431\u0430 \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430 \u0438\u0434\u0443\u0442 \u043E\u0442 \u043B\u0438\u0441\u0442\u044C\u0435\u0432 \u043A\u043E \u0432\u0441\u0435\u043C \u043E\u0440\u0433\u0430\u043D\u0430\u043C. \u0418\u0441\u043F\u0430\u0440\u0435\u043D\u0438\u0435 \u0432\u043E\u0434\u044B \u043B\u0438\u0441\u0442\u044C\u044F\u043C\u0438 (\u0442\u0440\u0430\u043D\u0441\u043F\u0438\u0440\u0430\u0446\u0438\u044F) \xAB\u0442\u044F\u043D\u0435\u0442\xBB \u0432\u043E\u0434\u0443 \u0432\u0432\u0435\u0440\u0445.", tasks: ["\u041F\u043E \u043A\u0430\u043A\u0438\u043C \u0442\u043A\u0430\u043D\u044F\u043C \u0434\u0432\u0438\u0436\u0435\u0442\u0441\u044F \u0432\u043E\u0434\u0430, \u0430 \u043F\u043E \u043A\u0430\u043A\u0438\u043C \u2014 \u043E\u0440\u0433\u0430\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u0430?", "\u041F\u043E\u0447\u0435\u043C\u0443 \u0432 \u0436\u0430\u0440\u0443 \u0440\u0430\u0441\u0442\u0435\u043D\u0438\u044F \u043F\u043E\u043B\u0438\u0432\u0430\u044E\u0442 \u0447\u0430\u0449\u0435?"] }] }, { id: "math-7", subject: "math", grade: 7, topics: [{ key: "math7-1.1", code: "1.1", title: "\u041F\u0440\u043E\u0441\u0442\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438, \u0441\u0442\u0435\u043F\u0435\u043D\u044C", homework: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 360 \u0438 1001 (\u0434\u0432\u0443\u043C\u044F \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u0434\u0435\u0440\u0435\u0432\u043E\u043C \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435\u043C).", essence: "\u041F\u0440\u043E\u0441\u0442\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 1 \u0438 \u043D\u0430 \u0441\u0430\u043C\u043E \u0441\u0435\u0431\u044F (2, 3, 5, 7, 11\u2026). \u041B\u044E\u0431\u043E\u0435 \u043D\u0430\u0442\u0443\u0440\u0430\u043B\u044C\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u0431\u043E\u043B\u044C\u0448\u0435 1 \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u043A\u0430\u043A \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u043F\u0440\u043E\u0441\u0442\u044B\u0445 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0435\u0439: 126 = 2 \xB7 3 \xB7 3 \xB7 7 = 2 \xB7 3\xB2 \xB7 7. \u0421\u0442\u0435\u043F\u0435\u043D\u044C \u2014 \u043A\u043E\u0440\u043E\u0442\u043A\u0430\u044F \u0437\u0430\u043F\u0438\u0441\u044C \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0445 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0435\u0439: 3 \xB7 3 = 3\xB2, 2 \xB7 2 \xB7 2 = 2\xB3. \u041E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0430 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u043E\u0439 a \u2014 \u044D\u0442\u043E a\xB3.", tasks: ["\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 585 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438.", "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432 \u0432\u0438\u0434\u0435 \u0441\u0442\u0435\u043F\u0435\u043D\u0438: 5 \xB7 5 \xB7 5 \xB7 5.", "\u042F\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043B\u0438 91 \u043F\u0440\u043E\u0441\u0442\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C?"] }, { key: "math7-1.2", code: "1.2", title: "\u041D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u0439 \u043E\u0431\u0449\u0438\u0439 \u0434\u0435\u043B\u0438\u0442\u0435\u043B\u044C (\u041D\u041E\u0414)", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u041D\u041E\u0414(84, 126) \u0438 \u041D\u041E\u0414(45, 75) \u0434\u0432\u0443\u043C\u044F \u0441\u043F\u043E\u0441\u043E\u0431\u0430\u043C\u0438: \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C \u0438 \u0430\u043B\u0433\u043E\u0440\u0438\u0442\u043C\u043E\u043C \u0415\u0432\u043A\u043B\u0438\u0434\u0430.", essence: "\u041D\u041E\u0414 \u2014 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0447\u0438\u0441\u043B\u043E, \u043D\u0430 \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0434\u0435\u043B\u044F\u0442\u0441\u044F \u043E\u0431\u0430 \u0447\u0438\u0441\u043B\u0430. \u041D\u0430\u0439\u0442\u0438 \u0435\u0433\u043E \u0443\u0434\u043E\u0431\u043D\u043E \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438: \u0431\u0435\u0440\u0451\u043C \u043E\u0431\u0449\u0438\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u0441 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0438\u043C\u0438 \u0441\u0442\u0435\u043F\u0435\u043D\u044F\u043C\u0438. \u0427\u0438\u0441\u043B\u0430 \u0441 \u041D\u041E\u0414 = 1 \u043D\u0430\u0437\u044B\u0432\u0430\u044E\u0442 \u0432\u0437\u0430\u0438\u043C\u043D\u043E \u043F\u0440\u043E\u0441\u0442\u044B\u043C\u0438.", tasks: ["\u0414\u0432\u0435 \u043F\u0440\u043E\u0432\u043E\u043B\u043E\u043A\u0438 72 cm \u0438 96 cm \u0440\u0430\u0437\u0440\u0435\u0437\u0430\u043B\u0438 \u043D\u0430 \u0440\u0430\u0432\u043D\u044B\u0435 \u0447\u0430\u0441\u0442\u0438 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0439 \u0434\u043B\u0438\u043D\u044B. \u041A\u0430\u043A\u043E\u0432\u0430 \u0434\u043B\u0438\u043D\u0430 \u0447\u0430\u0441\u0442\u0438?", "\u041B\u0438\u0441\u0442 360 cm \xD7 280 cm \u0440\u0430\u0437\u0440\u0435\u0437\u0430\u043B\u0438 \u043D\u0430 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0435 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u044B \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0433\u043E \u0440\u0430\u0437\u043C\u0435\u0440\u0430. \u0421\u0442\u043E\u0440\u043E\u043D\u0430 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u0438 \u0438\u0445 \u0447\u0438\u0441\u043B\u043E?", "\u0421\u0430\u0440\u0434\u043E\u0440 \u0440\u0430\u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u0435\u0442 132 \u0431\u0435\u043B\u044B\u0445 \u0438 154 \u0447\u0451\u0440\u043D\u044B\u0445 \u043F\u043B\u0438\u0442\u043A\u0438 \u0448\u043E\u043A\u043E\u043B\u0430\u0434\u0430 \u043F\u043E\u0440\u043E\u0432\u043D\u0443 \u0432 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0447\u0438\u0441\u043B\u043E \u043A\u043E\u0440\u043E\u0431\u043E\u043A. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u0440\u043E\u0431\u043E\u043A \u0438 \u0447\u0442\u043E \u0432 \u043A\u0430\u0436\u0434\u043E\u0439?"] }, { key: "math7-1.3", code: "1.3", title: "\u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u043E\u0431\u0449\u0435\u0435 \u043A\u0440\u0430\u0442\u043D\u043E\u0435 (\u041D\u041E\u041A)", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u041D\u041E\u041A(12, 18, 30) \u0438 \u0441\u043B\u043E\u0436\u0438\u0442\u0435 \u0434\u0440\u043E\u0431\u0438 5/12 + 7/18.", essence: "\u041D\u041E\u041A \u2014 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0447\u0438\u0441\u043B\u043E, \u043A\u043E\u0442\u043E\u0440\u043E\u0435 \u0434\u0435\u043B\u0438\u0442\u0441\u044F \u043D\u0430 \u043A\u0430\u0436\u0434\u043E\u0435 \u0438\u0437 \u0447\u0438\u0441\u0435\u043B. \u0420\u0430\u0437\u043B\u0430\u0433\u0430\u0435\u043C \u0447\u0438\u0441\u043B\u0430 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u0438 \u0431\u0435\u0440\u0451\u043C \u0432\u0441\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u0441 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0438\u043C\u0438 \u0441\u0442\u0435\u043F\u0435\u043D\u044F\u043C\u0438. \u0414\u043B\u044F \u0434\u0432\u0443\u0445 \u0447\u0438\u0441\u0435\u043B: \u041D\u041E\u0414 \xB7 \u041D\u041E\u041A = a \xB7 b.", tasks: ["\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u044B A, B \u0438 C \u043F\u0440\u0438\u0445\u043E\u0434\u044F\u0442 \u043A\u0430\u0436\u0434\u044B\u0435 20, 30 \u0438 45 \u043C\u0438\u043D\u0443\u0442. \u041E\u043D\u0438 \u0432\u0441\u0442\u0440\u0435\u0442\u0438\u043B\u0438\u0441\u044C \u0432 08:30. \u041A\u043E\u0433\u0434\u0430 \u0432\u0441\u0442\u0440\u0435\u0442\u044F\u0442\u0441\u044F \u0441\u043D\u043E\u0432\u0430?", "\u0421\u0442\u043E\u043B\u044B 56 cm \xD7 42 cm \u0441\u0434\u0432\u0438\u043D\u0443\u043B\u0438 \u0432 \u043E\u0434\u0438\u043D \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0438\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u0441\u0442\u043E\u043B. \u0415\u0433\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430 \u0438 \u0447\u0438\u0441\u043B\u043E \u0441\u0442\u043E\u043B\u043E\u0432?", "\u0427\u0438\u0441\u043B\u043E \u044F\u0431\u043B\u043E\u043A n \u043F\u0440\u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0438 \u043D\u0430 3 \u0434\u0430\u0451\u0442 \u043E\u0441\u0442\u0430\u0442\u043E\u043A 2, \u043D\u0430 5 \u2014 \u043E\u0441\u0442\u0430\u0442\u043E\u043A 4. \u041D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 n?"] }, { key: "math7-1.4", code: "1.4", title: "\u041A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u0438 \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043A\u043E\u0440\u0435\u043D\u044C \u0447\u0438\u0441\u043B\u0430", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043E\u0432 \u043F\u043B\u043E\u0449\u0430\u0434\u044C\u044E 81, 225 \u0438 400 \u0438 \u0440\u0451\u0431\u0440\u0430 \u043A\u0443\u0431\u043E\u0432 \u043E\u0431\u044A\u0451\u043C\u043E\u043C 216 \u0438 343.", essence: "\u041A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u044B\u0439 \u043A\u043E\u0440\u0435\u043D\u044C \u0438\u0437 \u0447\u0438\u0441\u043B\u0430 a \u2014 \u044D\u0442\u043E \u0447\u0438\u0441\u043B\u043E, \u043A\u0432\u0430\u0434\u0440\u0430\u0442 \u043A\u043E\u0442\u043E\u0440\u043E\u0433\u043E \u0440\u0430\u0432\u0435\u043D a: \u221A49 = 7, \u043F\u043E\u0442\u043E\u043C\u0443 \u0447\u0442\u043E 7\xB2 = 49. \u041E\u043D \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u0435\u0442 \u0441\u0442\u043E\u0440\u043E\u043D\u0443 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u0430 \u043F\u043E \u0435\u0433\u043E \u043F\u043B\u043E\u0449\u0430\u0434\u0438. \u041A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043A\u043E\u0440\u0435\u043D\u044C \u2014 \u0441\u0442\u043E\u0440\u043E\u043D\u0443 \u043A\u0443\u0431\u0430 \u043F\u043E \u0435\u0433\u043E \u043E\u0431\u044A\u0451\u043C\u0443: \u221B64 = 4, \u043F\u043E\u0442\u043E\u043C\u0443 \u0447\u0442\u043E 4\xB3 = 64. \u041D\u0430\u043F\u0440\u0438\u043C\u0435\u0440, \u0435\u0441\u043B\u0438 \u043A\u0443\u0431 \u0432\u043C\u0435\u0449\u0430\u0435\u0442 27 \u043B, \u0435\u0433\u043E \u0440\u0435\u0431\u0440\u043E \u2014 3 \u0434\u043C.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u221A144 \u0438 \u221B125.", "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u043E\u0439 \u043A\u043E\u043C\u043D\u0430\u0442\u044B 36 \u043C\xB2. \u041A\u0430\u043A\u043E\u0432\u0430 \u0434\u043B\u0438\u043D\u0430 \u0441\u0442\u0435\u043D\u044B?", "\u041E\u0431\u044A\u0451\u043C \u043A\u0443\u0431\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0431\u0430\u043A\u0430 8 \u043C\xB3. \u041A\u0430\u043A\u043E\u0432\u043E \u0435\u0433\u043E \u0440\u0435\u0431\u0440\u043E?"] }, { key: "math7-2.1", code: "2.1", title: "\u041F\u043E\u043D\u044F\u0442\u0438\u0435 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0447\u0438\u0441\u043B\u0430 \u0438 \u0447\u0438\u0441\u043B\u043E\u0432\u0430\u044F \u043E\u0441\u044C", homework: "\u041D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u043F\u0438\u0441\u044B\u0432\u0430\u0439\u0442\u0435 \u0443\u0442\u0440\u0435\u043D\u043D\u044E\u044E \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0443 \u0438 \u043E\u0442\u043C\u0435\u0447\u0430\u0439\u0442\u0435 \u0435\u0451 \u043D\u0430 \u0447\u0438\u0441\u043B\u043E\u0432\u043E\u0439 \u043E\u0441\u0438.", essence: "\u041E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u043C\u0435\u043D\u044C\u0448\u0435 \u043D\u0443\u043B\u044F \u0438 \u043B\u0435\u0436\u0430\u0442 \u043D\u0430 \u0447\u0438\u0441\u043B\u043E\u0432\u043E\u0439 \u043E\u0441\u0438 \u043B\u0435\u0432\u0435\u0435 \u043D\u0443\u043B\u044F. \u0418\u0437 \u0434\u0432\u0443\u0445 \u0447\u0438\u0441\u0435\u043B \u0431\u043E\u043B\u044C\u0448\u0435 \u0442\u043E, \u0447\u0442\u043E \u043F\u0440\u0430\u0432\u0435\u0435. \u041C\u043E\u0434\u0443\u043B\u044C \u0447\u0438\u0441\u043B\u0430 \u2014 \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043E\u0442 \u043D\u0443\u043B\u044F: |\u22127| = 7. \u0427\u0438\u0441\u043B\u0430 \u22125 \u0438 5 \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B\u0435.", tasks: ["\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E: \u221250, 210, 0, \u2212160, \u2212300.", "\u0412\u044B\u0441\u043E\u0442\u044B: \u0425\u0430\u0437\u0440\u0430\u0442\u0438 \u0421\u0443\u043B\u0442\u0430\u043D 4643 m, \u0422\u0443\u0440\u0444\u0430\u043D\u0441\u043A\u0430\u044F \u0432\u043F\u0430\u0434\u0438\u043D\u0430 \u2212154 m, \u0433\u043E\u0440\u0430 \u0424\u0430\u0431\u0435\u0440 105 m, \u0414\u043E\u043B\u0438\u043D\u0430 \u0421\u043C\u0435\u0440\u0442\u0438 \u221286 m. \u041F\u043E \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u0430\u043D\u0438\u044E?", "\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u0446\u0435\u043B\u044B\u0445 a \u0443\u0434\u043E\u0432\u043B\u0435\u0442\u0432\u043E\u0440\u044F\u044E\u0442 \u22129 \u2264 a < 5?"] }, { key: "math7-2.2", code: "2.2", title: "\u0421\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0432\u044B\u0447\u0438\u0442\u0430\u043D\u0438\u0435 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u0435\u043B", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: 3 \u2212 (\u22128) + (\u22124); \u221212 + (\u22129) + (\u22123); 15 \u2212 (\u22127) + (\u22127).", essence: "\u041F\u0440\u0438\u0431\u0430\u0432\u0438\u0442\u044C \u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u2014 \u0448\u0430\u0433 \u0432\u043F\u0440\u0430\u0432\u043E \u043F\u043E \u043E\u0441\u0438, \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u2014 \u0432\u043B\u0435\u0432\u043E. \u0412\u044B\u0447\u0438\u0442\u0430\u043D\u0438\u0435 \u0437\u0430\u043C\u0435\u043D\u044F\u044E\u0442 \u0441\u043B\u043E\u0436\u0435\u043D\u0438\u0435\u043C \u0441 \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B\u043C \u0447\u0438\u0441\u043B\u043E\u043C: a \u2212 b = a + (\u2212b). \u0427\u0438\u0441\u043B\u0430 \u0441 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u043C\u0438 \u0437\u043D\u0430\u043A\u0430\u043C\u0438 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442 \u043C\u043E\u0434\u0443\u043B\u0438, \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u2014 \u0432\u044B\u0447\u0438\u0442\u0430\u044E\u0442.", tasks: ["\u0412\u043E\u0434\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u0435\u0442 \u043F\u0440\u0438 0 \xB0C. \u0421 \u0441\u043E\u043B\u044C\u044E \u2014 \u043D\u0430 6 \u0433\u0440\u0430\u0434\u0443\u0441\u043E\u0432 \u043D\u0438\u0436\u0435. \u041D\u043E\u0432\u0430\u044F \u0442\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430 \u0437\u0430\u043C\u0435\u0440\u0437\u0430\u043D\u0438\u044F?", "\u0412\u0435\u0440\u0442\u043E\u043B\u0451\u0442 \u043D\u0430 \u0432\u044B\u0441\u043E\u0442\u0435 120 m \u043D\u0430\u0434 \u043C\u043E\u0440\u0435\u043C, \u043F\u043E\u0434\u043B\u043E\u0434\u043A\u0430 \u043D\u0430 39 m \u043D\u0438\u0436\u0435 \u0443\u0440\u043E\u0432\u043D\u044F \u043C\u043E\u0440\u044F. \u0420\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438?", "\u041D\u0430 \u0441\u0447\u0451\u0442\u0435 300 000 \u0441\u0443\u043C\u043E\u0432, \u043E\u0442\u0435\u0446 \u043F\u043E\u043B\u043E\u0436\u0438\u043B 600 000, \u0437\u0430\u0432\u0442\u0440\u0430 \u0441\u043D\u0438\u043C\u0443\u0442 200 000. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0441\u0442\u0430\u043D\u0435\u0442\u0441\u044F?"] }, { key: "math7-2.3", code: "2.3", title: "\u0423\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0446\u0435\u043B\u044B\u0445 \u0447\u0438\u0441\u0435\u043B", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 5 \u043F\u0440\u0438\u043C\u0435\u0440\u043E\u0432 \u043D\u0430 \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0441 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0437\u043D\u0430\u043A \u043F\u043E \u043F\u0440\u0430\u0432\u0438\u043B\u0443.", essence: "\u041F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0438 \u0447\u0430\u0441\u0442\u043D\u043E\u0435 \u0434\u0432\u0443\u0445 \u0447\u0438\u0441\u0435\u043B \u0441 \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u043C\u0438 \u0437\u043D\u0430\u043A\u0430\u043C\u0438 \u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435\u043B\u044C\u043D\u044B, \u0441 \u0440\u0430\u0437\u043D\u044B\u043C\u0438 \u2014 \u043E\u0442\u0440\u0438\u0446\u0430\u0442\u0435\u043B\u044C\u043D\u044B. \u041F\u0440\u0438 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044F\u0445 \u0441\u0447\u0438\u0442\u0430\u0435\u043C \u0447\u0438\u0441\u043B\u043E \u043C\u0438\u043D\u0443\u0441\u043E\u0432: \u0447\u0451\u0442\u043D\u043E\u0435 \u2014 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442 \u043F\u043E\u043B\u043E\u0436\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439.", tasks: ["\u041F\u0438\u043A \u0425\u0430\u0437\u0440\u0435\u0442-\u0421\u0443\u043B\u0442\u0430\u043D 4643 m \u043D\u0430\u0434 \u043C\u043E\u0440\u0435\u043C, \u043F\u0435\u0449\u0435\u0440\u0430 \u0411\u043E\u0439-\u0411\u0443\u043B\u043E\u043A \u2014 1517 m \u043D\u0438\u0436\u0435. \u0412\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u043E\u0435 \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u0435\u0433\u043E \u043F\u043E\u043B\u043E\u0432\u0438\u043D\u0430?", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: (\u22126) \xB7 (\u22125); (\u221248) : 6; (\u22122) \xB7 3 \xB7 (\u22124)."] }, { key: "math7-2.4", code: "2.4", title: "\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435, \u0438\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430", homework: "\u0418\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u044C \u0438 \u0434\u0438\u0430\u043C\u0435\u0442\u0440 \u0431\u0430\u043D\u043A\u0438 \u043D\u0438\u0442\u043A\u043E\u0439. \u0420\u0430\u0437\u0434\u0435\u043B\u0438\u0442\u0435 \u2014 \u043D\u0430\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0431\u043B\u0438\u0437\u043A\u043E \u043A \u03C0?", essence: "\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E \u043C\u043E\u0436\u043D\u043E \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0434\u0440\u043E\u0431\u044C\u044E p/q (\xBD, \u22123, 0,75). \u0418\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u2014 \u043D\u0435\u043B\u044C\u0437\u044F: \u0435\u0433\u043E \u0434\u0435\u0441\u044F\u0442\u0438\u0447\u043D\u0430\u044F \u0437\u0430\u043F\u0438\u0441\u044C \u0431\u0435\u0441\u043A\u043E\u043D\u0435\u0447\u043D\u0430 \u0438 \u043D\u0435 \u043F\u043E\u0432\u0442\u043E\u0440\u044F\u0435\u0442\u0441\u044F. \u0421\u0430\u043C\u044B\u0439 \u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u0439 \u043F\u0440\u0438\u043C\u0435\u0440 \u2014 \u03C0 \u2248 3,14159\u2026, \u043E\u0442\u043D\u043E\u0448\u0435\u043D\u0438\u0435 \u0434\u043B\u0438\u043D\u044B \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u0438 \u043A \u0434\u0438\u0430\u043C\u0435\u0442\u0440\u0443. \u0427\u0435\u0440\u0435\u0437 \u03C0 \u0441\u0447\u0438\u0442\u0430\u044E\u0442 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u0440\u0443\u0433\u0430 (\u03C0r\xB2), \u043E\u0431\u044A\u0451\u043C \u0446\u0438\u043B\u0438\u043D\u0434\u0440\u0430 (\u03C0r\xB2h) \u0438 \u0448\u0430\u0440\u0430 (\u2074\u2044\u2083\u03C0r\xB3).", tasks: ["\u0420\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435 \u0438\u043B\u0438 \u0438\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E\u0435: 0,25; \u221A9; \u221A7; \u03C0?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0431\u044A\u0451\u043C \u0446\u0438\u043B\u0438\u043D\u0434\u0440\u0430 r = 2 \u0441\u043C, h = 5 \u0441\u043C (\u03C0 \u2248 3,14).", "\u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u043D\u0430 \u0434\u043B\u0438\u043D\u0430 \u043E\u043A\u0440\u0443\u0436\u043D\u043E\u0441\u0442\u0438 \u0434\u0438\u0430\u043C\u0435\u0442\u0440\u043E\u043C 10 \u0441\u043C?"] }, { key: "math7-2.5", code: "2.5", title: "\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u043D\u0430\u0434 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438", homework: "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435: (\u22121/2 + 1/3 + 1/6) \xB7 (\u22122/5)\xB2; 32,7 + 9,84; (\u22123,45) \xB7 1,06.", essence: "\u0421 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u044E\u0442 \u0442\u0435 \u0436\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F, \u0447\u0442\u043E \u0441 \u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u043C\u0438, \u0441\u043E\u0431\u043B\u044E\u0434\u0430\u044F \u043F\u043E\u0440\u044F\u0434\u043E\u043A: \u0441\u043A\u043E\u0431\u043A\u0438, \u0441\u0442\u0435\u043F\u0435\u043D\u0438, \u0443\u043C\u043D\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0434\u0435\u043B\u0435\u043D\u0438\u0435, \u0441\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0438 \u0432\u044B\u0447\u0438\u0442\u0430\u043D\u0438\u0435. \u0418\u0440\u0440\u0430\u0446\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u0447\u0438\u0441\u043B\u0430 \u043F\u0440\u0438 \u0432\u044B\u0447\u0438\u0441\u043B\u0435\u043D\u0438\u044F\u0445 \u043E\u043A\u0440\u0443\u0433\u043B\u044F\u044E\u0442.", tasks: ["\u0423 \u041C\u0430\u0440\u044C\u044F\u043C 0,5 kg \u043C\u0443\u043A\u0438. \u041D\u0443\u0436\u043D\u043E 4\xBC \u0447\u0430\u0448\u043A\u0438 \u043F\u043E 1/8 kg. \u0425\u0432\u0430\u0442\u0438\u0442 \u043B\u0438?", "\u0410\u043B\u0438 \u043F\u0440\u0438\u043D\u0430\u0434\u043B\u0435\u0436\u0438\u0442 1/3 \u0438\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u0439, \u0411\u043E\u0442\u0438\u0440\u0443 \u2014 2/7. \u041A\u0430\u043A\u0430\u044F \u0447\u0430\u0441\u0442\u044C \u0443 \u0427\u0430\u0440\u0441\u0430?", "\u0410\u043B\u0438 \u0432\u043B\u043E\u0436\u0438\u043B \u043D\u0430 6 000 000 \u0441\u0443\u043C\u043E\u0432 \u0431\u043E\u043B\u044C\u0448\u0435 \u0411\u043E\u0442\u0438\u0440\u0430. \u041E\u0431\u0449\u0430\u044F \u0441\u0443\u043C\u043C\u0430?"] }, { key: "math7-3.1", code: "3.1", title: "\u041E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0434\u043E \u0437\u0430\u0434\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0430\u0437\u0440\u044F\u0434\u0430", homework: "\u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u0435 \u0434\u043E \u0434\u0435\u0441\u044F\u0442\u044B\u0445: 3,004056; 18,471984; \u0434\u043E \u0442\u044B\u0441\u044F\u0447: 1 958 200.", essence: "\u0427\u0442\u043E\u0431\u044B \u043E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u044C, \u0441\u043C\u043E\u0442\u0440\u0438\u043C \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0443\u044E \u0446\u0438\u0444\u0440\u0443: 0\u20134 \u2014 \u043E\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u043C, 5\u20139 \u2014 \u0443\u0432\u0435\u043B\u0438\u0447\u0438\u0432\u0430\u0435\u043C \u043D\u0430 1. \u0426\u0438\u0444\u0440\u044B \u043F\u0440\u0430\u0432\u0435\u0435 \u0437\u0430\u043C\u0435\u043D\u044F\u0435\u043C \u043D\u0443\u043B\u044F\u043C\u0438 (\u0432 \u0446\u0435\u043B\u043E\u0439 \u0447\u0430\u0441\u0442\u0438) \u0438\u043B\u0438 \u043E\u0442\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0435\u043C (\u0432 \u0434\u0440\u043E\u0431\u043D\u043E\u0439).", tasks: ["\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u0421\u0430\u043C\u0430\u0440\u043A\u0430\u043D\u0434\u0430 573 200 (\u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u043E \u0434\u043E \u0441\u043E\u0442\u0435\u043D). \u041D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0438 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0435 \u0447\u0438\u0441\u043B\u043E?", "\u0412\u043E\u0434\u043E\u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 27 800 000 m\xB3. \u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u0435 \u0434\u043E \u043C\u0438\u043B\u043B\u0438\u043E\u043D\u043E\u0432.", "\u0414\u043E\u043C 84,5 m\xB2 \u0441\u0442\u043E\u0438\u0442 725 000 000 \u0441\u0443\u043C\u043E\u0432. \u0426\u0435\u043D\u0430 1 m\xB2 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435\u043C \u0434\u043E \u0441\u0443\u043C\u043E\u0432?"] }, { key: "math7-3.2", code: "3.2", title: "\u041E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u0435\u043B \u0434\u043E \u0437\u043D\u0430\u0447\u0430\u0449\u0435\u0439 \u0446\u0438\u0444\u0440\u044B", homework: "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u0421\u0443\u0440\u0445\u0430\u043D\u0434\u0430\u0440\u044C\u0438\u043D\u0441\u043A\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 2 800 000 (3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B). \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043D\u0430\u0438\u0431\u043E\u043B\u044C\u0448\u0435\u0435 \u0438 \u043D\u0430\u0438\u043C\u0435\u043D\u044C\u0448\u0435\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435.", essence: "\u0417\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B \u2014 \u0432\u0441\u0435 \u0446\u0438\u0444\u0440\u044B, \u043D\u0430\u0447\u0438\u043D\u0430\u044F \u0441 \u043F\u0435\u0440\u0432\u043E\u0439 \u043D\u0435\u043D\u0443\u043B\u0435\u0432\u043E\u0439. \u041E\u043A\u0440\u0443\u0433\u043B\u0438\u0442\u044C \u0434\u043E 3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440 \u2014 \u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0442\u0440\u0438 \u043F\u0435\u0440\u0432\u044B\u0435 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B. \u0422\u0430\u043A \u0443\u0434\u043E\u0431\u043D\u043E \u0437\u0430\u043F\u0438\u0441\u044B\u0432\u0430\u0442\u044C \u043E\u0447\u0435\u043D\u044C \u0431\u043E\u043B\u044C\u0448\u0438\u0435 \u0438 \u043E\u0447\u0435\u043D\u044C \u043C\u0430\u043B\u0435\u043D\u044C\u043A\u0438\u0435 \u0447\u0438\u0441\u043B\u0430.", tasks: ["\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u0425\u043E\u0440\u0435\u0437\u043C\u0441\u043A\u043E\u0439 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u2248 6050 km\xB2, \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0435 \u2248 1 958 200. \u041F\u043B\u043E\u0442\u043D\u043E\u0441\u0442\u044C \u0434\u043E 3 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440?", "\u041F\u043E\u043B 6,7 m \xD7 3,8 m (2 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0435 \u0446\u0438\u0444\u0440\u044B). \u041C\u043E\u0436\u0435\u0442 \u043B\u0438 \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u0431\u044B\u0442\u044C 27 m\xB2? \u0410 25 m\xB2?"] }, { key: "math7-3.3", code: "3.3", title: "\u041F\u0440\u0438\u043A\u0438\u0434\u043A\u0430 (\u043E\u0446\u0435\u043D\u043A\u0430)", homework: "\u041F\u0440\u0438\u043A\u0438\u043D\u044C\u0442\u0435 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u043E\u043A\u0443\u043F\u043E\u043A \u0441\u0435\u043C\u044C\u0438 \u043F\u043E \u0447\u0435\u043A\u0443, \u0437\u0430\u0442\u0435\u043C \u0441\u0440\u0430\u0432\u043D\u0438\u0442\u0435 \u0441 \u0442\u043E\u0447\u043D\u043E\u0439 \u0441\u0443\u043C\u043C\u043E\u0439.", essence: "\u041F\u0440\u0438\u043A\u0438\u0434\u043A\u0430 \u2014 \u0431\u044B\u0441\u0442\u0440\u044B\u0439 \u043F\u0440\u0438\u0431\u043B\u0438\u0436\u0451\u043D\u043D\u044B\u0439 \u0440\u0430\u0441\u0447\u0451\u0442 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0451\u043D\u043D\u044B\u043C\u0438 \u0447\u0438\u0441\u043B\u0430\u043C\u0438. \u041E\u043D\u0430 \u043F\u043E\u043C\u043E\u0433\u0430\u0435\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u043E\u0442\u0432\u0435\u0442 \u0438 \u043F\u0440\u0438\u043D\u044F\u0442\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u0435, \u043A\u043E\u0433\u0434\u0430 \u0442\u043E\u0447\u043D\u043E\u0441\u0442\u044C \u043D\u0435 \u043D\u0443\u0436\u043D\u0430. \u041D\u043E \u0438\u043D\u043E\u0433\u0434\u0430 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435 \xAB\u043F\u0440\u044F\u0447\u0435\u0442\xBB \u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u044C \u2014 \u0442\u043E\u0433\u0434\u0430 \u0441\u0447\u0438\u0442\u0430\u0435\u043C \u0442\u043E\u0447\u043D\u043E.", tasks: ["\u041B\u0438\u0444\u0442 \u0432\u044B\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 600 kg. \u041C\u0430\u0441\u0441\u044B 8 \u0447\u0435\u043B\u043E\u0432\u0435\u043A: 71,8; 73,4; 75,3; 74,8; 76,4; 73,9; 78,4; 77,4 kg. \u041E\u0446\u0435\u043D\u0438\u0442\u0435 \u0441 \u043E\u043A\u0440\u0443\u0433\u043B\u0435\u043D\u0438\u0435\u043C \u0434\u043E 2 \u0437\u043D\u0430\u0447\u0430\u0449\u0438\u0445 \u0446\u0438\u0444\u0440.", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0442\u043E\u0447\u043D\u0443\u044E \u043C\u0430\u0441\u0441\u0443. \u041C\u043E\u0436\u043D\u043E \u043B\u0438 \u0432\u0441\u0435\u043C \u0435\u0445\u0430\u0442\u044C?", "\u041E\u0446\u0435\u043D\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u043F\u0440\u043E\u0431\u043A\u0438 \u0438\u0437 96 \u043C\u0430\u0448\u0438\u043D \u043F\u043E 4,5 m."] }, { key: "math7-4.1", code: "4.1", title: "\u0412\u0432\u0435\u0434\u0435\u043D\u0438\u0435 \u0432 \u0430\u043B\u0433\u0435\u0431\u0440\u0443", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 3 \u0444\u043E\u0440\u043C\u0443\u043B\u044B \u0438\u0437 \u0436\u0438\u0437\u043D\u0438 (\u0446\u0435\u043D\u0430 \u043F\u043E\u043A\u0443\u043F\u043A\u0438, \u0432\u0440\u0435\u043C\u044F \u0432 \u043F\u0443\u0442\u0438, \u043F\u043B\u043E\u0449\u0430\u0434\u044C \u043A\u043E\u043C\u043D\u0430\u0442\u044B) \u0441 \u0431\u0443\u043A\u0432\u0430\u043C\u0438.", essence: "\u0412 \u0430\u043B\u0433\u0435\u0431\u0440\u0435 \u0432\u043C\u0435\u0441\u0442\u043E \u0447\u0438\u0441\u0435\u043B \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442 \u0431\u0443\u043A\u0432\u044B \u2014 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435. \u0424\u043E\u0440\u043C\u0443\u043B\u0430 V = a\xB2 \xB7 h \u0441\u0447\u0438\u0442\u0430\u0435\u0442 \u043E\u0431\u044A\u0451\u043C \u043B\u044E\u0431\u043E\u0439 \u043A\u0432\u0430\u0434\u0440\u0430\u0442\u043D\u043E\u0439 \u043F\u0440\u0438\u0437\u043C\u044B: \u043F\u043E\u0434\u0441\u0442\u0430\u0432\u044C\u0442\u0435 a = 3 \u0438 h = 5 \u2014 \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0435 45. \u0410\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435 (2x + 3) \u2014 \u044D\u0442\u043E \xAB\u043F\u0440\u0430\u0432\u0438\u043B\u043E\xBB, \u043F\u043E \u043A\u043E\u0442\u043E\u0440\u043E\u043C\u0443 \u0438\u0437 \u0447\u0438\u0441\u043B\u0430 x \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442\u0441\u044F \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442. \u0411\u0443\u043A\u0432\u044B \u043F\u043E\u0437\u0432\u043E\u043B\u044F\u044E\u0442 \u0440\u0435\u0448\u0438\u0442\u044C \u0437\u0430\u0434\u0430\u0447\u0443 \u043E\u0434\u0438\u043D \u0440\u0430\u0437 \u0434\u043B\u044F \u0432\u0441\u0435\u0445 \u0447\u0438\u0441\u0435\u043B \u0441\u0440\u0430\u0437\u0443.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 3x \u2212 4 \u043F\u0440\u0438 x = 5.", "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435: \u043F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 a \u0438 b.", "\u041E\u0431\u044A\u0451\u043C \u043F\u0440\u0438\u0437\u043C\u044B a = 4 \u0441\u043C, h = 10 \u0441\u043C?"] }, { key: "math7-4.2", code: "4.2", title: "\u0423\u043F\u0440\u043E\u0449\u0435\u043D\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0439", homework: "\u0423\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u0435: 7t + (\u22124a) \u2212 5t + 2a; \u22123p + p + 4p; 4y \u2212 9y + 5y.", essence: "\u041F\u043E\u0434\u043E\u0431\u043D\u044B\u0435 \u0447\u043B\u0435\u043D\u044B \u043E\u0442\u043B\u0438\u0447\u0430\u044E\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043A\u043E\u044D\u0444\u0444\u0438\u0446\u0438\u0435\u043D\u0442\u043E\u043C: 7a \u0438 2a. \u0427\u0442\u043E\u0431\u044B \u0443\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u044C \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435, \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442 \u043A\u043E\u044D\u0444\u0444\u0438\u0446\u0438\u0435\u043D\u0442\u044B \u043F\u043E\u0434\u043E\u0431\u043D\u044B\u0445 \u0447\u043B\u0435\u043D\u043E\u0432: 7a + 2a = 9a. \u0420\u0430\u0437\u043D\u044B\u0435 \u0431\u0443\u043A\u0432\u044B \u043D\u0435 \u0441\u043A\u043B\u0430\u0434\u044B\u0432\u0430\u044E\u0442: 3x + 2y \u043E\u0441\u0442\u0430\u0451\u0442\u0441\u044F \u043A\u0430\u043A \u0435\u0441\u0442\u044C.", tasks: ["\u0423\u043F\u0440\u043E\u0441\u0442\u0438\u0442\u0435: 7a + 2a; 5b \u2212 8b; 3n + 10 \u2212 4n \u2212 11.", "\u0411\u0438\u043B\u0435\u0442 \u0432 \u0441\u0435\u043A\u0446\u0438\u044E A \u0441\u0442\u043E\u0438\u0442 x, \u0432 B \u2014 \u043D\u0430 50 000 \u0431\u043E\u043B\u044C\u0448\u0435, \u0432 C \u2014 \u043D\u0430 30 000 \u043C\u0435\u043D\u044C\u0448\u0435 \u0443\u0434\u0432\u043E\u0435\u043D\u043D\u043E\u0439 \u0446\u0435\u043D\u044B B. \u041E\u0431\u0449\u0430\u044F \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u0442\u0440\u0451\u0445 \u0431\u0438\u043B\u0435\u0442\u043E\u0432?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u044D\u0442\u0443 \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C \u043F\u0440\u0438 x = 90 000."] }, { key: "math7-4.3", code: "4.3", title: "\u0420\u0430\u0441\u043A\u0440\u044B\u0442\u0438\u0435 \u0441\u043A\u043E\u0431\u043E\u043A \u0432 \u0430\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u044F\u0445", homework: "\u0420\u0430\u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u043A\u043E\u0431\u043A\u0438: 7t \u2212 [5s + 8(s + 2t)]; 5[a \u2212 (b \u2212 a)] + 7(\u2212a + 2b).", essence: "\u0415\u0441\u043B\u0438 \u043F\u0435\u0440\u0435\u0434 \u0441\u043A\u043E\u0431\u043A\u043E\u0439 \xAB+\xBB, \u0437\u043D\u0430\u043A\u0438 \u0432\u043D\u0443\u0442\u0440\u0438 \u043D\u0435 \u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F; \u0435\u0441\u043B\u0438 \xAB\u2212\xBB, \u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F \u043D\u0430 \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B\u0435. \u041C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u043F\u0435\u0440\u0435\u0434 \u0441\u043A\u043E\u0431\u043A\u043E\u0439 \u0443\u043C\u043D\u043E\u0436\u0430\u044E\u0442 \u043D\u0430 \u043A\u0430\u0436\u0434\u044B\u0439 \u0447\u043B\u0435\u043D: a(b + c) = ab + ac. \u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0441\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u0432\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0438\u0435 \u0441\u043A\u043E\u0431\u043A\u0438.", tasks: ["\u0420\u0430\u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0441\u043A\u043E\u0431\u043A\u0438: 4a \u2212 [5a \u2212 (3 + 2a)].", "\u041A\u0430\u0440\u043A\u0430\u0441 \u044F\u0449\u0438\u043A\u0430: 4 \u0434\u043E\u0441\u043A\u0438 \u0434\u043B\u0438\u043D\u043E\u0439 (2x + 3y) cm \u0438 8 \u0434\u043E\u0441\u043E\u043A \u0434\u043B\u0438\u043D\u043E\u0439 (2x + y) cm. \u041E\u0431\u0449\u0430\u044F \u0434\u043B\u0438\u043D\u0430?", "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043B\u0438\u043D\u0443 \u043F\u0440\u0438 x = 30, y = 10."] }, { key: "math7-4.4", code: "4.4", title: "\u0420\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0430\u043B\u0433\u0435\u0431\u0440\u0430\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0439 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438", homework: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435: 7a + 7b + 7c; 3cd + 36ac \u2212 15ad; mx + my + 3mz.", essence: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u044C \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u2014 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u043A\u0430\u043A \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435. \u041E\u0431\u0449\u0438\u0439 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u044C \u0432\u044B\u043D\u043E\u0441\u044F\u0442 \u0437\u0430 \u0441\u043A\u043E\u0431\u043A\u0438: 6a + 3b = 3(2a + b). \u042D\u0442\u043E \u043E\u0431\u0440\u0430\u0442\u043D\u043E\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043A \u0440\u0430\u0441\u043A\u0440\u044B\u0442\u0438\u044E \u0441\u043A\u043E\u0431\u043E\u043A.", tasks: ["\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438: 6a + 3b; 18ax \u2212 15ay; 12s + 48bs.", "\u0412\u044B\u0447\u0438\u0441\u043B\u0438\u0442\u0435 \u0443\u0434\u043E\u0431\u043D\u043E: 86 \xB7 471 \u2212 76 \xB7 471.", "\u041F\u043B\u043E\u0449\u0430\u0434\u044C \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 ab + 10a, \u043E\u0434\u043D\u0430 \u0441\u0442\u043E\u0440\u043E\u043D\u0430 a. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u0443\u044E."] }, { key: "math7-5.1", code: "5.1", title: "\u041F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: 3x \u2212 x + 6 = 10x; 9 \u2212 5y = y \u2212 1; \u0441\u0443\u043C\u043C\u0430 \u043E\u0434\u043D\u043E\u0439 \u0448\u0435\u0441\u0442\u043E\u0439 x \u0438 \u22129 \u0440\u0430\u0432\u043D\u0430 \u221225.", essence: "\u0423\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u2014 \u0440\u0430\u0432\u0435\u043D\u0441\u0442\u0432\u043E \u0441 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u044B\u043C. \u0420\u0435\u0448\u0438\u0442\u044C \u0435\u0433\u043E \u2014 \u043D\u0430\u0439\u0442\u0438 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435, \u043F\u0440\u0438 \u043A\u043E\u0442\u043E\u0440\u043E\u043C \u0440\u0430\u0432\u0435\u043D\u0441\u0442\u0432\u043E \u0432\u0435\u0440\u043D\u043E. \u041A\u0430\u043A \u043D\u0430 \u0432\u0435\u0441\u0430\u0445: \u0441 \u043E\u0431\u0435\u0438\u043C\u0438 \u0447\u0430\u0441\u0442\u044F\u043C\u0438 \u0434\u0435\u043B\u0430\u0435\u043C \u043E\u0434\u043D\u043E \u0438 \u0442\u043E \u0436\u0435 \u2014 \u043F\u0435\u0440\u0435\u043D\u043E\u0441\u0438\u043C \u0447\u043B\u0435\u043D\u044B \u0441 \u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B\u043C \u0437\u043D\u0430\u043A\u043E\u043C \u0438 \u0434\u0435\u043B\u0438\u043C \u043D\u0430 \u043A\u043E\u044D\u0444\u0444\u0438\u0446\u0438\u0435\u043D\u0442.", tasks: ["\u0414\u043B\u0438\u043D\u0430 \u043F\u0440\u0443\u0436\u0438\u043D\u044B L = 70 + 5m. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 L \u043F\u0440\u0438 m = 6 \u0438 m \u043F\u0440\u0438 L = 85.", "\u041F\u0435\u0447\u0430\u0442\u044C \u043D\u0430 x \u0444\u0443\u0442\u0431\u043E\u043B\u043A\u0430\u0445 \u0441\u0442\u043E\u0438\u0442 C = 10 000 + 12 000x. \u041D\u0430 \u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0444\u0443\u0442\u0431\u043E\u043B\u043E\u043A \u0445\u0432\u0430\u0442\u0438\u0442 982 000 \u0441\u0443\u043C\u043E\u0432?", "\u041F\u043E\u0435\u0437\u0434: d = 240 \u2212 80t. \u041A\u043E\u0433\u0434\u0430 d = 40? \u041A\u043E\u0433\u0434\u0430 \u043F\u043E\u0435\u0437\u0434 \u043F\u0440\u0438\u0431\u0443\u0434\u0435\u0442?"] }, { key: "math7-5.2", code: "5.2", title: "\u041B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u0441\u043E \u0441\u043A\u043E\u0431\u043A\u0430\u043C\u0438 \u0438 \u0434\u0440\u043E\u0431\u044F\u043C\u0438", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: (7x \u2212 2)/2 = (5x \u2212 3)/3; \u2212x + x/4 = 15.", essence: "\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0441\u043A\u0440\u044B\u0432\u0430\u044E\u0442 \u0441\u043A\u043E\u0431\u043A\u0438. \u0415\u0441\u043B\u0438 \u0435\u0441\u0442\u044C \u0434\u0440\u043E\u0431\u0438, \u043E\u0431\u0435 \u0447\u0430\u0441\u0442\u0438 \u0443\u043C\u043D\u043E\u0436\u0430\u044E\u0442 \u043D\u0430 \u043E\u0431\u0449\u0438\u0439 \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u044C (\u041D\u041E\u041A) \u2014 \u0434\u0440\u043E\u0431\u0438 \u0438\u0441\u0447\u0435\u0437\u0430\u044E\u0442. \u0412\u0430\u0436\u043D\u043E \u0443\u043C\u043D\u043E\u0436\u0438\u0442\u044C \u043A\u0430\u0436\u0434\u044B\u0439 \u0447\u043B\u0435\u043D, \u0432\u043A\u043B\u044E\u0447\u0430\u044F \u043F\u0440\u0430\u0432\u0443\u044E \u0447\u0430\u0441\u0442\u044C.", tasks: ["\u0418\u043A\u0440\u043E\u043C \u0440\u0435\u0448\u0430\u043B (x + 1)/2 + (x \u2212 a)/3 = 1 \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B 3(x + 1) + 2(x \u2212 a) = 1. \u0413\u0434\u0435 \u043E\u0448\u0438\u0431\u043A\u0430?", "\u041F\u0440\u0438 \u043A\u0430\u043A\u043E\u043C a \u043A\u043E\u0440\u0435\u043D\u044C \u044D\u0442\u043E\u0433\u043E \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F x = 2?", "\u0420\u0435\u0448\u0438\u0442\u0435: 12 + (2/5)x = 16; (2x + 9)/5 = 5."] }, { key: "math7-5.3", code: "5.3", title: "\u041F\u0440\u043E\u0441\u0442\u0435\u0439\u0448\u0438\u0435 \u0434\u0440\u043E\u0431\u043D\u043E-\u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F", homework: "\u0420\u0435\u0448\u0438\u0442\u0435: 3/(2x \u2212 5) = 1/(x + 1); \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435, \u043D\u0435 \u043E\u0431\u0440\u0430\u0449\u0430\u0435\u0442\u0441\u044F \u043B\u0438 \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u044C \u0432 \u043D\u043E\u043B\u044C.", essence: "\u0412 \u0434\u0440\u043E\u0431\u043D\u043E-\u043B\u0438\u043D\u0435\u0439\u043D\u043E\u043C \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0438 \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0441\u0442\u043E\u0438\u0442 \u0432 \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u0435. \u0423\u043C\u043D\u043E\u0436\u0430\u0435\u043C \u043E\u0431\u0435 \u0447\u0430\u0441\u0442\u0438 \u043D\u0430 \u043E\u0431\u0449\u0438\u0439 \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u044C, \u0440\u0435\u0448\u0430\u0435\u043C \u043B\u0438\u043D\u0435\u0439\u043D\u043E\u0435 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0438 \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u043C: \u0437\u043D\u0430\u043C\u0435\u043D\u0430\u0442\u0435\u043B\u044C \u043D\u0435 \u0434\u043E\u043B\u0436\u0435\u043D \u0441\u0442\u0430\u0442\u044C \u043D\u0443\u043B\u0451\u043C.", tasks: ["\u0425\u0443\u043C\u043E\u044E\u043D \u0440\u0435\u0448\u0438\u043B x/(x \u2212 4) + 1 = 8/(x \u2212 4) \u0438 \u043F\u043E\u043B\u0443\u0447\u0438\u043B x + 1 = 8. \u0412\u0435\u0440\u043D\u043E \u043B\u0438?", "\u041B\u0438\u043D\u0437\u0430: 1/u + 1/v = 1/f. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 v \u043F\u0440\u0438 f = 20, u = 30.", "\u0420\u0435\u0448\u0438\u0442\u0435: 5/(x + 1) = 7/(2x)."] }, { key: "math7-5.4", code: "5.4", title: "\u0422\u0435\u043A\u0441\u0442\u043E\u0432\u044B\u0435 \u0437\u0430\u0434\u0430\u0447\u0438 \u043D\u0430 \u0441\u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043B\u0438\u043D\u0435\u0439\u043D\u044B\u0445 \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0439", homework: "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0441\u0432\u043E\u044E \u0437\u0430\u0434\u0430\u0447\u0443 \u043A \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044E 5x + 4(x \u2212 10) = 140 \u0438 \u0440\u0435\u0448\u0438\u0442\u0435 \u0435\u0451.", essence: "\u0410\u043B\u0433\u043E\u0440\u0438\u0442\u043C: 1) \u043E\u0431\u043E\u0437\u043D\u0430\u0447\u0438\u0442\u044C \u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0431\u0443\u043A\u0432\u043E\u0439; 2) \u0432\u044B\u0440\u0430\u0437\u0438\u0442\u044C \u0447\u0435\u0440\u0435\u0437 \u043D\u0435\u0451 \u0434\u0440\u0443\u0433\u0438\u0435 \u0432\u0435\u043B\u0438\u0447\u0438\u043D\u044B; 3) \u0441\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u0443\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u043F\u043E \u0443\u0441\u043B\u043E\u0432\u0438\u044E; 4) \u0440\u0435\u0448\u0438\u0442\u044C; 5) \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438 \u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u043E\u0442\u0432\u0435\u0442.", tasks: ["\u0421\u0443\u043C\u043C\u0430 \u0442\u0440\u0451\u0445 \u043F\u043E\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u043D\u044B\u0445 \u043D\u0435\u0447\u0451\u0442\u043D\u044B\u0445 \u0447\u0438\u0441\u0435\u043B \u0440\u0430\u0432\u043D\u0430 141. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0438\u0445.", "\u0422\u0438\u043C\u0443\u0440 \u0432 2 \u0440\u0430\u0437\u0430 \u0441\u0442\u0430\u0440\u0448\u0435 \u0410\u0431\u0440\u043E\u0440\u0430. \u0427\u0435\u0440\u0435\u0437 4 \u0433\u043E\u0434\u0430 \u0441\u0443\u043C\u043C\u0430 \u0438\u0445 \u0432\u043E\u0437\u0440\u0430\u0441\u0442\u043E\u0432 \u0431\u0443\u0434\u0435\u0442 32. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043B\u0435\u0442 \u0410\u0431\u0440\u043E\u0440\u0443?", "50 \u043C\u044B\u0448\u0435\u0439 \u0432\u0438\u0434\u043E\u0432 A (50 000) \u0438 B (60 000) \u0441\u0442\u043E\u044F\u0442 2 690 000 \u0441\u0443\u043C\u043E\u0432. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043C\u044B\u0448\u0435\u0439 A?"] }, { key: "math7-6.1", code: "6.1", title: "\u0422\u043E\u0447\u043A\u0430, \u043F\u0440\u044F\u043C\u0430\u044F \u0438 \u043F\u043B\u043E\u0441\u043A\u043E\u0441\u0442\u044C", homework: "\u041E\u0442\u043C\u0435\u0442\u044C\u0442\u0435 5 \u0442\u043E\u0447\u0435\u043A \u0438 \u043F\u0440\u043E\u0432\u0435\u0434\u0438\u0442\u0435 \u0432\u0441\u0435 \u043E\u0442\u0440\u0435\u0437\u043A\u0438 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438. \u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u043B\u043E\u0441\u044C?", essence: "\u0422\u043E\u0447\u043A\u0430, \u043F\u0440\u044F\u043C\u0430\u044F \u0438 \u043F\u043B\u043E\u0441\u043A\u043E\u0441\u0442\u044C \u2014 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u043F\u043E\u043D\u044F\u0442\u0438\u044F \u0433\u0435\u043E\u043C\u0435\u0442\u0440\u0438\u0438. \u0427\u0435\u0440\u0435\u0437 \u0434\u0432\u0435 \u0442\u043E\u0447\u043A\u0438 \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442 \u043E\u0434\u043D\u0430 \u043F\u0440\u044F\u043C\u0430\u044F. \u041B\u0443\u0447 \u0438\u043C\u0435\u0435\u0442 \u043D\u0430\u0447\u0430\u043B\u043E \u0438 \u0431\u0435\u0441\u043A\u043E\u043D\u0435\u0447\u0435\u043D \u0432 \u043E\u0434\u043D\u0443 \u0441\u0442\u043E\u0440\u043E\u043D\u0443, \u043E\u0442\u0440\u0435\u0437\u043E\u043A \u043E\u0433\u0440\u0430\u043D\u0438\u0447\u0435\u043D \u0434\u0432\u0443\u043C\u044F \u0442\u043E\u0447\u043A\u0430\u043C\u0438. \u0414\u0432\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u043D\u0430 \u043F\u043B\u043E\u0441\u043A\u043E\u0441\u0442\u0438 \u043B\u0438\u0431\u043E \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u044E\u0442\u0441\u044F, \u043B\u0438\u0431\u043E \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B.", tasks: ["\u0421\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0442\u0440\u0435\u0437\u043A\u043E\u0432 \u0437\u0430\u0434\u0430\u044E\u0442 4 \u0442\u043E\u0447\u043A\u0438, \u043D\u0438\u043A\u0430\u043A\u0438\u0435 \u0442\u0440\u0438 \u0438\u0437 \u043A\u043E\u0442\u043E\u0440\u044B\u0445 \u043D\u0435 \u043B\u0435\u0436\u0430\u0442 \u043D\u0430 \u043E\u0434\u043D\u043E\u0439 \u043F\u0440\u044F\u043C\u043E\u0439?", "\u0427\u0435\u043C \u043B\u0443\u0447 \u043E\u0442\u043B\u0438\u0447\u0430\u0435\u0442\u0441\u044F \u043E\u0442 \u043E\u0442\u0440\u0435\u0437\u043A\u0430?"] }, { key: "math7-6.2", code: "6.2", title: "\u0423\u0433\u043B\u044B", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 3 \u043E\u0441\u0442\u0440\u044B\u0445, 3 \u043F\u0440\u044F\u043C\u044B\u0445 \u0438 3 \u0442\u0443\u043F\u044B\u0445 \u0443\u0433\u043B\u0430 \u0438 \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0438\u0445 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u043C.", essence: "\u0423\u0433\u043E\u043B \u043E\u0431\u0440\u0430\u0437\u0443\u044E\u0442 \u0434\u0432\u0430 \u043B\u0443\u0447\u0430 \u0441 \u043E\u0431\u0449\u0438\u043C \u043D\u0430\u0447\u0430\u043B\u043E\u043C. \u0423\u0433\u043B\u044B \u0438\u0437\u043C\u0435\u0440\u044F\u044E\u0442 \u0442\u0440\u0430\u043D\u0441\u043F\u043E\u0440\u0442\u0438\u0440\u043E\u043C \u0432 \u0433\u0440\u0430\u0434\u0443\u0441\u0430\u0445: \u043E\u0441\u0442\u0440\u044B\u0439 < 90\xB0, \u043F\u0440\u044F\u043C\u043E\u0439 = 90\xB0, \u0442\u0443\u043F\u043E\u0439 > 90\xB0, \u0440\u0430\u0437\u0432\u0451\u0440\u043D\u0443\u0442\u044B\u0439 = 180\xB0. \u0421\u043C\u0435\u0436\u043D\u044B\u0435 \u0443\u0433\u043B\u044B \u0432 \u0441\u0443\u043C\u043C\u0435 \u0434\u0430\u044E\u0442 180\xB0, \u0432\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u044B\u0435 \u0440\u0430\u0432\u043D\u044B.", tasks: ["\u041E\u0434\u0438\u043D \u0438\u0437 \u0441\u043C\u0435\u0436\u043D\u044B\u0445 \u0443\u0433\u043B\u043E\u0432 65\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043E\u0439.", "\u041A\u0430\u043A\u043E\u0439 \u0443\u0433\u043E\u043B \u043C\u0435\u0436\u0434\u0443 \u0441\u0442\u0440\u0435\u043B\u043A\u0430\u043C\u0438 \u0447\u0430\u0441\u043E\u0432 \u0432 2:00?", "\u041E\u0434\u0438\u043D \u0438\u0437 \u0432\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C\u043D\u044B\u0445 \u0443\u0433\u043B\u043E\u0432 40\xB0. \u0427\u0435\u043C\u0443 \u0440\u0430\u0432\u0435\u043D \u0432\u0442\u043E\u0440\u043E\u0439?"] }, { key: "math7-6.3", code: "6.3", title: "\u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u0438 \u0441\u0435\u043A\u0443\u0449\u0438\u0435", homework: "\u041D\u0430\u0447\u0435\u0440\u0442\u0438\u0442\u0435 \u0434\u0432\u0435 \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u0438 \u0441\u0435\u043A\u0443\u0449\u0443\u044E, \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0432\u0441\u0435 8 \u0443\u0433\u043B\u043E\u0432.", essence: "\u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u044B\u0435 \u043D\u0435 \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u044E\u0442\u0441\u044F. \u0421\u0435\u043A\u0443\u0449\u0430\u044F \u043F\u0435\u0440\u0435\u0441\u0435\u043A\u0430\u0435\u0442 \u0438\u0445 \u0438 \u043E\u0431\u0440\u0430\u0437\u0443\u0435\u0442 8 \u0443\u0433\u043B\u043E\u0432. \u0415\u0441\u043B\u0438 \u043F\u0440\u044F\u043C\u044B\u0435 \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B: \u0441\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435 \u0443\u0433\u043B\u044B \u0440\u0430\u0432\u043D\u044B, \u043D\u0430\u043A\u0440\u0435\u0441\u0442 \u043B\u0435\u0436\u0430\u0449\u0438\u0435 \u0440\u0430\u0432\u043D\u044B, \u043E\u0434\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0435 \u0432 \u0441\u0443\u043C\u043C\u0435 \u0434\u0430\u044E\u0442 180\xB0.", tasks: ["a \u2225 b, \u043D\u0430\u043A\u0440\u0435\u0441\u0442 \u043B\u0435\u0436\u0430\u0449\u0438\u0439 \u0443\u0433\u043E\u043B \u0440\u0430\u0432\u0435\u043D 70\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0434\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0439 \u0443\u0433\u043E\u043B.", "\u0421\u043E\u043E\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0435 \u0443\u0433\u043B\u044B \u0440\u0430\u0432\u043D\u044B 50\xB0 \u0438 50\xB0. \u041F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B \u043B\u0438 \u043F\u0440\u044F\u043C\u044B\u0435?"] }, { key: "math7-7.1", code: "7.1", title: "\u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u0412\u044B\u0440\u0435\u0436\u044C\u0442\u0435 \u0431\u0443\u043C\u0430\u0436\u043D\u044B\u0439 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A, \u043E\u0442\u043E\u0440\u0432\u0438\u0442\u0435 \u0443\u0433\u043B\u044B \u0438 \u0441\u043B\u043E\u0436\u0438\u0442\u0435 \u0438\u0445 \u0432\u043C\u0435\u0441\u0442\u0435 \u2014 \u0447\u0442\u043E \u043F\u043E\u043B\u0443\u0447\u0438\u0442\u0441\u044F?", essence: "\u0421\u0443\u043C\u043C\u0430 \u0443\u0433\u043B\u043E\u0432 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0440\u0430\u0432\u043D\u0430 180\xB0. \u041F\u043E \u0443\u0433\u043B\u0430\u043C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0431\u044B\u0432\u0430\u044E\u0442 \u043E\u0441\u0442\u0440\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u044B\u0435, \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u044B\u0435 \u0438 \u0442\u0443\u043F\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u044B\u0435; \u043F\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C \u2014 \u0440\u0430\u0437\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0435, \u0440\u0430\u0432\u043D\u043E\u0431\u0435\u0434\u0440\u0435\u043D\u043D\u044B\u0435 \u0438 \u0440\u0430\u0432\u043D\u043E\u0441\u0442\u043E\u0440\u043E\u043D\u043D\u0438\u0435. \u041A\u0430\u0436\u0434\u0430\u044F \u0441\u0442\u043E\u0440\u043E\u043D\u0430 \u043C\u0435\u043D\u044C\u0448\u0435 \u0441\u0443\u043C\u043C\u044B \u0434\u0432\u0443\u0445 \u0434\u0440\u0443\u0433\u0438\u0445.", tasks: ["\u0414\u0432\u0430 \u0443\u0433\u043B\u0430 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 50\xB0 \u0438 60\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0442\u0440\u0435\u0442\u0438\u0439.", "\u0421\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442 \u043B\u0438 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 3, 4 \u0438 8 cm?", "\u0423\u0433\u043E\u043B \u043F\u0440\u0438 \u0432\u0435\u0440\u0448\u0438\u043D\u0435 \u0440\u0430\u0432\u043D\u043E\u0431\u0435\u0434\u0440\u0435\u043D\u043D\u043E\u0433\u043E \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 40\xB0. \u0423\u0433\u043B\u044B \u043F\u0440\u0438 \u043E\u0441\u043D\u043E\u0432\u0430\u043D\u0438\u0438?"] }, { key: "math7-7.2", code: "7.2", title: "\u0427\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432-\u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \u0438 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u0435 \u0438\u0445 \u0432\u0438\u0434.", essence: "\u0421\u0443\u043C\u043C\u0430 \u0443\u0433\u043B\u043E\u0432 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 360\xB0. \u0412\u0438\u0434\u044B: \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u043E\u0433\u0440\u0430\u043C\u043C (\u043F\u0440\u043E\u0442\u0438\u0432\u043E\u043F\u043E\u043B\u043E\u0436\u043D\u044B\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B), \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A (\u0432\u0441\u0435 \u0443\u0433\u043B\u044B \u043F\u0440\u044F\u043C\u044B\u0435), \u0440\u043E\u043C\u0431 (\u0432\u0441\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u0440\u0430\u0432\u043D\u044B), \u043A\u0432\u0430\u0434\u0440\u0430\u0442 (\u0438 \u0442\u043E \u0438 \u0434\u0440\u0443\u0433\u043E\u0435), \u0442\u0440\u0430\u043F\u0435\u0446\u0438\u044F (\u043E\u0434\u043D\u0430 \u043F\u0430\u0440\u0430 \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u044C\u043D\u044B\u0445 \u0441\u0442\u043E\u0440\u043E\u043D).", tasks: ["\u0422\u0440\u0438 \u0443\u0433\u043B\u0430 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 80\xB0, 100\xB0, 90\xB0. \u0427\u0435\u0442\u0432\u0451\u0440\u0442\u044B\u0439?", "\u041E\u0434\u0438\u043D \u0443\u0433\u043E\u043B \u043F\u0430\u0440\u0430\u043B\u043B\u0435\u043B\u043E\u0433\u0440\u0430\u043C\u043C\u0430 70\xB0. \u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435."] }, { key: "math7-7.3", code: "7.3", title: "\u041C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438", homework: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0432 \u043E\u0440\u043D\u0430\u043C\u0435\u043D\u0442\u0430\u0445 \u0420\u0435\u0433\u0438\u0441\u0442\u0430\u043D\u0430 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0435 \u043C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0438 \u0437\u0430\u0440\u0438\u0441\u0443\u0439\u0442\u0435 2 \u0438\u0437 \u043D\u0438\u0445.", essence: "\u0421\u0443\u043C\u043C\u0430 \u0443\u0433\u043B\u043E\u0432 n-\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0440\u0430\u0432\u043D\u0430 (n \u2212 2) \xB7 180\xB0. \u0423 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0433\u043E \u043C\u043D\u043E\u0433\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u0432\u0441\u0435 \u0441\u0442\u043E\u0440\u043E\u043D\u044B \u0438 \u0443\u0433\u043B\u044B \u0440\u0430\u0432\u043D\u044B. \u041F\u0435\u0440\u0438\u043C\u0435\u0442\u0440 \u2014 \u0441\u0443\u043C\u043C\u0430 \u0434\u043B\u0438\u043D \u0432\u0441\u0435\u0445 \u0441\u0442\u043E\u0440\u043E\u043D.", tasks: ["\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0441\u0443\u043C\u043C\u0443 \u0443\u0433\u043B\u043E\u0432 \u0448\u0435\u0441\u0442\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430.", "\u041A\u0430\u0436\u0434\u044B\u0439 \u0443\u0433\u043E\u043B \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u043E\u0433\u043E \u0432\u043E\u0441\u044C\u043C\u0438\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430?"] }, { key: "math7-7.4", code: "7.4", title: "\u041F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \u0438 \u0447\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432", homework: "\u041F\u043E\u0441\u0442\u0440\u043E\u0439\u0442\u0435 \u0446\u0438\u0440\u043A\u0443\u043B\u0435\u043C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 4, 5 \u0438 6 cm \u0438 \u0438\u0437\u043C\u0435\u0440\u044C\u0442\u0435 \u0435\u0433\u043E \u0443\u0433\u043B\u044B.", essence: "\u0422\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u0442\u0440\u043E\u044F\u0442 \u0446\u0438\u0440\u043A\u0443\u043B\u0435\u043C \u0438 \u043B\u0438\u043D\u0435\u0439\u043A\u043E\u0439 \u043F\u043E \u0442\u0440\u0451\u043C \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C, \u043F\u043E \u0434\u0432\u0443\u043C \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C \u0438 \u0443\u0433\u043B\u0443 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438, \u043F\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0435 \u0438 \u0434\u0432\u0443\u043C \u043F\u0440\u0438\u043B\u0435\u0436\u0430\u0449\u0438\u043C \u0443\u0433\u043B\u0430\u043C. \u0427\u0435\u0442\u044B\u0440\u0451\u0445\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0441\u0442\u0440\u043E\u044F\u0442, \u0440\u0430\u0437\u0431\u0438\u0432\u0430\u044F \u043D\u0430 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438.", tasks: ["\u041E\u043F\u0438\u0448\u0438\u0442\u0435 \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u0435 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430 \u043F\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C 5, 6 \u0438 7 cm.", "\u041F\u043E\u0447\u0435\u043C\u0443 \u043D\u0435\u043B\u044C\u0437\u044F \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A \u0441\u043E \u0441\u0442\u043E\u0440\u043E\u043D\u0430\u043C\u0438 2, 3 \u0438 6 cm?"] }] }];
+
+// src/lib/book-homework.ts
+var COURSE = book_topics_default;
+var SUBJECT_RU = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+function bookFor(subject, grade) {
+  return COURSE.find((book) => book.subject === subject && book.grade === grade) ?? COURSE.find((book) => book.subject === subject);
+}
+function dueAfter(date2) {
+  return /* @__PURE__ */ new Date(`${date2}T23:59:59+05:00`);
+}
+async function createHomework(date2, lessons, now) {
+  const ended = lessons.filter((lesson) => lesson.teacherId && Date.parse(lesson.endsAt) <= now && bookFor(lesson.subject, lesson.grade));
+  if (!ended.length) return;
+  try {
+    const classIds = [...new Set(ended.map((lesson) => lesson.classId))];
+    const progress = await db.select({ classId: courseProgressTable.classId, topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(inArray(courseProgressTable.classId, classIds));
+    const handled = /* @__PURE__ */ new Set();
+    for (const lesson of ended) {
+      const book = bookFor(lesson.subject, lesson.grade);
+      const key = `${lesson.classId}:${book.id}`;
+      if (handled.has(key)) continue;
+      handled.add(key);
+      const rows = progress.filter((row) => row.classId === lesson.classId);
+      const covered = new Set(rows.map((row) => row.topicKey));
+      const today2 = book.topics.find((topic2) => rows.some((row) => row.topicKey === topic2.key && row.doneOn === date2));
+      const last = book.topics.reduce((index2, topic2, i) => covered.has(topic2.key) ? i : index2, -1);
+      const topic = today2 ?? book.topics[last + 1];
+      if (!topic) continue;
+      if (!today2) {
+        await db.insert(courseProgressTable).values({ classId: lesson.classId, topicKey: topic.key, doneOn: date2, markedBy: lesson.teacherId }).onConflictDoNothing();
+      }
+      const autoKey = `book:${lesson.classId}:${topic.key}`;
+      const [exists2] = await db.select({ id: assignmentsTable.id }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, lesson.classId), eq(assignmentsTable.autoKey, autoKey))).limit(1);
+      if (exists2) continue;
+      const [cancelled] = await db.select({ key: noticeMarksTable.key }).from(noticeMarksTable).where(eq(noticeMarksTable.key, `hw-cancel:${autoKey}`)).limit(1);
+      if (cancelled) continue;
+      const tasks = topic.tasks.slice(0, 3).map((task, index2) => `${index2 + 1}. ${task}`).join("\n");
+      const [created] = await db.insert(assignmentsTable).values({
+        classId: lesson.classId,
+        createdBy: lesson.teacherId,
+        title: `\xA7${topic.code} ${topic.title}`.slice(0, 160),
+        subject: SUBJECT_RU[lesson.subject] ?? lesson.subject,
+        description: `${topic.homework}${tasks ? `
+
+\u0418\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430:
+${tasks}` : ""}`,
+        topicId: `course:${topic.key}`,
+        topicTitle: `\xA7${topic.code} ${topic.title}`,
+        autoKey,
+        dueAt: dueAfter(date2),
+        status: "assigned"
+      }).onConflictDoNothing().returning({ id: assignmentsTable.id });
+      if (created) await bellHomework(lesson.classId, `\xA7${topic.code} ${topic.title}`, topic.homework, SUBJECT_RU[lesson.subject] ?? lesson.subject);
+    }
+  } catch (error) {
+    logger.warn({ err: error }, "book homework was not given");
+  }
+}
+async function pupilsAndParents(classId) {
+  const pupils = (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+  return pupils.length ? withParents(pupils) : [];
+}
+async function bellHomework(classId, title, homework2, subject) {
+  try {
+    const people = await pupilsAndParents(classId);
+    if (people.length) await pushNotice(people, "homework", `\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: ${subject}`, `${title} \u2014 ${homework2}`, "/classes");
+  } catch (error) {
+    logger.warn({ err: error }, "homework notice was not sent");
+  }
+}
+async function sendDaySummary(classId, date2) {
+  try {
+    const done = await db.select({ topicKey: courseProgressTable.topicKey }).from(courseProgressTable).where(and(eq(courseProgressTable.classId, classId), eq(courseProgressTable.doneOn, date2)));
+    if (!done.length) return;
+    const tasks = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, classId), inArray(assignmentsTable.autoKey, done.map((row) => `book:${classId}:${row.topicKey}`))));
+    if (!tasks.length) return;
+    const [mark] = await db.insert(noticeMarksTable).values({ key: `hw-day:${classId}:${date2}` }).onConflictDoNothing().returning({ key: noticeMarksTable.key });
+    if (!mark) return;
+    const people = await pupilsAndParents(classId);
+    const day2 = date2.split("-").reverse().join(".");
+    await notifyUsers(people, (lang) => [
+      `\u{1F4DA} <b>${tl(lang, "Bugungi uy vazifasi", "\u0414\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435", "Today\u2019s homework")}</b> \xB7 ${day2}`,
+      "",
+      ...tasks.map((task) => `\u2022 <b>${subjectText(lang, task.subject)}</b>: ${escapeHtml(task.description.split("\n")[0].slice(0, 90))}`),
+      "",
+      `${tl(lang, "00:00 gacha topshiring", "\u0421\u0434\u0430\u0442\u044C \u0434\u043E 00:00", "Hand in by 00:00")}: https://eduverse-uz1.vercel.app/classes`
+    ].join("\n"));
+  } catch (error) {
+    logger.warn({ err: error }, "homework summary was not sent");
+  }
+}
+async function isHoliday(classId, date2) {
+  const [row] = await db.select({ holidays: schoolCalendarTable.holidays }).from(schoolCalendarTable).innerJoin(classesTable, eq(classesTable.schoolId, schoolCalendarTable.schoolId)).where(eq(classesTable.id, classId)).limit(1);
+  const list = Array.isArray(row?.holidays) ? row.holidays : [];
+  return list.some((item) => typeof item.from === "string" && typeof item.to === "string" && date2 >= item.from && date2 <= item.to);
+}
+async function giveBookHomework(date2, classIds, now = Date.now()) {
+  for (const classId of [...new Set(classIds)]) {
+    try {
+      const doneKey = `hw-done:${classId}:${date2}`;
+      const [done] = await db.select({ key: noticeMarksTable.key }).from(noticeMarksTable).where(eq(noticeMarksTable.key, doneKey)).limit(1);
+      if (done) continue;
+      if (await isHoliday(classId, date2)) {
+        await db.insert(noticeMarksTable).values({ key: doneKey }).onConflictDoNothing();
+        continue;
+      }
+      const weekday = (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).getUTCDay() || 7;
+      const classLessons = await lessonReader(eq(timetableSlotsTable.classId, classId))(date2, weekday);
+      await createHomework(date2, classLessons, now);
+      if (classLessons.length && classLessons.every((lesson) => Date.parse(lesson.endsAt) <= now)) {
+        await sendDaySummary(classId, date2);
+        await db.insert(noticeMarksTable).values({ key: doneKey }).onConflictDoNothing();
+      }
+    } catch (error) {
+      logger.warn({ err: error }, "book homework of a class failed");
+    }
+  }
+}
+
+// src/routes/timetable.ts
+var router7 = (0, import_express7.Router)();
+var viewerOf2 = (res) => res.locals.authenticatedUser;
+var isRecord6 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var everyRole3 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var MANAGERS = ["school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var TASHKENT_OFFSET_MIN = 5 * 60;
+var TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+var SUBJECT_RE = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
+var MAX_PERIODS = 10;
+var DEFAULT_BELLS = [
+  { start: "08:30", end: "09:15" },
+  { start: "09:25", end: "10:10" },
+  { start: "10:20", end: "11:05" },
+  { start: "11:20", end: "12:05" },
+  { start: "12:15", end: "13:00" },
+  { start: "13:10", end: "13:55" },
+  { start: "14:05", end: "14:50" }
+];
+function tashkentNow(now = /* @__PURE__ */ new Date()) {
+  const local = new Date(now.getTime() + TASHKENT_OFFSET_MIN * 60 * 1e3);
+  const date2 = local.toISOString().slice(0, 10);
+  const weekday = local.getUTCDay() === 0 ? 7 : local.getUTCDay();
+  return { date: date2, weekday, minutes: local.getUTCHours() * 60 + local.getUTCMinutes() };
+}
+function atTashkent(date2, time2) {
+  return (/* @__PURE__ */ new Date(`${date2}T${time2}:00+05:00`)).toISOString();
+}
+function cleanBells(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PERIODS) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord6(item) || typeof item.start !== "string" || typeof item.end !== "string") return null;
+    if (!TIME_RE.test(item.start) || !TIME_RE.test(item.end) || item.start >= item.end) return null;
+    if (out.length && out[out.length - 1].end > item.start) return null;
+    out.push({ start: item.start, end: item.end });
+  }
+  return out;
+}
+async function bellsOf(schoolId) {
+  const [row] = await db.select({ periods: schoolBellsTable.periods }).from(schoolBellsTable).where(eq(schoolBellsTable.schoolId, schoolId)).limit(1);
+  return cleanBells(row?.periods) ?? DEFAULT_BELLS;
+}
+async function schoolRoleOf(userId, schoolId) {
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+  return row?.role ?? null;
+}
+async function canRead(viewer, schoolId) {
+  return isGlobalAdminRole(viewer.role) || Boolean(await schoolRoleOf(viewer.id, schoolId));
+}
+async function canEdit(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const role = await schoolRoleOf(viewer.id, schoolId);
+  return role === "school_director" || role === "school_admin";
+}
+var editLimiter = createRateLimiter(120, 10 * 60 * 1e3, "Too many changes. Try again later.", "timetable");
+async function loadTimetable(schoolId) {
+  const [slots, classes, teachers, bells] = await Promise.all([
+    db.select({ id: timetableSlotsTable.id, classId: timetableSlotsTable.classId, weekday: timetableSlotsTable.weekday, period: timetableSlotsTable.period, subject: timetableSlotsTable.subject, teacherId: timetableSlotsTable.teacherId, room: timetableSlotsTable.room }).from(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId)).orderBy(asc(timetableSlotsTable.weekday), asc(timetableSlotsTable.period)),
+    db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name)),
+    db.select({ id: usersTable.id, name: usersTable.username, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username)),
+    bellsOf(schoolId)
+  ]);
+  return { slots, classes, teachers, bells };
+}
+router7.get("/schools/:schoolId/timetable", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  if (!await canRead(viewer, schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ ...await loadTimetable(schoolId), canEdit: await canEdit(viewer, schoolId) });
+});
+router7.put("/schools/:schoolId/timetable", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  if (!await canEdit(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
+    return;
+  }
+  const body = isRecord6(req.body) ? req.body : {};
+  const bells = body.bells === void 0 ? await bellsOf(schoolId) : cleanBells(body.bells);
+  if (!bells) {
+    res.status(400).json({ error: "Check the bell times." });
+    return;
+  }
+  if (!Array.isArray(body.slots) || body.slots.length > 2e3) {
+    res.status(400).json({ error: "Invalid timetable." });
+    return;
+  }
+  const { classes, teachers } = await loadTimetable(schoolId);
+  const classIds = new Set(classes.map((item) => item.id));
+  const teacherIds = new Set(teachers.map((item) => item.id));
+  const seen = /* @__PURE__ */ new Set();
+  const rows = [];
+  for (const item of body.slots) {
+    if (!isRecord6(item)) {
+      res.status(400).json({ error: "Invalid lesson." });
+      return;
+    }
+    const classId = String(item.classId ?? "");
+    const weekday = Number(item.weekday);
+    const period = Number(item.period);
+    const subject = typeof item.subject === "string" ? item.subject.trim() : "";
+    const teacherId = typeof item.teacherId === "string" && item.teacherId ? item.teacherId : null;
+    const room = typeof item.room === "string" ? item.room.trim().slice(0, 20) || null : null;
+    if (!classIds.has(classId) || !Number.isInteger(weekday) || weekday < 1 || weekday > 6 || !Number.isInteger(period) || period < 1 || period > bells.length || !SUBJECT_RE.test(subject)) {
+      res.status(400).json({ error: "A lesson has a wrong class, day, period or subject." });
+      return;
+    }
+    if (teacherId && !teacherIds.has(teacherId)) {
+      res.status(400).json({ error: "A lesson has a teacher from another school." });
+      return;
+    }
+    const key = `${classId}:${weekday}:${period}`;
+    if (seen.has(key)) {
+      res.status(400).json({ error: "Two lessons in one class at the same time." });
+      return;
+    }
+    seen.add(key);
+    rows.push({ schoolId, classId, weekday, period, subject, teacherId, room });
+  }
+  const busy = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    if (!row.teacherId) continue;
+    const key = `${row.teacherId}:${row.weekday}:${row.period}`;
+    if (busy.has(key)) {
+      res.status(400).json({ error: "One teacher has two lessons at the same time." });
+      return;
+    }
+    busy.set(key, row.classId);
+  }
+  await db.transaction(async (tx) => {
+    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
+    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    const links = [...new Set(rows.filter((row) => row.teacherId).map((row) => `${row.classId}|${row.teacherId}`))];
+    for (const link of links) {
+      const [classId, userId] = link.split("|");
+      await tx.insert(classMembersTable).values({ classId, userId, role: "teacher" }).onConflictDoNothing();
+    }
+    await tx.insert(schoolBellsTable).values({ schoolId, periods: bells, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: schoolBellsTable.schoolId, set: { periods: bells, updatedAt: /* @__PURE__ */ new Date() } });
+  });
+  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: rows.length });
+  res.json({ ...await loadTimetable(schoolId), canEdit: true });
+});
+async function fillDemoTimetable(schoolId) {
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId)).orderBy(asc(classesTable.name));
+  if (!classes.length) return 0;
+  const teachers = await db.select({ id: usersTable.id, subjects: usersTable.subjects }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "teacher"))).orderBy(asc(usersTable.username));
+  const SUBJECTS2 = ["math", "physics", "chemistry", "biology"];
+  const SUBJECT_RU2 = { math: "\u043C\u0430\u0442\u0435\u043C", physics: "\u0444\u0438\u0437\u0438\u043A", chemistry: "\u0445\u0438\u043C\u0438", biology: "\u0431\u0438\u043E\u043B\u043E\u0433" };
+  const teaches = (teacher, subject) => Array.isArray(teacher.subjects) && teacher.subjects.some((item) => typeof item === "string" && item.toLowerCase().includes(SUBJECT_RU2[subject]));
+  const ownerOf = /* @__PURE__ */ new Map();
+  SUBJECTS2.forEach((subject, index2) => {
+    const own = teachers.filter((teacher) => teaches(teacher, subject)).map((teacher) => teacher.id);
+    const fallback = teachers.length ? [teachers[index2 % teachers.length].id] : [];
+    ownerOf.set(subject, own.length ? own : fallback);
+  });
+  const WEEK = [
+    ["math", "physics", "chemistry", "math", "biology"],
+    ["chemistry", "math", "biology", "physics", "math"],
+    ["math", "biology", "physics", "math", "chemistry"],
+    ["physics", "math", "chemistry", "biology", "math"],
+    ["biology", "chemistry", "math", "physics", "math"],
+    ["math", "physics", "biology", "chemistry"]
+  ];
+  const rows = [];
+  const busy = /* @__PURE__ */ new Set();
+  classes.forEach((klass, classIndex) => {
+    WEEK.forEach((day2, dayIndex) => {
+      const weekday = dayIndex + 1;
+      day2.forEach((_, period0) => {
+        const period = period0 + 1;
+        let subject = day2[(period0 + classIndex) % day2.length];
+        let teacherId = null;
+        for (let attempt = 0; attempt < day2.length && !teacherId; attempt += 1) {
+          subject = day2[(period0 + classIndex + attempt) % day2.length];
+          teacherId = (ownerOf.get(subject) ?? []).find((id) => !busy.has(`${id}:${weekday}:${period}`)) ?? null;
+        }
+        if (teacherId) busy.add(`${teacherId}:${weekday}:${period}`);
+        rows.push({ schoolId, classId: klass.id, weekday, period, subject, teacherId, room: String(201 + classIndex) });
+      });
+    });
+  });
+  await db.transaction(async (tx) => {
+    await tx.delete(timetableSlotsTable).where(eq(timetableSlotsTable.schoolId, schoolId));
+    if (rows.length) await tx.insert(timetableSlotsTable).values(rows);
+    await tx.insert(schoolBellsTable).values({ schoolId, periods: DEFAULT_BELLS }).onConflictDoNothing();
+  });
+  return rows.length;
+}
+router7.post("/schools/:schoolId/timetable/demo", requireAuthenticatedRole(...MANAGERS), editLimiter, async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const viewer = viewerOf2(res);
+  if (!await canEdit(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy changes the timetable." });
+    return;
+  }
+  const count = await fillDemoTimetable(schoolId);
+  await writeAudit(schoolId, viewer.id, "timetable", null, { lessons: count, demo: true });
+  res.json({ ...await loadTimetable(schoolId), canEdit: true });
+});
+async function slotsFilterFor(viewer) {
+  if (viewer.role === "teacher") return eq(timetableSlotsTable.teacherId, viewer.id);
+  if (viewer.role === "student" || viewer.role === "parent") {
+    const studentIds = viewer.role === "student" ? [viewer.id] : (await db.select({ id: parentLinksTable.studentId }).from(parentLinksTable).where(eq(parentLinksTable.parentId, viewer.id))).map((row) => row.id);
+    if (!studentIds.length) return null;
+    const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(inArray(classMembersTable.userId, studentIds), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!classIds.length) return null;
+    return inArray(timetableSlotsTable.classId, [...new Set(classIds)]);
+  }
+  const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, viewer.id), inArray(schoolMembersTable.role, ["school_director", "school_admin"])))).map((row) => row.id);
+  if (!schoolIds.length) return null;
+  return inArray(timetableSlotsTable.schoolId, schoolIds);
+}
+function lessonReader(where) {
+  const teacherNames = /* @__PURE__ */ new Map();
+  const bellCache = /* @__PURE__ */ new Map();
+  return async function lessonsOn(date2, weekday) {
+    if (weekday === 7) return [];
+    const slots = await db.select({
+      id: timetableSlotsTable.id,
+      schoolId: timetableSlotsTable.schoolId,
+      classId: timetableSlotsTable.classId,
+      period: timetableSlotsTable.period,
+      subject: timetableSlotsTable.subject,
+      room: timetableSlotsTable.room,
+      teacherId: timetableSlotsTable.teacherId,
+      className: classesTable.name,
+      grade: classesTable.grade
+    }).from(timetableSlotsTable).innerJoin(classesTable, eq(classesTable.id, timetableSlotsTable.classId)).where(and(where, eq(timetableSlotsTable.weekday, weekday))).orderBy(asc(timetableSlotsTable.period), asc(classesTable.name));
+    const missing = [...new Set(slots.map((slot) => slot.teacherId).filter((id) => Boolean(id) && !teacherNames.has(id)))];
+    if (missing.length) for (const row of await db.select({ id: usersTable.id, name: usersTable.username }).from(usersTable).where(inArray(usersTable.id, missing))) teacherNames.set(row.id, row.name);
+    const out = [];
+    for (const slot of slots) {
+      if (!bellCache.has(slot.schoolId)) bellCache.set(slot.schoolId, await bellsOf(slot.schoolId));
+      const bell = bellCache.get(slot.schoolId)[slot.period - 1];
+      if (!bell) continue;
+      out.push({
+        id: slot.id,
+        classId: slot.classId,
+        className: slot.className,
+        grade: slot.grade,
+        period: slot.period,
+        subject: slot.subject,
+        room: slot.room,
+        teacherId: slot.teacherId,
+        teacherName: slot.teacherId ? teacherNames.get(slot.teacherId) ?? "" : "",
+        start: bell.start,
+        end: bell.end,
+        startsAt: atTashkent(date2, bell.start),
+        endsAt: atTashkent(date2, bell.end)
+      });
+    }
+    out.sort((a, b) => a.startsAt.localeCompare(b.startsAt) || a.className.localeCompare(b.className));
+    return out;
+  };
+}
+async function inDemoSchool(userId) {
+  const [row] = await db.select({ id: schoolsTable.id }).from(schoolMembersTable).innerJoin(schoolsTable, eq(schoolsTable.id, schoolMembersTable.schoolId)).where(and(eq(schoolMembersTable.userId, userId), eq(schoolsTable.isDemo, true))).limit(1);
+  return Boolean(row);
+}
+router7.get("/me/today", requireAuthenticatedRole(...everyRole3), async (_req, res) => {
+  const viewer = viewerOf2(res);
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  const base = { date: now.date, weekday: now.weekday, now: (/* @__PURE__ */ new Date()).toISOString(), week: [] };
+  const where = await slotsFilterFor(viewer);
+  if (!where) {
+    res.json({ ...base, lessons: [], next: [] });
+    return;
+  }
+  base.week = await db.selectDistinct({ classId: timetableSlotsTable.classId, subject: timetableSlotsTable.subject }).from(timetableSlotsTable).where(where);
+  const lessonsOn = lessonReader(where);
+  let lessons = await lessonsOn(now.date, now.weekday);
+  const demo = await inDemoSchool(viewer.id);
+  if (demo) {
+    if (!lessons.length) lessons = await lessonsOn(now.date, 1);
+    const start = Math.floor(Date.now() / 3e5) * 3e5 - 3e5;
+    const hhmm = (ms) => {
+      const local = tashkentNow(new Date(ms));
+      return `${String(Math.floor(local.minutes / 60)).padStart(2, "0")}:${String(local.minutes % 60).padStart(2, "0")}`;
+    };
+    lessons = lessons.map((lesson) => ({ ...lesson, start: hhmm(start), end: hhmm(start + 45 * 6e4), startsAt: new Date(start).toISOString(), endsAt: new Date(start + 45 * 6e4).toISOString() }));
+  }
+  const next = [];
+  for (let offset = 1; next.length < 2 && offset <= 4; offset += 1) {
+    const day2 = tashkentNow(new Date(Date.now() + offset * 864e5));
+    if (day2.weekday === 7) continue;
+    next.push({ date: day2.date, weekday: day2.weekday, lessons: await lessonsOn(day2.date, day2.weekday) });
+  }
+  let prev = null;
+  for (let offset = 1; !prev && offset <= 3; offset += 1) {
+    const day2 = tashkentNow(new Date(Date.now() - offset * 864e5));
+    if (day2.weekday === 7) continue;
+    prev = { date: day2.date, weekday: day2.weekday, lessons: await lessonsOn(day2.date, day2.weekday) };
+  }
+  if (viewer.role !== "school_director" && viewer.role !== "school_admin") {
+    if (prev) await giveBookHomework(prev.date, prev.lessons.map((lesson) => lesson.classId));
+    await giveBookHomework(now.date, lessons.map((lesson) => lesson.classId));
+  }
+  if (viewer.role === "teacher") await remindTrainer(viewer.id, now.date, lessons);
+  res.json({ ...base, lessons, next, prev, demo });
+});
+router7.get("/me/week", requireAuthenticatedRole(...everyRole3), async (req, res) => {
+  const viewer = viewerOf2(res);
+  const offset = Math.max(-8, Math.min(8, Number.parseInt(String(req.query.offset ?? "0"), 10) || 0));
+  const now = tashkentNow();
+  res.setHeader("Cache-Control", "private, no-store");
+  const monday = /* @__PURE__ */ new Date(`${now.date}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() - (now.weekday - 1) + offset * 7);
+  const days = [];
+  const where = await slotsFilterFor(viewer);
+  const lessonsOn = where ? lessonReader(where) : null;
+  for (let index2 = 0; index2 < 6; index2 += 1) {
+    const day2 = new Date(monday.getTime() + index2 * 864e5);
+    const date2 = day2.toISOString().slice(0, 10);
+    days.push({ date: date2, weekday: index2 + 1, lessons: lessonsOn ? await lessonsOn(date2, index2 + 1) : [] });
+  }
+  res.json({ today: now.date, now: (/* @__PURE__ */ new Date()).toISOString(), offset, days });
+});
+var timetable_default = router7;
+
+// src/lib/bot-commands.ts
+var SITE = "https://eduverse-uz1.vercel.app";
+var T = (lang, uz, ru, en) => lang === "ru" ? ru : lang === "en" ? en : uz;
+var SUBJECT = {
+  physics: ["Fizika", "\u0424\u0438\u0437\u0438\u043A\u0430", "Physics"],
+  chemistry: ["Kimyo", "\u0425\u0438\u043C\u0438\u044F", "Chemistry"],
+  biology: ["Biologiya", "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", "Biology"],
+  math: ["Matematika", "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", "Maths"]
+};
+var subjectName = (L, value) => {
+  const names = SUBJECT[value];
+  return names ? T(L, ...names) : value;
+};
+function langFromTelegram(code) {
+  const value = typeof code === "string" ? code.toLowerCase() : "";
+  return value.startsWith("uz") ? "uz" : value.startsWith("en") ? "en" : "ru";
+}
+var CONNECT_KEYBOARD = { inline_keyboard: [[{ text: "\u{1F517} Ulash \xB7 \u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C \xB7 Connect", url: `${SITE}/profile?tab=notifications&connect=telegram` }]] };
+var LANG_KEYBOARD = { inline_keyboard: [[
+  { text: "\u{1F1FA}\u{1F1FF} O\u2018zbekcha", callback_data: "lang:uz" },
+  { text: "\u{1F1F7}\u{1F1FA} \u0420\u0443\u0441\u0441\u043A\u0438\u0439", callback_data: "lang:ru" },
+  { text: "\u{1F1EC}\u{1F1E7} English", callback_data: "lang:en" }
+]] };
+var day = (iso) => iso.slice(0, 10).split("-").reverse().join(".");
+var MANAGERS2 = ["school_director", "school_admin"];
+var MANAGER_ROLES = ["school_director", "school_admin"];
+function commandsFor(role, lang) {
+  const list = [{ command: "today", description: T(lang, "Bugungi darslar", "\u0423\u0440\u043E\u043A\u0438 \u043D\u0430 \u0441\u0435\u0433\u043E\u0434\u043D\u044F", "Today\u2019s lessons") }];
+  if (role === "student" || role === "parent") list.push({ command: "homework", description: T(lang, "Uy vazifalari", "\u0414\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F", "Homework") }, { command: "grades", description: T(lang, "Baholar", "\u041E\u0446\u0435\u043D\u043A\u0438", "Marks") });
+  if (role === "teacher") list.push({ command: "check", description: T(lang, "Tekshiriladigan ishlar", "\u0420\u0430\u0431\u043E\u0442\u044B \u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443", "Work to check") });
+  if (MANAGERS2.includes(role)) list.push({ command: "school", description: T(lang, "Bugun maktabda", "\u0421\u0435\u0433\u043E\u0434\u043D\u044F \u0432 \u0448\u043A\u043E\u043B\u0435", "Today at school") });
+  list.push({ command: "lang", description: T(lang, "Tilni o\u2018zgartirish", "\u0421\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A", "Change language") }, { command: "help", description: T(lang, "Yordam", "\u041F\u043E\u043C\u043E\u0449\u044C", "Help") });
+  return list;
+}
+async function personOfChat(chatId) {
+  const [row] = await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role, lang: telegramNotifyTable.lang }).from(telegramNotifyTable).innerJoin(usersTable, eq(usersTable.id, telegramNotifyTable.userId)).where(and(eq(telegramNotifyTable.chatId, chatId), eq(usersTable.status, "active"))).limit(1);
+  return row ?? null;
+}
+async function pupilsOf(person) {
+  if (person.role === "student") return [{ id: person.id, name: person.name }];
+  if (person.role !== "parent") return [];
+  return db.select({ id: usersTable.id, name: usersTable.username }).from(parentLinksTable).innerJoin(usersTable, eq(usersTable.id, parentLinksTable.studentId)).where(eq(parentLinksTable.parentId, person.id));
+}
+async function today(person, L) {
+  const now = tashkentNow();
+  const where = await slotsFilterFor({ id: person.id, role: person.role });
+  if (!where) return T(L, "Jadval hali yo\u2018q.", "\u0420\u0430\u0441\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "There is no timetable yet.");
+  const lessons = await lessonReader(where)(now.date, now.weekday);
+  if (!lessons.length) return `\u{1F4C5} ${day(now.date)}: ${T(L, "bugun dars yo\u2018q.", "\u0443\u0440\u043E\u043A\u043E\u0432 \u043D\u0435\u0442.", "no lessons today.")}`;
+  const manager = MANAGERS2.includes(person.role);
+  const shown = manager ? lessons.slice(0, 40) : lessons;
+  const nowMs = Date.now();
+  const lines = shown.map((lesson) => {
+    const state = nowMs >= Date.parse(lesson.endsAt) ? "\u2713" : nowMs >= Date.parse(lesson.startsAt) ? "\u25B6" : "\u2022";
+    const who = person.role === "teacher" || manager ? `${escapeHtml(lesson.className)} \xB7 ` : "";
+    const teacher = person.role !== "teacher" && lesson.teacherName ? ` \xB7 ${escapeHtml(lesson.teacherName)}` : "";
+    return `${state} ${lesson.start}\u2013${lesson.end} \xB7 ${who}<b>${escapeHtml(subjectName(L, lesson.subject))}</b>${lesson.room ? ` \xB7 ${T(L, "xona", "\u043A\u0430\u0431.", "room")} ${escapeHtml(lesson.room)}` : ""}${teacher}`;
+  });
+  return `\u{1F4C5} <b>${T(L, "Darslar", "\u0423\u0440\u043E\u043A\u0438 \u043D\u0430", "Lessons")} ${day(now.date)}</b>
+${lines.join("\n")}${lessons.length > shown.length ? `
+\u2026 +${lessons.length - shown.length}` : ""}
+
+\u25B6 ${T(L, "hozir", "\u0438\u0434\u0451\u0442 \u0441\u0435\u0439\u0447\u0430\u0441", "now")} \xB7 \u2713 ${T(L, "tugadi", "\u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F", "over")}`;
+}
+async function homework(person, L) {
+  const pupils = await pupilsOf(person);
+  if (!pupils.length) return T(L, "O\u2018quvchi bog\u2018lanmagan.", "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432.", "No pupils linked.");
+  const out = [];
+  const since = new Date(Date.now() - 7 * 864e5);
+  for (const pupil of pupils) {
+    const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, pupil.id), eq(classMembersTable.role, "student")))).map((row) => row.id);
+    if (!classIds.length) continue;
+    const tasks = await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(and(inArray(assignmentsTable.classId, classIds), gte(assignmentsTable.createdAt, since))).orderBy(desc(assignmentsTable.createdAt)).limit(8);
+    const mine = tasks.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, pupil.id), inArray(assignmentSubmissionsTable.assignmentId, tasks.map((task) => task.id)))) : [];
+    out.push(`\u{1F4DA} <b>${escapeHtml(pupil.name)}</b>`);
+    if (!tasks.length) {
+      out.push(T(L, "Bu hafta vazifa yo\u2018q.", "\u0417\u0430 \u043D\u0435\u0434\u0435\u043B\u044E \u0437\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.", "No homework this week."));
+      continue;
+    }
+    for (const task of tasks) {
+      const sent = mine.find((row) => row.assignmentId === task.id);
+      const state = sent ? sent.score !== null ? `\u2705 ${T(L, "baho", "\u043E\u0446\u0435\u043D\u043A\u0430", "mark")} ${gradeOf(sent.score)}/10` : `\u{1F4E4} ${T(L, "tekshiruvda", "\u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435", "in review")}` : `\u23F3 ${T(L, "topshirilmagan", "\u043D\u0435 \u0441\u0434\u0430\u043D\u043E", "not handed in")}`;
+      const first = task.description.split("\n")[0].slice(0, 90);
+      out.push(`\u2022 <b>${escapeHtml(task.subject)}</b>: ${escapeHtml(first)} \u2014 ${state}`);
+    }
+  }
+  return out.join("\n") || T(L, "Vazifa yo\u2018q.", "\u0417\u0430\u0434\u0430\u043D\u0438\u0439 \u043D\u0435\u0442.", "No homework.");
+}
+async function grades(person, L) {
+  const pupils = await pupilsOf(person);
+  if (!pupils.length) return T(L, "O\u2018quvchi bog\u2018lanmagan.", "\u041D\u0435\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u0430\u043D\u043D\u044B\u0445 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432.", "No pupils linked.");
+  const out = [];
+  for (const pupil of pupils) {
+    const marks = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(eq(journalMarksTable.studentId, pupil.id)).orderBy(desc(journalMarksTable.date)).limit(12);
+    out.push(`\u{1F4D8} <b>${escapeHtml(pupil.name)}</b>`);
+    if (!marks.length) {
+      out.push(T(L, "Hali baho yo\u2018q.", "\u041E\u0446\u0435\u043D\u043E\u043A \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "No marks yet."));
+      continue;
+    }
+    for (const row of marks) {
+      const behavior = row.subject.startsWith("behavior:");
+      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : row.subject));
+      out.push(`${day(row.date)} \xB7 ${name}${behavior ? ` (${T(L, "xulq", "\u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "behaviour")})` : ""}: ${row.absent ? T(L, "nb", "\u043D\u0431", "ab") : `<b>${row.mark}</b>/10`}`);
+    }
+    const numbers = marks.filter((row) => !row.subject.startsWith("behavior:")).map((row) => row.mark).filter((mark) => typeof mark === "number");
+    if (numbers.length) out.push(`${T(L, "O\u2018rtacha", "\u0421\u0440\u0435\u0434\u043D\u044F\u044F", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
+  }
+  return out.join("\n");
+}
+async function toCheck(person, L) {
+  const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, person.id), eq(classMembersTable.role, "teacher")))).map((row) => row.id);
+  if (!classIds.length) return T(L, "Hali sinf yo\u2018q.", "\u041A\u043B\u0430\u0441\u0441\u043E\u0432 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442.", "No classes yet.");
+  const waiting = await db.select({ title: assignmentsTable.title, className: classesTable.name, student: usersTable.username }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentsTable.id, assignmentSubmissionsTable.assignmentId)).innerJoin(classesTable, eq(classesTable.id, assignmentsTable.classId)).innerJoin(usersTable, eq(usersTable.id, assignmentSubmissionsTable.studentId)).where(and(inArray(assignmentsTable.classId, classIds), eq(assignmentSubmissionsTable.status, "submitted"))).limit(30);
+  if (!waiting.length) return `\u2705 ${T(L, "Tekshiradigan ish yo\u2018q.", "\u041F\u0440\u043E\u0432\u0435\u0440\u044F\u0442\u044C \u043D\u0435\u0447\u0435\u0433\u043E.", "Nothing to check.")}`;
+  return `\u{1F4DD} <b>${T(L, "Tekshiruv kutmoqda", "\u0416\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", "Waiting to be checked")}: ${waiting.length}</b>
+${waiting.map((row) => `\u2022 ${escapeHtml(row.className)} \xB7 ${escapeHtml(row.student)} \u2014 ${escapeHtml(row.title)}`).join("\n")}
+
+${T(L, "Tekshirish", "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C", "Check")}: ${SITE}/teacher`;
+}
+async function school(person, L) {
+  const now = tashkentNow();
+  const schoolIds = (await db.select({ id: schoolMembersTable.schoolId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.userId, person.id), inArray(schoolMembersTable.role, MANAGER_ROLES)))).map((row) => row.id);
+  if (!schoolIds.length) return T(L, "Maktab topilmadi.", "\u0428\u043A\u043E\u043B\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430.", "School not found.");
+  const [info] = await db.select({ name: schoolsTable.name, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil }).from(schoolsTable).where(eq(schoolsTable.id, schoolIds[0])).limit(1);
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(inArray(classesTable.schoolId, schoolIds));
+  const classIds = classes.map((row) => row.id);
+  const where = await slotsFilterFor({ id: person.id, role: person.role });
+  const lessons = where ? await lessonReader(where)(now.date, now.weekday) : [];
+  const nowMs = Date.now();
+  const current = lessons.filter((lesson) => nowMs >= Date.parse(lesson.startsAt) && nowMs < Date.parse(lesson.endsAt));
+  const absent = classIds.length ? await db.select({ name: usersTable.username, status: attendanceTable.status, classId: attendanceTable.classId }).from(attendanceTable).innerJoin(usersTable, eq(usersTable.id, attendanceTable.studentId)).where(and(inArray(attendanceTable.classId, classIds), eq(attendanceTable.attendanceDate, now.date), inArray(attendanceTable.status, ["absent", "late"]))) : [];
+  const waiting = classIds.length ? await db.select({ id: assignmentSubmissionsTable.id }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentsTable.id, assignmentSubmissionsTable.assignmentId)).where(and(inArray(assignmentsTable.classId, classIds), eq(assignmentSubmissionsTable.status, "submitted"))) : [];
+  const className = (id) => classes.find((row) => row.id === id)?.name ?? "";
+  const absentNames = [...new Map(absent.filter((row) => row.status === "absent").map((row) => [row.name, `${row.name} (${className(row.classId)})`])).values()];
+  const lateCount = new Set(absent.filter((row) => row.status === "late").map((row) => row.name)).size;
+  const lines = [
+    `\u{1F3EB} <b>${escapeHtml(info?.name ?? "")}</b> \xB7 ${day(now.date)}`,
+    `${T(L, "Bugun darslar", "\u0423\u0440\u043E\u043A\u043E\u0432 \u0441\u0435\u0433\u043E\u0434\u043D\u044F", "Lessons today")}: <b>${lessons.length}</b>${current.length ? ` \xB7 ${T(L, "hozir", "\u0441\u0435\u0439\u0447\u0430\u0441 \u0438\u0434\u0451\u0442", "now")}: ${current.length}` : ""}`,
+    ...current.slice(0, 10).map((lesson) => `  \u25B6 ${escapeHtml(lesson.className)} \xB7 ${escapeHtml(subjectName(L, lesson.subject))}${lesson.teacherName ? ` \xB7 ${escapeHtml(lesson.teacherName)}` : ""}`),
+    `${T(L, "Kelmaganlar", "\u041E\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u044E\u0442", "Absent")}: <b>${absentNames.length}</b>${lateCount ? ` \xB7 ${T(L, "kechikdi", "\u043E\u043F\u043E\u0437\u0434\u0430\u043B\u0438", "late")}: ${lateCount}` : ""}`,
+    ...absentNames.slice(0, 15).map((name) => `  \u2022 ${escapeHtml(name)}`),
+    `${T(L, "Tekshirilmagan uy vazifalari", "\u0414\u043E\u043C\u0430\u0448\u043A\u0438 \u0436\u0434\u0443\u0442 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438", "Homework to check")}: <b>${waiting.length}</b>`
+  ];
+  if (info?.plan && info.plan !== "free" && info.planUntil) {
+    const left = Math.ceil((info.planUntil.getTime() - nowMs) / 864e5);
+    if (left <= 30) lines.push(left >= 0 ? `\u23F3 ${T(L, `Tarif ${left} kundan keyin tugaydi.`, `\u0422\u0430\u0440\u0438\u0444 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u0442\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${left} \u0434\u043D.`, `The plan ends in ${left} days.`)}` : `\u26A0\uFE0F ${T(L, "Tarif muddati tugadi.", "\u0421\u0440\u043E\u043A \u0442\u0430\u0440\u0438\u0444\u0430 \u0437\u0430\u043A\u043E\u043D\u0447\u0438\u043B\u0441\u044F.", "The plan has ended.")}`);
+  }
+  lines.push(`
+${T(L, "Batafsil", "\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u043E", "Details")}: ${SITE}/school`);
+  return lines.join("\n");
+}
+function help(person, L) {
+  if (!person) {
+    return [
+      "\u{1F44B} <b>EDUVERSE</b>",
+      T(L, "Hisobingizni ulang \u2014 2 qadam:", "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u0430\u043A\u043A\u0430\u0443\u043D\u0442 \u2014 2 \u0448\u0430\u0433\u0430:", "Connect your account \u2014 2 steps:"),
+      T(L, "1) Pastdagi \xABUlash\xBB tugmasini bosing \u2014 sayt ochiladi (kirmagan bo\u2018lsangiz, login va parol bilan kiring).", "1) \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043A\u043D\u043E\u043F\u043A\u0443 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\xBB \u043D\u0438\u0436\u0435 \u2014 \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u0441\u0430\u0439\u0442 (\u0435\u0441\u043B\u0438 \u043D\u0435 \u0432\u043E\u0448\u043B\u0438 \u2014 \u0432\u043E\u0439\u0434\u0438\u0442\u0435 \u043B\u043E\u0433\u0438\u043D\u043E\u043C \u0438 \u043F\u0430\u0440\u043E\u043B\u0435\u043C).", "1) Press \u201CConnect\u201D below \u2014 the site opens (sign in if asked)."),
+      T(L, "2) Telegram qayta ochiladi \u2014 \xABStart\xBB ni bosing. Tayyor!", "2) Telegram \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u0441\u043D\u043E\u0432\u0430 \u2014 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \xABStart\xBB. \u0413\u043E\u0442\u043E\u0432\u043E!", "2) Telegram opens again \u2014 press \u201CStart\u201D. Done!"),
+      "",
+      `\u{1F310} /lang \u2014 ${T(L, "tilni o\u2018zgartirish", "\u0441\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A", "change language")}`
+    ].join("\n");
+  }
+  const list = commandsFor(person.role, L).map((item) => `/${item.command} \u2014 ${item.description}`);
+  return `\u{1F44B} <b>${escapeHtml(person.name)}</b>
+${T(L, "Buyruqni bosing:", "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0443:", "Tap a command:")}
+
+${list.join("\n")}
+
+\u{1F30D} ${T(L, "Sayt", "\u0421\u0430\u0439\u0442", "Site")}: ${SITE}`;
+}
+async function answerCommand(chatId, text2, telegramLang) {
+  const match = /^\/([a-z]+)(?:@\w+)?\s*$/i.exec(text2.trim());
+  if (!match) return null;
+  const command = match[1].toLowerCase();
+  if (!["start", "help", "today", "homework", "grades", "check", "school", "lang", "language", "til", "uz", "ru", "en"].includes(command)) return null;
+  const person = await personOfChat(chatId);
+  const L = person?.lang === "uz" || person?.lang === "ru" || person?.lang === "en" ? person.lang : langFromTelegram(telegramLang);
+  if (command === "uz" || command === "ru" || command === "en") return chooseLang(chatId, command);
+  if (command === "lang" || command === "language" || command === "til") {
+    return { text: "\u{1F310} Tilni tanlang \xB7 \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \xB7 Choose a language", keyboard: LANG_KEYBOARD };
+  }
+  if (!person) return { text: help(null, L), keyboard: CONNECT_KEYBOARD };
+  if (command === "start" || command === "help") return { text: help(person, L) };
+  if (command === "today") return { text: await today(person, L) };
+  if (command === "homework" && (person.role === "student" || person.role === "parent")) return { text: await homework(person, L) };
+  if (command === "grades" && (person.role === "student" || person.role === "parent")) return { text: await grades(person, L) };
+  if (command === "check" && person.role === "teacher") return { text: await toCheck(person, L) };
+  if (command === "school" && MANAGERS2.includes(person.role)) return { text: await school(person, L) };
+  return { text: `${T(L, "Bu buyruq sizning rolingiz uchun emas.", "\u042D\u0442\u0430 \u043A\u043E\u043C\u0430\u043D\u0434\u0430 \u043D\u0435 \u0434\u043B\u044F \u0432\u0430\u0448\u0435\u0439 \u0440\u043E\u043B\u0438.", "This command is not for your role.")}
+
+${help(person, L)}` };
+}
+async function chooseLang(chatId, lang) {
+  await db.update(telegramNotifyTable).set({ lang }).where(eq(telegramNotifyTable.chatId, chatId));
+  const person = await personOfChat(chatId);
+  return { text: `\u2705 ${T(lang, "Til: o\u2018zbekcha", "\u042F\u0437\u044B\u043A: \u0440\u0443\u0441\u0441\u043A\u0438\u0439", "Language: English")}
+
+${help(person, lang)}` };
+}
+
+// src/routes/school-tools.ts
+init_ai_content();
+var router8 = (0, import_express8.Router)();
+var perSession3 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var viewerOf3 = (res) => res.locals.authenticatedUser;
+var isRecord7 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var SCRYPT_CONFIG2 = { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+function hashPassword2(password) {
+  return new Promise((resolve, reject) => {
+    const salt = randomBytes6(16);
+    scryptCallback3(password, salt, 64, SCRYPT_CONFIG2, (error, key) => {
+      if (error) return reject(error);
+      resolve(["scrypt", SCRYPT_CONFIG2.N, SCRYPT_CONFIG2.r, SCRYPT_CONFIG2.p, salt.toString("base64url"), key.toString("base64url")].join("$"));
+    });
+  });
+}
+function readablePassword2() {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = randomBytes6(10);
+  let out = "";
+  for (let i = 0; i < 10; i += 1) out += alphabet[bytes[i] % alphabet.length];
+  return `${out.slice(0, 5)}-${out.slice(5)}`;
+}
+var TRANSLIT = {
+  \u0430: "a",
+  \u0431: "b",
+  \u0432: "v",
+  \u0433: "g",
+  \u0434: "d",
+  \u0435: "e",
+  \u0451: "yo",
+  \u0436: "j",
+  \u0437: "z",
+  \u0438: "i",
+  \u0439: "y",
+  \u043A: "k",
+  \u043B: "l",
+  \u043C: "m",
+  \u043D: "n",
+  \u043E: "o",
+  \u043F: "p",
+  \u0440: "r",
+  \u0441: "s",
+  \u0442: "t",
+  \u0443: "u",
+  \u0444: "f",
+  \u0445: "x",
+  \u0446: "ts",
+  \u0447: "ch",
+  \u0448: "sh",
+  \u0449: "sh",
+  \u044A: "",
+  \u044B: "i",
+  \u044C: "",
+  \u044D: "e",
+  \u044E: "yu",
+  \u044F: "ya",
+  \u045E: "o",
+  \u049B: "q",
+  \u0493: "g",
+  \u04B3: "h"
+};
+function loginCandidate2(name) {
+  const latin = name.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("");
+  const base = latin.normalize("NFKD").replace(/[^a-z0-9]/g, "").slice(0, 14);
+  return `${base || "user"}_${randomBytes6(2).toString("hex")}`;
+}
+async function canManageSchool2(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1);
+  return row?.role === "school_director" || row?.role === "school_admin";
+}
+var resetLimiter = createRateLimiter(60, 15 * 60 * 1e3, "Too many password resets. Try again later.", "password-reset", (req) => `ip:${req.ip ?? "unknown"}`);
+router8.post(
+  "/schools/:schoolId/members/:userId/reset-password",
+  requireAuthenticatedRole("school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  resetLimiter,
+  async (req, res) => {
+    const schoolId = String(req.params.schoolId);
+    const userId = String(req.params.userId);
+    const viewer = viewerOf3(res);
+    if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
+      res.status(400).json({ error: "Invalid identifier." });
+      return;
+    }
+    if (!await canManageSchool2(viewer, schoolId)) {
+      res.status(403).json({ error: "Only the director or deputy can reset passwords." });
+      return;
+    }
+    const [member] = await db.select({ id: usersTable.id, login: usersTable.login, name: usersTable.username, role: usersTable.role }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+    if (!member) {
+      res.status(404).json({ error: "This person is not in your school." });
+      return;
+    }
+    if (member.id === viewer.id || isGlobalAdminRole(member.role) || (member.role === "school_director" || member.role === "school_admin") && !isGlobalAdminRole(viewer.role) && viewer.role !== "school_director") {
+      res.status(403).json({ error: "This account's password cannot be reset here." });
+      return;
+    }
+    if (member.role === "school_director" && !isGlobalAdminRole(viewer.role)) {
+      res.status(403).json({ error: "Only EDUVERSE staff can reset a director's password." });
+      return;
+    }
+    const password = readablePassword2();
+    await db.transaction(async (tx) => {
+      await tx.update(usersTable).set({ passwordHash: await hashPassword2(password), mustChangePassword: true, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, member.id));
+      await tx.delete(sessionsTable).where(eq(sessionsTable.userId, member.id));
+    });
+    res.json({ login: member.login, name: member.name, role: member.role, password });
+  }
+);
+function readSubjects(value) {
+  if (!Array.isArray(value)) return void 0;
+  return [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+}
+function normalizePhone(value) {
+  if (typeof value !== "string") return void 0;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 9) return `+998${digits}`;
+  if (digits.length === 12 && digits.startsWith("998")) return `+${digits}`;
+  return void 0;
+}
+function readRows(body) {
+  const raw = isRecord7(body) && Array.isArray(body.rows) ? body.rows : [];
+  const rows = [];
+  for (const item of raw.slice(0, 120)) {
+    if (!isRecord7(item)) continue;
+    const role = item.role === "teacher" || item.role === "parent" || item.role === "student" || item.role === "school_admin" || item.role === "school_director" ? item.role : null;
+    const name = cleanText(item.name, 80);
+    if (!role || !name) continue;
+    rows.push({
+      role,
+      name,
+      className: cleanText(item.className, 40) ?? void 0,
+      childName: cleanText(item.childName, 80) ?? void 0,
+      phone: normalizePhone(item.phone),
+      subjects: role === "teacher" ? readSubjects(item.subjects) : void 0
+    });
+  }
+  return rows;
+}
+async function importPeople(schoolId, rows, actorId) {
+  const year = String((/* @__PURE__ */ new Date()).getMonth() >= 7 ? (/* @__PURE__ */ new Date()).getFullYear() : (/* @__PURE__ */ new Date()).getFullYear() - 1);
+  const classCache = /* @__PURE__ */ new Map();
+  const classIdFor = async (className) => {
+    const key = className.toLowerCase();
+    const cached = classCache.get(key);
+    if (cached) return cached;
+    const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+    let id = existing?.id;
+    if (!id) {
+      const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+      const [created2] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
+      id = created2?.id;
+      if (!id) {
+        const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+        id = again.id;
+      }
+    }
+    classCache.set(key, id);
+    return id;
+  };
+  const created = [];
+  const skipped = [];
+  const studentIdsByName = /* @__PURE__ */ new Map();
+  const ordered = [...rows.filter((row) => row.role !== "parent"), ...rows.filter((row) => row.role === "parent")];
+  for (const row of ordered) {
+    const password = readablePassword2();
+    const passwordHash = await hashPassword2(password);
+    let account = null;
+    for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
+      const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
+      const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
+      const login = loginCandidate2(row.name);
+      try {
+        const [inserted] = await db.insert(usersTable).values({
+          username: shownName,
+          usernameNormalized: normalizeUsername(shownName),
+          login,
+          loginNormalized: login.toLowerCase(),
+          passwordHash,
+          role: row.role,
+          phone: row.phone ?? null,
+          ...row.subjects?.length ? { subjects: row.subjects } : {},
+          mustChangePassword: true
+        }).returning({ id: usersTable.id, username: usersTable.username, login: usersTable.login });
+        account = inserted ?? null;
+      } catch (error) {
+        const code = error?.code ?? error?.cause?.code;
+        if (String(code) !== "23505") throw error;
+      }
+    }
+    if (!account) {
+      skipped.push({ name: row.name, reason: "duplicate" });
+      continue;
+    }
+    await db.insert(schoolMembersTable).values({ schoolId, userId: account.id, role: row.role }).onConflictDoNothing();
+    if (row.className && (row.role === "student" || row.role === "teacher")) {
+      const classId = await classIdFor(row.className);
+      await db.insert(classMembersTable).values({ classId, userId: account.id, role: row.role }).onConflictDoNothing();
+    }
+    if (row.role === "student") studentIdsByName.set(row.name.toLowerCase(), account.id);
+    if (row.role === "parent" && row.childName) {
+      let childId = studentIdsByName.get(row.childName.toLowerCase());
+      if (!childId) {
+        const [existing] = await db.select({ id: usersTable.id }).from(usersTable).innerJoin(schoolMembersTable, eq(schoolMembersTable.userId, usersTable.id)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(usersTable.usernameNormalized, normalizeUsername(row.childName)), eq(usersTable.role, "student"))).limit(1);
+        childId = existing?.id;
+      }
+      if (childId) await db.insert(parentLinksTable).values({ parentId: account.id, studentId: childId, createdBy: actorId }).onConflictDoNothing();
+      else skipped.push({ name: row.name, reason: "child-not-found" });
+    }
+    created.push({ role: row.role, name: account.username, className: row.className ?? "", login: account.login, password, phone: row.phone ?? "", userId: account.id });
+  }
+  return { created, skipped };
+}
+router8.post(
+  "/schools/:schoolId/import",
+  requireAuthenticatedRole("education_admin", "ministry_admin", "platform_superadmin"),
+  async (req, res) => {
+    const schoolId = String(req.params.schoolId);
+    const viewer = viewerOf3(res);
+    if (!isValidUuid(schoolId)) {
+      res.status(400).json({ error: "Invalid school identifier." });
+      return;
+    }
+    const rows = readRows(req.body);
+    if (rows.length === 0) {
+      res.status(400).json({ error: "No valid rows to import." });
+      return;
+    }
+    const result = await importPeople(schoolId, rows, viewer.id);
+    await writeAudit(schoolId, viewer.id, "import", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
+    res.status(201).json({ created: result.created.map(({ userId: _userId, ...rest }) => rest), skipped: result.skipped });
+  }
+);
+var everyRole4 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+router8.get("/me/telegram", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const [row] = await db.select().from(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id)).limit(1);
+  res.json({ available: telegramBotConfigured() && Boolean(telegramBotUsername()), connected: Boolean(row?.chatId) });
+});
+router8.post("/me/telegram/link", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const username = telegramBotUsername();
+  if (!telegramBotConfigured() || !username) {
+    res.status(503).json({ error: "Telegram notifications are not configured." });
+    return;
+  }
+  const nonce = randomBytes6(24).toString("base64url");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1e3);
+  await db.insert(telegramNotifyTable).values({ userId: viewer.id, nonce, nonceExpiresAt: expiresAt }).onConflictDoUpdate({ target: telegramNotifyTable.userId, set: { nonce, nonceExpiresAt: expiresAt } });
+  res.json({ link: `https://t.me/${username}?start=notify_${nonce}` });
+});
+router8.delete("/me/telegram", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  await db.delete(telegramNotifyTable).where(eq(telegramNotifyTable.userId, viewer.id));
+  res.status(204).end();
+});
+router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
+  const callback = isRecord7(req.body) && isRecord7(req.body.callback_query) ? req.body.callback_query : null;
+  if (callback && typeof callback.data === "string" && /^lang:(uz|ru|en)$/.test(callback.data)) {
+    const secret = telegramWebhookSecret();
+    if (!secret || !matchesTelegramWebhookSecret(secret, req.get("x-telegram-bot-api-secret-token") ?? "")) {
+      res.status(403).json({ error: "Invalid Telegram webhook secret." });
+      return;
+    }
+    const from = isRecord7(callback.from) ? callback.from : null;
+    if (from && (typeof from.id === "number" || typeof from.id === "string")) {
+      try {
+        const reply = await chooseLang(String(from.id), callback.data.slice(5));
+        if (typeof callback.id === "string") await answerTelegramCallback(callback.id, "\u2713");
+        await sendTelegramMessage(String(from.id), reply.text);
+      } catch (error) {
+        logger.warn({ err: error }, "bot language change failed");
+      }
+    }
+    res.json({ ok: true });
+    return;
+  }
+  const message = isRecord7(req.body) && isRecord7(req.body.message) ? req.body.message : null;
+  const text2 = typeof message?.text === "string" ? message.text.trim() : "";
+  const match = /^\/start(?:@\w+)?\s+notify_([A-Za-z0-9_-]{20,64})$/.exec(text2);
+  if (!match) {
+    const chatOfCommand = isRecord7(message?.chat) ? message.chat : null;
+    if (/^\/[a-z]+(?:@\w+)?$/i.test(text2) && chatOfCommand?.type === "private" && (typeof chatOfCommand.id === "number" || typeof chatOfCommand.id === "string")) {
+      const secret = telegramWebhookSecret();
+      if (!secret || !matchesTelegramWebhookSecret(secret, req.get("x-telegram-bot-api-secret-token") ?? "")) {
+        res.status(403).json({ error: "Invalid Telegram webhook secret." });
+        return;
+      }
+      try {
+        const sender = isRecord7(message?.from) ? message.from : null;
+        const reply = await answerCommand(String(chatOfCommand.id), text2, sender?.language_code);
+        if (reply) {
+          await sendTelegramMessage(String(chatOfCommand.id), reply.text, { replyMarkup: reply.keyboard });
+          res.json({ ok: true });
+          return;
+        }
+      } catch (error) {
+        logger.warn({ err: error }, "bot command failed");
+        res.json({ ok: true });
+        return;
+      }
+    }
+    next();
+    return;
+  }
+  const expected = telegramWebhookSecret();
+  if (!expected || !matchesTelegramWebhookSecret(expected, req.get("x-telegram-bot-api-secret-token") ?? "")) {
+    res.status(403).json({ error: "Invalid Telegram webhook secret." });
+    return;
+  }
+  const chat = isRecord7(message?.chat) ? message.chat : null;
+  if (chat?.type !== "private" || typeof chat.id !== "number" && typeof chat.id !== "string") {
+    res.json({ ok: true });
+    return;
+  }
+  const chatId = String(chat.id);
+  const [pending2] = await db.select({ userId: telegramNotifyTable.userId }).from(telegramNotifyTable).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).limit(1);
+  if (pending2) await db.update(telegramNotifyTable).set({ chatId: null }).where(and(eq(telegramNotifyTable.chatId, chatId), ne(telegramNotifyTable.userId, pending2.userId)));
+  const [row] = await db.update(telegramNotifyTable).set({ chatId, nonce: null, nonceExpiresAt: null }).where(and(eq(telegramNotifyTable.nonce, match[1]), gt(telegramNotifyTable.nonceExpiresAt, /* @__PURE__ */ new Date()))).returning({ userId: telegramNotifyTable.userId });
+  if (row) {
+    const sender = isRecord7(message?.from) ? message.from : null;
+    const lang = langFromTelegram(sender?.language_code);
+    await db.update(telegramNotifyTable).set({ lang }).where(and(eq(telegramNotifyTable.userId, row.userId), isNull(telegramNotifyTable.lang)));
+    const welcome = await answerCommand(chatId, "/help", sender?.language_code);
+    const done = lang === "uz" ? "\u2705 <b>Tayyor! Telegram ulandi.</b>\nBaholar, \xABnb\xBB, uy vazifalari va onlayn darslar haqida xabarlar shu yerga keladi." : lang === "en" ? "\u2705 <b>Done! Telegram is connected.</b>\nMarks, absences, homework and online lessons will come here." : "\u2705 <b>\u0413\u043E\u0442\u043E\u0432\u043E! Telegram \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0451\u043D.</b>\n\u0421\u044E\u0434\u0430 \u0431\u0443\u0434\u0443\u0442 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u043E\u0446\u0435\u043D\u043A\u0438, \xAB\u043D\u0431\xBB, \u0434\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F \u0438 \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A\u0438.";
+    const language = lang === "uz" ? "\u{1F310} Boshqa til: /lang" : lang === "en" ? "\u{1F310} Another language: /lang" : "\u{1F310} \u0414\u0440\u0443\u0433\u043E\u0439 \u044F\u0437\u044B\u043A: /lang";
+    const result = await sendTelegramMessage(chatId, `${done}
+
+${welcome?.text ?? ""}
+
+${language}`, { replyMarkup: LANG_KEYBOARD });
+    if (!result.ok) logger.warn({ errorCode: result.errorCode }, "telegram confirmation not delivered");
+  } else {
+    await sendTelegramMessage(chatId, "\u231B Havola eskirgan. \xABUlash\xBB ni qayta bosing.\n\u0421\u0441\u044B\u043B\u043A\u0430 \u0443\u0441\u0442\u0430\u0440\u0435\u043B\u0430. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\xBB \u0435\u0449\u0451 \u0440\u0430\u0437.", { replyMarkup: CONNECT_KEYBOARD });
+  }
+  res.json({ ok: true });
+});
+var planLimiter = createRateLimiter(20, 10 * 60 * 1e3, "Too many lesson plans. Wait a few minutes.", "ai-plan", perSession3);
+router8.post(
+  "/ai/lesson-plan",
+  requireAuthenticatedRole("teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"),
+  planLimiter,
+  async (req, res) => {
+    const subject = cleanText(isRecord7(req.body) ? req.body.subject : void 0, 60);
+    const topic = cleanText(isRecord7(req.body) ? req.body.topic : void 0, 200);
+    const gradeRaw = Number(isRecord7(req.body) ? req.body.grade : 7);
+    const minutesRaw = Number(isRecord7(req.body) ? req.body.minutes : 45);
+    const language = isRecord7(req.body) && typeof req.body.language === "string" ? req.body.language.slice(0, 20) : "\u0420\u0443\u0441\u0441\u043A\u0438\u0439";
+    if (!subject || !topic) {
+      res.status(400).json({ error: "Subject and topic are required." });
+      return;
+    }
+    const plan = await generateLessonPlan({
+      subject,
+      topic,
+      grade: Number.isInteger(gradeRaw) && gradeRaw >= 1 && gradeRaw <= 11 ? gradeRaw : 7,
+      minutes: Number.isInteger(minutesRaw) && minutesRaw >= 20 && minutesRaw <= 90 ? minutesRaw : 45,
+      language
+    });
+    res.json({ plan, ai: isAiConfigured() });
+  }
+);
+var LABS = /* @__PURE__ */ new Set(["pendulum"]);
+function gradePendulum(rows) {
+  const valid = rows.filter((row) => row.length > 0.05 && row.length <= 5 && row.period > 0.1 && row.period < 10);
+  if (valid.length < 3) return null;
+  const estimates = valid.map((row) => 4 * Math.PI * Math.PI * row.length / (row.period * row.period));
+  const g = estimates.reduce((a, b) => a + b, 0) / estimates.length;
+  const reference = 9.81;
+  const errorPercent = Math.round(Math.abs(g - reference) / reference * 100);
+  const distinct = new Set(valid.map((row) => row.length.toFixed(2))).size;
+  let grade = errorPercent <= 5 ? 5 : errorPercent <= 10 ? 4 : errorPercent <= 20 ? 3 : 2;
+  if (distinct < 3) grade = Math.min(grade, 3);
+  return { g: Math.round(g * 100) / 100, errorPercent, grade, rows: valid };
+}
+router8.post("/labs/reports", requireAuthenticatedRole("student"), async (req, res) => {
+  const viewer = viewerOf3(res);
+  const lab = isRecord7(req.body) && typeof req.body.lab === "string" ? req.body.lab : "";
+  if (!LABS.has(lab)) {
+    res.status(400).json({ error: "Unknown lab." });
+    return;
+  }
+  const rawRows = isRecord7(req.body) && Array.isArray(req.body.rows) ? req.body.rows.slice(0, 12) : [];
+  const rows = rawRows.map((row) => isRecord7(row) ? { length: Number(row.length), period: Number(row.period) } : null).filter((row) => row !== null && Number.isFinite(row.length) && Number.isFinite(row.period));
+  const graded = gradePendulum(rows);
+  if (!graded) {
+    res.status(400).json({ error: "At least three valid measurements are required." });
+    return;
+  }
+  const conclusion = cleanText(isRecord7(req.body) ? req.body.conclusion : void 0, 1e3) ?? "";
+  const [report] = await db.insert(labReportsTable).values({ studentId: viewer.id, lab, data: { rows: graded.rows, g: graded.g, conclusion }, result: `g = ${graded.g} m/s\xB2`, errorPercent: graded.errorPercent, grade: graded.grade }).returning();
+  res.status(201).json({ report, g: graded.g, errorPercent: graded.errorPercent, grade: graded.grade });
+});
+router8.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  let studentIds = [viewer.id];
+  if (viewer.role !== "student") {
+    const classes = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
+    const classIds = classes.map((row) => row.classId);
+    const students = classIds.length ? await db.select({ userId: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student"))) : [];
+    studentIds = [...new Set(students.map((row) => row.userId))];
+    if (isGlobalAdminRole(viewer.role) || viewer.role === "school_director" || viewer.role === "school_admin") {
+      const schools = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, viewer.id));
+      const schoolIds = schools.map((row) => row.schoolId);
+      const all = schoolIds.length ? await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(and(inArray(schoolMembersTable.schoolId, schoolIds), eq(schoolMembersTable.role, "student"))) : [];
+      studentIds = [.../* @__PURE__ */ new Set([...studentIds, ...all.map((row) => row.userId)])];
+    }
+  }
+  if (!studentIds.length) {
+    res.json({ reports: [] });
+    return;
+  }
+  const reports = await db.select({ id: labReportsTable.id, lab: labReportsTable.lab, result: labReportsTable.result, errorPercent: labReportsTable.errorPercent, grade: labReportsTable.grade, data: labReportsTable.data, createdAt: labReportsTable.createdAt, studentName: usersTable.username }).from(labReportsTable).innerJoin(usersTable, eq(labReportsTable.studentId, usersTable.id)).where(inArray(labReportsTable.studentId, studentIds)).orderBy(desc(labReportsTable.createdAt)).limit(100);
+  res.json({ reports });
+});
+var WEAK_PASSWORDS = /* @__PURE__ */ new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
+var passwordLimiter = createRateLimiter(10, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-change", perSession3);
+router8.get("/me/security", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const [row] = await db.select({ must: usersTable.mustChangePassword, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.json({ mustChangePassword: Boolean(row?.must), recovery: Boolean(row?.recoveryUntil && row.recoveryUntil.getTime() > Date.now()) });
+});
+router8.post("/me/password", requireAuthenticatedRole(...everyRole4), passwordLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const current = isRecord7(req.body) && typeof req.body.current === "string" ? req.body.current : "";
+  const next = isRecord7(req.body) && typeof req.body.next === "string" ? req.body.next : "";
+  if (next.length < 10 || next.length > 128) {
+    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
+    return;
+  }
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
+    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
+    return;
+  }
+  const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const recovering = Boolean(account?.recoveryUntil && account.recoveryUntil.getTime() > Date.now());
+  if (!account || !recovering && !await verifyPassword(current, account.hash)) {
+    res.status(400).json({ error: "The current password is wrong." });
+    return;
+  }
+  if (next.toLowerCase() === account.login.toLowerCase()) {
+    res.status(400).json({ error: "The password must not equal the login." });
+    return;
+  }
+  await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  const token = req.cookies?.["eduverse.sid"];
+  const currentHash = typeof token === "string" && token ? hashSessionToken(token) : "";
+  const closed = await db.delete(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.tokenHash, currentHash))).returning({ id: sessionsTable.id });
+  await writeAudit(null, viewer.id, "password-change", viewer.id, { otherSessionsClosed: closed.length });
+  res.json({ changed: true, otherSessionsClosed: closed.length });
+});
+var AVATAR_MAX = 80 * 1024;
+var AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;
+var avatarLimiter = createRateLimiter(20, 15 * 60 * 1e3, "Too many photo changes. Try again later.", "avatar", perSession3);
+router8.get("/me/avatar", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
+  const viewer = viewerOf3(res);
+  const [row] = await db.select({ avatar: usersTable.avatar }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ avatar: row?.avatar ?? null });
+});
+router8.put("/me/avatar", requireAuthenticatedRole(...everyRole4), avatarLimiter, async (req, res) => {
+  const viewer = viewerOf3(res);
+  const avatar = isRecord7(req.body) && typeof req.body.avatar === "string" ? req.body.avatar : "";
+  if (avatar.length > AVATAR_MAX || !AVATAR_RE.test(avatar)) {
+    res.status(400).json({ error: "The photo must be a JPEG, PNG or WebP image under 80 KB." });
+    return;
+  }
+  await db.update(usersTable).set({ avatar, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ avatar });
+});
+router8.delete("/me/avatar", requireAuthenticatedRole(...everyRole4), avatarLimiter, async (_req, res) => {
+  const viewer = viewerOf3(res);
+  await db.update(usersTable).set({ avatar: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, viewer.id));
+  res.json({ avatar: null });
+});
+var school_tools_default = router8;
+
+// src/routes/account.ts
+init_drizzle_orm();
+var import_express9 = __toESM(require_express2(), 1);
+init_src();
+var router9 = (0, import_express9.Router)();
+var viewerOf4 = (res) => res.locals.authenticatedUser;
+var isRecord8 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var perSession4 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var everyRole5 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+var changeLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many changes. Try again later.", "account-change", perSession4);
+router9.get("/me/account", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const sessionId = res.locals.sessionId;
+  const [me] = await db.select({ email: usersTable.email, subjects: usersTable.subjects, phone: usersTable.phone, twoFactorEnabled: usersTable.twoFactorEnabled }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, role: schoolMembersTable.role }).from(schoolMembersTable).innerJoin(schoolsTable, eq(schoolMembersTable.schoolId, schoolsTable.id)).where(eq(schoolMembersTable.userId, viewer.id));
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name, grade: classesTable.grade, role: classMembersTable.role }).from(classMembersTable).innerJoin(classesTable, eq(classMembersTable.classId, classesTable.id)).where(eq(classMembersTable.userId, viewer.id));
+  const [previous] = await db.select({ at: sessionsTable.createdAt }).from(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), sessionId ? ne(sessionsTable.id, sessionId) : sql`true`)).orderBy(desc(sessionsTable.createdAt)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    email: me?.email ?? null,
+    subjects: Array.isArray(me?.subjects) ? me.subjects : [],
+    phone: me?.phone ?? null,
+    twoFactorEnabled: Boolean(me?.twoFactorEnabled),
+    schools: schools.map((school2) => ({ ...school2, number: school2.name.match(/\d+/)?.[0] ?? null })),
+    classes,
+    previousLoginAt: previous?.at ?? null
+  });
+});
+router9.put("/me/account", requireAuthenticatedRole(...everyRole5), changeLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const body = isRecord8(req.body) ? req.body : {};
+  const changes = { updatedAt: /* @__PURE__ */ new Date() };
+  if ("email" in body) {
+    const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (email && (email.length > 254 || !EMAIL_RE.test(email))) {
+      res.status(400).json({ error: "Invalid email." });
+      return;
+    }
+    changes.email = email || null;
+  }
+  if ("subjects" in body) {
+    if (!Array.isArray(body.subjects) || body.subjects.length > 8) {
+      res.status(400).json({ error: "Up to 8 subjects." });
+      return;
+    }
+    changes.subjects = [...new Set(body.subjects.filter((s) => typeof s === "string").map((s) => s.trim().slice(0, 40)).filter(Boolean))];
+  }
+  await db.update(usersTable).set(changes).where(eq(usersTable.id, viewer.id));
+  res.json({ saved: true, email: changes.email, subjects: changes.subjects });
+});
+router9.get("/me/sessions", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const current = res.locals.sessionId;
+  const rows = await db.select({ id: sessionsTable.id, device: sessionsTable.device, ip: sessionsTable.ipMasked, createdAt: sessionsTable.createdAt, lastSeenAt: sessionsTable.lastSeenAt, expiresAt: sessionsTable.expiresAt, revokedAt: sessionsTable.revokedAt }).from(sessionsTable).where(eq(sessionsTable.userId, viewer.id)).orderBy(desc(sessionsTable.createdAt)).limit(30);
+  const now = Date.now();
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    sessions: rows.map((row) => ({
+      id: row.id,
+      device: row.device ?? "\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u043E\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u043E",
+      ip: row.ip,
+      createdAt: row.createdAt,
+      lastSeenAt: row.lastSeenAt ?? row.createdAt,
+      active: !row.revokedAt && row.expiresAt.getTime() > now,
+      current: row.id === current
+    }))
+  });
+});
+router9.delete("/me/sessions/:id", requireAuthenticatedRole(...everyRole5), changeLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const id = String(req.params.id ?? "");
+  if (!isValidUuid(id)) {
+    res.status(400).json({ error: "Invalid session." });
+    return;
+  }
+  await db.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(and(eq(sessionsTable.id, id), eq(sessionsTable.userId, viewer.id), isNull(sessionsTable.revokedAt)));
+  res.json({ revoked: true, current: id === res.locals.sessionId });
+});
+router9.post("/me/sessions/revoke-others", requireAuthenticatedRole(...everyRole5), changeLimiter, async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const current = res.locals.sessionId;
+  const revoked = await db.update(sessionsTable).set({ revokedAt: /* @__PURE__ */ new Date() }).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.id, current), isNull(sessionsTable.revokedAt), gt(sessionsTable.expiresAt, /* @__PURE__ */ new Date()))).returning({ id: sessionsTable.id });
+  res.json({ revoked: revoked.length });
+});
+router9.get("/me/notification-settings", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const [row] = await db.select({ prefs: usersTable.notifyPrefs }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ prefs: mergePrefs(row?.prefs) });
+});
+router9.put("/me/notification-settings", requireAuthenticatedRole(...everyRole5), changeLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const [row] = await db.select({ prefs: usersTable.notifyPrefs }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  const prefs = mergePrefs(row?.prefs);
+  const input = isRecord8(req.body) && isRecord8(req.body.prefs) ? req.body.prefs : {};
+  for (const key of NOTIFY_KINDS) if (typeof input[key] === "boolean") prefs[key] = input[key];
+  await db.update(usersTable).set({ notifyPrefs: prefs }).where(eq(usersTable.id, viewer.id));
+  res.json({ prefs });
+});
+router9.get("/me/notifications", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const items = await db.select().from(userNotificationsTable).where(eq(userNotificationsTable.userId, viewer.id)).orderBy(desc(userNotificationsTable.createdAt)).limit(30);
+  const [count] = await db.select({ n: sql`count(*)` }).from(userNotificationsTable).where(and(eq(userNotificationsTable.userId, viewer.id), isNull(userNotificationsTable.readAt)));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ items: items.map(({ userId: _owner, ...item }) => item), unread: Number(count?.n ?? 0) });
+});
+router9.post("/me/notifications/read-all", requireAuthenticatedRole(...everyRole5), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  await db.update(userNotificationsTable).set({ readAt: /* @__PURE__ */ new Date() }).where(and(eq(userNotificationsTable.userId, viewer.id), isNull(userNotificationsTable.readAt)));
+  res.json({ read: true });
+});
+router9.get("/me/teaching-stats", requireAuthenticatedRole("teacher", "school_director", "school_admin"), async (_req, res) => {
+  const viewer = viewerOf4(res);
+  const [lessons] = await db.select({ n: sql`count(*)`, last: sql`max(${lessonRoomsTable.createdAt})` }).from(lessonRoomsTable).where(eq(lessonRoomsTable.hostId, viewer.id));
+  const myClasses = await db.select({ classId: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "teacher")));
+  const classIds = myClasses.map((row) => row.classId);
+  const [students] = classIds.length ? await db.select({ n: sql`count(distinct ${classMembersTable.userId})` }).from(classMembersTable).where(and(inArray(classMembersTable.classId, classIds), eq(classMembersTable.role, "student"))) : [{ n: 0 }];
+  const [checked] = await db.select({ n: sql`count(*)`, avg: sql`avg(${assignmentSubmissionsTable.score})`, last: sql`max(${assignmentSubmissionsTable.updatedAt})` }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id)).where(and(eq(assignmentsTable.createdBy, viewer.id), eq(assignmentSubmissionsTable.status, "checked")));
+  const [assigned] = await db.select({ n: sql`count(*)`, last: sql`max(${assignmentsTable.createdAt})` }).from(assignmentsTable).where(eq(assignmentsTable.createdBy, viewer.id));
+  const perClass = classIds.length ? await db.select({ classId: assignmentsTable.classId, name: classesTable.name, avg: sql`avg(${assignmentSubmissionsTable.score})` }).from(assignmentSubmissionsTable).innerJoin(assignmentsTable, eq(assignmentSubmissionsTable.assignmentId, assignmentsTable.id)).innerJoin(classesTable, eq(assignmentsTable.classId, classesTable.id)).where(and(inArray(assignmentsTable.classId, classIds), sql`${assignmentSubmissionsTable.score} is not null`)).groupBy(assignmentsTable.classId, classesTable.name) : [];
+  const dates = [lessons?.last, checked?.last, assigned?.last].filter(Boolean).map((d) => new Date(d).getTime());
+  const toGrade = (score) => score === null || score === void 0 ? null : Math.round(Number(score)) / 10;
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    lessons: Number(lessons?.n ?? 0),
+    students: Number(students?.n ?? 0),
+    assignments: Number(assigned?.n ?? 0),
+    checked: Number(checked?.n ?? 0),
+    averageGrade: toGrade(checked?.avg),
+    classes: perClass.map((row) => ({ id: row.classId, name: row.name, averageGrade: toGrade(row.avg) })),
+    lastActivityAt: dates.length ? new Date(Math.max(...dates)) : null
+  });
+});
+var channelOf = (value) => value === "curator" || value === "school" ? value : null;
+var supportLimiter = createRateLimiter(40, 10 * 60 * 1e3, "Too many messages. Try again later.", "support", perSession4);
+var cleanBody = (value) => typeof value === "string" ? value.replace(/\s+$/g, "").trim().slice(0, 1500) : "";
+async function schoolOf(userId) {
+  const [row] = await db.select({ schoolId: schoolMembersTable.schoolId }).from(schoolMembersTable).where(eq(schoolMembersTable.userId, userId)).limit(1);
+  return row?.schoolId ?? null;
+}
+async function staffOf(channel, schoolId) {
+  if (channel === "curator") {
+    const rows2 = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, "platform_superadmin"));
+    return rows2.map((row) => row.id);
+  }
+  if (!schoolId) return [];
+  const rows = await db.select({ id: schoolMembersTable.userId }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), inArray(schoolMembersTable.role, ["school_director", "school_admin"])));
+  return rows.map((row) => row.id);
+}
+async function canStaff(viewer, channel, threadUserId) {
+  if (channel === "curator") return viewer.role === "platform_superadmin";
+  const schoolId = await schoolOf(threadUserId);
+  return Boolean(schoolId) && (await staffOf("school", schoolId)).includes(viewer.id);
+}
+var messageView = (row) => ({ id: row.id, body: row.body, fromStaff: row.fromStaff, createdAt: row.createdAt });
+router9.get("/support/thread", requireAuthenticatedRole(...everyRole5), async (req, res) => {
+  const viewer = viewerOf4(res);
+  const channel = channelOf(req.query.channel) ?? "curator";
+  const rows = await db.select().from(supportMessagesTable).where(and(eq(supportMessagesTable.threadUserId, viewer.id), eq(supportMessagesTable.channel, channel))).orderBy(supportMessagesTable.createdAt).limit(200);
+  await db.update(supportMessagesTable).set({ readByOwner: true }).where(and(eq(supportMessagesTable.threadUserId, viewer.id), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByOwner, false)));
+  const schoolId = channel === "school" ? await schoolOf(viewer.id) : null;
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ messages: rows.map(messageView), available: channel === "curator" || Boolean(schoolId) });
+});
+router9.post("/support/thread", requireAuthenticatedRole(...everyRole5), supportLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const channel = channelOf(isRecord8(req.body) ? req.body.channel : null) ?? "curator";
+  const body = cleanBody(isRecord8(req.body) ? req.body.body : "");
+  if (!body) {
+    res.status(400).json({ error: "Write a message." });
+    return;
+  }
+  const schoolId = await schoolOf(viewer.id);
+  if (channel === "school" && !schoolId) {
+    res.status(400).json({ error: "You are not linked to a school yet." });
+    return;
+  }
+  const [created] = await db.insert(supportMessagesTable).values({ threadUserId: viewer.id, channel, schoolId, authorId: viewer.id, fromStaff: false, body, readByOwner: true }).returning();
+  const [me] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+  await pushNotice(await staffOf(channel, schoolId), "messages", `\u041D\u043E\u0432\u043E\u0435 \u0441\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435: ${me?.name ?? ""}`, body.slice(0, 140), channel === "curator" ? "/admin" : "/school");
+  res.status(201).json({ message: messageView(created) });
+});
+router9.get("/support/inbox", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
+  const viewer = viewerOf4(res);
+  const channel = viewer.role === "platform_superadmin" ? channelOf(req.query.channel) ?? "curator" : "school";
+  let scope = sql`true`;
+  if (channel === "school") {
+    const schoolId = await schoolOf(viewer.id);
+    if (!schoolId) {
+      res.json({ threads: [] });
+      return;
+    }
+    scope = eq(supportMessagesTable.schoolId, schoolId);
+  }
+  const threads = await db.select({
+    userId: supportMessagesTable.threadUserId,
+    name: usersTable.username,
+    role: usersTable.role,
+    last: sql`max(${supportMessagesTable.createdAt})`,
+    unread: sql`count(*) filter (where not ${supportMessagesTable.readByStaff} and not ${supportMessagesTable.fromStaff})`,
+    preview: sql`(array_agg(${supportMessagesTable.body} order by ${supportMessagesTable.createdAt} desc))[1]`
+  }).from(supportMessagesTable).innerJoin(usersTable, eq(supportMessagesTable.threadUserId, usersTable.id)).where(and(eq(supportMessagesTable.channel, channel), scope)).groupBy(supportMessagesTable.threadUserId, usersTable.username, usersTable.role).orderBy(sql`max(${supportMessagesTable.createdAt}) desc`).limit(100);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ channel, threads: threads.map((row) => ({ ...row, unread: Number(row.unread), preview: (row.preview ?? "").slice(0, 120) })) });
+});
+router9.get("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), async (req, res) => {
+  const viewer = viewerOf4(res);
+  const userId = String(req.params.userId ?? "");
+  const channel = viewer.role === "platform_superadmin" ? channelOf(req.query.channel) ?? "curator" : "school";
+  if (!isValidUuid(userId) || !await canStaff(viewer, channel, userId)) {
+    res.status(403).json({ error: "Not your inbox." });
+    return;
+  }
+  const rows = await db.select().from(supportMessagesTable).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel))).orderBy(supportMessagesTable.createdAt).limit(200);
+  await db.update(supportMessagesTable).set({ readByStaff: true }).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByStaff, false)));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ messages: rows.map(messageView) });
+});
+router9.post("/support/inbox/:userId", requireAuthenticatedRole("platform_superadmin", "school_director", "school_admin"), supportLimiter, async (req, res) => {
+  const viewer = viewerOf4(res);
+  const userId = String(req.params.userId ?? "");
+  const channel = viewer.role === "platform_superadmin" ? channelOf(isRecord8(req.body) ? req.body.channel : null) ?? "curator" : "school";
+  const body = cleanBody(isRecord8(req.body) ? req.body.body : "");
+  if (!body) {
+    res.status(400).json({ error: "Write a message." });
+    return;
+  }
+  if (!isValidUuid(userId) || !await canStaff(viewer, channel, userId)) {
+    res.status(403).json({ error: "Not your inbox." });
+    return;
+  }
+  const [created] = await db.insert(supportMessagesTable).values({ threadUserId: userId, channel, schoolId: await schoolOf(userId), authorId: viewer.id, fromStaff: true, body, readByStaff: true }).returning();
+  await db.update(supportMessagesTable).set({ readByStaff: true }).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByStaff, false)));
+  await pushNotice([userId], "messages", channel === "curator" ? "\u041E\u0442\u0432\u0435\u0442 \u043A\u0443\u0440\u0430\u0442\u043E\u0440\u0430 EDUVERSE" : "\u041E\u0442\u0432\u0435\u0442 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u0448\u043A\u043E\u043B\u044B", body.slice(0, 140), "/support");
+  res.status(201).json({ message: messageView(created) });
+});
+var account_default = router9;
+
+// src/routes/requests.ts
+init_drizzle_orm();
+var import_express10 = __toESM(require_express2(), 1);
+init_src();
+var router10 = (0, import_express10.Router)();
+var viewerOf5 = (res) => res.locals.authenticatedUser;
+var OWNER_ROLES = ["education_admin", "ministry_admin", "platform_superadmin"];
+var SCHOOL_STAFF = ["school_director", "school_admin", ...OWNER_ROLES];
+var KINDS = ["enroll", "expel", "transfer", "graduate", "restore", "edit"];
+var STATUS_OF = { transfer: "transferred", graduate: "graduated", restore: "active" };
+var BLOCKED_STATUSES = ["expelled", "transferred", "disabled"];
+var isRecord9 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+async function schoolRoleOf2(userId, schoolId) {
+  const [row] = await db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.userId, userId))).limit(1);
+  return row?.role ?? null;
+}
+async function isSchoolStaff(viewer, schoolId) {
+  if (isGlobalAdminRole(viewer.role)) return true;
+  const role = await schoolRoleOf2(viewer.id, schoolId);
+  return role === "school_director" || role === "school_admin";
+}
+async function ownerIds() {
+  const rows = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, "platform_superadmin"));
+  return rows.map((row) => row.id);
+}
+async function schoolName(schoolId) {
+  const [row] = await db.select({ name: schoolsTable.name }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  return row?.name ?? "";
+}
+async function classIdIn(schoolId, className) {
+  const [existing] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+  if (existing) return existing.id;
+  const now = /* @__PURE__ */ new Date();
+  const year = String(now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1);
+  const grade = Math.max(0, Math.min(11, Number.parseInt(className, 10) || 1));
+  const [created] = await db.insert(classesTable).values({ schoolId, name: className, grade, academicYear: year }).onConflictDoNothing().returning({ id: classesTable.id });
+  if (created) return created.id;
+  const [again] = await db.select({ id: classesTable.id }).from(classesTable).where(and(eq(classesTable.schoolId, schoolId), eq(classesTable.name, className))).limit(1);
+  return again.id;
+}
+function readChange(kind, body) {
+  if (kind === "enroll") {
+    const rows = readRows(body);
+    if (rows.length === 0) return { payload: {}, error: "No valid rows." };
+    return { payload: { rows } };
+  }
+  if (kind === "edit") {
+    const payload = {};
+    const name = cleanText(body.name, 80);
+    const phone = cleanText(body.phone, 30);
+    const className = cleanText(body.className, 40);
+    if (name) payload.name = name;
+    if (phone !== null && phone !== void 0) payload.phone = phone;
+    if (className) payload.className = className;
+    const subjects = readSubjects(body.subjects);
+    if (subjects) payload.subjects = subjects;
+    if (Object.keys(payload).length === 0) return { payload, error: "Nothing to change." };
+    return { payload };
+  }
+  if (kind === "transfer") {
+    const toSchool = cleanText(body.toSchool, 120);
+    return { payload: toSchool ? { toSchool } : {} };
+  }
+  return { payload: {} };
+}
+async function applyChange(schoolId, kind, targetUserId, payload, reason, actorId) {
+  if (kind === "enroll") {
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    const result = await importPeople(schoolId, rows, actorId);
+    await writeAudit(schoolId, actorId, "enroll", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
+    return { created: result.created.map(({ userId: _id, ...rest }) => rest), skipped: result.skipped };
+  }
+  if (!targetUserId) throw new Error("No person.");
+  const [person] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.id, targetUserId)).limit(1);
+  if (!person) throw new Error("Person not found.");
+  const now = /* @__PURE__ */ new Date();
+  if (kind === "edit") {
+    const set = { updatedAt: now };
+    if (typeof payload.name === "string") {
+      set.username = payload.name;
+      set.usernameNormalized = payload.name.toLowerCase();
+    }
+    if (typeof payload.phone === "string") set.phone = payload.phone || null;
+    if (Array.isArray(payload.subjects) && person.role === "teacher") set.subjects = payload.subjects;
+    await db.update(usersTable).set(set).where(eq(usersTable.id, person.id));
+    if (typeof payload.className === "string" && (person.role === "student" || person.role === "teacher")) {
+      const schoolClassIds = (await db.select({ id: classesTable.id }).from(classesTable).where(eq(classesTable.schoolId, schoolId))).map((row) => row.id);
+      if (person.role === "student" && schoolClassIds.length) {
+        await db.delete(classMembersTable).where(and(eq(classMembersTable.userId, person.id), inArray(classMembersTable.classId, schoolClassIds)));
+      }
+      const classId = await classIdIn(schoolId, payload.className);
+      await db.insert(classMembersTable).values({ classId, userId: person.id, role: person.role }).onConflictDoNothing();
+    }
+    await writeAudit(schoolId, actorId, "edit", person.id, { from: person.name, ...payload });
+    return { edited: person.name };
+  }
+  const staff = person.role !== "student" && person.role !== "parent";
+  const status = kind === "expel" ? staff ? "disabled" : "expelled" : STATUS_OF[kind] ?? "active";
+  await db.update(usersTable).set({ status, statusReason: reason.slice(0, 300), statusChangedAt: now, updatedAt: now }).where(eq(usersTable.id, person.id));
+  if (BLOCKED_STATUSES.includes(status)) await db.delete(sessionsTable).where(eq(sessionsTable.userId, person.id));
+  await writeAudit(schoolId, actorId, kind, person.id, { name: person.name, status, reason, ...payload });
+  return { name: person.name, status };
+}
+router10.post("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const viewer = viewerOf5(res);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isSchoolStaff(viewer, schoolId)) {
+    res.status(403).json({ error: "Only the director or deputy sends requests." });
+    return;
+  }
+  const body = isRecord9(req.body) ? req.body : {};
+  const kind = body.kind;
+  if (!KINDS.includes(kind)) {
+    res.status(400).json({ error: "Unknown request." });
+    return;
+  }
+  const reason = cleanText(body.reason, 300) ?? "";
+  if ((kind === "expel" || kind === "transfer") && reason.length < 3) {
+    res.status(400).json({ error: "Write the reason (for example: the order number)." });
+    return;
+  }
+  let targetUserId = null;
+  if (kind !== "enroll") {
+    targetUserId = typeof body.userId === "string" && isValidUuid(body.userId) ? body.userId : null;
+    if (!targetUserId || !await schoolRoleOf2(targetUserId, schoolId)) {
+      res.status(400).json({ error: "This person is not in your school." });
+      return;
+    }
+    const targetRole = await schoolRoleOf2(targetUserId, schoolId);
+    if (targetRole === "school_director" && !isGlobalAdminRole(viewer.role)) {
+      res.status(403).json({ error: "Changes about the director are made by EDUVERSE." });
+      return;
+    }
+    if (targetRole === "school_admin" && targetUserId !== viewer.id && !isGlobalAdminRole(viewer.role) && await schoolRoleOf2(viewer.id, schoolId) !== "school_director") {
+      res.status(403).json({ error: "Only the director changes a deputy." });
+      return;
+    }
+  }
+  const change = readChange(kind, body);
+  if (change.error) {
+    res.status(400).json({ error: change.error });
+    return;
+  }
+  if (kind === "enroll" && change.payload.rows.some((row2) => row2.role === "school_director")) {
+    res.status(403).json({ error: "Only EDUVERSE adds a director." });
+    return;
+  }
+  if (kind === "enroll" && !isGlobalAdminRole(viewer.role) && await schoolRoleOf2(viewer.id, schoolId) !== "school_director" && change.payload.rows.some((row2) => row2.role === "school_admin")) {
+    res.status(403).json({ error: "Only the director adds a deputy." });
+    return;
+  }
+  let result;
+  try {
+    result = await applyChange(schoolId, kind, targetUserId, change.payload, reason, viewer.id);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error && !/failed query|duplicate key|violates|syntax error/i.test(error.message) ? error.message : "Could not make the change." });
+    return;
+  }
+  const stored = Array.isArray(result.created) ? { ...result, created: result.created.map(({ password: _pw, ...rest }) => rest) } : result;
+  const [row] = await db.insert(schoolRequestsTable).values({
+    schoolId,
+    authorId: viewer.id,
+    kind,
+    targetUserId,
+    payload: change.payload,
+    reason,
+    status: "approved",
+    decidedBy: viewer.id,
+    decidedAt: /* @__PURE__ */ new Date(),
+    result: stored
+  }).returning({ id: schoolRequestsTable.id });
+  const owners = await ownerIds();
+  const name = await schoolName(schoolId);
+  const what = { enroll: "\u043F\u0440\u0438\u043D\u044F\u043B\u0438 \u0443\u0447\u0435\u043D\u0438\u043A\u043E\u0432", expel: "\u043E\u0442\u0447\u0438\u0441\u043B\u0438\u043B\u0438 / \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u043B\u0438", transfer: "\u043F\u0435\u0440\u0435\u0432\u0435\u043B\u0438 \u0432 \u0434\u0440\u0443\u0433\u0443\u044E \u0448\u043A\u043E\u043B\u0443", graduate: "\u0432\u044B\u043F\u0443\u0441\u043A", restore: "\u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u043B\u0438", edit: "\u0438\u0441\u043F\u0440\u0430\u0432\u0438\u043B\u0438 \u0434\u0430\u043D\u043D\u044B\u0435" };
+  await pushNotice(owners, "messages", `\u0428\u043A\u043E\u043B\u0430: ${what[kind]}`, `${name}${reason ? ` \xB7 ${reason}` : ""}`, "/admin");
+  res.status(201).json({ id: row.id, status: "approved", result });
+});
+async function listRequests(where, limit = 200) {
+  const rows = await db.select({
+    id: schoolRequestsTable.id,
+    schoolId: schoolRequestsTable.schoolId,
+    schoolName: schoolsTable.name,
+    kind: schoolRequestsTable.kind,
+    targetUserId: schoolRequestsTable.targetUserId,
+    payload: schoolRequestsTable.payload,
+    reason: schoolRequestsTable.reason,
+    status: schoolRequestsTable.status,
+    decisionNote: schoolRequestsTable.decisionNote,
+    result: schoolRequestsTable.result,
+    createdAt: schoolRequestsTable.createdAt,
+    decidedAt: schoolRequestsTable.decidedAt,
+    authorId: schoolRequestsTable.authorId
+  }).from(schoolRequestsTable).innerJoin(schoolsTable, eq(schoolsTable.id, schoolRequestsTable.schoolId)).where(where).orderBy(desc(schoolRequestsTable.createdAt)).limit(limit);
+  const ids = [...new Set(rows.flatMap((row) => [row.targetUserId, row.authorId]).filter((id) => Boolean(id)))];
+  const names = ids.length ? await db.select({ id: usersTable.id, name: usersTable.username, role: usersTable.role }).from(usersTable).where(inArray(usersTable.id, ids)) : [];
+  const nameOf = new Map(names.map((row) => [row.id, row]));
+  return rows.map((row) => ({
+    ...row,
+    target: row.targetUserId ? nameOf.get(row.targetUserId) ?? null : null,
+    author: row.authorId ? nameOf.get(row.authorId)?.name ?? "" : ""
+  }));
+}
+router10.get("/schools/:schoolId/requests", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isSchoolStaff(viewerOf5(res), schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ requests: await listRequests(eq(schoolRequestsTable.schoolId, schoolId), 100) });
+});
+router10.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  if (!await isSchoolStaff(viewerOf5(res), schoolId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  const people = await db.select({ id: usersTable.id, name: usersTable.username, login: usersTable.login, role: schoolMembersTable.role, phone: usersTable.phone, subjects: usersTable.subjects, status: usersTable.status, statusReason: usersTable.statusReason, statusChangedAt: usersTable.statusChangedAt }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(eq(schoolMembersTable.schoolId, schoolId)).orderBy(usersTable.username);
+  const classIds = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
+  const memberships = classIds.length ? await db.select({ userId: classMembersTable.userId, classId: classMembersTable.classId }).from(classMembersTable).where(inArray(classMembersTable.classId, classIds.map((row) => row.id))) : [];
+  const className = new Map(classIds.map((row) => [row.id, row.name]));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    people: people.map((person) => ({ ...person, classes: memberships.filter((m) => m.userId === person.id).map((m) => className.get(m.classId) ?? "").filter(Boolean) })),
+    classes: classIds.map((row) => row.name).sort()
+  });
+});
+router10.get("/admin/requests", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const status = typeof req.query.status === "string" && ["pending", "approved", "rejected"].includes(req.query.status) ? req.query.status : null;
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ requests: await listRequests(status ? eq(schoolRequestsTable.status, status) : void 0) });
+});
+router10.post("/admin/requests/:id/:decision", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const id = String(req.params.id);
+  const decision = String(req.params.decision);
+  if (!isValidUuid(id) || decision !== "approve" && decision !== "reject") {
+    res.status(400).json({ error: "Invalid request." });
+    return;
+  }
+  const viewer = viewerOf5(res);
+  const note = cleanText(isRecord9(req.body) ? req.body.note : "", 300) ?? "";
+  const [request] = await db.update(schoolRequestsTable).set({ status: decision === "approve" ? "approved" : "rejected", decidedBy: viewer.id, decidedAt: /* @__PURE__ */ new Date(), decisionNote: note }).where(and(eq(schoolRequestsTable.id, id), eq(schoolRequestsTable.status, "pending"))).returning();
+  if (!request) {
+    res.status(409).json({ error: "This request was already decided." });
+    return;
+  }
+  let result = {};
+  if (decision === "approve") {
+    try {
+      result = await applyChange(request.schoolId, request.kind, request.targetUserId, request.payload, request.reason, viewer.id);
+    } catch (error) {
+      await db.update(schoolRequestsTable).set({ status: "pending", decidedBy: null, decidedAt: null }).where(eq(schoolRequestsTable.id, id));
+      res.status(400).json({ error: error instanceof Error && !/failed query|duplicate key|violates|syntax error/i.test(error.message) ? error.message : "Could not apply the request." });
+      return;
+    }
+    const stored = Array.isArray(result.created) ? { ...result, created: result.created.map(({ password: _pw, ...rest }) => rest) } : result;
+    await db.update(schoolRequestsTable).set({ result: stored }).where(eq(schoolRequestsTable.id, id));
+  } else {
+    await writeAudit(request.schoolId, viewer.id, `reject:${request.kind}`, request.targetUserId, { requestId: id, note });
+  }
+  if (request.authorId) {
+    const verdict = decision === "approve" ? "\u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430" : "\u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u0430";
+    await pushNotice([request.authorId], "messages", `\u0417\u0430\u044F\u0432\u043A\u0430 ${verdict}`, note, "/school");
+    await notifyUsers([request.authorId], (lang) => `${decision === "approve" ? "\u2705" : "\u274C"} <b>${decision === "approve" ? tl(lang, "Ariza tasdiqlandi", "\u0417\u0430\u044F\u0432\u043A\u0430 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0430", "Request approved") : tl(lang, "Ariza rad etildi", "\u0417\u0430\u044F\u0432\u043A\u0430 \u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u0430", "Request rejected")}</b>${note ? `
+${escapeHtml(note)}` : ""}`);
+  }
+  res.json({ status: request.status, result });
+});
+router10.patch("/admin/schools/:schoolId/people/:userId", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const userId = String(req.params.userId);
+  if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
+    res.status(400).json({ error: "Invalid identifier." });
+    return;
+  }
+  if (!await schoolRoleOf2(userId, schoolId)) {
+    res.status(404).json({ error: "This person is not in the school." });
+    return;
+  }
+  const body = isRecord9(req.body) ? req.body : {};
+  const kind = body.kind;
+  if (!KINDS.includes(kind) || kind === "enroll") {
+    res.status(400).json({ error: "Unknown change." });
+    return;
+  }
+  const change = readChange(kind, body);
+  if (change.error) {
+    res.status(400).json({ error: change.error });
+    return;
+  }
+  const result = await applyChange(schoolId, kind, userId, change.payload, cleanText(body.reason, 300) ?? "", viewerOf5(res).id);
+  res.json({ result });
+});
+router10.get("/admin/audit", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = typeof req.query.schoolId === "string" && isValidUuid(req.query.schoolId) ? req.query.schoolId : null;
+  const rows = await db.select({ id: auditLogTable.id, action: auditLogTable.action, details: auditLogTable.details, createdAt: auditLogTable.createdAt, actor: usersTable.username, schoolId: auditLogTable.schoolId }).from(auditLogTable).leftJoin(usersTable, eq(usersTable.id, auditLogTable.actorId)).where(schoolId ? eq(auditLogTable.schoolId, schoolId) : void 0).orderBy(desc(auditLogTable.createdAt)).limit(200);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ entries: rows });
+});
+router10.get("/me/plan", requireAuthenticatedRole("student", "teacher", "parent", ...SCHOOL_STAFF), async (_req, res) => {
+  const viewer = viewerOf5(res);
+  const plan = await userPlan(viewer.id, viewer.role);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(plan);
+});
+router10.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const body = isRecord9(req.body) ? req.body : {};
+  const plan = body.plan === "pro" || body.plan === "pilot" || body.plan === "free" ? body.plan : null;
+  const untilText = typeof body.until === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.until) ? body.until : null;
+  if (!plan) {
+    res.status(400).json({ error: "Plan must be free, pilot or pro." });
+    return;
+  }
+  if (plan === "pilot" && !untilText) {
+    res.status(400).json({ error: "A pilot needs an end date." });
+    return;
+  }
+  const until = untilText ? /* @__PURE__ */ new Date(`${untilText}T23:59:59+05:00`) : null;
+  const [row] = await db.update(schoolsTable).set({ plan, planUntil: until, updatedAt: /* @__PURE__ */ new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  if (!row) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  await writeAudit(schoolId, viewerOf5(res).id, "plan", null, { plan, until: untilText });
+  res.json({ plan, until });
+});
+router10.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo }).from(schoolsTable);
+  const ids = schools.map((school2) => school2.id);
+  const counts = ids.length ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids)) : [];
+  const now = Date.now();
+  const rows = schools.map((school2) => {
+    const until = school2.planUntil ? school2.planUntil.getTime() : null;
+    const daysLeft = until === null ? null : Math.ceil((until - now) / 864e5);
+    return {
+      ...school2,
+      planUntil: school2.planUntil ? school2.planUntil.toISOString() : null,
+      daysLeft,
+      students: counts.filter((row) => row.schoolId === school2.id && row.role === "student").length,
+      teachers: counts.filter((row) => row.schoolId === school2.id && row.role === "teacher").length
+    };
+  });
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ schools: rows });
+});
+var requests_default = router10;
+
+// src/routes/demo.ts
+init_drizzle_orm();
+var import_express11 = __toESM(require_express2(), 1);
+init_src();
+var router11 = (0, import_express11.Router)();
+var OWNER_ROLES2 = ["education_admin", "ministry_admin", "platform_superadmin"];
+var viewerOf6 = (res) => res.locals.authenticatedUser;
+var PUPILS_A = ["\u041A\u0430\u0440\u0438\u043C\u043E\u0432\u0430 \u0410\u0437\u0438\u0437\u0430 \u0420\u0443\u0441\u0442\u0430\u043C\u043E\u0432\u043D\u0430", "\u042E\u0441\u0443\u043F\u043E\u0432 \u0411\u0435\u043A\u0437\u043E\u0434 \u0410\u043B\u0438\u0435\u0432\u0438\u0447", "\u0418\u0441\u043C\u043E\u0438\u043B\u043E\u0432\u0430 \u0414\u0438\u043B\u043D\u043E\u0437\u0430 \u0428\u0430\u0432\u043A\u0430\u0442\u043E\u0432\u043D\u0430", "\u0422\u0443\u0440\u0441\u0443\u043D\u043E\u0432 \u0416\u0430\u0441\u0443\u0440 \u0411\u0430\u0445\u0442\u0438\u0451\u0440\u043E\u0432\u0438\u0447", "\u0421\u043E\u0431\u0438\u0440\u043E\u0432\u0430 \u041C\u0430\u043B\u0438\u043A\u0430 \u0410\u043D\u0432\u0430\u0440\u043E\u0432\u043D\u0430", "\u0420\u0430\u0445\u0438\u043C\u043E\u0432 \u0421\u0430\u0440\u0434\u043E\u0440 \u0423\u043B\u0443\u0433\u0431\u0435\u043A\u043E\u0432\u0438\u0447", "\u0410\u043B\u0438\u043C\u043E\u0432\u0430 \u041D\u0438\u0433\u043E\u0440\u0430 \u0424\u0430\u0440\u0445\u043E\u0434\u043E\u0432\u043D\u0430", "\u0421\u0430\u0434\u0443\u043B\u043B\u0430\u0435\u0432 \u0414\u0438\u0451\u0440\u0431\u0435\u043A \u0410\u043A\u043C\u0430\u043B\u043E\u0432\u0438\u0447", "\u041C\u0438\u0440\u0437\u0430\u0435\u0432\u0430 \u0421\u0435\u0432\u0438\u043D\u0447 \u041E\u0439\u0431\u0435\u043A\u043E\u0432\u043D\u0430", "\u0425\u043E\u043B\u043C\u0430\u0442\u043E\u0432 \u041E\u0442\u0430\u0431\u0435\u043A \u0420\u0430\u0441\u0443\u043B\u043E\u0432\u0438\u0447"];
+var PUPILS_B = ["\u0410\u0441\u0430\u0434\u043E\u0432\u0430 \u041B\u0430\u0439\u043B\u043E \u0418\u043A\u0440\u043E\u043C\u043E\u0432\u043D\u0430", "\u0418\u0441\u043C\u0430\u0438\u043B\u043E\u0432 \u0410\u0437\u0438\u0437\u0431\u0435\u043A \u0422\u0438\u043C\u0443\u0440\u043E\u0432\u0438\u0447", "\u041E\u043B\u0438\u043C\u043E\u0432\u0430 \u0414\u0438\u043B\u0434\u043E\u0440\u0430 \u041A\u0430\u043C\u043E\u043B\u043E\u0432\u043D\u0430", "\u0422\u043E\u0448\u043C\u0430\u0442\u043E\u0432 \u042D\u043B\u0431\u0435\u043A \u041D\u043E\u0434\u0438\u0440\u043E\u0432\u0438\u0447", "\u0410\u0431\u0434\u0443\u043B\u043B\u0430\u0435\u0432\u0430 \u0424\u0430\u0440\u0437\u043E\u043D\u0430 \u0411\u0430\u0445\u043E\u0434\u0438\u0440\u043E\u0432\u043D\u0430", "\u0416\u0443\u0440\u0430\u0435\u0432 \u0413\u0438\u0451\u0441\u0431\u0435\u043A \u0428\u0443\u0445\u0440\u0430\u0442\u043E\u0432\u0438\u0447", "\u0421\u0430\u0434\u0438\u043A\u043E\u0432\u0430 \u0413\u0443\u043B\u043D\u043E\u0437\u0430 \u042D\u0440\u043A\u0438\u043D\u043E\u0432\u043D\u0430", "\u0420\u0430\u0445\u0438\u043C\u043E\u0432 \u0425\u0443\u043C\u043E\u044E\u043D \u0410\u0437\u0430\u043C\u0430\u0442\u043E\u0432\u0438\u0447", "\u0419\u0443\u043B\u0434\u043E\u0448\u0435\u0432\u0430 \u0418\u0440\u043E\u0434\u0430\u0445\u043E\u043D \u041C\u0443\u0445\u0430\u043C\u043C\u0430\u0434\u043E\u0432\u043D\u0430", "\u0418\u0441\u0440\u043E\u0438\u043B\u043E\u0432 \u041A\u0430\u043C\u0440\u043E\u043D\u0431\u0435\u043A \u0416\u0430\u043C\u0448\u0438\u0434\u043E\u0432\u0438\u0447"];
+var fatherOf = (pupil) => {
+  const [surname, , patronymic] = pupil.split(" ");
+  const first = patronymic.replace(/(ович|евич|овна|евна)$/, "");
+  const male = surname.endsWith("\u0430") ? surname.slice(0, -1) : surname;
+  return `${male} ${first}`;
+};
+var phoneOf = (index2) => `+99890${String(1e6 + index2 * 7919).slice(-7)}`;
+var isoDay2 = (offset) => new Date(Date.now() - offset * 864e5).toISOString().slice(0, 10);
+router11.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
+  const viewer = viewerOf6(res);
+  const until = new Date(Date.now() + 90 * 864e5);
+  const [school2] = await db.insert(schoolsTable).values({ name: `\u0414\u0435\u043C\u043E-\u0448\u043A\u043E\u043B\u0430 EDUVERSE \xB7 ${(/* @__PURE__ */ new Date()).toLocaleDateString("ru-RU")}`, region: "\u0422\u0430\u0448\u043A\u0435\u043D\u0442", district: "\u042E\u043D\u0443\u0441\u0430\u0431\u0430\u0434", address: "\u0414\u0435\u043C\u043E", plan: "pilot", planUntil: until, isDemo: true }).returning({ id: schoolsTable.id, name: schoolsTable.name });
+  const schoolId = school2.id;
+  const rows = [
+    { role: "school_director", name: "\u0420\u0430\u0445\u0438\u043C\u043E\u0432\u0430 \u041D\u0438\u0433\u043E\u0440\u0430 \u0410\u043B\u0438\u0448\u0435\u0440\u043E\u0432\u043D\u0430", phone: "+998901112233" },
+    { role: "school_admin", name: "\u041A\u0430\u0440\u0438\u043C\u043E\u0432 \u0410\u043A\u043C\u0430\u043B \u0422\u043E\u0445\u0438\u0440\u043E\u0432\u0438\u0447", phone: "+998901112244" },
+    { role: "teacher", name: "\u0418\u0431\u0440\u0430\u0433\u0438\u043C\u043E\u0432\u0430 \u0428\u0430\u0445\u043D\u043E\u0437\u0430 \u0420\u0430\u0432\u0448\u0430\u043D\u043E\u0432\u043D\u0430", className: "7-\u0410", phone: "+998901112255" },
+    { role: "teacher", name: "\u0410\u0445\u043C\u0435\u0434\u043E\u0432 \u0424\u0430\u0440\u0440\u0443\u0445 \u0411\u0430\u0445\u0440\u043E\u043C\u043E\u0432\u0438\u0447", className: "7-\u0411", phone: "+998901112266" },
+    ...PUPILS_A.map((name) => ({ role: "student", name, className: "7-\u0410" })),
+    ...PUPILS_B.map((name) => ({ role: "student", name, className: "7-\u0411" })),
+    ...[...PUPILS_A, ...PUPILS_B].map((name, index2) => ({ role: "parent", name: fatherOf(name), childName: name, phone: phoneOf(index2) }))
+  ];
+  const { created } = await importPeople(schoolId, rows, viewer.id);
+  const classes = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
+  const classA = classes.find((item) => item.name === "7-\u0410").id;
+  const classB = classes.find((item) => item.name === "7-\u0411").id;
+  const teachers = created.filter((person) => person.role === "teacher");
+  for (const teacher of teachers) for (const classId of [classA, classB]) await db.insert(classMembersTable).values({ classId, userId: teacher.userId, role: "teacher" }).onConflictDoNothing();
+  const physicsTeacher = teachers[0].userId;
+  for (const [classId, done] of [[classA, 6], [classB, 4]]) {
+    for (let index2 = 0; index2 < done; index2 += 1) {
+      await db.insert(courseProgressTable).values({ classId, topicKey: `phys7-1.${index2 + 1}`, doneOn: isoDay2((done - index2) * 4), markedBy: physicsTeacher }).onConflictDoNothing();
+    }
+    await db.insert(coursePaceTable).values({ classId, book: "physics-7", lessonsPerWeek: 2 }).onConflictDoNothing();
+  }
+  const pupils = created.filter((person) => person.role === "student");
+  const statuses = ["present", "present", "present", "present", "late", "present", "absent", "present", "present", "excused"];
+  for (let day2 = 1; day2 <= 5; day2 += 1) {
+    for (let index2 = 0; index2 < pupils.length; index2 += 1) {
+      const pupil = pupils[index2];
+      await db.insert(attendanceTable).values({ classId: pupil.className === "7-\u0410" ? classA : classB, studentId: pupil.userId, markedBy: physicsTeacher, attendanceDate: isoDay2(day2), subject: "\u0424\u0438\u0437\u0438\u043A\u0430", status: statuses[(index2 + day2) % statuses.length] }).onConflictDoNothing();
+    }
+  }
+  const marks = [5, 4, 5, 3, 4, 5, 4, 5, 4, 5];
+  for (const classId of [classA, classB]) {
+    const classPupils = pupils.filter((pupil) => (pupil.className === "7-\u0410" ? classA : classB) === classId);
+    for (const [title, description] of [["\u0424\u0438\u0437\u0438\u043A\u0430 \xB7 \xA71.4 \u041B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u043D\u043E\u0435 \u043E\u0431\u043E\u0440\u0443\u0434\u043E\u0432\u0430\u043D\u0438\u0435", "\u041D\u0430\u0437\u043E\u0432\u0438\u0442\u0435 \u0442\u0440\u0438 \u043F\u0440\u0438\u0431\u043E\u0440\u0430 \u0438 \u0447\u0442\u043E \u043A\u0430\u0436\u0434\u044B\u0439 \u0438\u0437\u043C\u0435\u0440\u044F\u0435\u0442."], ["\u0424\u0438\u0437\u0438\u043A\u0430 \xB7 \xA71.5 \u0422\u0435\u0445\u043D\u0438\u043A\u0430 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438", "\u0421\u043E\u0441\u0442\u0430\u0432\u044C\u0442\u0435 5 \u043F\u0440\u0430\u0432\u0438\u043B \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0441\u0442\u0438 \u0432 \u043B\u0430\u0431\u043E\u0440\u0430\u0442\u043E\u0440\u0438\u0438."]]) {
+      const [task] = await db.insert(assignmentsTable).values({ classId, createdBy: physicsTeacher, title, subject: "\u0424\u0438\u0437\u0438\u043A\u0430", description, status: "assigned", dueAt: new Date(Date.now() + 3 * 864e5) }).returning({ id: assignmentsTable.id });
+      for (let index2 = 0; index2 < classPupils.length - 1; index2 += 1) {
+        const checked = index2 < 8;
+        await db.insert(assignmentSubmissionsTable).values({ assignmentId: task.id, studentId: classPupils[index2].userId, status: checked ? "checked" : "submitted", content: "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438, \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u0441\u0432\u043E\u0438\u043C\u0438 \u0441\u043B\u043E\u0432\u0430\u043C\u0438.", score: checked ? marks[index2] * 20 : null, feedback: checked ? "\u0425\u043E\u0440\u043E\u0448\u043E, \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0439\u0442\u0435." : "" }).onConflictDoNothing();
+      }
+    }
+  }
+  const today2 = [
+    { subject: "\u0425\u0438\u043C\u0438\u044F", title: "\xA71.1 \u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0445\u0438\u043C\u0438\u044F?", description: "\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u0434\u043E\u043C\u0430 5 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432 \u0438 \u043D\u0430\u043F\u0438\u0448\u0438\u0442\u0435, \u043A\u0430\u043A\u043E\u0435 \u0432\u0435\u0449\u0435\u0441\u0442\u0432\u043E \u0438\u043B\u0438 \u043C\u0430\u0442\u0435\u0440\u0438\u0430\u043B \u0432 \u043D\u0438\u0445 \u0433\u043B\u0430\u0432\u043D\u043E\u0435.", topicId: "course:chem7-1.1" },
+    { subject: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430", title: "\xA71.1 \u041F\u0440\u043E\u0441\u0442\u044B\u0435 \u0447\u0438\u0441\u043B\u0430, \u0440\u0430\u0437\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043D\u0430 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438, \u0441\u0442\u0435\u043F\u0435\u043D\u044C", description: "\u0420\u0430\u0437\u043B\u043E\u0436\u0438\u0442\u0435 \u043D\u0430 \u043F\u0440\u043E\u0441\u0442\u044B\u0435 \u043C\u043D\u043E\u0436\u0438\u0442\u0435\u043B\u0438 \u0447\u0438\u0441\u043B\u0430 84, 90 \u0438 126.", topicId: "course:math7-1.1" },
+    { subject: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", title: "\xA71.1 \u0427\u0442\u043E \u0438\u0437\u0443\u0447\u0430\u0435\u0442 \u0431\u0438\u043E\u043B\u043E\u0433\u0438\u044F?", description: "\u0417\u0430\u043F\u0438\u0448\u0438\u0442\u0435 5 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u0436\u0438\u0432\u043E\u0433\u043E \u0438 \u043F\u0440\u0438\u043C\u0435\u0440 \u043A \u043A\u0430\u0436\u0434\u043E\u043C\u0443.", topicId: "course:bio7-1.1" }
+  ];
+  const teacherB = teachers[1]?.userId ?? physicsTeacher;
+  for (const classId of [classA, classB]) {
+    const classPupils = pupils.filter((pupil) => (pupil.className === "7-\u0410" ? classA : classB) === classId);
+    for (const [at, task] of today2.entries()) {
+      const [row] = await db.insert(assignmentsTable).values({ classId, createdBy: at % 2 ? teacherB : physicsTeacher, title: task.title, subject: task.subject, description: task.description, topicId: task.topicId, topicTitle: task.title, status: "assigned", dueAt: new Date(Date.now() + 864e5) }).returning({ id: assignmentsTable.id });
+      for (let index2 = 0; index2 < classPupils.length; index2 += 1) {
+        if ((index2 + at) % 3 === 0) continue;
+        const checked = index2 % 4 === 0;
+        await db.insert(assignmentSubmissionsTable).values({ assignmentId: row.id, studentId: classPupils[index2].userId, status: checked ? "checked" : "submitted", content: "\u0420\u0435\u0448\u0435\u043D\u0438\u0435 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438.", score: checked ? [90, 70, 80, 100][index2 % 4] : null }).onConflictDoNothing();
+      }
+    }
+  }
+  for (const topicKey of ["phys7-2.1", "chem7-1.1", "math7-1.1", "bio7-1.1"]) {
+    const classPupils = pupils.filter((pupil) => pupil.className === "7-\u0410");
+    for (let index2 = 0; index2 < classPupils.length; index2 += 1) {
+      const reached = (index2 * 3 + topicKey.length) % 6;
+      for (let stage = 1; stage <= reached; stage += 1) {
+        const total = stage === 5 ? 9 : stage === 1 ? 3 : stage === 2 || stage === 3 ? 1 : 4;
+        const score = Math.max(0, total - (index2 + stage) % 3);
+        const answers = stage === 5 ? [{ id: "test:q0", ok: score > total - 1, q: "\u0412\u043E\u043F\u0440\u043E\u0441 1 \u0442\u0435\u0441\u0442\u0430" }, { id: "test:q1", ok: index2 % 2 === 0, q: "\u0412\u043E\u043F\u0440\u043E\u0441 2 \u0442\u0435\u0441\u0442\u0430" }] : [];
+        await db.insert(lessonStageProgressTable).values({ userId: classPupils[index2].userId, classId: classA, topicKey, stage, score: stage === 2 || stage === 3 ? 1 : score, total, done: true, answers }).onConflictDoNothing();
+      }
+    }
+  }
+  for (let day2 = 0; day2 < 4; day2 += 1) {
+    for (let index2 = 0; index2 < pupils.length; index2 += 2) {
+      const pupil = pupils[index2];
+      await db.insert(trainerResultsTable).values({ userId: pupil.userId, classId: pupil.className === "7-\u0410" ? classA : classB, day: isoDay2(day2), score: (index2 + day2) % 6, total: 5 }).onConflictDoNothing();
+    }
+  }
+  await fillDemoTimetable(schoolId);
+  await writeAudit(schoolId, viewer.id, "demo-create", null, { people: created.length });
+  res.status(201).json({ school: school2, created: created.map(({ userId: _id, ...rest }) => rest) });
+});
+router11.get("/admin/demo-schools", requireAuthenticatedRole(...OWNER_ROLES2), async (_req, res) => {
+  const rows = await db.select({ id: schoolsTable.id, name: schoolsTable.name, createdAt: schoolsTable.createdAt }).from(schoolsTable).where(eq(schoolsTable.isDemo, true));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ schools: rows });
+});
+router11.delete("/admin/demo-school/:schoolId", requireAuthenticatedRole(...OWNER_ROLES2), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const [school2] = await db.select({ isDemo: schoolsTable.isDemo }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school2) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  if (!school2.isDemo) {
+    res.status(403).json({ error: "Only a demo school can be deleted this way." });
+    return;
+  }
+  const members = (await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(eq(schoolMembersTable.schoolId, schoolId))).map((row) => row.userId);
+  const elsewhere = members.length ? (await db.select({ userId: schoolMembersTable.userId }).from(schoolMembersTable).where(and(inArray(schoolMembersTable.userId, members), notInArray(schoolMembersTable.schoolId, [schoolId])))).map((row) => row.userId) : [];
+  const onlyHere = members.filter((id) => !elsewhere.includes(id));
+  await db.transaction(async (tx) => {
+    await tx.delete(schoolsTable).where(eq(schoolsTable.id, schoolId));
+    if (onlyHere.length) await tx.delete(usersTable).where(and(inArray(usersTable.id, onlyHere), notInArray(usersTable.role, ["platform_superadmin", "education_admin", "ministry_admin"])));
+  });
+  await writeAudit(null, viewerOf6(res).id, "demo-delete", null, { schoolId, people: onlyHere.length });
+  res.json({ deleted: true, people: onlyHere.length });
+});
+var demo_default = router11;
+
+// src/routes/journal.ts
+init_drizzle_orm();
+var import_express12 = __toESM(require_express2(), 1);
+init_src();
+var router12 = (0, import_express12.Router)();
+var viewerOf7 = (res) => res.locals.authenticatedUser;
+var STAFF = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var DATE_RE2 = /^\d{4}-\d{2}-\d{2}$/;
+var SUBJECT_RE2 = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
+var ATTENDANCE_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+var kindOf = (value) => value === "behavior" ? "behavior" : "class";
+var keyOf = (subject, kind) => kind === "behavior" ? `behavior:${subject}` : subject;
+var limiter = createRateLimiter(600, 10 * 60 * 1e3, "Too many changes. Try again later.", "journal-marks");
+async function access(viewer, classId) {
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  if (!klass) return null;
+  if (isGlobalAdminRole(viewer.role)) return { schoolId: klass.schoolId, manager: true };
+  const [[school2], [member]] = await Promise.all([
+    db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1),
+    db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1)
+  ]);
+  if (!canManageClass(viewer.role, school2?.role, member?.role)) return null;
+  const manager = school2?.role === "school_director" || school2?.role === "school_admin";
+  return { schoolId: klass.schoolId, manager };
+}
+async function subjectsFor(viewer, classId, manager) {
+  const slots = await db.select({ subject: timetableSlotsTable.subject, weekday: timetableSlotsTable.weekday, teacherId: timetableSlotsTable.teacherId }).from(timetableSlotsTable).where(eq(timetableSlotsTable.classId, classId));
+  const mine = manager ? slots : slots.filter((slot) => slot.teacherId === viewer.id);
+  const subjects = [...new Set(mine.map((slot) => slot.subject))];
+  return { slots, subjects: subjects.length || slots.length ? subjects : ["math", "physics", "chemistry", "biology"] };
+}
+function lessonDates(weekdays, today2, weeks = 6) {
+  const out = [];
+  const end = /* @__PURE__ */ new Date(`${today2}T12:00:00Z`);
+  for (let back = weeks * 7; back >= 0; back -= 1) {
+    const day2 = new Date(end.getTime() - back * 864e5);
+    const weekday = day2.getUTCDay() === 0 ? 7 : day2.getUTCDay();
+    if (weekdays.has(weekday)) out.push(day2.toISOString().slice(0, 10));
+  }
+  return out;
+}
+router12.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const viewer = viewerOf7(res);
+  const allowed = await access(viewer, classId);
+  if (!allowed) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const { slots, subjects } = await subjectsFor(viewer, classId, allowed.manager);
+  const wanted = String(req.query.subject ?? "");
+  const subject = subjects.includes(wanted) ? wanted : subjects[0] ?? "";
+  const kind = kindOf(req.query.kind);
+  const key = keyOf(subject, kind);
+  const today2 = tashkentNow().date;
+  const students = await db.select({ id: usersTable.id, name: usersTable.username, status: usersTable.status }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
+  const weekdays = new Set(slots.filter((slot) => slot.subject === subject).map((slot) => slot.weekday));
+  const dates = weekdays.size ? lessonDates(weekdays, today2) : [];
+  const from = dates[0] ?? today2;
+  const [marks, absences] = subject ? await Promise.all([
+    db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, key), gte(journalMarksTable.date, from))),
+    db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today2)))
+  ]) : [[], []];
+  const allDates = [.../* @__PURE__ */ new Set([...dates, ...marks.map((mark) => mark.date)])].sort();
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    subject,
+    subjects,
+    kind,
+    today: today2,
+    dates: allDates,
+    students: students.filter((student) => !student.status || student.status === "active").map(({ id, name }) => ({ id, name })),
+    marks,
+    absences: absences.map((row) => ({ studentId: row.studentId, date: String(row.date).slice(0, 10) }))
+  });
+});
+router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limiter, async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const viewer = viewerOf7(res);
+  const allowed = await access(viewer, classId);
+  if (!allowed) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const body = typeof req.body === "object" && req.body ? req.body : {};
+  const subject = typeof body.subject === "string" ? body.subject.trim() : "";
+  const date2 = typeof body.date === "string" ? body.date : "";
+  const studentId = typeof body.studentId === "string" ? body.studentId : "";
+  const kind = kindOf(body.kind);
+  const absent = kind === "class" && body.absent === true;
+  const mark = body.mark === null || body.mark === void 0 ? null : Number(body.mark);
+  const realDate = DATE_RE2.test(date2) && !Number.isNaN(Date.parse(`${date2}T12:00:00Z`)) && (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).toISOString().slice(0, 10) === date2;
+  if (!SUBJECT_RE2.test(subject) || !realDate || !isValidUuid(studentId)) {
+    res.status(400).json({ error: "Invalid mark." });
+    return;
+  }
+  if (mark !== null && (!Number.isInteger(mark) || mark < 2 || mark > 10)) {
+    res.status(400).json({ error: "A mark is from 2 to 10." });
+    return;
+  }
+  if (date2 > tashkentNow().date) {
+    res.status(400).json({ error: "A mark cannot be given ahead of the lesson." });
+    return;
+  }
+  const { subjects } = await subjectsFor(viewer, classId, allowed.manager);
+  if (!subjects.includes(subject)) {
+    res.status(403).json({ error: "You do not teach this subject in this class." });
+    return;
+  }
+  const key = keyOf(subject, kind);
+  const [pupil] = await db.select({ id: classMembersTable.id }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))).limit(1);
+  if (!pupil) {
+    res.status(404).json({ error: "This pupil is not in the class." });
+    return;
+  }
+  const [previous] = await db.select({ mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date2))).limit(1);
+  const changed = !previous || previous.mark !== (absent ? null : mark) || previous.absent !== absent;
+  if (mark === null && !absent) {
+    await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date2)));
+  } else {
+    await db.insert(journalMarksTable).values({ classId, studentId, subject: key, date: date2, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
+  }
+  if ((mark !== null || absent) && changed) {
+    const SUBJECT_NAME2 = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+    const day2 = date2.split("-").reverse().join(".");
+    await notifyFamily(studentId, (lang, name) => absent ? `\u26A0\uFE0F <b>${tl(lang, "Jurnalda \xABnb\xBB (kelmadi)", "\u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB (\u043D\u0435 \u0431\u044B\u043B \u043D\u0430 \u0443\u0440\u043E\u043A\u0435)", "Absent (\xABab\xBB) in the journal")}</b>
+\u{1F464} ${name}
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}` : `${kind === "behavior" ? "\u{1F642}" : "\u{1F4D8}"} <b>${kind === "behavior" ? tl(lang, "Xulq", "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "Behaviour") : tl(lang, "Darsdagi baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A", "Lesson mark")}: ${mark}/10</b>
+\u{1F464} ${name}
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}`, true);
+    await pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME2[subject] ?? subject}` : `${kind === "behavior" ? "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435" : "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A"}: ${mark}/10`, `${SUBJECT_NAME2[subject] ?? subject}, ${day2}`, "/grades");
+  }
+  res.json({ ok: true });
+});
+router12.get("/me/marks", requireAuthenticatedRole("student"), async (_req, res) => {
+  const viewer = viewerOf7(res);
+  const rows = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(eq(journalMarksTable.studentId, viewer.id));
+  rows.sort((a, b) => b.date.localeCompare(a.date));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ marks: rows.slice(0, 200) });
+});
+var journal_default = router12;
+
+// src/routes/ai-tools.ts
+init_drizzle_orm();
+var import_express13 = __toESM(require_express2(), 1);
+init_src();
+init_ai_content();
+var router13 = (0, import_express13.Router)();
+var viewerOf8 = (res) => res.locals.authenticatedUser;
+var perSession5 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var everyRole6 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var explainLimiter = createRateLimiter(40, 10 * 60 * 1e3, "Too many questions. Wait a few minutes.", "ai-explain", perSession5);
+var testLimiter = createRateLimiter(12, 60 * 60 * 1e3, "Too many tests. Try again later.", "ai-practice", perSession5);
+var COURSE2 = book_topics_default;
+var langOf = (value) => value === "uz" || value === "en" ? value : "ru";
+router13.post("/ai/explain", requireAuthenticatedRole(...everyRole6), explainLimiter, async (req, res) => {
+  const body = typeof req.body === "object" && req.body ? req.body : {};
+  const word = typeof body.word === "string" ? body.word.trim().slice(0, 60) : "";
+  if (word.length < 2) {
+    res.status(400).json({ error: "Write a word." });
+    return;
+  }
+  const topicKey = typeof body.topicKey === "string" ? body.topicKey : "";
+  let topic = "";
+  let subject = "";
+  for (const book of COURSE2) {
+    const found = book.topics.find((item) => item.key === topicKey);
+    if (found) {
+      topic = `\xA7${found.code} ${found.title}`;
+      subject = book.subject;
+      break;
+    }
+  }
+  const answer = await explainWord(word, topic, subject, langOf(body.lang));
+  if (!answer) {
+    res.status(503).json({ error: "The helper is busy. Try again in a minute." });
+    return;
+  }
+  res.json(answer);
+});
+router13.post("/me/practice-test", requireAuthenticatedRole("student"), testLimiter, async (req, res) => {
+  const viewer = viewerOf8(res);
+  const body = typeof req.body === "object" && req.body ? req.body : {};
+  const classIds = (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, viewer.id), eq(classMembersTable.role, "student")))).map((row) => row.id);
+  if (!classIds.length) {
+    res.status(404).json({ error: "You are not in a class yet." });
+    return;
+  }
+  const [marks, tests, progress] = await Promise.all([
+    db.select({ subject: journalMarksTable.subject, mark: journalMarksTable.mark }).from(journalMarksTable).where(eq(journalMarksTable.studentId, viewer.id)),
+    db.select({ subject: trainerTestsTable.subject, score: trainerTestsTable.score, total: trainerTestsTable.total }).from(trainerTestsTable).where(eq(trainerTestsTable.userId, viewer.id)).orderBy(desc(trainerTestsTable.day)).limit(30),
+    db.select({ topicKey: courseProgressTable.topicKey, doneOn: courseProgressTable.doneOn }).from(courseProgressTable).where(inArray(courseProgressTable.classId, classIds)).orderBy(desc(courseProgressTable.doneOn))
+  ]);
+  const weakness = /* @__PURE__ */ new Map();
+  for (const subject of ["math", "physics", "chemistry", "biology"]) {
+    const own = marks.filter((row) => row.subject === subject && typeof row.mark === "number").map((row) => row.mark);
+    const tried = tests.filter((row) => row.subject === subject);
+    const average = own.length ? own.reduce((sum, mark) => sum + mark, 0) / own.length / 2 : 4.5;
+    const share = tried.length ? tried.reduce((sum, row) => sum + row.score / Math.max(1, row.total), 0) / tried.length : 0.8;
+    weakness.set(subject, 5 - average + (1 - share) * 3);
+  }
+  const only = typeof body.subject === "string" && weakness.has(body.subject) ? body.subject : null;
+  const subjects = only ? [only] : [...weakness.entries()].sort((a, b) => b[1] - a[1]).map(([subject]) => subject);
+  const picked = [];
+  for (const subject of subjects) {
+    const book = COURSE2.find((item) => item.subject === subject);
+    if (!book) continue;
+    for (const row of progress) {
+      const topic = book.topics.find((item) => item.key === row.topicKey);
+      if (topic && !picked.some((item) => item.key === topic.key)) {
+        picked.push({ subject, title: `\xA7${topic.code} ${topic.title}`, essence: topic.essence ?? "", key: topic.key });
+        if (picked.filter((item) => item.subject === subject).length >= (only ? 3 : 2)) break;
+      }
+    }
+    if (picked.length >= 3) break;
+  }
+  if (!picked.length) {
+    res.status(404).json({ error: "No covered topics yet." });
+    return;
+  }
+  const questions = await generatePracticeTest(picked, langOf(body.lang));
+  if (!questions) {
+    res.status(503).json({ error: "The helper is busy. Try again in a minute." });
+    return;
+  }
+  res.json({ topics: picked.map(({ subject, title, key }) => ({ subject, title, key })), questions });
+});
+var ai_tools_default = router13;
+
+// src/routes/lessons.ts
+init_drizzle_orm();
+var import_express14 = __toESM(require_express2(), 1);
+init_src();
+init_ai_content();
+var router14 = (0, import_express14.Router)();
+var viewerOf9 = (res) => res.locals.authenticatedUser;
+var everyRole7 = ["student", "teacher", "parent", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var staffRoles2 = ["teacher", "school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
+var perSession6 = (req) => {
+  const token = req.cookies?.["eduverse.sid"];
+  return typeof token === "string" && token ? `sid:${token.slice(0, 64)}` : `ip:${req.ip ?? "unknown"}`;
+};
+var isRecord10 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var TOPIC_RE2 = /^[a-z0-9][a-z0-9.\-]{1,39}$/;
+var str2 = (value, max) => typeof value === "string" ? value.trim().slice(0, max) : "";
+var COURSE3 = book_topics_default;
+function topicOf(key) {
+  for (const book of COURSE3) {
+    const topic = book.topics.find((item) => item.key === key);
+    if (topic) return { book, topic };
+  }
+  return null;
+}
+var saveLimiter = createRateLimiter(600, 10 * 60 * 1e3, "Too many saves. Wait a minute.", "lesson-progress", perSession6);
+var liveLimiter = createRateLimiter(900, 10 * 60 * 1e3, "Too many requests. Wait a minute.", "lesson-live", perSession6);
+var helpLimiter = createRateLimiter(40, 10 * 60 * 1e3, "Too many questions. Wait a few minutes.", "lesson-help", perSession6);
+var contentLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many saves. Wait a minute.", "lesson-content", perSession6);
+async function classAccess2(viewer, classId) {
+  const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
+  if (!klass) return { read: false, edit: false, student: false };
+  if (isGlobalAdminRole(viewer.role)) return { read: true, edit: true, student: false };
+  const [[schoolRow], [classRow]] = await Promise.all([
+    db.select({ role: schoolMembersTable.role }).from(schoolMembersTable).where(and(eq(schoolMembersTable.schoolId, klass.schoolId), eq(schoolMembersTable.userId, viewer.id))).limit(1),
+    db.select({ role: classMembersTable.role }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.userId, viewer.id))).limit(1)
+  ]);
+  const edit = canManageClass(viewer.role, schoolRow?.role ?? null, classRow?.role ?? null);
+  return { read: edit || Boolean(classRow), edit, student: classRow?.role === "student" };
+}
+async function studentClassIds(userId) {
+  return (await db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, userId), eq(classMembersTable.role, "student")))).map((row) => row.id);
+}
+function cleanAnswers(value) {
+  if (!Array.isArray(value) || value.length > 80) return null;
+  const out = [];
+  for (const item of value) {
+    if (!isRecord10(item)) return null;
+    const id = str2(item.id, 60);
+    if (!id || typeof item.ok !== "boolean") return null;
+    const answer = { id, ok: item.ok };
+    const v = str2(item.v, 300);
+    const q = str2(item.q, 300);
+    if (v) answer.v = v;
+    if (q) answer.q = q;
+    out.push(answer);
+  }
+  return out;
+}
+router14.get("/me/lesson-progress/:topicKey", requireAuthenticatedRole(...everyRole7), async (req, res) => {
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!TOPIC_RE2.test(topicKey)) {
+    res.status(400).json({ error: "Invalid topic." });
+    return;
+  }
+  const rows = await db.select({ stage: lessonStageProgressTable.stage, score: lessonStageProgressTable.score, total: lessonStageProgressTable.total, done: lessonStageProgressTable.done, answers: lessonStageProgressTable.answers, attempts: lessonStageProgressTable.attempts, updatedAt: lessonStageProgressTable.updatedAt }).from(lessonStageProgressTable).where(and(eq(lessonStageProgressTable.userId, viewerOf9(res).id), eq(lessonStageProgressTable.topicKey, topicKey))).orderBy(asc(lessonStageProgressTable.stage));
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ stages: rows });
+});
+router14.put("/me/lesson-progress/:topicKey/:stage", requireAuthenticatedRole(...everyRole7), saveLimiter, async (req, res) => {
+  const topicKey = String(req.params.topicKey ?? "");
+  const stage = Number.parseInt(String(req.params.stage ?? ""), 10);
+  const body = isRecord10(req.body) ? req.body : {};
+  const answers = cleanAnswers(body.answers ?? []);
+  const score = Number(body.score);
+  const total = Number(body.total);
+  if (!TOPIC_RE2.test(topicKey) || !topicOf(topicKey) || !(stage >= 1 && stage <= 7) || !answers || !Number.isInteger(score) || !Number.isInteger(total) || score < 0 || total < 0 || score > total || total > 200) {
+    res.status(400).json({ error: "Invalid result." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  const done = body.done === true;
+  let classId = null;
+  if (viewer.role === "student") {
+    const wanted = str2(body.classId, 40);
+    const own = await studentClassIds(viewer.id);
+    classId = own.includes(wanted) ? wanted : own[0] ?? null;
+  }
+  const [row] = await db.insert(lessonStageProgressTable).values({ userId: viewer.id, classId, topicKey, stage, score, total, done, answers }).onConflictDoUpdate({
+    target: [lessonStageProgressTable.userId, lessonStageProgressTable.topicKey, lessonStageProgressTable.stage],
+    set: {
+      score,
+      total,
+      answers,
+      classId,
+      // once a stage is done it stays done; a retry keeps counting attempts
+      done: sql`${lessonStageProgressTable.done} OR ${done}`,
+      attempts: sql`${lessonStageProgressTable.attempts} + 1`,
+      updatedAt: /* @__PURE__ */ new Date()
+    }
+  }).returning({ stage: lessonStageProgressTable.stage, score: lessonStageProgressTable.score, total: lessonStageProgressTable.total, done: lessonStageProgressTable.done, attempts: lessonStageProgressTable.attempts });
+  res.json({ saved: row });
+});
+router14.get("/classes/:classId/lesson-progress/:topicKey", requireAuthenticatedRole(...staffRoles2), async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!isValidUuid(classId) || !TOPIC_RE2.test(topicKey)) {
+    res.status(400).json({ error: "Invalid class or topic." });
+    return;
+  }
+  const access2 = await classAccess2(viewerOf9(res), classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher sees this." });
+    return;
+  }
+  const students = await db.select({ id: usersTable.id, name: usersTable.username }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username));
+  const ids = students.map((item) => item.id);
+  const rows = ids.length ? await db.select({ userId: lessonStageProgressTable.userId, stage: lessonStageProgressTable.stage, score: lessonStageProgressTable.score, total: lessonStageProgressTable.total, done: lessonStageProgressTable.done, answers: lessonStageProgressTable.answers, updatedAt: lessonStageProgressTable.updatedAt }).from(lessonStageProgressTable).where(and(inArray(lessonStageProgressTable.userId, ids), eq(lessonStageProgressTable.topicKey, topicKey))) : [];
+  const questions = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    for (const answer of Array.isArray(row.answers) ? row.answers : []) {
+      const entry = questions.get(answer.id) ?? { id: answer.id, q: answer.q ?? "", right: 0, wrong: 0 };
+      if (answer.ok) entry.right += 1;
+      else entry.wrong += 1;
+      if (!entry.q && answer.q) entry.q = answer.q;
+      questions.set(answer.id, entry);
+    }
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({
+    students: students.map((student) => ({
+      id: student.id,
+      name: student.name,
+      stages: rows.filter((row) => row.userId === student.id).map(({ stage, score, total, done, updatedAt }) => ({ stage, score, total, done, updatedAt }))
+    })),
+    questions: [...questions.values()].sort((a, b) => b.wrong - a.wrong).slice(0, 40)
+  });
+});
+var MAX_IMAGE = 450 * 1024;
+var urlOk = (value) => /^https:\/\/[^\s"'<>]{4,600}$/.test(value);
+var imageOk = (value) => urlOk(value) || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value) && value.length <= MAX_IMAGE;
+function cleanContent(value) {
+  if (!isRecord10(value)) return null;
+  const intro = isRecord10(value.intro) ? { title: str2(value.intro.title, 140), text: str2(value.intro.text, 1500) } : { title: "", text: "" };
+  const blocks = [];
+  if (Array.isArray(value.blocks)) {
+    for (const item of value.blocks.slice(0, 20)) {
+      if (!isRecord10(item)) return null;
+      const id = str2(item.id, 40) || Math.random().toString(36).slice(2, 10);
+      const title = str2(item.title, 140);
+      if (item.kind === "text") {
+        const text2 = str2(item.text, 3e3);
+        if (text2) blocks.push({ id, kind: "text", title, text: text2 });
+      } else if (item.kind === "video" || item.kind === "model") {
+        const url = str2(item.url, 600);
+        if (!urlOk(url)) return null;
+        blocks.push({ id, kind: item.kind, title, url });
+      } else if (item.kind === "image") {
+        const url = typeof item.url === "string" ? item.url.trim() : "";
+        if (!imageOk(url)) return null;
+        blocks.push({ id, kind: "image", title, url });
+      } else return null;
+    }
+  }
+  const questions = [];
+  if (Array.isArray(value.questions)) {
+    for (const item of value.questions.slice(0, 20)) {
+      if (!isRecord10(item)) return null;
+      const prompt = str2(item.prompt, 500);
+      const choices = Array.isArray(item.choices) ? item.choices.map((choice) => str2(choice, 200)).filter(Boolean).slice(0, 6) : [];
+      const correct = Number(item.correct);
+      if (!prompt || choices.length < 2 || !Number.isInteger(correct) || correct < 0 || correct >= choices.length) return null;
+      questions.push({ id: str2(item.id, 40) || Math.random().toString(36).slice(2, 10), prompt, choices, correct, explain: str2(item.explain, 600) });
+    }
+  }
+  const minutes = Array.isArray(value.minutes) ? value.minutes.slice(0, 7).map((item) => Math.max(0, Math.min(45, Math.round(Number(item) || 0)))) : [];
+  const content = { intro, blocks, questions, minutes, homework: str2(value.homework, 1500) };
+  return JSON.stringify(content).length <= 2e6 ? content : null;
+}
+router14.get("/lesson-content/:topicKey", requireAuthenticatedRole(...everyRole7), async (req, res) => {
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!TOPIC_RE2.test(topicKey)) {
+    res.status(400).json({ error: "Invalid topic." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  res.setHeader("Cache-Control", "private, no-store");
+  let teacherIds = [viewer.id];
+  if (viewer.role === "student") {
+    const classIds = await studentClassIds(viewer.id);
+    const wanted = str2(req.query.classId, 40);
+    const scope = classIds.includes(wanted) ? [wanted] : classIds;
+    teacherIds = scope.length ? (await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, scope), eq(classMembersTable.role, "teacher")))).map((row2) => row2.id) : [];
+  }
+  if (!teacherIds.length) {
+    res.json({ content: null });
+    return;
+  }
+  const [row] = await db.select({ content: lessonContentTable.content, teacherId: lessonContentTable.teacherId, updatedAt: lessonContentTable.updatedAt, name: usersTable.username }).from(lessonContentTable).innerJoin(usersTable, eq(usersTable.id, lessonContentTable.teacherId)).where(and(inArray(lessonContentTable.teacherId, teacherIds), eq(lessonContentTable.topicKey, topicKey))).orderBy(desc(lessonContentTable.updatedAt)).limit(1);
+  res.json({ content: row ? row.content : null, author: row ? row.name : null, updatedAt: row?.updatedAt ?? null, own: row?.teacherId === viewer.id });
+});
+router14.put("/me/lesson-content/:topicKey", requireAuthenticatedRole("teacher", "school_director", "school_admin"), contentLimiter, async (req, res) => {
+  const topicKey = String(req.params.topicKey ?? "");
+  if (!TOPIC_RE2.test(topicKey) || !topicOf(topicKey)) {
+    res.status(400).json({ error: "Invalid topic." });
+    return;
+  }
+  const content = cleanContent(isRecord10(req.body) ? req.body.content : null);
+  if (!content) {
+    res.status(400).json({ error: "Check the blocks: links must start with https://, pictures up to 450 KB, a question needs 2 answers." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  await db.insert(lessonContentTable).values({ teacherId: viewer.id, topicKey, content }).onConflictDoUpdate({ target: [lessonContentTable.teacherId, lessonContentTable.topicKey], set: { content, updatedAt: /* @__PURE__ */ new Date() } });
+  res.json({ content });
+});
+function cleanLiveQuestion(value) {
+  if (value === null) return null;
+  if (!isRecord10(value)) return void 0;
+  const id = str2(value.id, 60);
+  const prompt = str2(value.prompt, 500);
+  const choices = Array.isArray(value.choices) ? value.choices.map((item) => str2(item, 200)).filter(Boolean).slice(0, 6) : [];
+  const correct = Number(value.correct);
+  if (!id || !prompt || choices.length < 2 || !Number.isInteger(correct) || correct < -1 || correct >= choices.length) return void 0;
+  return { id, prompt, choices, correct };
+}
+var LIVE_FRESH_MS = 3 * 3600 * 1e3;
+async function liveView(classId, canSeeAll, viewerId) {
+  const [live] = await db.select().from(lessonLiveTable).where(eq(lessonLiveTable.classId, classId)).limit(1);
+  if (!live || !live.active || Date.now() - live.updatedAt.getTime() > LIVE_FRESH_MS) return { live: null };
+  const question = live.question;
+  const [students] = await db.select({ count: sql`count(*)::int` }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")));
+  let stats = null;
+  let mine = null;
+  if (question) {
+    const answers = await db.select({ userId: lessonLiveAnswersTable.userId, choice: lessonLiveAnswersTable.choice, correct: lessonLiveAnswersTable.correct }).from(lessonLiveAnswersTable).where(and(eq(lessonLiveAnswersTable.classId, classId), eq(lessonLiveAnswersTable.questionId, question.id)));
+    mine = answers.find((item) => item.userId === viewerId)?.choice ?? null;
+    if (canSeeAll || live.reveal) {
+      const counts = question.choices.map((_, index2) => answers.filter((item) => item.choice === index2).length);
+      stats = { counts, answered: answers.length, right: answers.filter((item) => item.correct).length };
+    } else {
+      stats = { counts: [], answered: answers.length, right: 0 };
+    }
+  }
+  return {
+    live: {
+      topicKey: live.topicKey,
+      stage: live.stage,
+      reveal: live.reveal,
+      updatedAt: live.updatedAt,
+      students: students?.count ?? 0,
+      // pupils never get the right answer before the teacher shows it
+      question: question ? { id: question.id, prompt: question.prompt, choices: question.choices, correct: canSeeAll || live.reveal ? question.correct : -1 } : null,
+      stats,
+      mine
+    }
+  };
+}
+router14.get("/classes/:classId/live", requireAuthenticatedRole(...everyRole7), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  const access2 = await classAccess2(viewer, classId);
+  if (!access2.read) {
+    res.status(403).json({ error: "You are not in this class." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(await liveView(classId, access2.edit, viewer.id));
+});
+router14.put("/classes/:classId/live", requireAuthenticatedRole(...staffRoles2), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const body = isRecord10(req.body) ? req.body : {};
+  const topicKey = str2(body.topicKey, 40);
+  const stage = Number(body.stage);
+  const question = cleanLiveQuestion(body.question ?? null);
+  if (!isValidUuid(classId) || !TOPIC_RE2.test(topicKey) || !(Number.isInteger(stage) && stage >= 1 && stage <= 7) || question === void 0) {
+    res.status(400).json({ error: "Invalid board state." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  const access2 = await classAccess2(viewer, classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher controls the board." });
+    return;
+  }
+  const values = { teacherId: viewer.id, topicKey, stage, question, reveal: body.reveal === true, active: body.active !== false, updatedAt: /* @__PURE__ */ new Date() };
+  await db.insert(lessonLiveTable).values({ classId, ...values }).onConflictDoUpdate({ target: lessonLiveTable.classId, set: values });
+  res.json(await liveView(classId, true, viewer.id));
+});
+router14.post("/classes/:classId/live/answer", requireAuthenticatedRole("student"), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const body = isRecord10(req.body) ? req.body : {};
+  const choice = Number(body.choice);
+  const questionId = str2(body.questionId, 60);
+  if (!isValidUuid(classId) || !questionId || !Number.isInteger(choice) || choice < 0 || choice > 5) {
+    res.status(400).json({ error: "Invalid answer." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  const access2 = await classAccess2(viewer, classId);
+  if (!access2.student) {
+    res.status(403).json({ error: "You are not in this class." });
+    return;
+  }
+  const [live] = await db.select().from(lessonLiveTable).where(eq(lessonLiveTable.classId, classId)).limit(1);
+  const question = live?.question;
+  if (!live || !live.active || !question || question.id !== questionId || choice >= question.choices.length) {
+    res.status(409).json({ error: "This question is closed." });
+    return;
+  }
+  if (live.reveal) {
+    res.status(409).json({ error: "The answer is already shown." });
+    return;
+  }
+  await db.insert(lessonLiveAnswersTable).values({ classId, questionId, userId: viewer.id, choice, correct: choice === question.correct }).onConflictDoUpdate({ target: [lessonLiveAnswersTable.classId, lessonLiveAnswersTable.questionId, lessonLiveAnswersTable.userId], set: { choice, correct: choice === question.correct, createdAt: /* @__PURE__ */ new Date() } });
+  res.json(await liveView(classId, false, viewer.id));
+});
+var ACTIONS = ["simple", "detail", "example", "word", "practice", "mistake", "review", "ask"];
+var SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
+router14.post("/ai/lesson-help", requireAuthenticatedRole(...everyRole7), helpLimiter, async (req, res) => {
+  const body = isRecord10(req.body) ? req.body : {};
+  const action = ACTIONS.find((item) => item === body.action);
+  const found = topicOf(str2(body.topicKey, 40));
+  if (!action || !found) {
+    res.status(400).json({ error: "Choose a topic and an action." });
+    return;
+  }
+  const question = str2(body.question, 400);
+  if ((action === "word" || action === "ask") && question.length < 2) {
+    res.status(400).json({ error: "Write a word or a question." });
+    return;
+  }
+  const mistakes = Array.isArray(body.mistakes) ? body.mistakes.map((item) => str2(item, 200)).filter(Boolean).slice(0, 6) : [];
+  const lang = body.lang === "uz" || body.lang === "en" ? body.lang : "ru";
+  const answer = await lessonHelp({
+    action,
+    subject: SUBJECT_NAME[found.book.subject] ?? found.book.subject,
+    grade: found.book.grade,
+    topic: `\xA7${found.topic.code} ${found.topic.title}`,
+    essence: found.topic.essence ?? "",
+    stage: str2(body.stage, 60),
+    question,
+    mistakes,
+    language: lang
+  });
+  res.json({ answer, source: answer ? "ai" : "local" });
+});
+var lessons_default = router14;
+
 // src/lib/schema-sync.ts
 init_drizzle_orm();
 init_pg_core();
@@ -52798,7 +57309,29 @@ function columnDefinition(column, forCreate) {
   if (forCreate && column.primary) parts.push("PRIMARY KEY");
   if (column.notNull && (forCreate || fallback !== null)) parts.push("NOT NULL");
   if (fallback !== null) parts.push(`DEFAULT ${fallback}`);
+  const identity = identityOf(column);
+  if (identity) parts.push(`GENERATED ${identity} AS IDENTITY`);
   return parts.join(" ");
+}
+function identityOf(column) {
+  const identity = column.generatedIdentity;
+  if (!identity) return null;
+  return identity.type === "byDefault" ? "BY DEFAULT" : "ALWAYS";
+}
+async function syncIdentities() {
+  const tables = Object.values(src_exports).filter((value) => is(value, PgTable));
+  const { rows } = await pool.query(
+    "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND is_identity = 'YES'"
+  );
+  const existing = new Set(rows.map((row) => `${row.table_name}.${row.column_name}`));
+  for (const table of tables) {
+    const config = getTableConfig(table);
+    for (const column of config.columns) {
+      const identity = identityOf(column);
+      if (!identity || existing.has(`${config.name}.${column.name}`)) continue;
+      await run(`ALTER TABLE ${quote(config.name)} ALTER COLUMN ${quote(column.name)} ADD GENERATED ${identity} AS IDENTITY`);
+    }
+  }
 }
 async function run(statement, fatal = false) {
   try {
@@ -52906,7 +57439,9 @@ function ensureSchema() {
     pending = (async () => {
       await syncEnums();
       const { created } = await syncTables();
+      await syncIdentities();
       await syncConstraints();
+      await pool.query('DROP INDEX IF EXISTS "attendance_class_student_date_unique"');
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
       pending = null;
@@ -52917,9 +57452,9 @@ function ensureSchema() {
 }
 
 // src/routes/index.ts
-var router6 = (0, import_express6.Router)();
-router6.use(health_default);
-router6.use(async (_req, _res, next) => {
+var router15 = (0, import_express15.Router)();
+router15.use(health_default);
+router15.use(async (_req, _res, next) => {
   try {
     await ensureSchema();
   } catch (error) {
@@ -52927,14 +57462,23 @@ router6.use(async (_req, _res, next) => {
   }
   next();
 });
-router6.use(auth_default);
-router6.use(learning_default);
-router6.use(lesson_rooms_default);
-router6.use(schools_default);
-var routes_default = router6;
+router15.use(school_tools_default);
+router15.use(course_default);
+router15.use(account_default);
+router15.use(requests_default);
+router15.use(demo_default);
+router15.use(timetable_default);
+router15.use(journal_default);
+router15.use(ai_tools_default);
+router15.use(lessons_default);
+router15.use(auth_default);
+router15.use(learning_default);
+router15.use(lesson_rooms_default);
+router15.use(schools_default);
+var routes_default = router15;
 
 // src/app.ts
-var app = (0, import_express7.default)();
+var app = (0, import_express16.default)();
 app.disable("x-powered-by");
 if (process.env.TRUST_PROXY === "1" || process.env.VERCEL === "1") app.set("trust proxy", 1);
 var configuredOrigins2 = new Set(
@@ -52985,8 +57529,8 @@ app.use(
   })
 );
 app.use((0, import_cookie_parser.default)());
-app.use(import_express7.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
-app.use(import_express7.default.urlencoded({ extended: false, limit: "16kb" }));
+app.use(import_express16.default.json({ limit: process.env.JSON_BODY_LIMIT ?? "4mb" }));
+app.use(import_express16.default.urlencoded({ extended: false, limit: "16kb" }));
 var unsafeMethods = /* @__PURE__ */ new Set(["POST", "PUT", "PATCH", "DELETE"]);
 var originGuard = (req, res, next) => {
   if (!unsafeMethods.has(req.method)) {
@@ -53035,9 +57579,11 @@ app.use(errorHandler);
 var app_default = app;
 
 // src/vercel.ts
+var maxDuration = 60;
 var vercel_default = app_default;
 export {
-  vercel_default as default
+  vercel_default as default,
+  maxDuration
 };
 /*! Bundled license information:
 

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
+import { customFetch } from '@workspace/api-client-react';
+import { useLocation } from 'wouter';
 import {
   ApiError,
-  addClassMemberByLogin,
-  getClassAttendance,
   getMySchools,
   getStudentAttendance,
-  saveClassAttendance,
   type AttendanceRecord,
+  type AttendanceResponse,
   type AttendanceStatus,
   type SchoolClass,
   type StudentAttendanceRecord,
@@ -21,11 +22,32 @@ import {
   RefreshCw,
   UserCheck,
   Users,
-  UserPlus,
   X,
 } from 'lucide-react';
 import type { Language } from './school-data';
+import { attendanceSubject, lessonSubjectName, statusOf, useToday } from './today';
+
+/** Lesson subjects. The value is stored with each mark; course books open by `book`. */
+const SUBJECTS: Array<{ value: string; uz: string; ru: string; en: string; book?: 'physics' | 'chemistry' | 'biology' | 'math' }> = [
+  { value: 'Математика', uz: 'Matematika', ru: 'Математика', en: 'Mathematics', book: 'math' },
+  { value: 'Физика', uz: 'Fizika', ru: 'Физика', en: 'Physics', book: 'physics' },
+  { value: 'Химия', uz: 'Kimyo', ru: 'Химия', en: 'Chemistry', book: 'chemistry' },
+  { value: 'Биология', uz: 'Biologiya', ru: 'Биология', en: 'Biology', book: 'biology' },
+  { value: 'Узбекский язык', uz: 'O‘zbek tili', ru: 'Узбекский язык', en: 'Uzbek' },
+  { value: 'Русский язык', uz: 'Rus tili', ru: 'Русский язык', en: 'Russian' },
+  { value: 'Английский язык', uz: 'Ingliz tili', ru: 'Английский язык', en: 'English' },
+  { value: 'История', uz: 'Tarix', ru: 'История', en: 'History' },
+  { value: 'География', uz: 'Geografiya', ru: 'География', en: 'Geography' },
+  { value: 'Информатика', uz: 'Informatika', ru: 'Информатика', en: 'Computer science' },
+  { value: 'Литература', uz: 'Adabiyot', ru: 'Литература', en: 'Literature' },
+  { value: 'Физкультура', uz: 'Jismoniy tarbiya', ru: 'Физкультура', en: 'PE' },
+];
+const subjectLabel = (language: Language, value: string) => {
+  const item = SUBJECTS.find((entry) => entry.value === value);
+  return !item ? value : language === 'Русский' ? item.ru : language === 'English' ? item.en : item.uz;
+};
 import { friendlyError } from './errors';
+import { LoadingBlock } from './ui/loading';
 
 type MarkStatus = Exclude<AttendanceStatus, 'unmarked'>;
 
@@ -115,12 +137,28 @@ const COPY: Record<Language, Record<string, string>> = {
   },
 };
 
-export function AttendancePage({ user, language }: { user: User; language: Language }) {
+/** `lesson` locks the page to one lesson of today's timetable: its class and subject. */
+export function AttendancePage({ user, language, lesson }: { user: User; language: Language; lesson?: { classId: string; subject: string } }) {
   const copy = COPY[language];
   const isTeacher = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
+  const isManager = user.role === 'school_director' || user.role === 'school_admin';
+  // A teacher marks attendance only during the lesson. The director and deputy only look.
+  const today = useToday();
+  const hasTimetable = Boolean(today.data && (today.data.lessons.length || (today.data.next ?? []).some((day) => day.lessons.length)));
+  const currentLesson = today.data?.lessons.find((item) => statusOf(item, today.now) === 'current');
+  const lessonIsNow = Boolean(currentLesson && (!lesson || (currentLesson.classId === lesson.classId && attendanceSubject(currentLesson.subject) === attendanceSubject(lesson.subject))));
+  const editable = user.role === 'teacher' && (lessonIsNow || (!hasTimetable && Boolean(today.data)));
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [classId, setClassId] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [classId, setClassId] = useState(lesson?.classId ?? '');
+  const [date, setDate] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
+  const [, navigate] = useLocation();
+  const [subject, setSubject] = useState<string>(() => {
+    const fromLesson = lesson ? SUBJECTS.find((item) => item.book === lesson.subject || item.value === lesson.subject)?.value ?? lesson.subject : null;
+    if (fromLesson) return fromLesson;
+    try { return localStorage.getItem('eduverse:attendance-subject') ?? 'Физика'; } catch { return 'Физика'; }
+  });
+  const [savedLesson, setSavedLesson] = useState(false);
+  const pickSubject = (value: string) => { setSubject(value); try { localStorage.setItem('eduverse:attendance-subject', value); } catch { /* private mode */ } };
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -129,9 +167,6 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
   const [error, setError] = useState('');
   const [history, setHistory] = useState<StudentAttendanceRecord[]>([]);
   const [rate, setRate] = useState(0);
-  const [addLogin, setAddLogin] = useState('');
-  const [addBusy, setAddBusy] = useState(false);
-  const [addNotice, setAddNotice] = useState('');
 
   useEffect(() => {
     void (async () => {
@@ -164,7 +199,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     setError('');
     setNotice('');
     try {
-      const response = await getClassAttendance(classId, { date });
+      const response = await customFetch<AttendanceResponse>(`/api/classes/${classId}/attendance?date=${encodeURIComponent(date)}&subject=${encodeURIComponent(subject)}`, { method: 'GET' });
       setRecords(response.records);
       setCanManage(response.canManage);
     } catch (requestError) {
@@ -172,11 +207,16 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     } finally {
       setLoading(false);
     }
-  }, [classId, date, language]);
+  }, [classId, date, subject, language]);
 
   useEffect(() => {
     if (isTeacher) void load();
   }, [isTeacher, load]);
+  useEffect(() => {
+    if (user.role !== 'teacher' || lesson || !currentLesson) return;
+    setClassId(currentLesson.classId);
+    setSubject(attendanceSubject(currentLesson.subject));
+  }, [user.role, lesson, currentLesson?.id]);
 
   const summary = useMemo(() => {
     const counted: Record<MarkStatus, number> = { present: 0, late: 0, absent: 0, excused: 0 };
@@ -199,8 +239,9 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     setSaving(true);
     setError('');
     try {
-      await saveClassAttendance(classId, { date, records: payload });
-      setNotice(copy.saved);
+      await customFetch(`/api/classes/${classId}/attendance`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, subject, records: payload }) });
+      setNotice(`${copy.saved}: ${subjectLabel(language, subject)}`);
+      setSavedLesson(true);
       await load();
     } catch (requestError) {
       setError(describe(requestError, language));
@@ -209,21 +250,6 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
     }
   }
 
-  async function addStudent() {
-    if (!classId || !addLogin.trim()) return;
-    setAddBusy(true);
-    setAddNotice('');
-    try {
-      await addClassMemberByLogin(classId, { login: addLogin.trim(), role: 'student' });
-      setAddLogin('');
-      setAddNotice(copy.studentAdded);
-      await load();
-    } catch (requestError) {
-      setAddNotice(describe(requestError, language));
-    } finally {
-      setAddBusy(false);
-    }
-  }
 
   if (!isTeacher) {
     return (
@@ -270,59 +296,72 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
           <h1>{copy.titleTeacher}</h1>
           <p className="page-subtitle">{copy.subtitleTeacher}</p>
         </div>
-        <button type="button" className="btn primary" disabled={saving || records.length === 0} onClick={() => void save()}>
+        {editable && <button type="button" className="btn primary" disabled={saving || records.length === 0} onClick={() => void save()}>
           {saving ? <RefreshCw className="school-spin" size={15} /> : <Check size={15} />}
           {copy.save}
-        </button>
+        </button>}
       </div>
+      {user.role === 'teacher' && today.data && hasTimetable && !lessonIsNow && (() => {
+        const next = today.data.lessons.find((item) => statusOf(item, today.now) === 'upcoming');
+        return (
+          <div className="empty-state attendance-closed">
+            <span className="empty-icon"><Clock3 /></span>
+            <h2>{language === 'Русский' ? 'Давомат отмечается во время урока' : language === 'English' ? 'Attendance is marked during the lesson' : 'Davomat dars vaqtida belgilanadi'}</h2>
+            <p>{next
+              ? (language === 'Русский' ? `Следующий урок в ${next.start}: ${next.className} · ${lessonSubjectName(next.subject, language)}` : language === 'English' ? `Next lesson at ${next.start}: ${next.className} · ${lessonSubjectName(next.subject, language)}` : `Keyingi dars ${next.start} da: ${next.className} · ${lessonSubjectName(next.subject, language)}`)
+              : (language === 'Русский' ? 'На сегодня уроки закончились.' : language === 'English' ? 'Today’s lessons are over.' : 'Bugungi darslar tugadi.')}</p>
+          </div>
+        );
+      })()}
 
-      <div className="attendance-toolbar">
-        <div className="control">
+      {(editable || isManager) && <div className="attendance-toolbar">
+        {!lesson && (isManager || !hasTimetable) && <><div className="control">
           <label htmlFor="attendance-class">{copy.pickClass}</label>
-          <select id="attendance-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
+          <Select id="attendance-class" value={classId} onChange={(event) => setClassId(event.target.value)}>
             {classes.length === 0 && <option value="">{copy.noClasses}</option>}
             {classes.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name} · {item.academicYear}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="control">
+          <label htmlFor="attendance-subject">{language === 'Русский' ? 'Предмет урока' : language === 'English' ? 'Lesson subject' : 'Dars fani'}</label>
+          <Select id="attendance-subject" value={subject} onChange={(event) => { pickSubject(event.target.value); setSavedLesson(false); }}>
+            {SUBJECTS.map((item) => <option key={item.value} value={item.value}>{subjectLabel(language, item.value)}</option>)}
+          </Select>
+        </div></>}
+        {isManager && <div className="control">
           <label htmlFor="attendance-date">{copy.date}</label>
           <input id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-        </div>
-        <button type="button" className="btn" onClick={() => setRecords((current) => current.map((record) => ({ ...record, status: 'present' })))}>
+        </div>}
+        {editable && currentLesson && !lesson && <b className="attendance-now">{currentLesson.start}–{currentLesson.end} · {currentLesson.className} · {lessonSubjectName(currentLesson.subject, language)}</b>}
+        {editable && <button type="button" className="btn" onClick={() => setRecords((current) => current.map((record) => ({ ...record, status: 'present' })))}>
           <UserCheck size={14} /> {copy.markAllPresent}
-        </button>
+        </button>}
         <button type="button" className="btn small" onClick={() => void load()} disabled={loading}>
           <RefreshCw size={13} className={loading ? 'school-spin' : ''} />
         </button>
-      </div>
+      </div>}
 
-      {canManage && (
-        <form className="attendance-add-row" onSubmit={(event) => { event.preventDefault(); void addStudent(); }}>
-          <label className="sr-only" htmlFor="attendance-add-login">{copy.addPrompt}</label>
-          <input
-            id="attendance-add-login"
-            className="input"
-            placeholder={copy.addPrompt}
-            value={addLogin}
-            onChange={(event) => setAddLogin(event.target.value)}
-            maxLength={32}
-          />
-          <button type="submit" className="btn" disabled={addBusy || !addLogin.trim()}>
-            {addBusy ? <RefreshCw className="school-spin" size={14} /> : <UserPlus size={14} />}
-            {copy.addStudent}
-          </button>
-          {addNotice && <span className="muted attendance-add-notice">{addNotice}</span>}
-        </form>
-      )}
 
       {error && <div className="notice" role="alert"><CircleAlert size={15} /> {error}</div>}
       {notice && <div className="notice school-inline-success" role="status"><Check size={15} /> {notice}</div>}
+      {savedLesson && (() => {
+        const book = SUBJECTS.find((item) => item.value === subject)?.book;
+        if (!book) return null;
+        return (
+          <button type="button" className="btn primary attendance-topic-btn" onClick={() => {
+            try { localStorage.setItem('eduverse:course-class', classId); localStorage.setItem('eduverse:course-subject', book); } catch { /* private mode */ }
+            navigate('/course');
+          }}>
+            {language === 'Русский' ? 'Открыть сегодняшнюю тему урока' : language === 'English' ? 'Open today’s lesson topic' : 'Bugungi dars mavzusini ochish'} · {subjectLabel(language, subject)}
+          </button>
+        );
+      })()}
 
-      <div className="attendance-summary">
+      {(editable || isManager) && <><div className="attendance-summary">
         {STATUS_ORDER.map((status) => (
           <div className={`attendance-pill status-${status}`} key={status}>
             <span>{copy[status]}</span>
@@ -333,7 +372,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
 
       <section className="panel reveal-up">
         {loading ? (
-          <p className="muted" role="status">…</p>
+          <LoadingBlock language={language} kind="inline" />
         ) : records.length === 0 ? (
           <p className="muted">{copy.noStudents}</p>
         ) : (
@@ -347,7 +386,7 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
                     <small className="muted">@{record.login}</small>
                   </span>
                 </div>
-                <div className="attendance-actions">
+                {!editable ? (record.status !== 'unmarked' ? <StatusTag status={record.status as MarkStatus} copy={copy} /> : <span className="muted">—</span>) : <div className="attendance-actions">
                   {STATUS_ORDER.map((status) => (
                     <button
                       key={status}
@@ -360,13 +399,12 @@ export function AttendancePage({ user, language }: { user: User; language: Langu
                       {copy[status]}
                     </button>
                   ))}
-                </div>
-                {!canManage && <span className="tag gold">read-only</span>}
+                </div>}
               </div>
             ))}
           </div>
         )}
-      </section>
+      </section></>}
     </div>
   );
 }

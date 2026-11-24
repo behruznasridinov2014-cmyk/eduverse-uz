@@ -1,4 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { Select } from './ui/select';
+import { LANGUAGES } from './ui/config';
 import { Link } from 'wouter';
 import {
   Activity,
@@ -29,10 +31,12 @@ import {
 } from 'lucide-react';
 import type { User } from '@workspace/api-client-react';
 import type { AppLanguage } from './localization';
+import { GoogleSignInButton } from './google-auth';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
-import { TwoFactorSettings } from './two-factor-settings';
+import { UserAvatar, useMustChangePassword } from './school-tools';
+import { ProfileSections } from './account';
 
 type AuthCopy = {
   signIn: string;
@@ -112,8 +116,8 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     sideTitle: 'Bilim sari ishonchli qadam.',
     sideDescription: 'Maktab darslari, jadval, topshiriqlar va xavfsiz o‘quv vositalari bitta hisobda.',
     benefitOne: 'Shaxsiy o‘quv profilingiz',
-    benefitTwo: 'Bitta xavfsiz, server boshqaradigan sessiya',
-    emailNotice: 'Parolni tiklash hozircha mavjud emas: tasdiqlangan elektron pochta xizmati ulanmagan.',
+    benefitTwo: 'Xavfsiz kirish',
+    emailNotice: 'Parolni unutdingizmi? O‘qituvchi yoki maktab administratoriga murojaat qiling.',
     language: 'Til',
     profile: 'Profil',
     accountMode: 'HISOB',
@@ -122,18 +126,18 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logout: 'Hisobdan chiqish',
     home: 'Bosh sahifa',
     loading: 'Yuklanmoqda…',
-    checking: 'Hisob sessiyasi tekshirilmoqda.',
+    checking: 'Hisobingiz ochilmoqda…',
     retry: 'Qayta urinish',
     unavailableTitle: 'Hisob xizmatiga ulanib bo‘lmadi',
-    unavailableText: 'Server bilan aloqa vaqtincha mavjud emas. Birozdan so‘ng qayta urinib ko‘ring.',
+    unavailableText: 'Aloqa vaqtincha mavjud emas. Birozdan so‘ng qayta urinib ko‘ring.',
     signInRequired: 'Profilni ko‘rish uchun tizimga kiring.',
     privateRequiredTitle: 'Bu bo‘lim uchun tizimga kiring.',
-    privateRequiredText: 'Shaxsiy bo‘limlarga kirish server tasdiqlagan hisob huquqlariga bog‘liq.',
+    privateRequiredText: 'Shaxsiy bo‘limlar faqat o‘z hisobingiz bilan ochiladi.',
     passwordMismatch: 'Parollar mos kelmadi.',
     logoutError: 'Hisobdan chiqishda xatolik. Qayta urinib ko‘ring.',
     independentLearner: 'Mustaqil o‘quvchi',
     role: 'Hisob turi',
-    serviceWarning: 'Hisob serveri bilan aloqa yo‘q. Ro‘yxatdan o‘tish va kirish vaqtincha ishlamaydi.',
+    serviceWarning: 'Hozir EDUVERSE bilan aloqa yo‘q. Bir daqiqadan keyin kirib ko‘ring.',
     qrTitle: 'Telefon orqali kirish',
     qrUnavailable: 'QR orqali kirish EDUVERSE mobil ilovasi tayyor bo‘lganda yoqiladi. Hozircha login va parol bilan kiring.',
     localAccess: 'Faqat mahalliy sinov muhiti',
@@ -167,8 +171,8 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     sideTitle: 'Уверенный шаг к знаниям.',
     sideDescription: 'Уроки, расписание, задания и безопасные учебные инструменты в одном школьном аккаунте.',
     benefitOne: 'Личный учебный профиль',
-    benefitTwo: 'Безопасная серверная сессия',
-    emailNotice: 'Восстановление пароля пока недоступно: сервис подтверждённой почты не подключён.',
+    benefitTwo: 'Безопасный вход',
+    emailNotice: 'Забыли пароль? Обратитесь к учителю или администратору школы.',
     language: 'Язык',
     profile: 'Профиль',
     accountMode: 'АККАУНТ',
@@ -177,18 +181,18 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logout: 'Выйти из аккаунта',
     home: 'На главную',
     loading: 'Загрузка…',
-    checking: 'Проверяем сессию аккаунта.',
+    checking: 'Открываем ваш аккаунт…',
     retry: 'Повторить',
     unavailableTitle: 'Не удалось подключиться к сервису аккаунтов',
-    unavailableText: 'Связь с сервером временно недоступна. Попробуйте позже.',
+    unavailableText: 'Нет связи. Проверьте интернет и попробуйте ещё раз.',
     signInRequired: 'Войдите, чтобы открыть профиль.',
     privateRequiredTitle: 'Войдите, чтобы открыть этот раздел.',
-    privateRequiredText: 'Доступ к личным разделам определяется правами аккаунта, подтверждёнными сервером.',
+    privateRequiredText: 'Личные разделы открываются только под вашим аккаунтом.',
     passwordMismatch: 'Пароли не совпадают.',
     logoutError: 'Не удалось выйти из аккаунта. Попробуйте ещё раз.',
     independentLearner: 'Самостоятельный ученик',
     role: 'Тип аккаунта',
-    serviceWarning: 'Нет связи с сервером аккаунтов. Вход и регистрация временно недоступны.',
+    serviceWarning: 'Сейчас нет связи с EDUVERSE. Попробуйте войти через минуту.',
     qrTitle: 'Вход с телефона',
     qrUnavailable: 'Вход по QR появится после выхода мобильного приложения EDUVERSE. Пока используйте логин и пароль.',
     localAccess: 'Только локальная тестовая среда',
@@ -222,8 +226,8 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     sideTitle: 'A confident step toward knowledge.',
     sideDescription: 'Lessons, schedules, assignments, and secure learning tools in one school account.',
     benefitOne: 'A personal learning profile',
-    benefitTwo: 'One secure, server-managed session',
-    emailNotice: 'Password recovery is not available yet because verified email delivery is not configured.',
+    benefitTwo: 'Secure sign-in',
+    emailNotice: 'Forgot your password? Ask the school administration or the school administrator.',
     language: 'Language',
     profile: 'Profile',
     accountMode: 'ACCOUNT',
@@ -232,18 +236,18 @@ const AUTH_COPY: Record<AppLanguage, AuthCopy> = {
     logout: 'Sign out',
     home: 'Home',
     loading: 'Loading…',
-    checking: 'Checking your account session.',
+    checking: 'Opening your account…',
     retry: 'Try again',
     unavailableTitle: 'Account service is unavailable',
-    unavailableText: 'The server connection is temporarily unavailable. Please try again shortly.',
+    unavailableText: 'The connection is temporarily unavailable. Please try again shortly.',
     signInRequired: 'Sign in to view your profile.',
     privateRequiredTitle: 'Sign in to access this section.',
-    privateRequiredText: 'Private sections are available only with permissions confirmed by the account server.',
+    privateRequiredText: 'Private sections are available only with permissions confirmed.',
     passwordMismatch: 'The passwords do not match.',
     logoutError: 'Could not sign out. Please try again.',
     independentLearner: 'Independent learner',
     role: 'Account type',
-    serviceWarning: 'The account server is unreachable. Sign-in and registration are temporarily unavailable.',
+    serviceWarning: 'EDUVERSE cannot be reached right now. Try signing in again in a minute.',
     qrTitle: 'Sign in with your phone',
     qrUnavailable: 'QR sign-in will be available when the EDUVERSE mobile app is ready. For now, use your login and password.',
     localAccess: 'Local test environment only',
@@ -339,7 +343,7 @@ export function PublicHomePage({
       inDevelopment: 'Ishlab chiqilmoqda',
       features: [
         ['Interaktiv ta’lim', 'Mavzuni ochiq mashqlar va bosqichma-bosqich tushuntirishlar orqali mustahkamlang.', 'available'],
-        ['Onlayn darslar', 'Kamera, mikrofon va ekran namoyishi bilan jonli dars: kodni yuboring va boshlang.', 'available'],
+        ['Onlayn darslar', 'Kamera, mikrofon va ekran namoyishi bilan jonli dars: sinf o‘quvchilari darsni darhol o‘zida ko‘radi.', 'available'],
         ['Davomat', 'Har bir sinf uchun davomatni belgilang va saqlang.', 'available'],
         ['Uy vazifalari', 'Mavzuga bog‘langan vazifa: daftar rasmi, izoh, baho va o‘qituvchi imzosi.', 'available'],
         ['3D mavzular', 'Mavzuni 3D modelda o‘rganing va test bilan mustahkamlang.', 'available'],
@@ -365,16 +369,16 @@ export function PublicHomePage({
         ['O‘quvchilar', 'Ochiq materiallar va mustaqil mashqlar.'],
         ['O‘qituvchilar', 'Darsni tashkil etish vositalari — rejalashtirilmoqda.'],
         ['Direktorlar', 'Maktab boshqaruvi — ishlab chiqish rejasida.'],
-        ['Davlat maktablari', 'O‘z serverida o‘rnatish imkoniyati maqsad qilingan.'],
+        ['Davlat maktablari', 'Har bir sinf va o‘qituvchi uchun tayyor.'],
       ] as const,
       ecosystemEyebrow: 'ISHTIROKCHILAR UCHUN YAGONA MUHIT',
       ecosystemTitle: 'Ta’lim jarayonining har bir bosqichi uchun',
       ecosystemSubtitle: 'Darslar, davomat, uy vazifalari va kutubxona bitta hisobda: har bir rol uchun alohida kabinet.',
       securityTitle: 'Xavfsizlik va maktab ma’lumotlari',
       securityText: 'Hisob va sessiya uchun server tomonda parol xeshlash hamda HttpOnly cookie ishlatiladi. Maktab tashkilotlari, rollar bo‘yicha API nazorati va audit jurnali hali ishlab chiqilishi kerak.',
-      securityPoints: ['Parol ochiq matnda saqlanmaydi', 'Sessiya brauzer skriptlariga ochiq emas', 'Ma’muriy vakolat ommaviy ro‘yxatdan berilmaydi'],
-      hostingTitle: 'Maktabning o‘z serverida ishlatish',
-      hostingText: 'O‘z serverida joylashtirish — arxitekturaning maqsadi. Docker Compose, o‘rnatish/yangilash yo‘riqnomalari va zaxira nusxalash jarayoni hali tayyor emas.',
+      securityPoints: ['Parol ochiq matnda saqlanmaydi', 'Har kimning o‘z logini va paroli', 'Hisoblarni faqat maktab yaratadi'],
+      hostingTitle: 'Bulutda ishlaydi',
+      hostingText: 'Maktabga o‘z serveri va tizim administratori kerak emas: sayt brauzerda va telefonda ochiladi, yangilanishlar avtomatik.',
       hostingPoints: ['PostgreSQL — mavjud texnologiya', 'Docker Compose — rejalashtirilgan', 'Zaxiralash va tiklash — rejalashtirilgan'],
       hostingCta: 'O‘rnatish holatini ko‘rish',
       faqEyebrow: 'KO‘P SO‘RALADIGAN SAVOLLAR',
@@ -382,7 +386,7 @@ export function PublicHomePage({
       faqs: [
         ['Platformani hozir ishlatish mumkinmi?', 'Ha. Onlayn darslar, davomat, uy vazifalari, 3D mavzular va kutubxona ishlaydi. Hisobni maktab administratori beradi.'],
         ['Ro‘yxatdan o‘tish shartmi?', 'Ochiq materiallarni ko‘rish va mashqlarni sinash uchun hisob shart emas. Hisob hozircha o‘quvchi profili uchun kerak.'],
-        ['Maktab o‘z serveriga o‘rnata oladimi?', 'Bu arxitektura maqsadlaridan biri, ammo o‘rnatish to‘plami va qo‘llanma hali tayyorlanmagan.'],
+        ['Maktabga o‘z serveri kerakmi?', 'Yo‘q. Platforma bulutda ishlaydi, maktabga faqat internet kerak.'],
         ['EDUVERSE-UZ davlat tomonidan tasdiqlanganmi?', 'Platforma mustaqil loyiha. Davlat tomonidan tasdiqlanish yoki rasmiy integratsiya haqida da’vo qilinmaydi.'],
       ] as const,
       contactTitle: 'Loyiha bilan bog‘laning',
@@ -425,7 +429,7 @@ export function PublicHomePage({
       inDevelopment: 'В разработке',
       features: [
         ['Интерактивное обучение', 'Закрепляйте темы с помощью открытых упражнений и пошаговых объяснений.', 'available'],
-        ['Онлайн-уроки', 'Живой урок с камерой, микрофоном и показом экрана: отправьте код и начинайте.', 'available'],
+        ['Онлайн-уроки', 'Живой урок с камерой, микрофоном и показом экрана: ученики класса сразу видят урок у себя.', 'available'],
         ['Посещаемость', 'Отмечайте и сохраняйте посещаемость каждого класса.', 'available'],
         ['Домашние задания', 'Задание по теме: фото тетради, объяснение, оценка и подпись учителя.', 'available'],
         ['3D-темы', 'Изучайте тему на 3D-модели и закрепляйте тестом.', 'available'],
@@ -451,16 +455,16 @@ export function PublicHomePage({
         ['Ученики', 'Открытые материалы и самостоятельная практика.'],
         ['Учителя', 'Инструменты организации уроков — в планах.'],
         ['Директора', 'Управление школой — будущий этап разработки.'],
-        ['Государственные школы', 'Самостоятельное размещение — цель проекта.'],
+        ['Государственные школы', 'Готово для всех классов и учителей.'],
       ] as const,
       ecosystemEyebrow: 'ЕДИНОЕ ПРОСТРАНСТВО ДЛЯ ОБРАЗОВАНИЯ',
       ecosystemTitle: 'Для каждого участника учебного процесса',
       ecosystemSubtitle: 'Уроки, посещаемость, домашние задания и библиотека в одном аккаунте: отдельный кабинет для каждой роли.',
       securityTitle: 'Безопасность и школьные данные',
       securityText: 'Для аккаунтов и сессий используются серверное хеширование паролей и HttpOnly-cookie. Организации школ, серверный контроль прав для их API и аудит действий ещё предстоит реализовать.',
-      securityPoints: ['Пароли не хранятся открытым текстом', 'Сессия недоступна скриптам страницы', 'Административная роль не выдаётся открытой регистрацией'],
-      hostingTitle: 'Размещение на сервере школы',
-      hostingText: 'Самостоятельное размещение — цель архитектуры. Docker Compose, инструкции по установке и обновлению, резервное копирование пока не готовы.',
+      securityPoints: ['Пароли не хранятся открытым текстом', 'У каждого свой логин и пароль', 'Аккаунты создаёт только школа'],
+      hostingTitle: 'Работает в облаке',
+      hostingText: 'Школе не нужен свой сервер и системный администратор: сайт открывается в браузере и на телефоне, обновления приходят сами.',
       hostingPoints: ['PostgreSQL — текущая технология', 'Docker Compose — запланирован', 'Резервирование и восстановление — запланированы'],
       hostingCta: 'Посмотреть статус установки',
       faqEyebrow: 'ЧАСТЫЕ ВОПРОСЫ',
@@ -468,7 +472,7 @@ export function PublicHomePage({
       faqs: [
         ['Можно ли пользоваться платформой сейчас?', 'Да. Работают онлайн-уроки, посещаемость, домашние задания, 3D-темы и библиотека. Аккаунт выдаёт администратор школы.'],
         ['Нужна ли регистрация?', 'Для открытых материалов и упражнений аккаунт не нужен. Сейчас аккаунт используется для ученического профиля.'],
-        ['Можно ли установить платформу на сервер школы?', 'Это одна из целей проекта, но установочный набор и инструкции ещё не подготовлены.'],
+        ['Нужен ли школе свой сервер?', 'Нет. Платформа работает в облаке, школе нужен только интернет.'],
         ['Одобрена ли EDUVERSE-UZ государством?', 'Это независимый проект. Мы не заявляем о государственном одобрении или официальной интеграции.'],
       ] as const,
       contactTitle: 'Связаться с проектом',
@@ -511,7 +515,7 @@ export function PublicHomePage({
       inDevelopment: 'In development',
       features: [
         ['Interactive learning', 'Practice concepts with open exercises and step-by-step explanations.', 'available'],
-        ['Online lessons', 'Live lessons with camera, microphone and screen sharing: share the code and start.', 'available'],
+        ['Online lessons', 'Live lessons with camera, microphone and screen sharing: students of the class see it at once.', 'available'],
         ['Attendance', 'Mark and save attendance for every class.', 'available'],
         ['Homework', 'Topic-linked tasks: notebook photos, explanation, grade and teacher signature.', 'available'],
         ['3D topics', 'Learn a topic on a 3D model and reinforce it with a test.', 'available'],
@@ -537,16 +541,16 @@ export function PublicHomePage({
         ['Students', 'Open materials and independent practice.'],
         ['Teachers', 'Lesson organization tools are planned.'],
         ['School leaders', 'School administration is a future development stage.'],
-        ['Public schools', 'Self-hosting is a project goal.'],
+        ['Public schools', 'Ready for every class and teacher.'],
       ] as const,
       ecosystemEyebrow: 'ONE SPACE FOR LEARNING',
       ecosystemTitle: 'For every part of the learning journey',
       ecosystemSubtitle: 'Lessons, attendance, homework and the library in one account: a separate workspace for each role.',
       securityTitle: 'Security and school data',
       securityText: 'Accounts use server-side password hashing and HttpOnly session cookies. School organizations, server-side authorization for their APIs, and audit history still need to be built.',
-      securityPoints: ['Passwords are never stored as plain text', 'Session cookies are inaccessible to page scripts', 'Public registration cannot grant administrative roles'],
-      hostingTitle: 'Run on a school-owned server',
-      hostingText: 'Self-hosting is an architecture goal. Docker Compose, installation and upgrade guides, and backup procedures are not available yet.',
+      securityPoints: ['Passwords are never stored as plain text', 'Everyone has their own login', 'Only the school creates accounts'],
+      hostingTitle: 'Runs in the cloud',
+      hostingText: 'The school needs no server or IT staff: it opens in a browser and on a phone, and updates arrive automatically.',
       hostingPoints: ['PostgreSQL is the current database', 'Docker Compose is planned', 'Backup and restore procedures are planned'],
       hostingCta: 'Check deployment status',
       faqEyebrow: 'FREQUENTLY ASKED QUESTIONS',
@@ -554,7 +558,7 @@ export function PublicHomePage({
       faqs: [
         ['Can I use the platform today?', 'Yes. Online lessons, attendance, homework, 3D topics and the library work. The school administrator issues your account.'],
         ['Do I need an account?', 'No account is needed for open materials or practice. Accounts currently provide a student profile.'],
-        ['Can a school install it on its own server?', 'That is a project goal, but installation packages and guides are not ready yet.'],
+        ['Does the school need its own server?', 'No. The platform runs in the cloud; the school only needs internet.'],
         ['Is EDUVERSE-UZ government-approved?', 'This is an independent project. No government endorsement or official integration is claimed.'],
       ] as const,
       contactTitle: 'Get in touch with the project',
@@ -586,11 +590,7 @@ export function PublicHomePage({
         <div className="public-home-actions">
           <label className="auth-language">
             <span className="sr-only">{authCopy(language).language}</span>
-            <select value={language} onChange={(event) => onLanguageChange(event.target.value as AppLanguage)}>
-              <option value="Uzbek">O‘zbekcha</option>
-              <option value="Русский">Русский</option>
-              <option value="English">English</option>
-            </select>
+            <Select value={language} aria-label={authCopy(language).language} options={LANGUAGES.map((item) => ({ value: item.value, label: item.label }))} onChange={(_event, value) => onLanguageChange(value as AppLanguage)} />
           </label>
           <button
             type="button"
@@ -845,11 +845,7 @@ function AuthFrame({
           <Link href="/login" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>
           <label className="auth-language">
             <span className="sr-only">{copy.language}</span>
-            <select value={language} onChange={(event) => onLanguageChange(event.target.value as AppLanguage)}>
-              <option value="Uzbek">O‘zbekcha</option>
-              <option value="Русский">Русский</option>
-              <option value="English">English</option>
-            </select>
+            <Select value={language} aria-label={authCopy(language).language} options={LANGUAGES.map((item) => ({ value: item.value, label: item.label }))} onChange={(_event, value) => onLanguageChange(value as AppLanguage)} />
           </label>
         </div>
       </header>
@@ -884,6 +880,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
   const auth = useAuth();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'code' | 'qr'>(() => {
     const qr = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('qr');
@@ -892,12 +889,15 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
   const [code, setCode] = useState('');
   const [resendNotice, setResendNotice] = useState('');
   const qrCode = typeof window === 'undefined' ? '' : (new URLSearchParams(window.location.search).get('qr') ?? '');
+  // A phone signs in with login and password. "Sign in with a QR code" is for a
+  // computer: the code shown here is scanned by a phone that is already signed in.
+  const isPhone = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     try {
-      await auth.signIn({ login: login.trim(), password });
+      await auth.signIn({ login: login.trim(), password, remember });
       if (!auth.twoFactorChallenge) onSuccess();
     } catch (requestError) {
       setError(getAuthErrorMessage(requestError, language));
@@ -969,16 +969,19 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
         </form>
       ) : (
         <>
-          <div className="auth-tabs" role="tablist" aria-label={copy.signIn}>
+          {auth.accountNotice?.kind === 'signed-out' && (
+            <div className="notice" role="status">{language === 'Uzbek' ? 'Boshqa oynada hisobdan chiqildi. Qaytadan kiring.' : language === 'Русский' ? 'В другой вкладке выполнен выход. Войдите снова.' : 'You were signed out in another tab. Please sign in again.'}</div>
+          )}
+          {!isPhone && <div className="auth-tabs" role="tablist" aria-label={copy.signIn}>
             <button type="button" role="tab" aria-selected={tab === 'code'} className={`auth-tab ${tab === 'code' ? 'active' : ''}`} onClick={() => setTab('code')}>
               <LockKeyhole size={15} /> {qrCopy.tabCode}
             </button>
             <button type="button" role="tab" aria-selected={tab === 'qr'} className={`auth-tab ${tab === 'qr' ? 'active' : ''}`} onClick={() => setTab('qr')}>
               <Smartphone size={15} /> {qrCopy.tabQr}
             </button>
-          </div>
+          </div>}
 
-          {tab === 'code' ? (
+          {tab === 'code' || (isPhone && !qrCode) ? (
             <form className="auth-form" onSubmit={submit}>
               <label className="auth-field" htmlFor="account-login">
                 <span>{copy.login}</span>
@@ -987,6 +990,13 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
               <label className="auth-field" htmlFor="account-password">
                 <span>{copy.password}</span>
                 <input id="account-password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} maxLength={128} required/>
+              </label>
+              <label className="auth-remember">
+                <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)}/>
+                <span>
+                  <b>{language === 'Uzbek' ? 'Meni eslab qol' : language === 'English' ? 'Remember me' : 'Запомнить меня'}</b>
+                  <small>{language === 'Uzbek' ? 'Faqat o‘z qurilmangizda. Belgilanmasa, brauzer yopilganda hisobdan chiqiladi.' : language === 'English' ? 'Only on your own device. Otherwise you are signed out when the browser closes.' : 'Только на своём устройстве. Без галочки выход произойдёт, когда закроете браузер.'}</small>
+                </span>
               </label>
               {error && <FormError>{error}</FormError>}
               <button className="auth-submit" type="submit" disabled={auth.isSubmitting}>
@@ -999,9 +1009,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           ) : (
             <QrSignInPanel language={language} onSuccess={() => onSuccess()} />
           )}
-          <div className="auth-switch-row">
-            <QrScannerButton language={language} className="btn" />
-          </div>
+          {(tab === 'code' || (isPhone && !qrCode)) && <GoogleSignInButton language={language} />}
           <div className="auth-switch">{copy.noAccount}</div>
         </>
       )}
@@ -1092,40 +1100,25 @@ export function ProfilePage({
     }
   }
 
-  const locale = language === 'Uzbek' ? 'uz-UZ' : language === 'Русский' ? 'ru-RU' : 'en-US';
+  const locale = language === 'Русский' ? 'ru-RU' : 'en-GB';
+  const mustChange = useMustChangePassword(user.id);
+  const text = (uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
   return (
-    <section className="profile-page" data-locale-preserve="true">
-      <div className="profile-heading">
+    <section className="profile" data-locale-preserve="true">
+      <div className="profile-head">
+        <UserAvatar userId={user.id} name={user.username} className="avatar avatar-lg" />
         <div>
-          <div className="auth-eyebrow">EDUVERSE-UZ</div>
-          <h1>{copy.profile}</h1>
-          <p>{copy.accountDetails}</p>
+          <h1>{user.username}</h1>
+          <p>{ROLE_LABELS[language][user.role]}</p>
         </div>
-        <div className="profile-avatar">{user.username.slice(0, 1).toLocaleUpperCase(locale)}</div>
       </div>
-      <div className="profile-card">
-        <div className="profile-identity">
-          <div className="profile-avatar large">{user.username.slice(0, 1).toLocaleUpperCase(locale)}</div>
-          <div><h2>{user.username}</h2><p>@{user.login}</p></div>
-          <span className="profile-status"><span/> {copy.profile}</span>
-        </div>
-        <div className="profile-details">
-          <div><span>{copy.username}</span><b>{user.username}</b></div>
-          <div><span>{copy.login}</span><b>{user.login}</b></div>
-          <div><span>{copy.createdAt}</span><b>{new Date(user.createdAt).toLocaleDateString(locale, { dateStyle: 'long' })}</b></div>
-          <div><span>{copy.role}</span><b>{ROLE_LABELS[language][user.role]}</b></div>
-        </div>
-        <TwoFactorSettings language={language} />
-        <p className="auth-note profile-note">{copy.emailNotice}</p>
-        {error && <FormError>{error}</FormError>}
-        <div className="profile-actions">
-          <QrScannerButton language={language} className="btn" />
-          <Link href="/" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>
-          <button className="btn danger" onClick={() => void signOut()} disabled={auth.isSubmitting}>
-            {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={16}/> : <LogOut size={16}/>}
-            {copy.logout}
-          </button>
-        </div>
+      <ProfileSections user={user} language={language} initialTab={mustChange ? 'security' : undefined} />
+      {error && <FormError>{error}</FormError>}
+      <div className="profile-buttons">
+        <button className="btn danger" onClick={() => void signOut()} disabled={auth.isSubmitting}>
+          {auth.isSubmitting ? <LoaderCircle className="auth-spinner" size={16}/> : <LogOut size={16}/>}
+          {copy.logout}
+        </button>
       </div>
     </section>
   );
@@ -1156,7 +1149,6 @@ export function AuthStatusPage({
       <p className="auth-description">{required ? privateArea ? copy.privateRequiredText : copy.signInSubtitle : copy.unavailableText}</p>
       <div className="profile-actions">
         {detail ? <div className="auth-error" role="alert">{detail}</div> : null}
-      {detail ? <div className="auth-error" role="alert">{detail}</div> : null}
       {required && onSignIn ? <button className="auth-submit" onClick={onSignIn}>{copy.signIn}</button> : null}
         {onRetry ? <button className="btn" onClick={onRetry}>{copy.retry}</button> : null}
         <Link href="/" className="auth-home-link"><ArrowLeft size={15}/>{copy.home}</Link>

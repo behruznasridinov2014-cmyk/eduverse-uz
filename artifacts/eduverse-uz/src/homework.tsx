@@ -1,34 +1,69 @@
 import { useEffect, useRef, useState } from 'react';
-import { getSubmissionFiles } from '@workspace/api-client-react';
+import { customFetch, getSubmissionFiles } from '@workspace/api-client-react';
 import { Camera, Eraser, ImagePlus, X } from 'lucide-react';
 import type { Language } from './school-data';
+import { useDismiss } from './ui/dismiss';
 
 const tr = (language: Language, en: string, ru: string, uz: string) =>
   language === 'Русский' ? ru : language === 'Uzbek' ? uz : en;
 
 export const MAX_PHOTOS = 4;
-const MAX_SIDE = 1400;
-const TARGET_CHARS = 600_000;
+const MAX_SIDE = 1280;
+const TARGET_BYTES = 420_000;
+
+/** Decodes a photo without holding the full-size picture in memory twice (iPhone photos are 12–48 MP). */
+async function decodeSmall(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; done: () => void }> {
+  // Chrome / Android: the browser decodes the photo straight to a small size, off the main thread.
+  // (Not on iPhone/iPad: Safari may ignore the size and decode a 48 MP photo in full.)
+  const chromeLike = /Chrome|Chromium|Android/i.test(navigator.userAgent) && !/iPhone|iPad|iPod|CriOS/i.test(navigator.userAgent);
+  if (chromeLike) try {
+    const bitmap = await createImageBitmap(file, { resizeWidth: MAX_SIDE, resizeQuality: 'medium', imageOrientation: 'from-image' } as ImageBitmapOptions);
+    if (bitmap.width > 0 && bitmap.height > 0) {
+      if (bitmap.height <= MAX_SIDE * 2) return { source: bitmap, width: bitmap.width, height: bitmap.height, done: () => bitmap.close?.() };
+      bitmap.close?.();
+    }
+  } catch { /* older browsers: the <img> way below */ }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+    await img.decode();
+    return { source: img, width: img.naturalWidth, height: img.naturalHeight, done: () => { img.src = ''; URL.revokeObjectURL(url); } };
+  } catch {
+    URL.revokeObjectURL(url);
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (!bitmap) throw new Error('unreadable-image');
+    return { source: bitmap, width: bitmap.width, height: bitmap.height, done: () => bitmap.close?.() };
+  }
+}
+
+const toBlob = (canvas: HTMLCanvasElement, quality: number) =>
+  new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+const toDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); });
 
 /** Resize a notebook photo to a compact JPEG data URL that fits the free-tier database. */
 export async function compressImage(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) throw new Error('unreadable-image');
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+  const picture = await decodeSmall(file);
+  const scale = Math.min(1, MAX_SIDE / Math.max(picture.width, picture.height));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
+  canvas.width = Math.max(1, Math.round(picture.width * scale));
+  canvas.height = Math.max(1, Math.round(picture.height * scale));
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('no-canvas');
+  if (!context) { picture.done(); throw new Error('no-canvas'); }
   context.fillStyle = '#fff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close?.();
-  for (const quality of [0.82, 0.7, 0.58, 0.46, 0.36]) {
-    const url = canvas.toDataURL('image/jpeg', quality);
-    if (url.length <= TARGET_CHARS) return url;
+  context.drawImage(picture.source, 0, 0, canvas.width, canvas.height);
+  picture.done();
+  let blob: Blob | null = null;
+  for (const quality of [0.78, 0.62, 0.48, 0.36]) {
+    blob = await toBlob(canvas, quality);
+    if (blob && blob.size <= TARGET_BYTES) break;
   }
-  return canvas.toDataURL('image/jpeg', 0.3);
+  canvas.width = canvas.height = 0; // frees the pixels at once on iOS
+  if (!blob) throw new Error('no-image');
+  return toDataUrl(blob);
 }
 
 export function PhotoPicker({
@@ -56,6 +91,7 @@ export function PhotoPicker({
         if (next.length >= MAX_PHOTOS) break;
         if (!file.type.startsWith('image/')) continue;
         next.push(await compressImage(file));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
       onChange(next);
     } catch {
@@ -97,7 +133,6 @@ export function PhotoPicker({
         ref={input}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         hidden
         onChange={(event) => void addFiles(event.target.files)}
@@ -164,10 +199,7 @@ export function SubmissionPhotos({
         ))}
       </div>
       {zoom && (
-        <div className="hw-lightbox" role="dialog" aria-modal="true" onClick={() => setZoom(null)}>
-          <button type="button" className="hw-lightbox-close" aria-label="Close" onClick={() => setZoom(null)}><X size={20} /></button>
-          <img src={zoom} alt="" onClick={(event) => event.stopPropagation()} />
-        </div>
+        <Lightbox src={zoom} onClose={() => setZoom(null)} />
       )}
     </>
   );
@@ -275,6 +307,71 @@ export function SignatureStamp({
         {tr(language, 'Signed by', 'Подписал(а)', 'Imzolagan')} <b>{signedBy ?? ''}</b>
         {signedAt ? ` · ${new Date(signedAt).toLocaleDateString()}` : ''}
       </span>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Teacher hint: did the student do the work themselves or copy an AI answer?  */
+/* -------------------------------------------------------------------------- */
+
+type AiCheck = { verdict: 'self' | 'unclear' | 'ai'; confidence: number; handwritten: boolean; matchesTask: boolean; reasons: string[]; advice: string };
+
+export function HomeworkAiCheck({ assignmentId, studentId, language }: { assignmentId: string; studentId: string; language: Language }) {
+  const [check, setCheck] = useState<AiCheck | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const tx = (uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
+  async function run() {
+    setBusy(true);
+    setError('');
+    try {
+      const response = await customFetch<{ check: AiCheck }>(`/api/assignments/${assignmentId}/submissions/${studentId}/ai-check`, { method: 'POST' });
+      setCheck(response.check);
+    } catch (requestError) {
+      const status = (requestError as { status?: number })?.status;
+      setError(status === 503
+        ? tx('Tekshirib bo‘lmadi. Keyinroq urinib ko‘ring.', 'Не удалось проверить. Попробуйте позже.', 'Could not check. Try later.')
+        : tx('Tekshirib bo‘lmadi.', 'Не удалось проверить.', 'Could not check.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const label = check?.verdict === 'self'
+    ? tx('O‘zi bajarganga o‘xshaydi', 'Похоже на самостоятельную работу', 'Looks self-made')
+    : check?.verdict === 'ai'
+      ? tx('Ko‘chirilganga o‘xshaydi', 'Похоже на списанный ответ', 'Looks copied')
+      : tx('Aniq emas — o‘quvchidan so‘rang', 'Неясно — спросите ученика', 'Unclear — ask the student');
+  return (
+    <div className="ai-check">
+      {!check && (
+        <button type="button" className="btn small" disabled={busy} onClick={() => void run()}>
+          🤖 {busy ? tx('Tekshirilmoqda…', 'Проверяем…', 'Checking…') : tx('O‘zi yozganini tekshirish', 'Проверить, сам ли писал', 'Check it is own work')}
+        </button>
+      )}
+      {check && (
+        <div className={`ai-check-result verdict-${check.verdict}`}>
+          <b>{label} · {check.confidence}%</b>
+          <span className="muted">{check.handwritten ? tx('Qo‘lda yozilgan', 'Написано от руки', 'Handwritten') : tx('Qo‘lda yozilmagan', 'Не от руки', 'Not handwritten')} · {check.matchesTask ? tx('topshiriqqa mos', 'по заданию', 'matches the task') : tx('topshiriqqa mos emas', 'не по заданию', 'off task')}</span>
+          {check.reasons.length > 0 && <ul>{check.reasons.map((reason, index) => <li key={index}>{reason}</li>)}</ul>}
+          {check.advice && <span className="ai-check-advice">💬 {check.advice}</span>}
+          <small className="muted">{tx('Bu faqat maslahat. Qarorni o‘qituvchi qabul qiladi.', 'Это только подсказка. Решение принимает учитель.', 'A hint only. The teacher decides.')}</small>
+        </div>
+      )}
+      {error && <span className="muted">{error}</span>}
+    </div>
+  );
+}
+
+/** Full-size photo; closes on a click outside the picture or on Escape. */
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useDismiss(true, onClose, [imgRef, closeRef]);
+  return (
+    <div className="hw-lightbox" role="dialog" aria-modal="true">
+      <button ref={closeRef} type="button" className="hw-lightbox-close" aria-label="Close" onClick={onClose}><X size={20} /></button>
+      <img ref={imgRef} src={src} alt="" />
     </div>
   );
 }

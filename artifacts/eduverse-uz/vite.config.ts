@@ -18,6 +18,10 @@ const basePath = process.env.BASE_PATH ?? '/';
 const apiServerUrl = process.env.API_SERVER_URL ?? 'http://127.0.0.1:5000';
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify('1.3.0'),
+    __APP_BUILD__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 7)),
+  },
   base: basePath,
   plugins: [
     react(),

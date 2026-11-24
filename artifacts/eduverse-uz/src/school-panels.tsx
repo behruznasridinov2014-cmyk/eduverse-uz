@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { Select } from './ui/select';
+import { LoadingBlock } from './ui/loading';
+import { friendlyError } from './errors';
+import { statusOf, useToday } from './today';
+import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
   createAssignment,
@@ -40,6 +45,7 @@ import {
   Copy,
   GraduationCap,
   Info,
+  KeyRound,
   Plus,
   RefreshCw,
   Send,
@@ -56,7 +62,9 @@ import {
   type Language,
   type SchoolData,
 } from './school-data';
-import { PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
+import { HomeworkAiCheck, PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
+import { MARKS, markBand, markOf, scoreOf } from './marks';
+import { COURSE, pdfPageOf } from './course-data';
 
 const ASSIGNMENT_STATUSES = [
   'assigned',
@@ -119,15 +127,26 @@ function RefreshButton({ onClick, busy, language }: { onClick: () => void; busy:
 /* Account school scope                                                        */
 /* -------------------------------------------------------------------------- */
 
+const SUBJECT_TEXT: Record<string, [string, string, string]> = {
+  Mathematics: ['Mathematics', 'Математика', 'Matematika'],
+  Biology: ['Biology', 'Биология', 'Biologiya'],
+  History: ['History', 'История', 'Tarix'],
+  Physics: ['Physics', 'Физика', 'Fizika'],
+  Chemistry: ['Chemistry', 'Химия', 'Kimyo'],
+  Uzbek: ['Uzbek', 'Узбекский язык', 'O‘zbek tili'],
+  Russian: ['Russian', 'Русский язык', 'Rus tili'],
+  English: ['English', 'Английский язык', 'Ingliz tili'],
+};
+
 export function SchoolScopeSummary({ school, language }: { school: SchoolData; language: Language }) {
   const statusLabel =
     school.status === 'loading'
-      ? t(language, 'Loading server records…', 'Загружаем данные сервера…', 'Server ma’lumotlari yuklanmoqda…')
+      ? t(language, 'Loading…', 'Загружаем…', 'Yuklanmoqda…')
       : school.status === 'ready'
-        ? t(language, 'Server school data connected', 'Данные школы подключены', 'Maktab server ma’lumotlari ulandi')
+        ? t(language, 'School data loaded', 'Данные школы загружены', 'Maktab ma’lumotlari yuklandi')
         : school.status === 'unavailable'
-          ? t(language, 'Server school data unavailable', 'Данные школы недоступны', 'Maktab server ma’lumotlari mavjud emas')
-          : t(language, 'Waiting for account session', 'Ожидаем сессию аккаунта', 'Hisob sessiyasi kutilmoqda');
+          ? t(language, 'School data not loaded', 'Данные школы не загрузились', 'Maktab ma’lumotlari yuklanmadi')
+          : t(language, 'Opening your account…', 'Открываем ваш аккаунт…', 'Hisobingiz ochilmoqda…');
 
   return (
     <Panel className="school-scope-summary">
@@ -136,7 +155,7 @@ export function SchoolScopeSummary({ school, language }: { school: SchoolData; l
         detail={statusLabel}
         tag={
           <span className={`tag ${school.status === 'ready' ? 'green' : school.status === 'unavailable' ? 'gold' : 'blue'}`}>
-            {school.status === 'ready' ? t(language, 'Live', 'Активно', 'Faol') : t(language, 'Server', 'Сервер', 'Server')}
+            {school.status === 'ready' ? t(language, 'Live', 'Активно', 'Faol') : t(language, 'Wait', 'Ждём', 'Kuting')}
           </span>
         }
       />
@@ -218,12 +237,26 @@ export function ServerClassesPanel({
   language: Language;
   onOpen: (path: string) => void;
 }) {
+  const today = useToday();
   const [selectedId, setSelectedId] = useState('');
   const [workspace, setWorkspace] = useState<ClassWorkspace>(EMPTY_WORKSPACE);
   const [revision, setRevision] = useState(0);
-  const [draftAssignmentId, setDraftAssignmentId] = useState<string | null>(null);
-  const [draftContent, setDraftContent] = useState('');
-  const [draftPhotos, setDraftPhotos] = useState<string[]>([]);
+  // The homework being written is kept on the device: when a phone reloads the page after the
+  // camera (Android and iOS do that when memory is short), the photos and the text come back.
+  const draftKey = `eduverse:hw-draft:${user.id}`;
+  const savedDraft = useMemo(() => {
+    try { const raw = localStorage.getItem(draftKey); return raw ? JSON.parse(raw) as { assignmentId: string; content: string; photos: string[] } : null; } catch { return null; }
+  }, [draftKey]);
+  const [draftAssignmentId, setDraftAssignmentId] = useState<string | null>(savedDraft?.assignmentId ?? null);
+  const [draftContent, setDraftContent] = useState(savedDraft?.content ?? '');
+  const [draftPhotos, setDraftPhotos] = useState<string[]>(savedDraft?.photos ?? []);
+  useEffect(() => {
+    try {
+      if (!draftAssignmentId) { localStorage.removeItem(draftKey); return; }
+      const value = { assignmentId: draftAssignmentId, content: draftContent, photos: draftPhotos };
+      try { localStorage.setItem(draftKey, JSON.stringify(value)); } catch { localStorage.setItem(draftKey, JSON.stringify({ ...value, photos: [] })); }
+    } catch { /* private mode */ }
+  }, [draftKey, draftAssignmentId, draftContent, draftPhotos]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [mutationError, setMutationError] = useState('');
@@ -253,7 +286,7 @@ export function ServerClassesPanel({
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setWorkspace({ ...EMPTY_WORKSPACE, error: describeSchoolError(error) });
+        setWorkspace({ ...EMPTY_WORKSPACE, error: friendlyError(error, language) });
       });
 
     return () => {
@@ -271,7 +304,6 @@ export function ServerClassesPanel({
   const canManageClass = isManagerRole(user.role) || workspace.role === 'teacher';
 
   async function submitWork(assignment: MyAssignment) {
-    if (!draftContent.trim()) return;
     if (draftPhotos.length === 0 && !assignment.mySubmission?.attachmentCount) {
       setMutationError(t(language, 'Add at least one photo of your notebook.', 'Добавьте хотя бы одно фото тетради.', 'Daftaringizning kamida bitta rasmini qo‘shing.'));
       return;
@@ -281,7 +313,7 @@ export function ServerClassesPanel({
     setNotice('');
     try {
       await submitAssignment(assignment.id, {
-        content: draftContent.trim(),
+        content: draftContent.trim() || t(language, 'Notebook photo', 'Фото тетради', 'Daftar rasmi'),
         ...(draftPhotos.length ? { attachments: draftPhotos } : {}),
       });
       setDraftAssignmentId(null);
@@ -297,131 +329,70 @@ export function ServerClassesPanel({
       );
       await school.refresh();
       setRevision((value) => value + 1);
+      window.setTimeout(() => setNotice(''), 4000);
     } catch (error) {
-      setMutationError(describeSchoolError(error));
+      setMutationError(friendlyError(error, language));
     } finally {
       setBusyId(null);
     }
   }
 
-  return (
-    <>
-      <div className="grid grid-3">
-        {school.classes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`panel class-card ${item.id === activeClassId ? 'selected' : ''}`}
-            onClick={() => {
-              setSelectedId(item.id);
-              setDraftAssignmentId(null);
-              setNotice('');
-              setMutationError('');
-            }}
-            style={{ textAlign: 'left' }}
-          >
-            <div className="row-between">
-              <span className="tag blue">{item.name}</span>
-              <span className="muted">
-                {item.studentCount ?? 0} {t(language, 'students', 'учеников', 'o‘quvchi')}
-              </span>
-            </div>
-            <h2 style={{ marginTop: 12 }}>
-              {item.grade}
-              {t(language, ' grade', ' класс', '-sinf')} · {item.academicYear}
-            </h2>
-            <p className="muted">{item.schoolName ?? activeClass?.schoolName ?? ''}</p>
-            <div className="progress-track" style={{ marginTop: 14 }}>
-              <div
-                className="progress-fill"
-                style={{ width: `${Math.min(100, (item.studentCount ?? 0) * 3)}%` }}
-              />
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-2" style={{ marginTop: 16 }}>
-        <Panel>
-          <SectionHead
-            title={activeClass?.name ?? t(language, 'Class', 'Класс', 'Sinf')}
-            detail={activeClass?.schoolName}
-            tag={<span className="tag green">{t(language, 'Server roster', 'Список с сервера', 'Server ro‘yxati')}</span>}
-          />
-          {workspace.loading ? (
-            <p className="muted" role="status">{t(language, 'Loading roster…', 'Загружаем список…', 'Ro‘yxat yuklanmoqda…')}</p>
-          ) : workspace.error ? (
-            <InlineError>{workspace.error}</InlineError>
-          ) : (
-            <>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Students', 'Ученики', 'O‘quvchilar')}</span>
-                <b>{studentMembers.length}</b>
-              </div>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Teachers', 'Учителя', 'O‘qituvchilar')}</span>
-                <b>{teacherMembers.length}</b>
-              </div>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Academic year', 'Учебный год', 'O‘quv yili')}</span>
-                <span>{activeClass?.academicYear}</span>
-              </div>
-              <div className="list-row">
-                <span className="list-title">{t(language, 'Your class role', 'Ваша роль в классе', 'Sinfdagi rolingiz')}</span>
-                <span className="tag">{workspace.role ? formatStatus(workspace.role) : t(language, 'Manager access', 'Доступ руководителя', 'Rahbar ruxsati')}</span>
-              </div>
-              <div className="school-member-chips">
-                {workspace.members.slice(0, 8).map((member) => (
-                  <span className="tag" key={member.userId} title={member.accountRole ?? member.role}>
-                    {member.username} · {formatStatus(member.role)}
-                  </span>
-                ))}
-                {workspace.members.length > 8 && (
-                  <span className="tag gold">+{workspace.members.length - 8}</span>
-                )}
-                {workspace.members.length === 0 && (
-                  <span className="muted">{t(language, 'No roster members have been added yet.', 'В списке пока нет участников.', 'Ro‘yxatga hali a’zo qo‘shilmagan.')}</span>
-                )}
-              </div>
-              {canManageClass && (
-                <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/teacher')}>
-                  {t(language, 'Manage class in teacher workspace', 'Управлять классом в кабинете учителя', 'Sinfni o‘qituvchi kabinetida boshqarish')}
-                  <ArrowRight size={15} />
-                </button>
-              )}
-            </>
-          )}
-        </Panel>
-
-        <Panel>
-          <SectionHead
-            title={t(language, 'Class assignments', 'Задания класса', 'Sinf topshiriqlari')}
-            detail={t(language, 'Posted work visible to this class.', 'Работы, доступные этому классу.', 'Bu sinfga ko‘rinadigan topshiriqlar.')}
-            tag={
-              <button type="button" className="btn small" onClick={() => setRevision((value) => value + 1)}>
-                <RefreshCw size={13} />
-                {t(language, 'Reload', 'Обновить', 'Yangilash')}
-              </button>
-            }
-          />
-          {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-          {mutationError && <InlineError>{mutationError}</InlineError>}
-          {classAssignments.length === 0 ? (
+  const isStudent = user.role === 'student';
+  // A pupil sees only what is still to do; handed-in work goes to "My grades".
+  // Homework is accepted until 00:00 of the lesson day; missed work stays visible for 3 days, marked late.
+  const isOverdue = (item: MyAssignment) => !item.mySubmission && Boolean(item.dueAt) && new Date(item.dueAt as string).getTime() < Date.now();
+  const todoAssignments = classAssignments.filter((item) => !item.mySubmission && !(isOverdue(item) && Date.now() - new Date(item.dueAt as string).getTime() > 3 * 86_400_000));
+  const [showStudents, setShowStudents] = useState(false);
+  if (isStudent) {
+    // A pupil sees only the homework that is still to do.
+    return (
+      <Panel>
+          {/* On a phone the top of the page is off screen: the result of sending pops up at the bottom. */}
+          {notice && <div className="notice school-inline-success hw-toast" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
+          {mutationError && <div className="hw-toast is-error" role="alert"><InlineError>{mutationError}</InlineError></div>}
+          {todoAssignments.length === 0 ? (
             <div className="callout">
-              {t(
-                language,
-                'No assignments have been posted to this class yet.',
-                'В этот класс пока не добавлено ни одного задания.',
-                'Bu sinfga hali topshiriq joylanmagan.',
-              )}
+              {classAssignments.length === 0
+                ? t(language, 'No homework yet.', 'Заданий пока нет.', 'Hali vazifa yo‘q.')
+                : t(language, 'All homework is done. Grades are in “My grades”.', 'Все задания сделаны. Оценки — во вкладке «Мои оценки».', 'Barcha vazifalar bajarilgan. Baholar — «Mening baholarim»da.')}
             </div>
           ) : (
             <div className="stack school-assignment-list">
-              {classAssignments.map((assignment) => {
+              {(() => {
+                // Subjects to hand in today: one glance, then the cards below grouped by subject.
+                const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+                const dueToday = [...new Set(todoAssignments.filter((item) => !isOverdue(item) && item.dueAt && new Date(new Date(item.dueAt).getTime() + 5 * 3600_000).toISOString().slice(0, 10) === today).map((item) => item.subject))];
+                return dueToday.length > 0 && (
+                  <div className="hw-today">
+                    <b>{t(language, 'Today, by 00:00', 'Сегодня до 00:00', 'Bugun 00:00 gacha')}:</b>
+                    {dueToday.map((subject) => <span key={subject} className="tag gold">{subject}</span>)}
+                  </div>
+                );
+              })()}
+              {[...todoAssignments].sort((a, b) => a.subject.localeCompare(b.subject)).map((assignment, at, list) => {
                 const submission = assignment.mySubmission;
+                const subjectHead = at === 0 || list[at - 1]!.subject !== assignment.subject;
                 const isEditing = draftAssignmentId === assignment.id;
+                const overdue = isOverdue(assignment);
+                const bookTopic = (() => {
+                  if (!assignment.topicId?.startsWith('course:')) return null;
+                  const key = assignment.topicId.slice(7);
+                  for (const book of COURSE) { const topic = book.topics.find((item) => item.key === key); if (topic) return { book, topic }; }
+                  return null;
+                })();
+                const openBook = () => {
+                  if (!bookTopic) { onOpen('/topics'); return; }
+                  const page = pdfPageOf(bookTopic.book, bookTopic.topic);
+                  try {
+                    if (page) localStorage.setItem(`eduverse:pdf-page:/books/${bookTopic.book.bookId}.pdf`, String(page));
+                    localStorage.removeItem(`eduverse:pdf-range:/books/${bookTopic.book.bookId}.pdf`);
+                  } catch { /* private mode */ }
+                  onOpen(`/read/${bookTopic.book.bookId}`);
+                };
                 return (
-                  <article className="school-assignment-card" key={assignment.id}>
+                  <div key={assignment.id} className="stack" style={{ gap: 6 }}>
+                  {subjectHead && <h3 className="hw-subject-head">{assignment.subject}</h3>}
+                  <article className="school-assignment-card">
                     <div className="row-between" style={{ gap: 8, alignItems: 'flex-start' }}>
                       <div>
                         <b>{assignment.title}</b>
@@ -429,15 +400,26 @@ export function ServerClassesPanel({
                           {assignment.subject} · {formatDue(assignment.dueAt)}
                         </div>
                       </div>
-                      <span className={`tag ${submission ? 'green' : 'gold'}`}>
-                        {submission ? formatStatus(submission.status) : formatStatus(assignment.status)}
+                      <span className={`tag ${overdue ? 'red' : submission ? (submission.score !== null && submission.score !== undefined ? 'green' : 'blue') : 'gold'}`}>
+                        {overdue
+                          ? t(language, 'Late — not counted', 'Срок прошёл — не засчитано', 'Muddat o‘tdi — hisoblanmaydi')
+                          : !submission
+                          ? (() => {
+                            const due = assignment.dueAt ? new Date(assignment.dueAt) : null;
+                            const time = due ? due.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' }) : '00:00';
+                            const shown = time === '23:59' ? '00:00' : time;
+                            return t(language, `Due by ${shown}`, `Сдать до ${shown}`, `${shown} gacha topshiring`);
+                          })()
+                          : submission.score !== null && submission.score !== undefined
+                            ? `${t(language, 'Checked', 'Проверено', 'Tekshirildi')} · ${markOf(submission.score)}`
+                            : t(language, 'In review', 'На проверке', 'Tekshirilmoqda')}
                       </span>
                     </div>
                     <p className="muted school-assignment-copy">{assignment.description}</p>
-                    {assignment.topicTitle && (
-                      <button type="button" className="hw-topic-link" onClick={() => onOpen('/topics')}>
+                    {(assignment.topicTitle || bookTopic) && (
+                      <button type="button" className="hw-topic-link" onClick={openBook}>
                         <BookOpen size={14} />
-                        {t(language, 'Theory', 'Теория', 'Nazariya')}: {assignment.topicTitle}
+                        {t(language, 'More: open the textbook (examples)', 'Подробнее: открыть учебник (примеры)', 'Batafsil: darslikni ochish (misollar)')}
                         <ArrowRight size={13} />
                       </button>
                     )}
@@ -464,7 +446,7 @@ export function ServerClassesPanel({
                         {submission.score !== null && submission.score !== undefined && (
                           <>
                             {' '}
-                            · {t(language, 'Score', 'Оценка', 'Ball')}: {submission.score}
+                            · {t(language, 'Grade', 'Оценка', 'Baho')}: {markOf(submission.score)}
                           </>
                         )}
                         {submission.signature && (
@@ -477,7 +459,7 @@ export function ServerClassesPanel({
                         )}
                       </div>
                     )}
-                    {canSubmit && !(submission?.signedAt && submission.status === 'checked') && (
+                    {canSubmit && !overdue && !(submission && submission.score !== null && submission.score !== undefined) && !(submission?.signedAt && submission.status === 'checked') && (
                       <div className="stack" style={{ gap: 8 }}>
                         {isEditing ? (
                           <>
@@ -492,7 +474,7 @@ export function ServerClassesPanel({
                             </div>
                             <div className="control">
                               <label htmlFor={`submit-${assignment.id}`}>
-                                {t(language, '2. In your own words: what did you understand?', '2. Своими словами: что вы поняли?', '2. O‘z so‘zingiz bilan: nimani tushundingiz?')}
+                                {t(language, '2. In your own words (optional)', '2. Своими словами (по желанию)', '2. O‘z so‘zingiz bilan (ixtiyoriy)')}
                               </label>
                               <textarea
                                 id={`submit-${assignment.id}`}
@@ -505,7 +487,7 @@ export function ServerClassesPanel({
                               <button
                                 type="button"
                                 className="btn primary"
-                                disabled={!draftContent.trim() || busyId === assignment.id || (draftPhotos.length === 0 && !submission?.attachmentCount)}
+                                disabled={busyId === assignment.id || (draftPhotos.length === 0 && !submission?.attachmentCount)}
                                 onClick={() => void submitWork(assignment)}
                               >
                                 <Send size={14} />
@@ -547,12 +529,65 @@ export function ServerClassesPanel({
                       </div>
                     )}
                   </article>
+                  </div>
                 );
               })}
             </div>
           )}
-        </Panel>
+      </Panel>
+    );
+  }
+  return (
+    <>
+      <div className="class-pick">
+        {school.classes.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`class-pick-card ${item.id === activeClassId ? 'selected' : ''}`}
+            onClick={() => { setSelectedId(item.id); setShowStudents(false); }}
+          >
+            <b>{t(language, `Class ${item.name}`, `${item.name} класс`, `${item.name} sinf`)}</b>
+            <small className="muted">{item.studentCount ?? 0} {t(language, 'students', 'учеников', 'o‘quvchi')}</small>
+          </button>
+        ))}
       </div>
+
+      <Panel className="class-info">
+        <h2>{activeClass ? t(language, `Class ${activeClass.name}`, `${activeClass.name} класс`, `${activeClass.name} sinf`) : ''}</h2>
+        {workspace.loading ? (
+          <p className="muted" role="status">{t(language, 'Loading…', 'Загружаем…', 'Yuklanmoqda…')}</p>
+        ) : workspace.error ? (
+          <InlineError>{workspace.error}</InlineError>
+        ) : (
+          <>
+            <div className="class-info-grid">
+              <div><small className="muted">{t(language, 'Grade', 'Параллель', 'Sinf')}</small><b>{activeClass?.grade}{t(language, ' grade', ' класс', '-sinf')}</b></div>
+              <div><small className="muted">{t(language, 'School year', 'Учебный год', 'O‘quv yili')}</small><b>{activeClass ? (/^\d{4}$/.test(String(activeClass.academicYear).trim()) ? `${activeClass.academicYear}–${Number(activeClass.academicYear) + 1}` : activeClass.academicYear) : ''}</b></div>
+              <div><small className="muted">{t(language, 'Students', 'Учеников', 'O‘quvchilar')}</small><b>{studentMembers.length}</b></div>
+            </div>
+            <div className="class-info-block">
+              <small className="muted">{t(language, 'Teachers', 'Учителя класса', 'Sinf o‘qituvchilari')}</small>
+              <p>{teacherMembers.map((member) => member.username).join(', ') || t(language, 'Not added yet', 'Пока не добавлены', 'Hali qo‘shilmagan')}</p>
+            </div>
+            <button type="button" className="btn" onClick={() => setShowStudents((value) => !value)}>
+              <Users size={15} /> {showStudents ? t(language, 'Hide students', 'Скрыть учеников', 'O‘quvchilarni yashirish') : t(language, `Students · ${studentMembers.length}`, `Ученики · ${studentMembers.length}`, `O‘quvchilar · ${studentMembers.length}`)}
+            </button>
+            {showStudents && (
+              <ol className="class-students">
+                {studentMembers.map((member) => <li key={member.userId}>{member.username}</li>)}
+                {studentMembers.length === 0 && <li className="muted">{t(language, 'No students yet.', 'Учеников пока нет.', 'Hali o‘quvchi yo‘q.')}</li>}
+              </ol>
+            )}
+            {user.role === 'teacher' && canManageClass && (today.data?.lessons ?? []).some((lesson) => lesson.classId === activeClass?.id && statusOf(lesson, today.now) === 'current') && (
+              <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/attendance')}>
+                {t(language, 'Mark attendance', 'Отметить давомат', 'Davomatni belgilash')}
+                <ArrowRight size={15} />
+              </button>
+            )}
+          </>
+        )}
+      </Panel>
     </>
   );
 }
@@ -576,6 +611,7 @@ export function ServerTeachingPanel({
   language: Language;
 }) {
   const [selectedClassId, setSelectedClassId] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', subject: 'Mathematics', description: '', dueAt: '', topicId: '' });
   const [topics, setTopics] = useState<LessonTopic[]>([]);
   const [creating, setCreating] = useState(false);
@@ -585,6 +621,7 @@ export function ServerTeachingPanel({
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewBusyId, setReviewBusyId] = useState<string | null>(null);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -629,7 +666,7 @@ export function ServerTeachingPanel({
         );
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(describeSchoolError(requestError));
+        if (!cancelled) setError(friendlyError(requestError, language));
       })
       .finally(() => {
         if (!cancelled) setReviewLoading(false);
@@ -661,11 +698,11 @@ export function ServerTeachingPanel({
       await createAssignment(activeClassId, payload);
       setForm({ title: '', subject: form.subject, description: '', dueAt: '', topicId: '' });
       setNotice(
-        t(language, 'Assignment published to the server.', 'Задание опубликовано на сервере.', 'Topshiriq serverga joylandi.'),
+        t(language, 'Assignment published.', 'Задание опубликовано.', 'Topshiriq joylandi.'),
       );
       await school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setCreating(false);
     }
@@ -680,7 +717,7 @@ export function ServerTeachingPanel({
       await school.refresh();
       setNotice(t(language, 'Assignment status updated.', 'Статус задания обновлён.', 'Topshiriq holati yangilandi.'));
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusyAssignmentId(null);
     }
@@ -703,7 +740,7 @@ export function ServerTeachingPanel({
       await school.refresh();
       setNotice(t(language, 'Assignment deleted.', 'Задание удалено.', 'Topshiriq o‘chirildi.'));
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusyAssignmentId(null);
     }
@@ -737,11 +774,12 @@ export function ServerTeachingPanel({
         ...(draft.signature ? { signature: draft.signature } : {}),
       };
       await reviewSubmission(reviewAssignmentId, studentId, payload);
-      setNotice(t(language, 'Review saved.', 'Проверка сохранена.', 'Tekshiruv saqlandi.'));
-      const refreshed = await listSubmissions(reviewAssignmentId);
-      setSubmissions(refreshed.submissions);
+      setSavedIds((current) => [...current.filter((id) => id !== studentId), studentId]);
+      // The list and counters refresh in the background: the button is free at once.
+      void listSubmissions(reviewAssignmentId).then((refreshed) => setSubmissions(refreshed.submissions)).catch(() => {});
+      void school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setReviewBusyId(null);
     }
@@ -753,12 +791,18 @@ export function ServerTeachingPanel({
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
 
       <div className="grid grid-2" style={{ marginTop: error || notice ? 12 : 0 }}>
+        {!showForm ? (
+          <Panel>
+            <SectionHead title={t(language, 'Your own assignment', 'Своё задание', 'O‘z topshirig‘ingiz')} detail={t(language, 'If the textbook homework is not enough, write your own.', 'Если домашки из учебника мало, напишите своё.', 'Darslikdagi topshiriqlar yetmasa, o‘zingiz yozing.')} />
+            <button type="button" className="btn" onClick={() => setShowForm(true)}>{t(language, 'Write an assignment', 'Написать задание', 'Topshiriq yozish')}</button>
+          </Panel>
+        ) : (
         <Panel>
           <SectionHead
             title={t(language, 'Publish an assignment', 'Опубликовать задание', 'Topshiriq joylash')}
             detail={activeClass ? `${activeClass.name} · ${activeClass.academicYear}` : undefined}
             tag={
-              <select
+              <Select
                 className="top-select"
                 aria-label={t(language, 'Class', 'Класс', 'Sinf')}
                 value={activeClassId}
@@ -772,7 +816,7 @@ export function ServerTeachingPanel({
                     {item.name} · {item.academicYear}
                   </option>
                 ))}
-              </select>
+              </Select>
             }
           />
           <form className="stack" onSubmit={handleCreate}>
@@ -789,15 +833,15 @@ export function ServerTeachingPanel({
             <div className="grid grid-2">
               <div className="control">
                 <label htmlFor="server-assignment-subject">{t(language, 'Subject', 'Предмет', 'Fan')}</label>
-                <select
+                <Select
                   id="server-assignment-subject"
                   value={form.subject}
                   onChange={(event) => setForm({ ...form, subject: event.target.value })}
                 >
                   {['Mathematics', 'Biology', 'History', 'Physics', 'Chemistry', 'Uzbek', 'Russian', 'English'].map((subject) => (
-                    <option value={subject} key={subject}>{subject}</option>
+                    <option value={subject} key={subject}>{t(language, ...(SUBJECT_TEXT[subject] ?? [subject, subject, subject]))}</option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div className="control">
                 <label htmlFor="server-assignment-due">{t(language, 'Due date', 'Срок', 'Muddat')}</label>
@@ -811,7 +855,7 @@ export function ServerTeachingPanel({
             </div>
             <div className="control">
               <label htmlFor="server-assignment-topic">{t(language, 'Linked 3D theory topic', 'Связанная тема 3D-теории', 'Bog‘langan 3D nazariya mavzusi')}</label>
-              <select
+              <Select
                 id="server-assignment-topic"
                 value={form.topicId}
                 onChange={(event) => setForm({ ...form, topicId: event.target.value })}
@@ -820,7 +864,7 @@ export function ServerTeachingPanel({
                 {topics.map((topic) => (
                   <option value={topic.id} key={topic.id}>{topic.subject} · {topic.title}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="control">
               <label htmlFor="server-assignment-description">{t(language, 'Instructions', 'Инструкции', 'Ko‘rsatmalar')}</label>
@@ -844,10 +888,12 @@ export function ServerTeachingPanel({
             </button>
           </form>
         </Panel>
+        )}
 
-        <Panel>
+        <Panel className="review-queue-panel">
+          <span id="review-queue" />
           <SectionHead
-            title={t(language, 'Review queue', 'Очередь проверки', 'Tekshiruv navbati')}
+            title={t(language, 'Review queue', 'Проверка работ', 'Tekshiruv')}
             detail={
               reviewAssignment
                 ? `${reviewAssignment.title} · ${formatStatus(reviewAssignment.status)}`
@@ -887,31 +933,12 @@ export function ServerTeachingPanel({
                       <p className="muted school-assignment-copy">
                         <b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}
                       </p>
-                      <div className="grid grid-2" style={{ gap: 8 }}>
-                        <div className="control">
-                          <label htmlFor={`review-status-${submission.studentId}`}>{t(language, 'Status', 'Статус', 'Holat')}</label>
-                          <select
-                            id={`review-status-${submission.studentId}`}
-                            value={draft.status}
-                            onChange={(event) => updateDraft(submission.studentId, { status: event.target.value })}
-                          >
-                            {REVIEW_STATUSES.map((status) => (
-                              <option value={status} key={status}>{formatStatus(status)}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="control">
-                          <label htmlFor={`review-score-${submission.studentId}`}>{t(language, 'Score (0–100)', 'Оценка (0–100)', 'Ball (0–100)')}</label>
-                          <input
-                            id={`review-score-${submission.studentId}`}
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={draft.score}
-                            onChange={(event) => updateDraft(submission.studentId, { score: event.target.value })}
-                          />
-                        </div>
-                      </div>
+                      <HomeworkAiCheck assignmentId={reviewAssignment.id} studentId={submission.studentId} language={language} />
+                      <ReviewVerdict
+                        draft={draft}
+                        language={language}
+                        onChange={(patch) => updateDraft(submission.studentId, patch)}
+                      />
                       <div className="control" style={{ marginTop: 8 }}>
                         <label htmlFor={`review-feedback-${submission.studentId}`}>{t(language, 'Feedback', 'Комментарий', 'Izoh')}</label>
                         <textarea
@@ -940,12 +967,13 @@ export function ServerTeachingPanel({
                         type="button"
                         className="btn primary small"
                         style={{ marginTop: 8 }}
-                        disabled={reviewBusyId === submission.studentId}
+                        disabled={reviewBusyId === submission.studentId || draft.score.trim() === ''}
                         onClick={() => void saveReview(submission.studentId)}
                       >
                         <CheckCircle2 size={13} />
-                        {t(language, 'Save review', 'Сохранить проверку', 'Tekshiruvni saqlash')}
+                        {reviewBusyId === submission.studentId ? t(language, 'Saving…', 'Сохраняем…', 'Saqlanmoqda…') : t(language, 'Save review', 'Сохранить проверку', 'Tekshiruvni saqlash')}
                       </button>
+                      {savedIds.includes(submission.studentId) && reviewBusyId !== submission.studentId && <span className="review-saved"><CheckCircle2 size={14} /> {t(language, 'Saved. The pupil sees the mark.', 'Сохранено. Ученик видит оценку.', 'Saqlandi. O‘quvchi bahoni ko‘radi.')}</span>}
                     </article>
                   );
                 })}
@@ -966,82 +994,28 @@ export function ServerTeachingPanel({
 
       <Panel style={{ marginTop: 16 }}>
         <SectionHead
-          title={t(language, 'Class assignments', 'Задания класса', 'Sinf topshiriqlari')}
-          detail={activeClass ? `${activeClass.schoolName ?? ''} · ${activeClass.name}` : undefined}
-          tag={<span className="tag green">{classAssignments.length}</span>}
+          title={t(language, 'Work to check', 'Работы на проверку', 'Tekshiriladigan ishlar')}
+          detail={t(language, 'Only the tasks where pupils handed in work and it is not checked yet.', 'Только задания, где ученики сдали работу и она ещё не проверена.', 'Faqat o‘quvchilar ish topshirgan va hali tekshirilmagan vazifalar.')}
         />
-        {classAssignments.length === 0 ? (
-          <div className="callout">
-            {t(language, 'No assignments in this class yet. Use the form above to publish the first one.', 'В этом классе пока нет заданий. Опубликуйте первое через форму выше.', 'Bu sinfda hali topshiriq yo‘q. Yuqoridagi shakl orqali birinchisini joylang.')}
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t(language, 'Assignment', 'Задание', 'Topshiriq')}</th>
-                  <th>{t(language, 'Due', 'Срок', 'Muddat')}</th>
-                  <th>{t(language, 'Status', 'Статус', 'Holat')}</th>
-                  <th>{t(language, 'Submissions', 'Работы', 'Javoblar')}</th>
-                  <th>{t(language, 'Actions', 'Действия', 'Amallar')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classAssignments.map((assignment) => (
-                  <tr key={assignment.id}>
-                    <td>
-                      <b>{assignment.title}</b>
-                      <div className="list-meta">{assignment.subject}</div>
-                    </td>
-                    <td>{formatDue(assignment.dueAt)}</td>
-                    <td>
-                      <select
-                        className="top-select"
-                        aria-label={`${t(language, 'Status for', 'Статус для', 'Holati')} ${assignment.title}`}
-                        value={assignment.status}
-                        disabled={busyAssignmentId === assignment.id}
-                        onChange={(event) => void changeStatus(assignment, event.target.value)}
-                      >
-                        {ASSIGNMENT_STATUSES.map((status) => (
-                          <option value={status} key={status}>{formatStatus(status)}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>
-                      {assignment.submissionCount ?? 0}
-                      {assignment.reviewCount ? ` · ${assignment.reviewCount} ${t(language, 'reviewed', 'проверено', 'tekshirilgan')}` : ''}
-                    </td>
-                    <td>
-                      <div className="row" style={{ gap: 6 }}>
-                        <button
-                          type="button"
-                          className={`btn small ${reviewAssignmentId === assignment.id ? 'subtle' : ''}`}
-                          onClick={() =>
-                            setReviewAssignmentId((current) =>
-                              current === assignment.id ? null : assignment.id,
-                            )
-                          }
-                        >
-                          <ClipboardCheck size={13} />
-                          {t(language, 'Review', 'Проверить', 'Tekshirish')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn small danger"
-                          aria-label={`${t(language, 'Delete', 'Удалить', 'O‘chirish')} ${assignment.title}`}
-                          disabled={busyAssignmentId === assignment.id}
-                          onClick={() => void removeAssignment(assignment)}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {(() => {
+          const pending = school.assignments
+            .map((item) => ({ item, waiting: Math.max(0, (item.submissionCount ?? 0) - (item.reviewCount ?? 0)), className: school.classes.find((klass) => klass.id === item.classId)?.name ?? '' }))
+            .filter((row) => row.waiting > 0);
+          if (!pending.length) return <div className="callout">{t(language, 'Nothing to check. New work appears here by itself.', 'Проверять нечего. Новые работы появятся здесь сами.', 'Tekshiradigan ish yo‘q. Yangi ishlar shu yerda o‘zi chiqadi.')}</div>;
+          return (
+            <ul className="check-list">
+              {pending.map(({ item, waiting, className }) => (
+                <li key={item.id} className={reviewAssignmentId === item.id ? 'on' : ''}>
+                  <div><b>{item.title}</b><small className="muted">{className} · {item.subject}</small></div>
+                  <span className="tag gold">{t(language, `${waiting} waiting`, `ждут: ${waiting}`, `${waiting} ta kutmoqda`)}</span>
+                  <button type="button" className="btn small primary" onClick={() => { setSelectedClassId(item.classId); setReviewAssignmentId(item.id); window.setTimeout(() => document.getElementById('review-queue')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>
+                    <ClipboardCheck size={13} /> {t(language, 'Check', 'Проверить', 'Tekshirish')}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
       </Panel>
     </>
   );
@@ -1063,6 +1037,21 @@ export function ServerSchoolOverview({
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
   const [detail, setDetail] = useState<SchoolRecord | null>(null);
   const [members, setMembers] = useState<SchoolMember[]>([]);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [resetCard, setResetCard] = useState<{ name: string; login: string; password: string } | null>(null);
+  const [resetError, setResetError] = useState('');
+  async function resetPassword(member: SchoolMember) {
+    if (!activeSchoolId) return;
+    if (!window.confirm(t(language, `Give ${member.username} a new one-time password? The old one stops working.`, `Выдать новый одноразовый пароль: ${member.username}? Старый перестанет работать.`, `${member.username} uchun yangi bir martalik parol berilsinmi? Eskisi ishlamaydi.`))) return;
+    setResetError('');
+    try {
+      const result = await customFetch<{ name: string; login: string; password: string }>(`/api/schools/${activeSchoolId}/members/${member.userId}/reset-password`, { method: 'POST' });
+      setResetCard(result);
+    } catch (requestError) {
+      setResetCard(null);
+      setResetError(friendlyError(requestError, language));
+    }
+  }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -1102,7 +1091,7 @@ export function ServerSchoolOverview({
         setMembers(memberResponse.members);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(describeSchoolError(requestError));
+        if (!cancelled) setError(friendlyError(requestError, language));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -1127,11 +1116,11 @@ export function ServerSchoolOverview({
       };
       await createClass(activeSchoolId, payload);
       setClassForm({ ...classForm, name: '' });
-      setNotice(t(language, 'Class created on the server.', 'Класс создан на сервере.', 'Sinf serverda yaratildi.'));
+      setNotice(t(language, 'Class created.', 'Класс создан.', 'Sinf yaratildi.'));
       await school.refresh();
       setRevision((value) => value + 1);
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setCreatingClass(false);
     }
@@ -1153,58 +1142,13 @@ export function ServerSchoolOverview({
           ))}
         </div>
         <div className="row">
-          <span className="tag green">{t(language, 'Server records', 'Данные сервера', 'Server ma’lumotlari')}</span>
+          <span className="tag green">{t(language, 'School data', 'Данные школы', 'Maktab ma’lumotlari')}</span>
           <RefreshButton onClick={() => setRevision((value) => value + 1)} busy={loading} language={language} />
         </div>
       </div>
 
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-
-      <div className="grid grid-4" style={{ marginTop: 12 }}>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Members', 'Участники', 'A’zolar')}</div>
-              <div className="metric-value">{detail?.memberCount ?? members.length}</div>
-              <div className="metric-note">{t(language, 'From the server roster', 'Из списка сервера', 'Server ro‘yxatidan')}</div>
-            </div>
-            <div className="metric-icon"><Users /></div>
-          </div>
-        </Panel>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Classes', 'Классы', 'Sinflar')}</div>
-              <div className="metric-value">{detail?.classCount ?? schoolClasses.length}</div>
-              <div className="metric-note">{t(language, 'Linked to this school', 'Привязаны к школе', 'Bu maktabga bog‘langan')}</div>
-            </div>
-            <div className="metric-icon"><BookOpen /></div>
-          </div>
-        </Panel>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Assignments', 'Задания', 'Topshiriqlar')}</div>
-              <div className="metric-value">{schoolAssignments.length}</div>
-              <div className="metric-note">{t(language, 'Visible to this account', 'Видимы этому аккаунту', 'Bu hisobga ko‘rinadi')}</div>
-            </div>
-            <div className="metric-icon"><ClipboardCheck /></div>
-          </div>
-        </Panel>
-        <Panel>
-          <div className="metric">
-            <div>
-              <div className="metric-label">{t(language, 'Your school role', 'Ваша роль в школе', 'Maktabdagi rolingiz')}</div>
-              <div className="metric-value" style={{ fontSize: 17 }}>
-                {activeMembership ? formatStatus(activeMembership.role) : '—'}
-              </div>
-              <div className="metric-note">{activeMembership?.region}</div>
-            </div>
-            <div className="metric-icon"><ShieldCheck /></div>
-          </div>
-        </Panel>
-      </div>
 
       <div className="grid grid-2" style={{ marginTop: 16 }}>
         <Panel>
@@ -1217,7 +1161,7 @@ export function ServerSchoolOverview({
                   ? [activeMembership.region, activeMembership.district].filter(Boolean).join(' · ')
                   : undefined
             }
-            tag={<span className="tag blue">{t(language, 'Server record', 'Запись сервера', 'Server yozuvi')}</span>}
+            tag={<span className="tag blue">{t(language, 'Record', 'Запись', 'Yozuv')}</span>}
           />
           {loading ? (
             <p className="muted" role="status">{t(language, 'Loading school record…', 'Загружаем школу…', 'Maktab yozuvi yuklanmoqda…')}</p>
@@ -1227,17 +1171,37 @@ export function ServerSchoolOverview({
               {members.length === 0 ? (
                 <div className="callout">
                   {canManage
-                    ? t(language, 'No members yet. Add accounts through the school API or a teacher workspace.', 'Участников пока нет. Добавьте аккаунты через API школы или кабинет учителя.', 'Hali a’zo yo‘q. Hisoblarni maktab API’si yoki o‘qituvchi kabineti orqali qo‘shing.')
+                    ? t(language, 'No members yet. The director or deputy adds them from an Excel list.', 'Участников пока нет. Директор или завуч добавляет их из списка Excel.', 'Hali a’zo yo‘q. Direktor yoki zavuch Excel ro‘yxatidan qo‘shadi.')
                     : t(language, 'The roster is only shown to school managers.', 'Список видят только руководители школы.', 'Ro‘yxat faqat maktab rahbarlariga ko‘rinadi.')}
                 </div>
               ) : (
-                <div className="school-member-chips">
-                  {members.map((member) => (
-                    <span className="tag" key={member.userId} title={member.login ?? member.accountRole}>
-                      {member.username} · {formatStatus(member.role)}
-                    </span>
-                  ))}
-                </div>
+                <>
+                  {canManage && (
+                    <input className="input" style={{ marginBottom: 8 }} value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder={t(language, 'Find a person (name or login)', 'Найти человека (ФИО или логин)', 'Odamni topish (F.I.Sh. yoki login)')} />
+                  )}
+                  {resetError && <InlineError>{resetError}</InlineError>}
+                  {resetCard && (
+                    <div className="notice school-inline-success reset-card" role="status">
+                      <KeyRound size={15} />
+                      <span>{resetCard.name} · {t(language, 'login', 'логин', 'login')}: <b>{resetCard.login}</b> · {t(language, 'new password', 'новый пароль', 'yangi parol')}: <b>{resetCard.password}</b><br /><small>{t(language, 'Shown once. They set their own password at the next sign-in.', 'Показывается один раз. При входе человек поставит свой пароль.', 'Bir marta ko‘rsatiladi. Keyingi kirishda o‘z parolini qo‘yadi.')}</small></span>
+                      <button type="button" className="btn small" onClick={() => setResetCard(null)}>{t(language, 'Done', 'Готово', 'Tayyor')}</button>
+                    </div>
+                  )}
+                  <div className="school-member-list">
+                    {members
+                      .filter((member) => !memberQuery.trim() || `${member.username} ${member.login ?? ''}`.toLowerCase().includes(memberQuery.trim().toLowerCase()))
+                      .map((member) => (
+                        <div className="school-member-row" key={member.userId}>
+                          <span><b>{member.username}</b> <small className="muted">{formatStatus(member.role)}{member.login ? ` · ${member.login}` : ''}</small></span>
+                          {canManage && member.role !== 'school_director' && (
+                            <button type="button" className="btn small" onClick={() => void resetPassword(member)}>
+                              <KeyRound size={13} /> {t(language, 'New password', 'Новый пароль', 'Yangi parol')}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </>
               )}
             </>
           )}
@@ -1327,7 +1291,7 @@ export function ServerSchoolOverview({
 /* Administration                                                              */
 /* -------------------------------------------------------------------------- */
 
-export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
+export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part = 'all' }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; selectedId?: string; part?: 'all' | 'list' | 'create' }) {
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1345,7 +1309,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
         if (!cancelled) setSchools(response.schools);
       })
       .catch((requestError: unknown) => {
-        if (!cancelled) setError(describeSchoolError(requestError));
+        if (!cancelled) setError(friendlyError(requestError, language));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -1370,10 +1334,10 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
       };
       await createSchool(payload);
       setForm({ name: '', region: form.region, district: '', address: '' });
-      setNotice(t(language, 'School created on the server.', 'Школа создана на сервере.', 'Maktab serverda yaratildi.'));
+      setNotice(t(language, 'School created.', 'Школа создана.', 'Maktab yaratildi.'));
       setRevision((value) => value + 1);
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setCreating(false);
     }
@@ -1382,13 +1346,10 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
   return (
     <Panel className="school-admin-panel">
       <SectionHead
-        title={t(language, 'Schools', 'Школы', 'Maktablar')}
-        detail={t(
-          language,
-          'Create schools and manage who belongs to them.',
-          'Создавайте школы и управляйте их составом.',
-          'Global administratorlar maktab yozuvlarini yaratishi va ko‘rishi mumkin.',
-        )}
+        title={part === 'create' ? t(language, 'Create a school', 'Создать школу', 'Maktab yaratish') : t(language, 'Schools', 'Школы', 'Maktablar')}
+        detail={part === 'create'
+          ? t(language, 'Then open it in “Schools” and add people.', 'Потом откройте её во вкладке «Школы» и добавьте людей.', 'Keyin «Maktablar» bo‘limida ochib, odamlarni qo‘shing.')
+          : t(language, 'Press “Set up” to open a school.', 'Нажмите «Настроить», чтобы открыть школу.', 'Maktabni ochish uchun «Sozlash» ni bosing.')}
         tag={
           <div className="row">
             <span className="tag green">{schools.length}</span>
@@ -1398,11 +1359,11 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
       />
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-      {loading ? (
-        <p className="muted" role="status">{t(language, 'Loading schools…', 'Загружаем школы…', 'Maktablar yuklanmoqda…')}</p>
+      {part !== 'create' && (loading ? (
+        <LoadingBlock language={language} kind="inline" />
       ) : schools.length === 0 ? (
         <div className="callout">
-          {t(language, 'No school records exist on the server yet.', 'На сервере пока нет школ.', 'Serverda hali maktab yozuvlari yo‘q.')}
+          {t(language, 'No schools yet.', 'Школ пока нет.', 'Hali maktablar yo‘q.')}
         </div>
       ) : (
         <div className="table-wrap">
@@ -1414,6 +1375,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
                 <th>{t(language, 'District', 'Район', 'Tuman')}</th>
                 <th>{t(language, 'Members', 'Участники', 'A’zolar')}</th>
                 <th>{t(language, 'Classes', 'Классы', 'Sinflar')}</th>
+                {onSelect && <th />}
               </tr>
             </thead>
             <tbody>
@@ -1424,13 +1386,14 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
                   <td>{item.district || '—'}</td>
                   <td>{item.memberCount ?? 0}</td>
                   <td>{item.classCount ?? 0}</td>
+                  {onSelect && <td><button type="button" className={`btn small ${selectedId === item.id ? 'primary' : ''}`} onClick={() => onSelect({ id: item.id, name: item.name })}>{t(language, 'Set up', 'Настроить', 'Sozlash')}</button></td>}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
-      <form className="stack school-admin-create" onSubmit={handleCreate}>
+      ))}
+      {part !== 'list' && <form className="stack school-admin-create" onSubmit={handleCreate}>
         <h3>{t(language, 'Create a school record', 'Создать школу', 'Maktab yozuvini yaratish')}</h3>
         <div className="grid grid-2" style={{ gap: 8 }}>
           <div className="control">
@@ -1476,7 +1439,7 @@ export function ServerAdminSchoolsPanel({ language }: { language: Language }) {
             ? t(language, 'Creating…', 'Создаём…', 'Yaratilmoqda…')
             : t(language, 'Create school', 'Создать школу', 'Maktab yaratish')}
         </button>
-      </form>
+      </form>}
     </Panel>
   );
 }
@@ -1520,7 +1483,7 @@ export function ServerAccountsPanel({
       setNames('');
       await school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setBusy(false);
     }
@@ -1538,7 +1501,7 @@ export function ServerAccountsPanel({
             : t(language, 'Choose a class', 'Выберите класс', 'Sinfni tanlang')
         }
         tag={
-          <select
+          <Select
             className="top-select"
             aria-label={t(language, 'Class', 'Класс', 'Sinf')}
             value={activeClassId}
@@ -1549,7 +1512,7 @@ export function ServerAccountsPanel({
                 {item.name} · {item.academicYear}
               </option>
             ))}
-          </select>
+          </Select>
         }
       />
       <form className="stack" onSubmit={submit}>
@@ -1703,7 +1666,7 @@ export function ServerTopicAssignPanel({
       );
       await school.refresh();
     } catch (requestError) {
-      setError(describeSchoolError(requestError));
+      setError(friendlyError(requestError, language));
     } finally {
       setAssigningId('');
     }
@@ -1719,7 +1682,7 @@ export function ServerTopicAssignPanel({
             : t(language, 'Choose a class', 'Выберите класс', 'Sinfni tanlang')
         }
         tag={
-          <select
+          <Select
             className="top-select"
             aria-label={t(language, 'Class', 'Класс', 'Sinf')}
             value={activeClassId}
@@ -1730,7 +1693,7 @@ export function ServerTopicAssignPanel({
                 {item.name} · {item.academicYear}
               </option>
             ))}
-          </select>
+          </Select>
         }
       />
       {error && <InlineError>{error}</InlineError>}
@@ -1786,9 +1749,190 @@ export function ServerTopicAssignPanel({
       <div className="row" style={{ marginTop: 14 }}>
         <a className="btn primary" href="/topics">
           <Sparkles size={15} />
-          {t(language, 'Create a topic with AI', 'Создать тему с ИИ', 'AI bilan mavzu yaratish')}
+          {t(language, 'Create your own topic', 'Создать свою тему', 'O‘z mavzuingizni yaratish')}
         </a>
       </div>
     </Panel>
   );
 }
+
+
+/**
+ * Checking one homework: «Checked» → how it was done (all right / partly, with mistakes / wrong)
+ * → the mark 2…10. The verdict only suggests a mark: the teacher can set any mark afterwards
+ * (for effort or behaviour), and the chosen verdict stays as it is. There is no mark below 2.
+ */
+const VERDICTS: Array<{ id: 'right' | 'partly' | 'wrong'; mark: number; status: string; label: [string, string, string]; note: [string, string, string]; tone: string }> = [
+  { id: 'right', mark: 10, status: 'checked', label: ['All correct', 'Всё правильно', 'Hammasi to‘g‘ri'], note: ['Well done, everything is correct.', 'Молодец, всё сделано правильно.', 'Barakalla, hammasi to‘g‘ri.'], tone: 'green' },
+  { id: 'partly', mark: 7, status: 'checked', label: ['Partly, some mistakes', 'Частично, есть ошибки', 'Qisman, xatolar bor'], note: ['Good, but there are mistakes. Look at them again.', 'Хорошо, но есть ошибки. Посмотри их ещё раз.', 'Yaxshi, lekin xatolar bor. Ularni qayta ko‘rib chiq.'], tone: 'gold' },
+  { id: 'wrong', mark: 3, status: 'needs_revision', label: ['Wrong', 'Неправильно', 'Noto‘g‘ri'], note: ['Wrong. Read the topic again and redo the task.', 'Неправильно. Перечитай тему и переделай задание.', 'Noto‘g‘ri. Mavzuni qayta o‘qib, vazifani qayta bajar.'], tone: 'red' },
+];
+function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; language: Language; onChange: (patch: Partial<ReviewDraft>) => void }) {
+  const mark = draft.score.trim() === '' ? null : markOf(Number(draft.score));
+  const [opened, setOpened] = useState(mark !== null);
+  const [verdict, setVerdict] = useState<'right' | 'partly' | 'wrong' | null>(
+    mark === null ? null : draft.status === 'needs_revision' ? 'wrong' : mark >= 9 ? 'right' : 'partly',
+  );
+  if (!opened) {
+    return (
+      <button type="button" className="btn primary review-checked-btn" onClick={() => setOpened(true)}>
+        <CheckCircle2 size={16} /> {t(language, 'Checked', 'Проверил', 'Tekshirdim')}
+      </button>
+    );
+  }
+  const status = VERDICTS.find((item) => item.id === verdict)?.status ?? 'checked';
+  return (
+    <div className="review-verdict">
+      <span className="muted">{t(language, 'How is it done?', 'Как сделано?', 'Qanday bajarilgan?')}</span>
+      <div className="review-verdict-options">
+        {VERDICTS.map((item) => (
+          <button type="button" key={item.id} className={`review-verdict-btn tone-${item.tone} ${verdict === item.id ? 'on' : ''}`}
+            onClick={() => {
+              setVerdict(item.id);
+              onChange({ status: item.status, score: String(scoreOf(item.mark)), feedback: draft.feedback.trim() && !VERDICTS.some((v) => draft.feedback === t(language, ...v.note)) ? draft.feedback : t(language, ...item.note) });
+            }}>
+            {t(language, ...item.label)}
+          </button>
+        ))}
+      </div>
+      <span className="muted">{t(language, 'Mark (out of 10) — change it if you like, e.g. for effort or behaviour', 'Оценка из 10 — можно поменять, например за старание или поведение', 'Baho (10 dan) — o‘zgartirsa bo‘ladi, masalan, harakat yoki xulq uchun')}</span>
+      <div className="review-marks" role="group">
+        {MARKS.map((value) => (
+          <button type="button" key={value} className={`grade-pick ${markBand(value)} ${mark === value ? 'on' : ''}`}
+            onClick={() => onChange({ score: String(scoreOf(value)), status })}>{value}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One pupil's homework opened from the journal: notebook photos and their words first,
+ * then «Checked» → verdict → mark 2…10. The teacher cannot grade without seeing the work.
+ */
+export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentId, studentName, language, onClose, onSaved }: {
+  assignmentId: string; assignmentTitle: string; studentId: string; studentName: string; language: Language; onClose: () => void; onSaved: () => void;
+}) {
+  const [submission, setSubmission] = useState<SubmissionWithStudent | null | undefined>(undefined);
+  const [draft, setDraft] = useState<ReviewDraft>({ status: 'checked', score: '', feedback: '', signature: null });
+  const [verdictKey, setVerdictKey] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    listSubmissions(assignmentId)
+      .then((response) => {
+        if (!alive) return;
+        const found = response.submissions.find((item) => item.studentId === studentId) ?? null;
+        setSubmission(found);
+        if (found) setDraft({ status: found.status, score: found.score === null || found.score === undefined ? '' : String(found.score), feedback: found.feedback, signature: null });
+      })
+      .catch((requestError: unknown) => { if (alive) { setSubmission(null); setError(friendlyError(requestError, language)); } });
+    return () => { alive = false; };
+  }, [assignmentId, studentId]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  async function save() {
+    if (draft.score.trim() === '') return;
+    setBusy(true); setError('');
+    try {
+      await reviewSubmission(assignmentId, studentId, { status: draft.status as ReviewSubmissionRequest['status'], score: Number(draft.score), feedback: draft.feedback });
+      onSaved();
+      onClose();
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="modal review-dialog" role="dialog" aria-modal="true" aria-label={studentName}>
+        <div className="row-between" style={{ marginBottom: 10 }}>
+          <div><b>{studentName}</b><div className="muted">{assignmentTitle}</div></div>
+          <button type="button" className="btn small" onClick={onClose} aria-label={t(language, 'Close', 'Закрыть', 'Yopish')}>×</button>
+        </div>
+        {submission === undefined && <LoadingBlock language={language} kind="inline" />}
+        {submission === null && !error && <div className="callout">{t(language, 'The pupil has not handed in this work.', 'Ученик ещё не сдал эту работу.', 'O‘quvchi bu ishni hali topshirmagan.')}</div>}
+        {submission && (
+          <>
+            {(submission.attachmentCount ?? 0) > 0
+              ? <SubmissionPhotos assignmentId={assignmentId} studentId={studentId} count={submission.attachmentCount ?? 0} language={language} refreshKey={submission.updatedAt} />
+              : <p className="muted">{t(language, 'No photos attached.', 'Фото не прикреплено.', 'Rasm biriktirilmagan.')}</p>}
+            {(submission.attachmentCount ?? 0) > 0 && <HomeworkHelpCheck assignmentId={assignmentId} studentId={studentId} language={language} onUseMark={(mark, feedback) => { setDraft((current) => ({ ...current, status: mark >= 5 ? 'checked' : 'needs_revision', score: String(scoreOf(mark)), feedback: current.feedback.trim() ? current.feedback : feedback })); setVerdictKey((value) => value + 1); }} />}
+            {submission.content && <p className="school-assignment-copy"><b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}</p>}
+            <ReviewVerdict key={verdictKey} draft={draft} language={language} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />
+            <div className="control">
+              <label htmlFor="dialog-feedback">{t(language, 'Comment', 'Комментарий', 'Izoh')}</label>
+              <textarea id="dialog-feedback" value={draft.feedback} maxLength={4000} onChange={(event) => setDraft((current) => ({ ...current, feedback: event.target.value }))} />
+            </div>
+            <button type="button" className="btn primary" style={{ marginTop: 10 }} disabled={busy || draft.score.trim() === ''} onClick={() => void save()}>
+              <CheckCircle2 size={15} /> {t(language, 'Save', 'Сохранить', 'Saqlash')}
+            </button>
+          </>
+        )}
+        {error && <InlineError>{error}</InlineError>}
+      </section>
+    </div>
+  );
+}
+
+
+type HomeworkReview = { summary: string; mistakes: Array<{ where: string; why: string; fix: string }>; good: string[]; advice: string; suggestedMark: number | null; realPhoto: 'yes' | 'no' | 'unsure' };
+
+/**
+ * Help with checking: the helper reads the notebook photos against the task and lists the
+ * mistakes (where, why, how to fix), what is good and a suggested mark. The teacher decides.
+ */
+function HomeworkHelpCheck({ assignmentId, studentId, language, onUseMark }: { assignmentId: string; studentId: string; language: Language; onUseMark: (mark: number, feedback: string) => void }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'off' | 'error'>('idle');
+  const [review, setReview] = useState<HomeworkReview | null>(null);
+  const [error, setError] = useState('');
+  async function run() {
+    setState('busy'); setError('');
+    try {
+      const lang = language === 'Uzbek' ? 'uz' : language === 'English' ? 'en' : 'ru';
+      const response = await customFetch<{ review: HomeworkReview }>(`/api/assignments/${assignmentId}/submissions/${studentId}/ai-review`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lang }) });
+      setReview(response.review); setState('done');
+    } catch (requestError) {
+      const body = (requestError as { data?: { error?: string } })?.data;
+      if (body?.error === 'not-configured') { setState('off'); return; }
+      setError(friendlyError(requestError, language)); setState('error');
+    }
+  }
+  const feedbackText = (item: HomeworkReview) => [item.summary, ...item.mistakes.map((m) => `• ${m.where ? `${m.where}: ` : ''}${m.why}${m.fix ? ` → ${m.fix}` : ''}`), item.advice].filter(Boolean).join('\n');
+  return (
+    <div className="photo-ai-check">
+      {(state === 'idle' || state === 'busy' || state === 'error') && (
+        <button type="button" className="btn" disabled={state === 'busy'} onClick={() => void run()}>
+          {state === 'busy' ? <LoadingBlock language={language} kind="inline" label={t(language, 'Reading the notebook…', 'Читаем тетрадь…', 'Daftar o‘qilmoqda…')} /> : <>🔍 {t(language, 'Help me check: mistakes and advice', 'Помочь проверить: ошибки и советы', 'Tekshirishga yordam: xatolar va maslahat')}</>}
+        </button>
+      )}
+      {state === 'off' && <p className="muted">{t(language, 'Check help is not connected for this school yet. Check the photos yourself.', 'Помощь в проверке для школы ещё не подключена. Проверьте фото сами.', 'Tekshirish yordamchisi hali ulanmagan. Rasmlarni o‘zingiz tekshiring.')}</p>}
+      {state === 'done' && review && (
+        <div className="photo-ai-result is-review">
+          {review.summary && <b>{review.summary}</b>}
+          {review.mistakes.length > 0 && (
+            <ul className="hw-review-mistakes">
+              {review.mistakes.map((item, index) => <li key={index}><b>{item.where || `${index + 1}`}</b> — {item.why}{item.fix && <><br /><span className="muted">✎ {item.fix}</span></>}</li>)}
+            </ul>
+          )}
+          {review.good.length > 0 && <p>✅ {review.good.join(' · ')}</p>}
+          {review.advice && <p>💬 {review.advice}</p>}
+          {review.realPhoto === 'no' && <p className="notice">⚠️ {t(language, 'This may not be a real notebook photo (screenshot or generated picture).', 'Возможно, это не настоящее фото тетради (скриншот или созданная картинка).', 'Bu haqiqiy daftar rasmi bo‘lmasligi mumkin (skrinshot yoki yasalgan rasm).')}</p>}
+          {review.suggestedMark !== null && (
+            <button type="button" className="btn small primary" onClick={() => onUseMark(review.suggestedMark!, feedbackText(review))}>
+              {t(language, `Use the suggested mark: ${review.suggestedMark}`, `Взять предложенную оценку: ${review.suggestedMark}`, `Taklif qilingan baho: ${review.suggestedMark}`)}
+            </button>
+          )}
+          <small className="muted">{t(language, 'Only a hint. The final mark is yours.', 'Это только подсказка. Итоговую оценку ставите вы.', 'Bu faqat maslahat. Yakuniy bahoni siz qo‘yasiz.')}</small>
+        </div>
+      )}
+      {error && <span className="notice">{error}</span>}
+    </div>
+  );
+}
+
