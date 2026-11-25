@@ -578,25 +578,25 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  ];
  const tab:AdminTab=tabs.some(([key])=>key===savedTab)?savedTab:'overview';
  const swipe=useSwipeTabs<AdminTab>(tabs.map(([key])=>key),tab,setTab);
- const openSchool=(school:{id:string;name:string})=>{setSetup(school);setTab('schools')};
+ const openSchool=(school:{id:string;name:string})=>{setSetup(school);setTab('schools');window.scrollTo({top:0,behavior:'smooth'})};
+ const closeSchool=()=>{setSetup(null);setSchoolsRevision(v=>v+1)};
+ useEffect(()=>{window.scrollTo({top:0})},[tab,setup?.id]);
  void role;
  return <><PageHeading eyebrow="EDUVERSE" title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
   <GlassTabs className="cabinet-glass-tabs" ariaLabel="EDUVERSE" activeKey={tab} onSelect={key=>swipe.select(key as AdminTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   <div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
    {tab==='overview'&&<PlansOverview language={language} onOpenSchool={openSchool}/>}
    {tab==='requests'&&<OwnerRequestsPanel language={language}/>}
-   {tab==='create'&&<ServerAdminSchoolsPanel key={`create-${schoolsRevision}`} language={language} part="create"/>}
-   {tab==='schools'&&<>
-    <ServerAdminSchoolsPanel key={schoolsRevision} language={language} part="list" selectedId={setup?.id} onSelect={setSetup}/>
-    {setup&&<div style={{display:'grid',gap:16,gridTemplateColumns:'minmax(0,1fr)'}}>
-     <div className="row-between"><b>{setup.name}</b><button className="btn small" onClick={()=>{setSetup(null);setSchoolsRevision(v=>v+1)}}>{text('Close','Закрыть','Yopish')}</button></div>
+   {tab==='create'&&<ServerAdminSchoolsPanel key={`create-${schoolsRevision}`} language={language} part="create" onCreated={school=>{setSchoolsRevision(v=>v+1);openSchool(school)}}/>}
+   {tab==='schools'&&!setup&&<ServerAdminSchoolsPanel key={schoolsRevision} language={language} part="list" onSelect={openSchool}/>}
+   {tab==='schools'&&setup&&<div className="admin-school-setup">
+     <div className="row-between admin-school-setup-head"><button className="btn small" onClick={closeSchool}><ArrowLeft size={14}/>{text('All schools','Все школы','Barcha maktablar')}</button><b>{setup.name}</b></div>
      <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>
-     <SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/>
-     <details className="panel"><summary><b>{text('Or paste the school’s Excel','Или вставьте Excel школы целиком','Yoki maktab Excelini qo‘ying')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
-     <SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/>
-     <AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/>
+     <details className="panel admin-more"><summary><b>{text('Plan','Тариф','Tarif')}</b></summary><SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/></details>
+     <details className="panel admin-more"><summary><b>{text('People of the school','Люди школы','Maktab odamlari')}</b></summary><SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/></details>
+     <details className="panel admin-more"><summary><b>{text('Paste Excel','Вставить Excel','Excel qo‘yish')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>
+     <details className="panel admin-more"><summary><b>{text('History','История','Tarix')}</b></summary><AuditPanel key={`audit-${setup.id}`} schoolId={setup.id} language={language}/></details>
     </div>}
-   </>}
   </div></>;
 }
 

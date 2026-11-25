@@ -1291,7 +1291,7 @@ export function ServerSchoolOverview({
 /* Administration                                                              */
 /* -------------------------------------------------------------------------- */
 
-export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part = 'all' }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; selectedId?: string; part?: 'all' | 'list' | 'create' }) {
+export function ServerAdminSchoolsPanel({ language, onSelect, onCreated, selectedId, part = 'all' }: { language: Language; onSelect?: (school: { id: string; name: string }) => void; onCreated?: (school: { id: string; name: string }) => void; selectedId?: string; part?: 'all' | 'list' | 'create' }) {
   const [schools, setSchools] = useState<SchoolRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1332,7 +1332,11 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
         district: form.district.trim() || undefined,
         address: form.address.trim() || undefined,
       };
-      await createSchool(payload);
+      const response = await createSchool(payload);
+      if (onCreated && response?.school?.id) {
+        onCreated({ id: response.school.id, name: response.school.name });
+        return;
+      }
       setForm({ name: '', region: form.region, district: '', address: '' });
       setNotice(t(language, 'School created.', 'Школа создана.', 'Maktab yaratildi.'));
       setRevision((value) => value + 1);
@@ -1348,9 +1352,9 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
       <SectionHead
         title={part === 'create' ? t(language, 'Create a school', 'Создать школу', 'Maktab yaratish') : t(language, 'Schools', 'Школы', 'Maktablar')}
         detail={part === 'create'
-          ? t(language, 'Then open it in “Schools” and add people.', 'Потом откройте её во вкладке «Школы» и добавьте людей.', 'Keyin «Maktablar» bo‘limida ochib, odamlarni qo‘shing.')
+          ? t(language, 'Then add the director and deputy.', 'Потом добавите директора и завуча.', 'Keyin direktor va zavuchni qo‘shasiz.')
           : t(language, 'Press “Set up” to open a school.', 'Нажмите «Настроить», чтобы открыть школу.', 'Maktabni ochish uchun «Sozlash» ni bosing.')}
-        tag={
+        tag={part === 'create' ? undefined :
           <div className="row">
             <span className="tag green">{schools.length}</span>
             <RefreshButton onClick={() => setRevision((value) => value + 1)} busy={loading} language={language} />
@@ -1394,7 +1398,7 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
         </div>
       ))}
       {part !== 'list' && <form className="stack school-admin-create" onSubmit={handleCreate}>
-        <h3>{t(language, 'Create a school record', 'Создать школу', 'Maktab yozuvini yaratish')}</h3>
+        {part !== 'create' && <h3>{t(language, 'Create a school record', 'Создать школу', 'Maktab yozuvini yaratish')}</h3>}
         <div className="grid grid-2" style={{ gap: 8 }}>
           <div className="control">
             <label htmlFor="new-school-name">{t(language, 'School name', 'Название школы', 'Maktab nomi')}</label>
@@ -1414,6 +1418,10 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
               maxLength={120}
             />
           </div>
+        </div>
+        <details className="admin-more-fields">
+          <summary>{t(language, 'More', 'Ещё', 'Yana')}</summary>
+          <div className="grid grid-2" style={{ gap: 8, marginTop: 8 }}>
           <div className="control">
             <label htmlFor="new-school-district">{t(language, 'District (optional)', 'Район (необязательно)', 'Tuman (ixtiyoriy)')}</label>
             <input
@@ -1432,7 +1440,8 @@ export function ServerAdminSchoolsPanel({ language, onSelect, selectedId, part =
               maxLength={240}
             />
           </div>
-        </div>
+          </div>
+        </details>
         <button type="submit" className="btn primary" disabled={creating || !form.name.trim() || !form.region.trim()}>
           <Plus size={14} />
           {creating

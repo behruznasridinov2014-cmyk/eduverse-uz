@@ -62,6 +62,7 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
       const response = await customFetch<{ created: Created[]; skipped: Array<{ name: string; reason: string }> }>(`/api/schools/${schoolId}/import`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: apiRows }) });
       setCreated((current) => [...current, ...response.created]);
       setRows([{ ...EMPTY }]);
+      if (step === 'director' && response.created.length > 0) setStep('deputy');
       setMessage(t(language, `Yaratildi: ${response.created.length}. Kartochkalar pastda.`, `Создано: ${response.created.length}. Карточки с логинами — внизу.`, `Created: ${response.created.length}. Cards are below.`) + (response.skipped.length ? ` ${t(language, 'O‘tkazib yuborildi', 'Пропущено', 'Skipped')}: ${response.skipped.map((item) => item.name).join(', ')}` : ''));
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -86,7 +87,7 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
   return (
     <section className="panel setup-wizard">
       <h2><UserPlus size={16} /> {t(language, 'Maktabni tayyorlash', 'Подготовка школы', 'Prepare the school')}: {schoolName}</h2>
-      <p className="muted">{t(language, 'Siz direktor va zavuchni qo‘shasiz. O‘qituvchilar, sinflar, o‘quvchilar, ota-onalar, dars jadvali va darsliklarni maktabning o‘zi qo‘shadi.', 'Вы добавляете директора и завуча. Учителей, классы, учеников, родителей, расписание и учебники школа добавляет сама.', 'You add the director and deputy. The school adds teachers, classes, pupils, parents, the timetable and books itself.')}</p>
+      <p className="muted">{t(language, 'Direktor va zavuchni qo‘shing. Qolganlarni maktab o‘zi qo‘shadi.', 'Добавьте директора и завуча. Остальных школа добавит сама.', 'Add the director and deputy. The school adds everyone else.')}</p>
       <div className="setup-steps-tabs">
         {steps.map(([key, label]) => <button key={key} type="button" className={`btn small ${step === key ? 'primary' : ''}`} onClick={() => go(key)}>{label}</button>)}
       </div>
