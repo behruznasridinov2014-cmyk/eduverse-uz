@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter, type Response } from "express";
 import {
   classMembersTable,
@@ -6,6 +6,8 @@ import {
   db,
   lessonContentTable,
   lessonLiveAnswersTable,
+  lessonLiveAsksTable,
+  lessonLivePresenceTable,
   lessonLiveTable,
   lessonStageProgressTable,
   schoolMembersTable,
@@ -305,6 +307,7 @@ function cleanLiveQuestion(value: unknown): LiveQuestion | null | undefined {
   return { id, prompt, choices, correct };
 }
 const LIVE_FRESH_MS = 3 * 3600 * 1000;
+const ONLINE_MS = 20 * 1000;
 
 async function liveView(classId: string, canSeeAll: boolean, viewerId: string) {
   const [live] = await db.select().from(lessonLiveTable).where(eq(lessonLiveTable.classId, classId)).limit(1);
@@ -326,8 +329,26 @@ async function liveView(classId: string, canSeeAll: boolean, viewerId: string) {
       stats = { counts: [], answered: answers.length, right: 0 };
     }
   }
+  // The teacher sees who has the lesson open now and the pupils' questions.
+  let online: Array<{ id: string; name: string }> | undefined;
+  let asks: Array<{ id: string; name: string; text: string; createdAt: Date }> | undefined;
+  if (canSeeAll) {
+    const since = new Date(Date.now() - ONLINE_MS);
+    [online, asks] = await Promise.all([
+      db.select({ id: usersTable.id, name: usersTable.username }).from(lessonLivePresenceTable)
+        .innerJoin(usersTable, eq(usersTable.id, lessonLivePresenceTable.userId))
+        .where(and(eq(lessonLivePresenceTable.classId, classId), gt(lessonLivePresenceTable.seenAt, since)))
+        .orderBy(asc(usersTable.username)),
+      db.select({ id: lessonLiveAsksTable.id, name: usersTable.username, text: lessonLiveAsksTable.text, createdAt: lessonLiveAsksTable.createdAt }).from(lessonLiveAsksTable)
+        .innerJoin(usersTable, eq(usersTable.id, lessonLiveAsksTable.userId))
+        .where(and(eq(lessonLiveAsksTable.classId, classId), eq(lessonLiveAsksTable.topicKey, live.topicKey), eq(lessonLiveAsksTable.done, false), gt(lessonLiveAsksTable.createdAt, new Date(Date.now() - LIVE_FRESH_MS))))
+        .orderBy(asc(lessonLiveAsksTable.createdAt)).limit(30),
+    ]);
+  }
   return {
     live: {
+      online,
+      asks,
       topicKey: live.topicKey,
       stage: live.stage,
       reveal: live.reveal,
@@ -347,6 +368,11 @@ router.get("/classes/:classId/live", requireAuthenticatedRole(...everyRole), liv
   const viewer = viewerOf(res);
   const access = await classAccess(viewer, classId);
   if (!access.read) { res.status(403).json({ error: "You are not in this class." }); return; }
+  if (access.student) {
+    await db.insert(lessonLivePresenceTable).values({ classId, userId: viewer.id, seenAt: new Date() })
+      .onConflictDoUpdate({ target: [lessonLivePresenceTable.classId, lessonLivePresenceTable.userId], set: { seenAt: new Date() } })
+      .catch(() => {});
+  }
   res.setHeader("Cache-Control", "private, no-store");
   res.json(await liveView(classId, access.edit, viewer.id));
 });
@@ -389,6 +415,34 @@ router.post("/classes/:classId/live/answer", requireAuthenticatedRole("student")
   await db.insert(lessonLiveAnswersTable).values({ classId, questionId, userId: viewer.id, choice, correct: choice === question.correct })
     .onConflictDoUpdate({ target: [lessonLiveAnswersTable.classId, lessonLiveAnswersTable.questionId, lessonLiveAnswersTable.userId], set: { choice, correct: choice === question.correct, createdAt: new Date() } });
   res.json(await liveView(classId, false, viewer.id));
+});
+
+/* "Ask the teacher": a pupil sends a short question during the lesson. */
+router.post("/classes/:classId/live/ask", requireAuthenticatedRole("student"), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const body = isRecord(req.body) ? req.body : {};
+  const topicKey = str(body.topicKey, 40);
+  const text = str(body.text, 300);
+  if (!isValidUuid(classId) || !TOPIC_RE.test(topicKey) || !topicOf(topicKey) || text.length < 2) { res.status(400).json({ error: "Write a question." }); return; }
+  const viewer = viewerOf(res);
+  const access = await classAccess(viewer, classId);
+  if (!access.student) { res.status(403).json({ error: "You are not in this class." }); return; }
+  const [open] = await db.select({ count: sql<number>`count(*)::int` }).from(lessonLiveAsksTable)
+    .where(and(eq(lessonLiveAsksTable.classId, classId), eq(lessonLiveAsksTable.userId, viewer.id), eq(lessonLiveAsksTable.done, false), gt(lessonLiveAsksTable.createdAt, new Date(Date.now() - LIVE_FRESH_MS))));
+  if ((open?.count ?? 0) >= 5) { res.status(429).json({ error: "Wait until the teacher answers your questions." }); return; }
+  const [row] = await db.insert(lessonLiveAsksTable).values({ classId, userId: viewer.id, topicKey, text }).returning({ id: lessonLiveAsksTable.id });
+  res.status(201).json({ id: row?.id });
+});
+
+/* The teacher marks a pupil's question as answered. */
+router.post("/classes/:classId/live/ask/:askId/done", requireAuthenticatedRole(...staffRoles), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const askId = String(req.params.askId ?? "");
+  if (!isValidUuid(classId) || !isValidUuid(askId)) { res.status(400).json({ error: "Invalid question." }); return; }
+  const access = await classAccess(viewerOf(res), classId);
+  if (!access.edit) { res.status(403).json({ error: "Only the class teacher can do this." }); return; }
+  await db.update(lessonLiveAsksTable).set({ done: true }).where(and(eq(lessonLiveAsksTable.id, askId), eq(lessonLiveAsksTable.classId, classId)));
+  res.json({ done: true });
 });
 
 /* -------------------------------------------------------------------------- */

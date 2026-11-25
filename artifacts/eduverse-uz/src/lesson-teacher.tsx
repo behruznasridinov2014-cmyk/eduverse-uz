@@ -3,7 +3,7 @@ import { customFetch } from '@workspace/api-client-react';
 import { BarChart3, CheckCircle2, Eye, Image as ImageIcon, MonitorPlay, Plus, Radio, RefreshCw, Save, Square, Trash2, Type, Video, Box, HelpCircle, Users } from 'lucide-react';
 import type { Language } from './school-data';
 import type { CourseTopic } from './course-data';
-import { STAGES, missionScenarios, topicQuestions, tx } from './lesson-engine';
+import { FLOW, STAGES, missionScenarios, stepOf, topicQuestions, tx } from './lesson-engine';
 import { bookOf } from './lesson-engine';
 import { compressImage } from './homework';
 import { friendlyError } from './errors';
@@ -28,6 +28,9 @@ export type LiveState = {
   question: { id: string; prompt: string; choices: string[]; correct: number } | null;
   stats: { counts: number[]; answered: number; right: number } | null;
   mine: number | null;
+  /** teacher only: pupils with the lesson open now, and their questions */
+  online?: Array<{ id: string; name: string }>;
+  asks?: Array<{ id: string; name: string; text: string; createdAt: string }>;
 };
 export type LiveHook = { state: LiveState | null; refresh: () => void; set: (state: LiveState | null) => void };
 
@@ -91,10 +94,9 @@ export function BoardControls({ classId, topic, stage, language, live, content }
           ? <button type="button" className="btn small" disabled={busy} onClick={() => void put({ active: false, question: null })}><Square size={13} /> {t(language, 'Tugatish', 'Завершить', 'Stop')}</button>
           : <button type="button" className="btn small primary" disabled={busy} onClick={() => void put({ stage, question: null })}><Radio size={13} /> {t(language, 'Sinf bilan boshlash', 'Вести урок с классом', 'Run with the class')}</button>}
       </div>
-      {!on && <p className="muted">{t(language, 'Doskada darsni oching va boshlang: o‘quvchilar o‘z hisobidan kiradi, ularning ekrani siz tanlagan bosqichga o‘tadi, savollarga telefondan javob beradi.', 'Откройте урок на доске и начните: ученики входят в свои аккаунты, их экран переходит на ваш этап, на вопросы они отвечают с телефона.', 'Open the lesson on the board and start: pupils sign in, follow your stage and answer from their phones.')}</p>}
       {state && (
         <>
-          <p className="muted">{t(language, `O‘quvchilar ${state.stage}-bosqichni ko‘rmoqda: ${tx(language, STAGES[state.stage - 1]!.title)}`, `Ученики видят этап ${state.stage}: ${tx(language, STAGES[state.stage - 1]!.title)}`, `Pupils see stage ${state.stage}: ${tx(language, STAGES[state.stage - 1]!.title)}`)}</p>
+          <OnlineAndAsks classId={classId} state={state} language={language} onChange={live.refresh} />
           {!state.question && questions.length > 0 && (
             <div className="ls-board-launch">
               <select className="input" value={pick} onChange={(event) => setPick(Number(event.target.value))} aria-label={t(language, 'Savol', 'Вопрос', 'Question')}>
@@ -120,6 +122,35 @@ export function BoardControls({ classId, topic, stage, language, live, content }
       )}
       {error && <div className="notice" role="alert">{error}</div>}
     </section>
+  );
+}
+
+/** Teacher: who is connected now and the pupils' questions ("ask the teacher"). */
+export function OnlineAndAsks({ classId, state, language, onChange }: { classId: string; state: LiveState; language: Language; onChange: () => void }) {
+  const [busy, setBusy] = useState('');
+  const online = state.online ?? [];
+  const asks = state.asks ?? [];
+  async function done(id: string) {
+    setBusy(id);
+    try { await customFetch(`/api/classes/${classId}/live/ask/${id}/done`, { method: 'POST' }); onChange(); } catch { /* next poll shows it again */ } finally { setBusy(''); }
+  }
+  return (
+    <div className="ls-online">
+      <details className="ls-online-list">
+        <summary><Users size={14} /> <b>{online.length}</b> / {state.students} {t(language, 'darsda', 'на уроке', 'in the lesson')}</summary>
+        {online.length > 0 ? <div className="ls-online-names">{online.map((item) => <span key={item.id} className="tag green">{item.name}</span>)}</div> : <p className="muted">{t(language, 'Hali hech kim yo‘q', 'Пока никого', 'Nobody yet')}</p>}
+      </details>
+      {asks.length > 0 && (
+        <ul className="ls-asks">
+          {asks.map((item) => (
+            <li key={item.id}>
+              <span className="ls-ask-text"><b>{item.name}</b> {item.text}</span>
+              <button type="button" className="btn small" disabled={busy === item.id} onClick={() => void done(item.id)}><CheckCircle2 size={13} /> {t(language, 'Javob berdim', 'Ответил', 'Answered')}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -158,7 +189,7 @@ export function StudentBoard({ classId, state, language, follow, onFollow, onAns
     <section className="ls-board on student">
       <div className="ls-board-head">
         <span className="ls-board-title"><MonitorPlay size={16} /> {t(language, 'O‘qituvchi doskasi', 'Доска учителя', 'Teacher’s board')}<span className="ls-live-dot">{t(language, 'jonli', 'в эфире', 'live')}</span></span>
-        {!follow && <button type="button" className="btn small" onClick={onFollow}>{t(language, `${state.stage}-bosqichga qaytish`, `Вернуться к этапу ${state.stage}`, `Back to stage ${state.stage}`)}</button>}
+        {!follow && <button type="button" className="btn small" onClick={onFollow}>{t(language, 'O‘qituvchiga qaytish', 'Вернуться к учителю', 'Back to the teacher')}</button>}
       </div>
       {state.question ? (
         <div className="ls-board-question">
@@ -221,12 +252,12 @@ export function ClassProgressPanel({ classId, topic, language }: { classId: stri
         <div className="ls-class-table" role="table">
           <div className="ls-class-row head" role="row">
             <span>{t(language, 'O‘quvchi', 'Ученик', 'Pupil')}</span>
-            {STAGES.map((item) => <span key={item.n} title={tx(language, item.title)}>{item.n}</span>)}
+            {FLOW.map((item) => <span key={item.n} title={tx(language, item.title)}>{stepOf(item.n)}</span>)}
           </div>
           {data.students.map((student) => (
             <div className="ls-class-row" role="row" key={student.id}>
               <span className="ls-class-name">{student.name}</span>
-              {STAGES.map((item) => {
+              {FLOW.map((item) => {
                 const value = cell(student, item.n);
                 const share = value && value.total ? value.score / value.total : null;
                 return <span key={item.n} className={`ls-class-cell ${value?.done ? 'done' : value ? 'part' : ''} ${share !== null ? (share >= 0.8 ? 'good' : share >= 0.5 ? 'mid' : 'low') : ''}`}>{value ? (value.total ? `${value.score}/${value.total}` : '✓') : '·'}</span>;
@@ -284,13 +315,13 @@ export function LessonBuilder({ topic, language, initial, onSaved }: { topic: Co
       <p className="muted">{t(language, `§${topic.code} «${topic.title}» darsiga o‘z materiallaringizni qo‘shing. Darslik matni, 3D va savollar o‘z joyida qoladi.`, `Добавьте свои материалы к уроку §${topic.code} «${topic.title}». Текст учебника, 3D и вопросы остаются на месте.`, `Add your own materials to §${topic.code} “${topic.title}”. The textbook, 3D and questions stay.`)}</p>
 
       <div className="ls-builder-block">
-        <h4>1 · {t(language, 'Missiyaga kirish', 'Вступление миссии', 'Mission intro')}</h4>
+        <h4>1 · {t(language, 'Kirish', 'Вступление', 'Intro')}</h4>
         <input className="input" value={draft.intro.title} maxLength={140} onChange={(event) => patch({ intro: { ...draft.intro, title: event.target.value } })} placeholder={t(language, 'Sarlavha (masalan: Laboratoriyaga xush kelibsiz!)', 'Заголовок (например: Добро пожаловать в лабораторию!)', 'Title (e.g. Welcome to the lab!)')} />
         <textarea className="input" rows={2} value={draft.intro.text} maxLength={1500} onChange={(event) => patch({ intro: { ...draft.intro, text: event.target.value } })} placeholder={t(language, 'Vaziyat yoki savol bilan boshlang…', 'Начните с ситуации или вопроса…', 'Start with a situation or a question…')} />
       </div>
 
       <div className="ls-builder-block">
-        <h4>2–3 · {t(language, 'Materiallar', 'Материалы', 'Materials')}</h4>
+        <h4>1–2 · {t(language, 'Materiallar', 'Материалы', 'Materials')}</h4>
         {draft.blocks.map((block) => (
           <div key={block.id} className="ls-builder-item">
             <span className="tag">{block.kind === 'text' ? <><Type size={12} /> {t(language, 'Matn', 'Текст', 'Text')}</> : block.kind === 'video' ? <><Video size={12} /> {t(language, 'Video', 'Видео', 'Video')}</> : block.kind === 'image' ? <><ImageIcon size={12} /> {t(language, 'Rasm', 'Картинка', 'Picture')}</> : <><Box size={12} /> 3D</>}</span>
@@ -316,7 +347,7 @@ export function LessonBuilder({ topic, language, initial, onSaved }: { topic: Co
       </div>
 
       <div className="ls-builder-block">
-        <h4>5 · {t(language, 'O‘z savollaringiz', 'Свои вопросы', 'Your questions')}</h4>
+        <h4>4 · {t(language, 'O‘z savollaringiz', 'Свои вопросы', 'Your questions')}</h4>
         {draft.questions.map((item, number) => (
           <div key={item.id} className="ls-builder-question">
             <div className="row" style={{ gap: 6 }}>
@@ -340,8 +371,8 @@ export function LessonBuilder({ topic, language, initial, onSaved }: { topic: Co
       <div className="ls-builder-block">
         <h4>{t(language, 'Vaqt (daqiqa)', 'Время этапов (мин)', 'Stage timing (min)')}</h4>
         <div className="ls-builder-minutes">
-          {STAGES.map((item, index) => (
-            <label key={item.n}><small>{item.n}. {tx(language, item.title)}</small>
+          {STAGES.map((item, index) => item.hidden ? null : (
+            <label key={item.n}><small>{stepOf(item.n)}. {tx(language, item.title)}</small>
               <input className="input" type="number" min={0} max={45} value={draft.minutes[index] ?? item.minutes} onChange={(event) => { const minutes = STAGES.map((stage, at) => draft.minutes[at] ?? stage.minutes); minutes[index] = Math.max(0, Math.min(45, Number(event.target.value) || 0)); patch({ minutes }); }} />
             </label>
           ))}
@@ -349,7 +380,7 @@ export function LessonBuilder({ topic, language, initial, onSaved }: { topic: Co
       </div>
 
       <div className="ls-builder-block">
-        <h4>7 · {t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h4>
+        <h4>6 · {t(language, 'Uy vazifasi', 'Домашнее задание', 'Homework')}</h4>
         <textarea className="input" rows={2} value={draft.homework} maxLength={1500} onChange={(event) => patch({ homework: event.target.value })} placeholder={topic.homework} />
         <small className="muted">{t(language, 'Bo‘sh qolsa — darslikdagi vazifa.', 'Пусто — задание из учебника.', 'Empty — the textbook task.')}</small>
       </div>

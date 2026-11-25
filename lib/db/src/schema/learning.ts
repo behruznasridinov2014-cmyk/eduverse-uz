@@ -584,3 +584,26 @@ export const lessonLiveAnswersTable = pgTable("lesson_live_answers", {
 }, (table) => [
   uniqueIndex("lesson_live_answers_unique").on(table.classId, table.questionId, table.userId),
 ]);
+
+/** Who has the lesson open right now (a pupil's screen polls the board). One row per class and pupil. */
+export const lessonLivePresenceTable = pgTable("lesson_live_presence", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("lesson_live_presence_unique").on(table.classId, table.userId),
+]);
+
+/** "Ask the teacher" during a lesson: a pupil's short question, the teacher marks it answered. */
+export const lessonLiveAsksTable = pgTable("lesson_live_asks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  topicKey: text("topic_key").notNull(),
+  text: text("text").notNull(),
+  done: boolean("done").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("lesson_live_asks_class_topic_idx").on(table.classId, table.topicKey),
+]);

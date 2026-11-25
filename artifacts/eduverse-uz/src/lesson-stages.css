@@ -1,5 +1,5 @@
 /*
- * Seven-stage lesson. Uses only the EDUVERSE tokens (theme.css / glass.css),
+ * The 40-minute lesson. Uses only the EDUVERSE tokens (theme.css / glass.css),
  * so it follows the day and night themes like every other page.
  */
 .ls { position: relative; display: grid; gap: 14px; min-width: 0; }
@@ -285,3 +285,123 @@
   .ls-helper-fab span { display: none; }
   .ls-helper { right: 8px; left: 8px; width: auto; bottom: calc(150px + env(safe-area-inset-bottom)); max-height: calc(100vh - 220px); }
 }
+
+/* ------------------------------------------------------------------ */
+/* 40-minute lesson: one main step per screen, big touch targets        */
+/* ------------------------------------------------------------------ */
+.ls-steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.ls-step {
+  display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: 44px; padding: 6px 8px;
+  border-radius: var(--ev-r-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-2); cursor: pointer; font: inherit;
+  transition: background .25s var(--ease), border-color .25s var(--ease);
+}
+.ls-step.on { border-color: var(--ev-primary-line); background: var(--ev-primary-soft); color: var(--text); font-weight: 700; }
+.ls-step.live { box-shadow: 0 0 0 2px var(--sky-deep) inset; }
+.ls-step-dot { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-2); font-size: 12px; font-weight: 700; }
+.ls-step.done .ls-step-dot { background: var(--ok); color: #fff; border-color: transparent; }
+.ls-step.on .ls-step-dot { border-color: var(--ev-primary); }
+.ls-step-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* phones and small tablets: only numbers, the current step keeps its name */
+@media (max-width: 760px) {
+  .ls-steps { display: flex; gap: 4px; }
+  .ls-step { flex: 1 1 0; padding: 4px; }
+  .ls-step .ls-step-name { display: none; }
+  .ls-step.on { flex: 3 1 0; }
+  .ls-step.on .ls-step-name { display: inline; }
+}
+.ls-save-error { margin: 0; font-size: 13px; color: var(--bad); }
+.ls-stage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ls-stage-head h2 { font-size: clamp(22px, 4vw, 28px); }
+.ls-stage-time { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-3); white-space: nowrap; }
+.ls-stage-nav { align-items: center; }
+.ls-stage-nav .ls-back { min-width: 52px; min-height: 52px; justify-content: center; }
+.ls-stage-nav .ls-next { min-height: 52px; padding: 0 28px; font-size: 17px; margin-left: auto; }
+@media (max-width: 600px) {
+  .ls-stage-nav { flex-wrap: nowrap; }
+  .ls-stage-nav .ls-back { flex: none; }
+  .ls-stage-nav .ls-next { flex: 1 1 auto; }
+}
+
+/* explanation */
+.ls-main-idea { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--ev-r-lg); background: var(--ev-primary-soft); border: 1px solid var(--ev-primary-line); }
+.ls-main-idea > svg { flex: none; color: var(--ev-primary); margin-top: 2px; }
+.ls-main-idea p { margin: 6px 0 0; font-size: 17px; line-height: 1.5; }
+.ls-main-topic { font-size: 18px; }
+.ls-main-idea .ls-hook { font-size: 15px; color: var(--text-2); }
+.ls-book-tools { justify-content: flex-end; gap: 6px; }
+.ls-book-tools .btn { min-height: 40px; min-width: 40px; justify-content: center; }
+.ls-definitions summary, .ls-notes summary, .ls-hw-box summary, .ls-online-list summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; gap: 6px; }
+.ls-notes { display: grid; gap: 8px; padding: 12px 14px; border-radius: var(--ev-r-md); border: 1px solid var(--line); background: var(--surface-2); }
+.ls-notes[open] { gap: 8px; }
+.ls-notes-marks { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.ls-notes-marks li { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; padding: 6px 8px; border-radius: 8px; background: var(--ev-primary-soft); font-size: 14px; }
+.ls-notes textarea { width: 100%; }
+
+/* test */
+.ls-timer { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); }
+.ls-timer.low { color: var(--bad); }
+.ls-choice, .ls-tf .btn { min-height: 48px; }
+
+/* achievements: 30 seconds */
+.ls-achieve { display: grid; gap: 16px; justify-items: center; text-align: center; padding: 8px 0; }
+.ls-achieve-score { display: grid; gap: 6px; justify-items: center; }
+.ls-achieve-score b { font-size: clamp(48px, 12vw, 72px); line-height: 1; }
+.ls-achieve-score > svg { color: var(--ev-primary); }
+.ls-stars { display: flex; gap: 4px; }
+.ls-stars svg { color: var(--line-2); }
+.ls-stars svg.on { color: #f5b301; fill: #f5b301; }
+.ls-achieve-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.ls-badge.big { padding: 12px 16px; font-size: 15px; font-weight: 600; animation: ls-pop .5s var(--ease) both; }
+@keyframes ls-pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+.ls-achieve-repeat { width: 100%; max-width: 520px; text-align: left; padding: 10px 14px; border-radius: var(--ev-r-md); background: var(--surface-2); }
+.ls-achieve-repeat ul { margin: 6px 0 0; padding-left: 18px; }
+.ls-achieve-timer { display: flex; align-items: center; gap: 10px; }
+.ls-ring {
+  display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; font-weight: 700; font-variant-numeric: tabular-nums;
+  background: radial-gradient(closest-side, var(--surface) 78%, transparent 80%), conic-gradient(var(--ev-primary) var(--p), var(--line) 0);
+}
+@media (prefers-reduced-motion: reduce) { .ls-badge.big { animation: none; } }
+
+/* results and closing */
+.ls-results { display: grid; gap: 14px; }
+.ls-results-hero { display: grid; justify-items: center; gap: 6px; padding: 8px 0; font-size: 22px; }
+.ls-results-hero svg { color: var(--ok); }
+.ls-finish { min-height: 56px; font-size: 18px; justify-content: center; width: 100%; }
+.ls-hw-box { padding: 12px 14px; border-radius: var(--ev-r-md); border: 1px solid var(--line); }
+.ls-hw-box[open] > summary { margin-bottom: 10px; }
+
+/* teacher: connected pupils and questions */
+.ls-online { display: grid; gap: 8px; }
+.ls-online-names { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.ls-asks { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.ls-asks li { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: var(--ev-r-md); background: var(--ev-primary-soft); border: 1px solid var(--ev-primary-line); }
+.ls-ask-text { min-width: 0; overflow-wrap: anywhere; }
+.ls-ask-text b { margin-right: 6px; }
+@media (max-width: 600px) { .ls-asks li { flex-direction: column; align-items: stretch; } }
+
+/* pupil: "ask the teacher" */
+.ls-helper-fab.ask { background: var(--ev-primary); color: #fff; border-color: transparent; }
+.ls-helper-fab.ask svg { color: #fff; }
+.ls-ask { grid-template-rows: auto; align-content: start; max-height: none; }
+.ls-helper-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ls-helper-head b { display: inline-flex; align-items: center; gap: 6px; }
+.ls-ask-helper { justify-self: start; }
+@media (max-width: 820px) { .ls-helper-fab.ask span { display: inline; } }
+
+/* lesson mode of the topic page: no big repeated title, compact buttons on phones */
+.course-hero.in-lesson { padding: 0; background: none; border: 0; box-shadow: none; min-height: 0; }
+.course-hero.in-lesson::before, .course-hero.in-lesson::after { display: none; }
+@media (max-width: 600px) {
+  .lesson-day-actions { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .lesson-day-actions .btn, .course-hero.in-lesson .btn { padding: 8px 12px; font-size: 14px; min-height: 40px; }
+}
+.ls-stage-head h2 { margin-right: auto; }
+.ls-ask-inline { min-height: 40px; background: var(--ev-primary); color: #fff; border-color: transparent; }
+.ls-ask-inline svg { color: #fff; }
+.ls-achieve-repeat b { display: inline-flex; align-items: center; gap: 6px; }
+.ls { padding-bottom: 64px; }
+.ls-page { min-height: 0; }
+.ls-more { justify-self: start; }
+.ls-more-box > summary { list-style: none; display: inline-flex; width: auto; }
+.ls-more-box > summary::-webkit-details-marker { display: none; }
+.ls-more-box[open] { display: grid; gap: 8px; }

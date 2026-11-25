@@ -42796,7 +42796,7 @@ var init_school = __esm({
 });
 
 // ../../lib/db/src/schema/learning.ts
-var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable, journalMarksTable, noticeMarksTable, lessonStageProgressTable, lessonContentTable, lessonLiveTable, lessonLiveAnswersTable;
+var attendanceStatusEnum, attendanceTable, subjectsTable, lessonTopicStatusEnum, lessonTopicsTable, lessonRoomStatusEnum, lessonRoomsTable, lessonRoomParticipantsTable, lessonRoomSignalsTable, quizAttemptsTable, qrLoginStatusEnum, qrLoginSessionsTable, classAnnouncementsTable, parentLinksTable, telegramNotifyTable, labReportsTable, bookAnnotationsTable, courseProgressTable, coursePaceTable, userNotificationsTable, supportMessagesTable, schoolCalendarTable, schoolRequestsTable, auditLogTable, trainerResultsTable, trainerTestsTable, timetableSlotsTable, schoolBellsTable, journalMarksTable, noticeMarksTable, lessonStageProgressTable, lessonContentTable, lessonLiveTable, lessonLiveAnswersTable, lessonLivePresenceTable, lessonLiveAsksTable;
 var init_learning = __esm({
   "../../lib/db/src/schema/learning.ts"() {
     "use strict";
@@ -43285,6 +43285,25 @@ var init_learning = __esm({
     }, (table) => [
       uniqueIndex("lesson_live_answers_unique").on(table.classId, table.questionId, table.userId)
     ]);
+    lessonLivePresenceTable = pgTable("lesson_live_presence", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      uniqueIndex("lesson_live_presence_unique").on(table.classId, table.userId)
+    ]);
+    lessonLiveAsksTable = pgTable("lesson_live_asks", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      classId: uuid("class_id").notNull().references(() => classesTable.id, { onDelete: "cascade" }),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      topicKey: text("topic_key").notNull(),
+      text: text("text").notNull(),
+      done: boolean("done").notNull().default(false),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [
+      index("lesson_live_asks_class_topic_idx").on(table.classId, table.topicKey)
+    ]);
   }
 });
 
@@ -43389,6 +43408,8 @@ __export(schema_exports, {
   labReportsTable: () => labReportsTable,
   lessonContentTable: () => lessonContentTable,
   lessonLiveAnswersTable: () => lessonLiveAnswersTable,
+  lessonLiveAsksTable: () => lessonLiveAsksTable,
+  lessonLivePresenceTable: () => lessonLivePresenceTable,
   lessonLiveTable: () => lessonLiveTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
@@ -43463,6 +43484,8 @@ __export(src_exports, {
   labReportsTable: () => labReportsTable,
   lessonContentTable: () => lessonContentTable,
   lessonLiveAnswersTable: () => lessonLiveAnswersTable,
+  lessonLiveAsksTable: () => lessonLiveAsksTable,
+  lessonLivePresenceTable: () => lessonLivePresenceTable,
   lessonLiveTable: () => lessonLiveTable,
   lessonModeEnum: () => lessonModeEnum,
   lessonRoomParticipantsTable: () => lessonRoomParticipantsTable,
@@ -57254,6 +57277,7 @@ function cleanLiveQuestion(value) {
   return { id, prompt, choices, correct };
 }
 var LIVE_FRESH_MS = 3 * 3600 * 1e3;
+var ONLINE_MS = 20 * 1e3;
 async function liveView(classId, canSeeAll, viewerId) {
   const [live] = await db.select().from(lessonLiveTable).where(eq(lessonLiveTable.classId, classId)).limit(1);
   if (!live || !live.active || Date.now() - live.updatedAt.getTime() > LIVE_FRESH_MS) return { live: null };
@@ -57271,8 +57295,19 @@ async function liveView(classId, canSeeAll, viewerId) {
       stats = { counts: [], answered: answers.length, right: 0 };
     }
   }
+  let online;
+  let asks;
+  if (canSeeAll) {
+    const since = new Date(Date.now() - ONLINE_MS);
+    [online, asks] = await Promise.all([
+      db.select({ id: usersTable.id, name: usersTable.username }).from(lessonLivePresenceTable).innerJoin(usersTable, eq(usersTable.id, lessonLivePresenceTable.userId)).where(and(eq(lessonLivePresenceTable.classId, classId), gt(lessonLivePresenceTable.seenAt, since))).orderBy(asc(usersTable.username)),
+      db.select({ id: lessonLiveAsksTable.id, name: usersTable.username, text: lessonLiveAsksTable.text, createdAt: lessonLiveAsksTable.createdAt }).from(lessonLiveAsksTable).innerJoin(usersTable, eq(usersTable.id, lessonLiveAsksTable.userId)).where(and(eq(lessonLiveAsksTable.classId, classId), eq(lessonLiveAsksTable.topicKey, live.topicKey), eq(lessonLiveAsksTable.done, false), gt(lessonLiveAsksTable.createdAt, new Date(Date.now() - LIVE_FRESH_MS)))).orderBy(asc(lessonLiveAsksTable.createdAt)).limit(30)
+    ]);
+  }
   return {
     live: {
+      online,
+      asks,
       topicKey: live.topicKey,
       stage: live.stage,
       reveal: live.reveal,
@@ -57296,6 +57331,10 @@ router14.get("/classes/:classId/live", requireAuthenticatedRole(...everyRole7), 
   if (!access2.read) {
     res.status(403).json({ error: "You are not in this class." });
     return;
+  }
+  if (access2.student) {
+    await db.insert(lessonLivePresenceTable).values({ classId, userId: viewer.id, seenAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [lessonLivePresenceTable.classId, lessonLivePresenceTable.userId], set: { seenAt: /* @__PURE__ */ new Date() } }).catch(() => {
+    });
   }
   res.setHeader("Cache-Control", "private, no-store");
   res.json(await liveView(classId, access2.edit, viewer.id));
@@ -57347,6 +57386,44 @@ router14.post("/classes/:classId/live/answer", requireAuthenticatedRole("student
   }
   await db.insert(lessonLiveAnswersTable).values({ classId, questionId, userId: viewer.id, choice, correct: choice === question.correct }).onConflictDoUpdate({ target: [lessonLiveAnswersTable.classId, lessonLiveAnswersTable.questionId, lessonLiveAnswersTable.userId], set: { choice, correct: choice === question.correct, createdAt: /* @__PURE__ */ new Date() } });
   res.json(await liveView(classId, false, viewer.id));
+});
+router14.post("/classes/:classId/live/ask", requireAuthenticatedRole("student"), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const body = isRecord10(req.body) ? req.body : {};
+  const topicKey = str2(body.topicKey, 40);
+  const text2 = str2(body.text, 300);
+  if (!isValidUuid(classId) || !TOPIC_RE2.test(topicKey) || !topicOf(topicKey) || text2.length < 2) {
+    res.status(400).json({ error: "Write a question." });
+    return;
+  }
+  const viewer = viewerOf9(res);
+  const access2 = await classAccess2(viewer, classId);
+  if (!access2.student) {
+    res.status(403).json({ error: "You are not in this class." });
+    return;
+  }
+  const [open] = await db.select({ count: sql`count(*)::int` }).from(lessonLiveAsksTable).where(and(eq(lessonLiveAsksTable.classId, classId), eq(lessonLiveAsksTable.userId, viewer.id), eq(lessonLiveAsksTable.done, false), gt(lessonLiveAsksTable.createdAt, new Date(Date.now() - LIVE_FRESH_MS))));
+  if ((open?.count ?? 0) >= 5) {
+    res.status(429).json({ error: "Wait until the teacher answers your questions." });
+    return;
+  }
+  const [row] = await db.insert(lessonLiveAsksTable).values({ classId, userId: viewer.id, topicKey, text: text2 }).returning({ id: lessonLiveAsksTable.id });
+  res.status(201).json({ id: row?.id });
+});
+router14.post("/classes/:classId/live/ask/:askId/done", requireAuthenticatedRole(...staffRoles2), liveLimiter, async (req, res) => {
+  const classId = String(req.params.classId ?? "");
+  const askId = String(req.params.askId ?? "");
+  if (!isValidUuid(classId) || !isValidUuid(askId)) {
+    res.status(400).json({ error: "Invalid question." });
+    return;
+  }
+  const access2 = await classAccess2(viewerOf9(res), classId);
+  if (!access2.edit) {
+    res.status(403).json({ error: "Only the class teacher can do this." });
+    return;
+  }
+  await db.update(lessonLiveAsksTable).set({ done: true }).where(and(eq(lessonLiveAsksTable.id, askId), eq(lessonLiveAsksTable.classId, classId)));
+  res.json({ done: true });
 });
 var ACTIONS = ["simple", "detail", "example", "word", "practice", "mistake", "review", "ask"];
 var SUBJECT_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };

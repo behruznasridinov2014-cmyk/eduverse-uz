@@ -117,7 +117,7 @@ router.post("/admin/demo-school", requireAuthenticatedRole(...OWNER_ROLES), asyn
     }
   }
 
-  // The seven-stage lesson: some pupils of 7-А already went through the first stages of today's topics.
+  // The lesson: some pupils of 7-А already went through the first stages of today's topics.
   for (const topicKey of ["phys7-2.1", "chem7-1.1", "math7-1.1", "bio7-1.1"]) {
     const classPupils = pupils.filter((pupil) => pupil.className === "7-А");
     for (let index = 0; index < classPupils.length; index += 1) {
