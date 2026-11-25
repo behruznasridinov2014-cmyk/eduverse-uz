@@ -316,13 +316,15 @@ function StatsSection({ language }: { language: Language }) {
     [tx(language, 'Sinflar o‘rtacha bahosi', 'Средняя оценка классов', 'Average grade'), stats.averageGrade ?? '—'],
     [tx(language, 'Oxirgi faollik', 'Последняя активность', 'Last activity'), stats.lastActivityAt ? ago(stats.lastActivityAt, language) : '—'],
   ];
+  // grades are out of 10 in most schools, out of 5 in some
+  const gradeTop = stats.classes.some((item) => (item.averageGrade ?? 0) > 5) ? 10 : 5;
   return (
     <>
       <div className="stat-grid">{cards.map(([label, value]) => <div key={label} className="home-stat stat-card"><b>{value}</b><span>{label}</span></div>)}</div>
       {stats.classes.length > 0 && (
-        <section className="panel">
+        <section className="panel" style={{ overflow: 'hidden' }}>
           <h2>{tx(language, 'Sinflar bo‘yicha o‘rtacha baho', 'Средняя оценка по классам', 'Average by class')}</h2>
-          <div className="grade-bars">{stats.classes.map((item) => <div key={item.id}><span>{item.name}</span><i style={{ width: `${((item.averageGrade ?? 0) / 5) * 100}%` }} /><b>{item.averageGrade ?? '—'}</b></div>)}</div>
+          <div className="grade-bars">{stats.classes.map((item) => <div key={item.id}><span>{item.name}</span><i style={{ width: `${Math.min(100, Math.max(0, ((item.averageGrade ?? 0) / gradeTop) * 100))}%` }} /><b>{item.averageGrade ?? '—'}</b></div>)}</div>
         </section>
       )}
     </>

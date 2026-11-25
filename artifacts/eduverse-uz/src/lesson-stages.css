@@ -422,3 +422,5 @@
   .ls-helper-fab { display: none; }
 }
 @media (max-width: 480px) { .ls-stage-time { display: none; } }
+.ls-notes textarea { padding: 12px 14px; line-height: 1.5; min-height: 84px; resize: vertical; height: auto; }
+.ls-notes > summary { margin: 0; }

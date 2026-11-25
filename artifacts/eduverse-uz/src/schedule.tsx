@@ -151,7 +151,7 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
                             {info?.topic && <span className="schedule-topic">{past ? <CheckCircle2 size={13} /> : <BookOpen size={13} />} §{info.topic.code} {info.topic.title}{info.plan && <small className="muted"> · {t(language, 'reja', 'по плану', 'planned')}</small>}</span>}
                             {status === 'current' && <span className="tag green schedule-now">{t(language, 'Hozir', 'Сейчас идёт', 'Now')}</span>}
                           </div>
-                          {!open && info?.topic && (user.role === 'teacher' || user.role === 'student') && (
+                          {!open && (info?.topic || bookForLesson(lesson)) && (user.role === 'teacher' || user.role === 'student') && (
                             <div className="schedule-lesson-actions">
                               <button type="button" className="btn small" onClick={() => openLessonPreview(lesson, onOpen)}>{past ? t(language, 'Darsni ko‘rish', 'Посмотреть урок', 'View lesson') : t(language, 'Oldindan ko‘rish', 'Предпросмотр урока', 'Preview the lesson')} <ArrowRight size={14} /></button>
                             </div>

@@ -80,6 +80,7 @@ export function PhotoPicker({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const input = useRef<HTMLInputElement>(null);
+  const camera = useRef<HTMLInputElement>(null);
 
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -99,6 +100,7 @@ export function PhotoPicker({
     } finally {
       setBusy(false);
       if (input.current) input.current.value = '';
+      if (camera.current) camera.current.value = '';
     }
   }
 
@@ -119,16 +121,30 @@ export function PhotoPicker({
           </figure>
         ))}
         {photos.length < MAX_PHOTOS && (
-          <button type="button" className="hw-add" disabled={busy} onClick={() => input.current?.click()}>
-            {photos.length === 0 ? <Camera size={22} /> : <ImagePlus size={22} />}
+          <button type="button" className="hw-add" disabled={busy} onClick={() => camera.current?.click()}>
+            <Camera size={22} />
             <span>
               {busy
                 ? tr(language, 'Preparing…', 'Готовим…', 'Tayyorlanmoqda…')
-                : tr(language, 'Photo of notebook', 'Фото тетради', 'Daftar rasmi')}
+                : tr(language, 'Camera', 'Камера', 'Kamera')}
             </span>
           </button>
         )}
+        {photos.length < MAX_PHOTOS && (
+          <button type="button" className="hw-add" disabled={busy} onClick={() => input.current?.click()}>
+            <ImagePlus size={22} />
+            <span>{tr(language, 'Gallery', 'Галерея', 'Galereya')}</span>
+          </button>
+        )}
       </div>
+      <input
+        ref={camera}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(event) => void addFiles(event.target.files)}
+      />
       <input
         ref={input}
         type="file"

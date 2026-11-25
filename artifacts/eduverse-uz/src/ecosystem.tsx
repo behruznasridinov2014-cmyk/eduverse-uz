@@ -521,7 +521,7 @@ export function ParentWeekPanel({ language, onOpen }: { language: Language; onOp
       {children.data.children.length > 1 && (
         <div className="eco-segment">{children.data.children.map((item, index) => <button key={item.id} type="button" className={index === active ? 'on' : ''} onClick={() => setActive(index)}>{item.name}</button>)}</div>
       )}
-      <Section icon={<CalendarCheck2 size={16} />} title={t(language, `Haftalik hisobot · ${child.name}`, `Отчёт за неделю · ${child.name}`, `Weekly report · ${child.name}`)} actions={<button type="button" className="btn small" onClick={() => onOpen('/messages')}><MessageCircle size={14} /> {t(language, 'O‘qituvchiga yozish', 'Написать учителю', 'Write to a teacher')}</button>}>
+      <Section icon={<CalendarCheck2 size={16} />} title={children.data.children.length > 1 ? t(language, `Bu hafta · ${child.name}`, `Эта неделя · ${child.name}`, `This week · ${child.name}`) : t(language, 'Bu hafta', 'Эта неделя', 'This week')} actions={<button type="button" className="btn small" onClick={() => onOpen('/messages')}><MessageCircle size={14} /> {t(language, 'O‘qituvchiga yozish', 'Написать учителю', 'Write to a teacher')}</button>}>
         {report.error ? <ErrorNote error={report.error} language={language} /> : !r ? <LoadingBlock language={language} /> : <>
           <div className="eco-stats compact">
             <Stat icon={<GraduationCap size={16} />} label={t(language, 'Hafta o‘rtachasi', 'Средняя за неделю', 'Week average')} value={r.average !== null ? r.average.toFixed(1) : '—'} note={<Trend now={r.average} prev={r.averagePrev} />} />
@@ -530,7 +530,8 @@ export function ParentWeekPanel({ language, onOpen }: { language: Language; onOp
           </div>
           {r.subjects.length > 0 && (
             <ul className="eco-marks">
-              {r.subjects.map((item) => <li key={item.subject}><span>{subj(item.subject, language)}</span><span className="eco-mark-row">{item.marks.map((mark, index) => <span key={index} className={`grade-mark ${mark < 5 ? 'low' : ''}`}>{mark}</span>)}</span></li>)}
+              <li className="eco-mark-line head"><span>{t(language, 'Fan', 'Предмет', 'Subject')}</span><span>{t(language, 'Baholar', 'Оценки за неделю', 'Marks this week')}</span><span>{t(language, 'O‘rtacha', 'Средняя', 'Average')}</span></li>
+              {r.subjects.map((item) => <li key={item.subject} className="eco-mark-line"><span className="eco-mark-subject">{subj(item.subject, language)}</span><span className="eco-mark-list">{item.marks.map((mark, index) => <span key={index} className={`grade-mark ${mark < 5 ? 'low' : ''}`}>{mark}</span>)}</span><b className="eco-mark-avg" title={t(language, 'O‘rtacha', 'Средняя', 'Average')}>{item.average !== null ? item.average.toFixed(1) : '—'}</b></li>)}
             </ul>
           )}
           {r.absences.length > 0 && <p className="notice">{t(language, 'Qoldirgan', 'Пропуски', 'Absent')}: {r.absences.map((item) => `${shortDate(item.date)}${item.subject ? ` (${subj(item.subject, language)})` : ''}`).join(', ')}</p>}

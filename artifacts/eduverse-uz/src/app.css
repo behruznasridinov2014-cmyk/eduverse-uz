@@ -1120,3 +1120,10 @@ h3 { font-size:14px;margin:0 0 8px;font-weight:600; }
 .admin-more>summary::-webkit-details-marker,.admin-more-fields>summary::-webkit-details-marker{display:none}
 .admin-more[open]>summary{margin-bottom:10px}
 .admin-more-fields>summary{color:inherit;opacity:.7;font-size:14px}
+/* The book page must never widen its own box: otherwise "fit width" grows forever. */
+.pdfv { min-width: 0; max-width: 100%; width: 100%; }
+.pdfv-stage { contain: inline-size; min-width: 0; }
+.pdfv.is-wide { max-width: none; }
+.course-book { min-width: 0; max-width: 100%; }
+.parent-stack { display: grid; gap: 18px; }
+.parent-stack .cabinet { display: grid; gap: 14px; }
