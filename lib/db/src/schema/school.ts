@@ -31,9 +31,26 @@ export const schoolsTable = pgTable("schools", {
   /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
   isDemo: boolean("is_demo").notNull().default(false),
   planUntil: timestamp("plan_until", { withTimezone: true }),
+  /** What the school pays the owner each month (sum, cash). 0 = not set. */
+  monthlyFee: integer("monthly_fee").notNull().default(0),
+  /** First month that is charged, "YYYY-MM". */
+  billingStart: text("billing_start"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("schools_region_idx").on(table.region)]);
+
+/** Cash the school paid the owner for EDUVERSE, one row per payment. */
+export const schoolBillingPaymentsTable = pgTable("school_billing_payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  /** The month it pays for, "YYYY-MM". */
+  month: text("month").notNull(),
+  paidOn: text("paid_on").notNull(),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_billing_payments_school_idx").on(table.schoolId)]);
 
 export const schoolMembersTable = pgTable("school_members", {
   id: uuid("id").defaultRandom().primaryKey(),

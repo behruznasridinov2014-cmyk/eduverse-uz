@@ -118,10 +118,9 @@ export function DirectorDashboard({ schoolId, language }: { schoolId: string; la
         <Kpi icon={NotebookPen} label={t(language, 'O‘rtacha baho', 'Средняя оценка', 'Average grade')} value={data.average !== null ? data.average.toFixed(1) : '—'} />
         <Kpi icon={Video} label={t(language, 'Onlayn darslar, 30 kun', 'Онлайн-уроков, 30 дней', 'Online lessons, 30 days')} value={String(data.lessons30d)} />
       </div>
-      {(data.absentToday > 0 || data.toReview > 0) && (
+      {data.absentToday > 0 && (
         <div className="notice">
-          {data.absentToday > 0 && <span>{t(language, 'Bugun kelmaganlar', 'Сегодня отсутствуют', 'Absent today')}: <b>{data.absentToday}</b>. </span>}
-          {data.toReview > 0 && <span>{t(language, 'Tekshirilmagan ishlar', 'Непроверенных работ', 'Unchecked work')}: <b>{data.toReview}</b>.</span>}
+          <span>{t(language, 'Bugun kelmaganlar', 'Сегодня отсутствуют', 'Absent today')}: <b>{data.absentToday}</b>.</span>
         </div>
       )}
       <section className="panel">
