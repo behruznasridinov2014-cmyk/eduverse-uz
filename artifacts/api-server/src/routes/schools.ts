@@ -1,4 +1,4 @@
-﻿import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+﻿import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
   ACCOUNT_ROLES,
@@ -1237,8 +1237,10 @@ router.post(
 
     if (photos?.length) {
       await db.delete(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id));
+      const { readPhotoMeta } = await import("../lib/honest-check");
+      const metas = readPhotoMeta(req.body, photos.length);
       await db.insert(submissionFilesTable).values(
-        photos.map((data, position) => ({ submissionId: submission.id, position, data })),
+        photos.map((data, position) => ({ submissionId: submission.id, position, data, meta: metas[position] })),
       );
     }
 
@@ -1273,30 +1275,84 @@ router.post(
       return;
     }
     const [info] = await db
-      .select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description })
+      .select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, createdAt: assignmentsTable.createdAt })
       .from(assignmentsTable)
       .where(eq(assignmentsTable.id, assignmentId))
       .limit(1);
-    const [student] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
-    const photos = await db
-      .select({ data: submissionFilesTable.data })
+    const files = await db
+      .select({ data: submissionFilesTable.data, meta: submissionFilesTable.meta })
       .from(submissionFilesTable)
       .where(eq(submissionFilesTable.submissionId, submission.id))
       .orderBy(submissionFilesTable.position)
-      .limit(2);
-    const { analyzeHomework } = await import("../lib/ai-content");
-    const check = await analyzeHomework({
-      subject: info?.subject ?? "",
-      task: `${info?.title ?? ""}. ${info?.description ?? ""}`.slice(0, 600),
-      studentName: student?.name ?? "",
-      explanation: submission.content,
-      photos: photos.map((row) => row.data).filter((data) => data.startsWith("data:image/")),
+      .limit(3);
+    // Fingerprints of the other pupils' photos of the same task: the same picture handed in twice.
+    const others = await db
+      .select({ name: usersTable.username, meta: submissionFilesTable.meta })
+      .from(submissionFilesTable)
+      .innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id))
+      .innerJoin(usersTable, eq(usersTable.id, assignmentSubmissionsTable.studentId))
+      .where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), ne(assignmentSubmissionsTable.studentId, studentId)))
+      .limit(200);
+    // The pupil's last earlier work: to compare the handwriting.
+    const [previous] = await db
+      .select({ data: submissionFilesTable.data })
+      .from(submissionFilesTable)
+      .innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id))
+      .where(and(eq(assignmentSubmissionsTable.studentId, studentId), ne(assignmentSubmissionsTable.assignmentId, assignmentId), eq(submissionFilesTable.position, 0)))
+      .orderBy(desc(assignmentSubmissionsTable.submittedAt))
+      .limit(1);
+    const body = isRecord(req.body) ? req.body : {};
+    const lang = body.lang === "uz" || body.lang === "en" ? body.lang : "ru";
+    const { honestCode, photoSignals, readPhotoMeta } = await import("../lib/honest-check");
+    const code = honestCode(assignmentId, studentId);
+    const metas = readPhotoMeta({ photoMeta: files.map((row) => row.meta) }, files.length);
+    const otherHashes = others.flatMap((row) => {
+      const hash = (row.meta as { hash?: unknown } | null)?.hash;
+      return typeof hash === "string" && /^[0-9a-f]{16}$/.test(hash) ? [{ name: row.name, hash }] : [];
     });
-    if (!check) {
-      res.status(503).json({ error: "The AI check is not available right now." });
-      return;
+    const signals = photoSignals({ metas, givenAt: info?.createdAt ?? new Date(0), others: otherHashes });
+    const images = files.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    const { honestHomeworkCheck } = await import("../lib/ai-content");
+    const ai = images.length ? await honestHomeworkCheck({
+      subject: info?.subject ?? "",
+      task: `${info?.title ?? ""}. ${info?.description ?? ""}`,
+      explanation: submission.content ?? "",
+      photos: images,
+      code,
+      previousPhoto: previous?.data?.startsWith("data:image/") ? previous.data : null,
+      language: lang,
+    }) : null;
+    type Level = "ok" | "warn" | "risk";
+    const add = (level: Level, ru: string, uz: string, en: string) => signals.push({ level, ru, uz, en });
+    if (ai) {
+      if (ai.aiImage === "yes") add("risk", "Похоже на картинку, созданную нейросетью.", "Neyrotarmoq yaratgan rasmga o‘xshaydi.", "Looks like a picture made by AI.");
+      else if (ai.aiImage === "unsure") add("warn", "Не уверен, что это настоящая тетрадь.", "Haqiqiy daftar ekaniga ishonch yo‘q.", "Not sure it is a real notebook.");
+      if (ai.screenPhoto === "yes") add("risk", "Похоже на фото с экрана другого телефона или компьютера.", "Boshqa telefon yoki kompyuter ekranidan olingan rasmga o‘xshaydi.", "Looks like a photo of another screen.");
+      else if (ai.screenPhoto === "unsure") add("warn", "Возможно, это фото экрана.", "Ekran rasmi bo‘lishi mumkin.", "May be a photo of a screen.");
+      if (ai.codeFound === "yes") add("ok", `Код ${code} на странице есть.`, `${code} kodi sahifada bor.`, `Code ${code} is on the page.`);
+      else if (ai.codeFound === "no") add("risk", `Кода ${code} на странице нет.`, `${code} kodi sahifada yo‘q.`, `Code ${code} is not on the page.`);
+      else add("warn", `Код ${code} не разобрать.`, `${code} kodini o‘qib bo‘lmadi.`, `Code ${code} is unreadable.`);
+      if (ai.onTopic === "no") add("risk", "Работа не по этому заданию.", "Ish bu topshiriq bo‘yicha emas.", "The work is not on this task.");
+      if (ai.sameHandwriting === "no") add("risk", "Почерк не похож на прошлые работы ученика.", "Husnixat oldingi ishlariga o‘xshamaydi.", "The handwriting differs from earlier work.");
+      else if (ai.sameHandwriting === "yes") add("ok", "Почерк как в прошлых работах.", "Husnixat oldingi ishlardagidek.", "Same handwriting as earlier work.");
+      if (!ai.handwritten) add("warn", "Написано не от руки.", "Qo‘lda yozilmagan.", "Not handwritten.");
     }
-    res.json({ check });
+    const risks = signals.filter((item) => item.level === "risk").length;
+    const warns = signals.filter((item) => item.level === "warn").length;
+    const verdict = risks ? "risk" : warns >= 2 ? "doubt" : "honest";
+    res.json({
+      check: {
+        verdict,
+        code,
+        signals: signals.map((item) => ({ level: item.level, text: item[lang] })),
+        ai: Boolean(ai),
+        solution: ai?.solution ?? null,
+        mistakes: ai?.mistakes ?? [],
+        suggestedMark: ai?.suggestedMark ?? null,
+        reasons: ai?.reasons ?? [],
+        advice: ai?.advice ?? "",
+      },
+    });
   },
 );
 

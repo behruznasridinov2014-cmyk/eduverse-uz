@@ -365,7 +365,10 @@ html[data-theme="night"] .people-stat { background: rgba(255, 255, 255, 0.04); }
 .plans-list.tone-blue { border-left: 4px solid #3c82c8; }
 .plans-list.tone-green { border-left: 4px solid #3aa368; }
 html[data-theme="night"] .plans-kpi, html[data-theme="night"] .plans-list li { background: rgba(255, 255, 255, 0.05); }
-@media (max-width: 560px) { .plans-list li { grid-template-columns: 1fr; } }
+.call-list li { grid-template-columns: 1fr auto auto auto; }
+.call-list li.owed { box-shadow: inset 3px 0 0 #d05555; }
+.call-list a.btn { text-decoration: none; white-space: nowrap; }
+@media (max-width: 560px) { .plans-list li, .call-list li { grid-template-columns: 1fr; } }
 
 /* ---- Teacher: work to check ---- */
 .check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

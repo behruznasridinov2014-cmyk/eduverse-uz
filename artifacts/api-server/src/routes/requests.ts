@@ -367,13 +367,19 @@ router.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_RO
 
 /** The owner's overview of plans: which schools end their trial / paid period soon, who is on free. */
 router.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
-  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart, billingCurrency: schoolsTable.billingCurrency, billingDay: schoolsTable.billingDay, billingContact: schoolsTable.billingContact, billingPhone: schoolsTable.billingPhone }).from(schoolsTable);
   const paid = schools.length
     ? await db.select({ schoolId: schoolBillingPaymentsTable.schoolId, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month }).from(schoolBillingPaymentsTable).where(inArray(schoolBillingPaymentsTable.schoolId, schools.map((school) => school.id)))
     : [];
   const ids = schools.map((school) => school.id);
   const counts = ids.length
     ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids))
+    : [];
+  // Who to call about money when no contact is written: the director.
+  const directors = ids.length
+    ? await db.select({ schoolId: schoolMembersTable.schoolId, name: usersTable.username, phone: usersTable.phone }).from(schoolMembersTable)
+      .innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId))
+      .where(and(inArray(schoolMembersTable.schoolId, ids), eq(schoolMembersTable.role, "school_director")))
     : [];
   const now = Date.now();
   const rows = schools.map((school) => {
@@ -385,7 +391,10 @@ router.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req
       daysLeft,
       students: counts.filter((row) => row.schoolId === school.id && row.role === "student").length,
       teachers: counts.filter((row) => row.schoolId === school.id && row.role === "teacher").length,
-      ...(() => { const sum = billingSummary(school.monthlyFee, school.billingStart, paid.filter((row) => row.schoolId === school.id)); return { debt: sum.debt, monthsOwed: sum.monthsOwed }; })(),
+      ...(() => { const sum = billingSummary(school.monthlyFee, school.billingStart, paid.filter((row) => row.schoolId === school.id), school.billingDay); return { debt: sum.debt, monthsOwed: sum.monthsOwed }; })(),
+      ...nextDue(school.billingDay),
+      contact: school.billingContact || directors.find((row) => row.schoolId === school.id)?.name || null,
+      phone: school.billingPhone || directors.find((row) => row.schoolId === school.id)?.phone || null,
     };
   });
   res.setHeader("Cache-Control", "private, no-store");
@@ -411,9 +420,25 @@ function monthsBetween(from: string, to: string): string[] {
   }
   return out;
 }
-/** Months charged so far, what was paid for each, and the debt. */
-export function billingSummary(monthlyFee: number, billingStart: string | null, payments: Array<{ amount: number; month: string }>) {
-  const months = monthlyFee > 0 && billingStart && MONTH_RE.test(billingStart) ? monthsBetween(billingStart, currentMonth()) : [];
+/** Today in Tashkent: "YYYY-MM-DD". */
+const tashkentToday = () => new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+/** The month before "YYYY-MM". */
+function previousMonth(month: string): string {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+/** The next payment day and how many days are left (0 = today). */
+export function nextDue(billingDay: number, today = tashkentToday()) {
+  const day = Math.min(28, Math.max(1, Math.round(billingDay) || 1));
+  const [y, m, d] = today.split("-").map(Number) as [number, number, number];
+  const due = d <= day ? new Date(Date.UTC(y, m - 1, day)) : new Date(Date.UTC(y, m, day));
+  const dueDate = due.toISOString().slice(0, 10);
+  return { nextDue: dueDate, daysToDue: Math.round((due.getTime() - Date.UTC(y, m - 1, d)) / 86400000) };
+}
+/** Months charged so far (a month counts from its payment day), what was paid for each, and the debt. */
+export function billingSummary(monthlyFee: number, billingStart: string | null, payments: Array<{ amount: number; month: string }>, billingDay = 1, today = tashkentToday()) {
+  const lastMonth = Number(today.slice(8, 10)) >= Math.min(28, Math.max(1, billingDay)) ? today.slice(0, 7) : previousMonth(today.slice(0, 7));
+  const months = monthlyFee > 0 && billingStart && MONTH_RE.test(billingStart) && billingStart <= lastMonth ? monthsBetween(billingStart, lastMonth) : [];
   const paidBy = new Map<string, number>();
   for (const payment of payments) paidBy.set(payment.month, (paidBy.get(payment.month) ?? 0) + payment.amount);
   const rows = months.map((month) => ({ month, due: monthlyFee, paid: paidBy.get(month) ?? 0 }));
@@ -424,11 +449,11 @@ export function billingSummary(monthlyFee: number, billingStart: string | null, 
 }
 
 async function loadBilling(schoolId: string) {
-  const [school] = await db.select({ monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  const [school] = await db.select({ monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart, currency: schoolsTable.billingCurrency, billingDay: schoolsTable.billingDay, contact: schoolsTable.billingContact, phone: schoolsTable.billingPhone }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
   if (!school) return null;
   const payments = await db.select({ id: schoolBillingPaymentsTable.id, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month, paidOn: schoolBillingPaymentsTable.paidOn, note: schoolBillingPaymentsTable.note })
     .from(schoolBillingPaymentsTable).where(eq(schoolBillingPaymentsTable.schoolId, schoolId)).orderBy(desc(schoolBillingPaymentsTable.paidOn), desc(schoolBillingPaymentsTable.createdAt));
-  return { monthlyFee: school.monthlyFee, billingStart: school.billingStart, payments, ...billingSummary(school.monthlyFee, school.billingStart, payments) };
+  return { monthlyFee: school.monthlyFee, billingStart: school.billingStart, currency: school.currency, billingDay: school.billingDay, contact: school.contact, phone: school.phone, ...nextDue(school.billingDay), payments, ...billingSummary(school.monthlyFee, school.billingStart, payments, school.billingDay) };
 }
 
 router.get("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
@@ -448,9 +473,15 @@ router.put("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER
   if (!Number.isInteger(fee) || fee < 0 || fee > 1_000_000_000) { res.status(400).json({ error: "Monthly sum must be a whole number." }); return; }
   const start = typeof body.billingStart === "string" && MONTH_RE.test(body.billingStart) ? body.billingStart : null;
   if (fee > 0 && !start) { res.status(400).json({ error: "Choose the first month." }); return; }
-  const [row] = await db.update(schoolsTable).set({ monthlyFee: fee, billingStart: start, updatedAt: new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  // Fields left out of the request keep their saved value.
+  const update: Partial<typeof schoolsTable.$inferInsert> = { monthlyFee: fee, billingStart: start, updatedAt: new Date() };
+  if ("currency" in body) update.billingCurrency = body.currency === "USD" ? "USD" : "UZS";
+  if ("billingDay" in body) { const day = Number(body.billingDay); update.billingDay = Number.isInteger(day) && day >= 1 && day <= 28 ? day : 1; }
+  if ("contact" in body) update.billingContact = cleanText(body.contact, 80) || null;
+  if ("phone" in body) update.billingPhone = typeof body.phone === "string" ? body.phone.replace(/[^\d+ ()-]/g, "").trim().slice(0, 24) || null : null;
+  const [row] = await db.update(schoolsTable).set(update).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
   if (!row) { res.status(404).json({ error: "School not found." }); return; }
-  await writeAudit(schoolId, viewerOf(res).id, "billing", null, { monthlyFee: fee, billingStart: start });
+  await writeAudit(schoolId, viewerOf(res).id, "billing", null, { monthlyFee: fee, billingStart: start, currency: update.billingCurrency, billingDay: update.billingDay });
   res.json(await loadBilling(schoolId));
 });
 

@@ -974,6 +974,82 @@ export async function checkPhotoIsAi(photos: string[], language: string): Promis
 }
 
 /* -------------------------------------------------------------------------- */
+/* Honest check: is it a real notebook, on the task, written by this pupil?    */
+/* -------------------------------------------------------------------------- */
+
+type Tri = "yes" | "no" | "unsure";
+export type HonestAiCheck = {
+  aiImage: Tri;
+  screenPhoto: Tri;
+  codeFound: Tri;
+  onTopic: Tri;
+  sameHandwriting: Tri | null;
+  handwritten: boolean;
+  solution: "correct" | "partly" | "wrong" | "unreadable";
+  mistakes: Array<{ where: string; why: string }>;
+  suggestedMark: number | null;
+  reasons: string[];
+  advice: string;
+};
+const tri = (value: unknown): Tri => (value === "yes" || value === "no" ? value : "unsure");
+
+/**
+ * One look at the notebook photos for the TEACHER: a picture made by AI? a photo of another
+ * screen? the pupil's code in the corner? on the task? the same handwriting as the pupil's
+ * earlier work? and is the solution right. A hint, never proof: the teacher decides.
+ */
+export async function honestHomeworkCheck(input: {
+  subject: string; task: string; explanation: string; photos: string[]; code: string; previousPhoto: string | null; language: string;
+}): Promise<HonestAiCheck | null> {
+  if (!isAiConfigured() || input.photos.length === 0) return null;
+  const lang = input.language === "uz" ? "на узбекском (латиница)" : input.language === "en" ? "in English" : "по-русски";
+  const photos = input.photos.slice(0, 3);
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `Ты строгий, но честный помощник учителя 7 класса в Узбекистане. Ученик сдал домашнюю работу фотографиями тетради. Ученики иногда обманывают: генерируют «тетрадь» нейросетью, фотографируют такую картинку с экрана другого телефона или компьютера так, чтобы не было видно краёв, сдают чужую или старую работу. Проверь по фото:
+1) aiImage — картинка создана или дорисована ИИ? Признаки: слишком ровный «рукописный» текст, одинаковые буквы, бессмысленные символы и цифры, клетка тетради «плывёт» или не совпадает с текстом, нереальные тени и бумага, текст не по смыслу.
+2) screenPhoto — это фото экрана (телефона, монитора), а не бумаги? Признаки: муар (волнистые цветные полосы), видна сетка пикселей, блики стекла, свечение, рамка или край устройства, слишком яркий белый, полосы обновления экрана, пиксели при увеличении.
+3) codeFound — на странице (обычно в углу) от руки написан код «${input.code}»? yes — код есть и совпадает, no — кода нет или другой код, unsure — не разобрать.
+4) onTopic — решение относится к заданию и предмету?
+5) sameHandwriting — если приложено ПОСЛЕДНЕЕ фото с подписью «прошлая работа», тот же ли это почерк? Если его нет — null.
+6) handwritten — написано от руки ручкой в тетради?
+7) solution — проверь решение по заданию: correct / partly / wrong / unreadable; mistakes — где ошибка и почему (коротко, без готового ответа); suggestedMark — оценка 1–10 или null.
+reasons — 2–4 самых важных наблюдения; advice — что спросить у ученика, чтобы убедиться, что он сделал сам.
+Это подсказка учителю, не обвинение. Если сомневаешься — ставь unsure. Пиши ${lang}, коротко. Ответ строго JSON: {"aiImage":"yes|no|unsure","screenPhoto":"yes|no|unsure","codeFound":"yes|no|unsure","onTopic":"yes|no|unsure","sameHandwriting":"yes|no|unsure"|null,"handwritten":true|false,"solution":"correct|partly|wrong|unreadable","mistakes":[{"where":"...","why":"..."}],"suggestedMark":1-10|null,"reasons":["..."],"advice":"..."}`,
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `Предмет: ${input.subject.slice(0, 60)}. Задание: ${input.task.slice(0, 1200)}.${input.explanation ? ` Ученик написал: «${input.explanation.slice(0, 600)}».` : ""} Код, который ученик должен был написать на странице: ${input.code}. Фото работы: ${photos.length}.${input.previousPhoto ? " Последнее фото — прошлая работа этого же ученика, только для сравнения почерка." : ""}` },
+        ...photos.map((url) => ({ type: "image_url", image_url: { url } })),
+        ...(input.previousPhoto ? [{ type: "image_url", image_url: { url: input.previousPhoto } }] : []),
+      ],
+    },
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const markRaw = Number(parsed.suggestedMark);
+  const solution = ["correct", "partly", "wrong", "unreadable"].includes(String(parsed.solution)) ? String(parsed.solution) as HonestAiCheck["solution"] : "unreadable";
+  return {
+    aiImage: tri(parsed.aiImage),
+    screenPhoto: tri(parsed.screenPhoto),
+    codeFound: tri(parsed.codeFound),
+    onTopic: tri(parsed.onTopic),
+    sameHandwriting: input.previousPhoto ? tri(parsed.sameHandwriting) : null,
+    handwritten: parsed.handwritten === true,
+    solution,
+    mistakes: Array.isArray(parsed.mistakes)
+      ? parsed.mistakes.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+        .map((item) => ({ where: str(item.where).slice(0, 120), why: str(item.why).slice(0, 300) })).filter((item) => item.why).slice(0, 5)
+      : [],
+    suggestedMark: parsed.suggestedMark === null || !Number.isFinite(markRaw) ? null : Math.max(1, Math.min(10, Math.round(markRaw))),
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice).slice(0, 300),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* "Explain this word" for a pupil during a lesson                             */
 /* -------------------------------------------------------------------------- */
 

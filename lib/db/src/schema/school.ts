@@ -1,5 +1,6 @@
 import {
   boolean,
+  jsonb,
   index,
   integer,
   pgEnum,
@@ -35,6 +36,13 @@ export const schoolsTable = pgTable("schools", {
   monthlyFee: integer("monthly_fee").notNull().default(0),
   /** First month that is charged, "YYYY-MM". */
   billingStart: text("billing_start"),
+  /** The currency of the monthly sum: "UZS" (сум) or "USD". */
+  billingCurrency: text("billing_currency").notNull().default("UZS"),
+  /** Day of the month the payment is due (1–28). */
+  billingDay: integer("billing_day").notNull().default(1),
+  /** Who to call about the payment, and the phone. */
+  billingContact: text("billing_contact"),
+  billingPhone: text("billing_phone"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("schools_region_idx").on(table.region)]);
@@ -130,6 +138,8 @@ export const submissionFilesTable = pgTable("submission_files", {
   submissionId: uuid("submission_id").notNull().references(() => assignmentSubmissionsTable.id, { onDelete: "cascade" }),
   position: integer("position").notNull().default(0),
   data: text("data").notNull(),
+  /** How the photo was taken (camera/gallery), when, which camera, and a small picture fingerprint — for the honest check. */
+  meta: jsonb("meta"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("submission_files_submission_idx").on(table.submissionId)]);
 

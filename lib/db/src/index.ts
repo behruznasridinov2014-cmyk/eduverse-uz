@@ -14,6 +14,9 @@ let dbInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 if (configured) {
   poolInstance = new Pool({ connectionString: process.env.DATABASE_URL });
+  // An idle connection dropped by the database (restart, Neon scale-to-zero) must not kill the
+  // whole server: log it, the pool opens a fresh connection on the next query.
+  poolInstance.on("error", (error) => { console.error("[db] idle connection lost:", error.message); });
   dbInstance = drizzle(poolInstance, { schema });
 } else {
   console.error(
