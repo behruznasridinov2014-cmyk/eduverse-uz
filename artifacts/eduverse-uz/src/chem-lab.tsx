@@ -9,6 +9,7 @@ import { CourseScene3D, GALLERY } from './course';
 import { Circuit, Pendulum } from './physics-lab';
 import { CollisionLab } from './collision-lab';
 import { LoadingBlock } from './ui/loading';
+import { STUDIO_TASKS, StudioTaskBanner, StudioTaskList, StudioTaskQuiz, useStudioDone, type LabState, type StudioTask } from './studio-tasks';
 const StudioBookTopics = lazy(() => import('./studio-book'));
 
 /**
@@ -316,10 +317,11 @@ function shade(hex: string): string {
 
 export function ChemLabPage({ language, user }: { language: Language; user: User }) {
   const tx = (text: Txt) => text[language];
-  type Subject = 'book' | 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'sandbox';
+  type Subject = 'book' | 'chem' | 'phys' | 'math' | 'bio' | 'geo' | 'sandbox' | 'tasks';
   const [subject, setSubject] = useState<Subject>('sandbox');
   const SUBJECTS: Array<[Subject, Txt, string]> = [
     ['sandbox', L('Qum quti: erkin tajriba', 'Песочница: свободный опыт', 'Sandbox: free experiment'), '✦'],
+    ['tasks', L('Topshiriqlar', 'Задания', 'Tasks'), '🎯'],
     ['chem', L('Kimyo', 'Химия', 'Chemistry'), '⚗'],
     ['phys', L('Fizika', 'Физика', 'Physics'), '⚛'],
     ['math', L('Matematika', 'Математика', 'Maths'), '△'],
@@ -330,6 +332,14 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
   const [mode, setMode] = useState<'build' | 'react'>('build');
   const [pick, setPick] = useState<string | null>(null);
   useEffect(() => setPick(null), [subject]);
+  // A task of the studio: which lab it opens, and whether its goal is reached.
+  const { done: tasksDone, mark: markTask } = useStudioDone(user.id);
+  const [task, setTask] = useState<StudioTask | null>(null);
+  const [labState, setLabState] = useState<LabState>({});
+  const reached = Boolean(task && tasksDone.includes(task.id));
+  useEffect(() => { if (task?.check && task.check(labState)) markTask(task.id); }, [task, labState]); // eslint-disable-line react-hooks/exhaustive-deps
+  const openTask = (next: StudioTask) => { setLabState({}); setTask(next); window.setTimeout(() => document.querySelector('.studio-task-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); };
+  const closeTask = () => { setTask(null); setLabState({}); };
   const [counts, setCounts] = useState<Record<string, number>>({ H: 2, O: 1 });
   const [selected, setSelected] = useState<Molecule>(MOLECULES.find((m) => m.id === 'h2o')!);
   const [mixA, setMixA] = useState('h2');
@@ -366,7 +376,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         <div>
           <div className="row lab-subjects">
             {SUBJECTS.map(([key, label, icon]) => (
-              <button type="button" key={key} className={`studio-tab ${subject === key ? 'active' : ''}`} onClick={() => setSubject(key)}>
+              <button type="button" key={key} className={`studio-tab ${subject === key ? 'active' : ''}`} onClick={() => { setSubject(key); closeTask(); }}>
                 <span>{icon}</span>{tx(label)}
               </button>
             ))}
@@ -379,9 +389,24 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
         </div>
       </div>
 
-      {subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense>
+      {task ? (
+        <div className="studio-task-view">
+          <button type="button" className="btn small studio-back" onClick={closeTask}>← {tx(L('Topshiriqlarga', 'К заданиям', 'All tasks'))}</button>
+          <StudioTaskBanner task={task} language={language} reached={reached} />
+          {task.open === 'sandbox' ? <AtomSandbox key={task.id} language={language} userId={user.id} initialGoal={task.molecule} onBuilt={(id) => { if (id === task.molecule) markTask(task.id); }} />
+          : task.open === 'pendulum' ? <Pendulum language={language} onState={setLabState} />
+          : task.open === 'circuit' ? <Circuit language={language} onState={setLabState} />
+          : task.open === 'solids' ? <MathLab language={language} onState={setLabState} />
+          : (() => { const item = GALLERY[task.subject]?.[Number(task.open.slice(2))]; return item ? <><CourseScene3D key={task.id} scene={{ kind: 'own', scene: item[0], mode: item[1] }} language={language} /><StudioTaskQuiz key={`q${task.id}`} task={task} language={language} onRight={() => markTask(task.id)} /></> : null; })()}
+          {reached && (() => { const rest = STUDIO_TASKS.filter((item) => !tasksDone.includes(item.id) && item.id !== task.id); const nextTask = rest.find((item) => item.subject === task.subject) ?? rest[0]; return nextTask ? <button type="button" className="btn primary studio-next" onClick={() => openTask(nextTask)}>{tx(L('Keyingi topshiriq', 'Следующее задание', 'Next task'))} →</button> : null; })()}
+        </div>
+      )
+      : subject === 'tasks' ? <StudioTaskList language={language} done={tasksDone} onPick={openTask} />
+      : subject === 'book' ? <Suspense fallback={<LoadingBlock language={language} kind="3d" />}><StudioBookTopics language={language} /></Suspense>
       : subject === 'sandbox' ? <AtomSandbox language={language} userId={user.id} />
       : !pick ? (
+        <>
+        <StudioTaskList subject={subject as 'chem' | 'phys' | 'math' | 'bio' | 'geo'} language={language} done={tasksDone} onPick={openTask} />
         <div className="studio-chooser">
           {studioItems(subject).map((item) => (
             <button type="button" key={item.id} className="studio-card" onClick={() => { setPick(item.id); if (item.id === 'build' || item.id === 'react') setMode(item.id); }}>
@@ -391,6 +416,7 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
             </button>
           ))}
         </div>
+        </>
       ) : <>
         <button type="button" className="btn small studio-back" onClick={() => setPick(null)}>← {tx(L('Barcha modellar', 'Ко всем моделям', 'All models'))}</button>
         {pick.startsWith('g:') ? (() => { const item = GALLERY[subject as keyof typeof GALLERY]?.[Number(pick.slice(2))]; return item ? <><div className="studio-title">{tx(L(...item[2]))}</div><CourseScene3D key={pick} scene={{ kind: 'own', scene: item[0], mode: item[1] }} language={language} /></> : null; })()
@@ -618,12 +644,12 @@ function studioItems(subject: string): StudioItem[] {
  * Found substances go to the discovery journal; two found substances can be
  * mixed to see the reaction. A random goal gives a small challenge.
  */
-function AtomSandbox({ language, userId }: { language: Language; userId: string }) {
+function AtomSandbox({ language, userId, initialGoal, onBuilt }: { language: Language; userId: string; initialGoal?: string; onBuilt?: (id: string) => void }) {
   const tx = (text: Txt) => text[language];
   const key = `eduverse:sandbox:${userId}`;
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [found, setFound] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(key) ?? '[]') as string[]; } catch { return []; } });
-  const [goal, setGoal] = useState<string | null>(null);
+  const [goal, setGoal] = useState<string | null>(initialGoal ?? null);
   const [fresh, setFresh] = useState<string | null>(null);
   const [mixA, setMixA] = useState('');
   const [mixB, setMixB] = useState('');
@@ -640,7 +666,7 @@ function AtomSandbox({ language, userId }: { language: Language; userId: string 
     const added = ids.filter((id) => !found.includes(id));
     if (added.length) { setFound((current) => [...current, ...added.filter((id) => !current.includes(id))]); setFresh(added[0]!); window.setTimeout(() => setFresh(null), 2600); }
   };
-  useEffect(() => { if (match) discover([match.id]); }, [match]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (match) { discover([match.id]); onBuilt?.(match.id); } }, [match]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const add = (el: El) => setCounts((current) => (atoms >= 12 ? current : { ...current, [el]: (current[el] ?? 0) + 1 }));
   const remove = (el: string) => setCounts((current) => { const next = { ...current, [el]: (current[el] ?? 0) - 1 }; if (next[el]! <= 0) delete next[el]; return next; });

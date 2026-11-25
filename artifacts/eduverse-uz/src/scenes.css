@@ -124,3 +124,27 @@ html[data-theme="night"] .course-hook { color: var(--accent-night, #D7A968) !imp
 .stage3d-tools button:hover { background: rgba(16, 34, 58, 0.75); }
 .stage3d-tools button:active { transform: scale(.92); }
 .stage3d-tools button.on { background: var(--ev-primary, #b8955a); border-color: transparent; }
+
+/* 3D studio tasks */
+.studio-tasks { margin: 0 0 16px; }
+.studio-tasks-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.studio-tasks-head b { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; }
+.studio-tasks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.studio-task { position: relative; display: grid; gap: 4px; text-align: left; padding: 14px 14px 14px 44px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--surface); color: inherit; font: inherit; cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.studio-task:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(40, 30, 10, .08); }
+.studio-task-mark { position: absolute; left: 14px; top: 15px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2, rgba(120,100,60,.1)); color: #b8954f !important; }
+.studio-task-mark svg { color: inherit !important; stroke: currentColor; }
+.studio-task.done { border-color: color-mix(in srgb, var(--success, #2f8f5b) 45%, transparent); }
+.studio-task.done .studio-task-mark { background: var(--success, #2f8f5b); color: #fff !important; }
+.studio-task-view { display: grid; gap: 12px; }
+.studio-task-view .studio-back { justify-self: start; }
+.studio-task-banner { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--surface); }
+.studio-task-banner p, .studio-task-banner.reached p { margin: 2px 0 0; color: var(--text-2, #5b5446) !important; }
+.studio-task-banner b { color: var(--text, inherit); }
+.studio-task-banner > svg { flex: none; margin-top: 2px; color: var(--accent, #b8954f); }
+.studio-task-banner.reached { border-color: var(--success, #2f8f5b); background: color-mix(in srgb, var(--success, #2f8f5b) 10%, var(--surface)); animation: studio-cheer .5s cubic-bezier(.2,.8,.2,1); }
+.studio-task-banner.reached > svg { color: var(--success, #2f8f5b); }
+@keyframes studio-cheer { 0% { transform: scale(.97); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+.studio-quiz { display: grid; gap: 10px; }
+.studio-quiz-options { display: grid; gap: 8px; }
+.studio-next { justify-self: start; }
