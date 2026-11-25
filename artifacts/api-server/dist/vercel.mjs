@@ -16137,14 +16137,14 @@ var require_object_inspect = __commonJS({
     var gPO = (typeof Reflect === "function" ? Reflect.getPrototypeOf : Object.getPrototypeOf) || ([].__proto__ === Array.prototype ? function(O) {
       return O.__proto__;
     } : null);
-    function addNumericSeparator(num2, str4) {
-      if (num2 === Infinity || num2 === -Infinity || num2 !== num2 || num2 && num2 > -1e3 && num2 < 1e3 || $test.call(/e/, str4)) {
+    function addNumericSeparator(num3, str4) {
+      if (num3 === Infinity || num3 === -Infinity || num3 !== num3 || num3 && num3 > -1e3 && num3 < 1e3 || $test.call(/e/, str4)) {
         return str4;
       }
       var sepRegex = /[0-9](?=(?:[0-9]{3})+(?![0-9]))/g;
-      if (typeof num2 === "number") {
-        var int = num2 < 0 ? -$floor(-num2) : $floor(num2);
-        if (int !== num2) {
+      if (typeof num3 === "number") {
+        var int = num3 < 0 ? -$floor(-num3) : $floor(num3);
+        if (int !== num3) {
           var intStr = String(int);
           var dec = $slice.call(str4, intStr.length + 1);
           return $replace.call(intStr, sepRegex, "$&_") + "." + $replace.call($replace.call(dec, /([0-9]{3})/g, "$&_"), /_$/, "");
@@ -26803,14 +26803,14 @@ var require_tools = __commonJS({
       }
       return point2 < 32 ? JSON.stringify(str4) : '"' + result + '"';
     }
-    function asJson(obj, msg, num2, time2) {
+    function asJson(obj, msg, num3, time2) {
       if (asJsonChan.hasSubscribers === false) {
-        return _asJson.call(this, obj, msg, num2, time2);
+        return _asJson.call(this, obj, msg, num3, time2);
       }
       const store = { instance: this, arguments };
-      return asJsonChan.traceSync(_asJson, store, this, obj, msg, num2, time2);
+      return asJsonChan.traceSync(_asJson, store, this, obj, msg, num3, time2);
     }
-    function _asJson(obj, msg, num2, time2) {
+    function _asJson(obj, msg, num3, time2) {
       const stringify2 = this[stringifySym];
       const stringifySafe = this[stringifySafeSym];
       const stringifiers = this[stringifiersSym];
@@ -26820,7 +26820,7 @@ var require_tools = __commonJS({
       const formatters = this[formattersSym];
       const messageKey = this[messageKeySym];
       const errorKey = this[errorKeySym];
-      let data = this[lsCacheSym][num2] + time2;
+      let data = this[lsCacheSym][num3] + time2;
       data = data + chindings;
       let value;
       if (formatters.log) {
@@ -27446,7 +27446,7 @@ var require_proto = __commonJS({
     function defaultMixinMergeStrategy(mergeObject, mixinObject) {
       return Object.assign(mixinObject, mergeObject);
     }
-    function write(_obj, msg, num2) {
+    function write(_obj, msg, num3) {
       const t = this[timeSym]();
       const mixin = this[mixinSym];
       const errorKey = this[errorKeySym];
@@ -27468,12 +27468,12 @@ var require_proto = __commonJS({
         }
       }
       if (mixin) {
-        obj = mixinMergeStrategy(obj, mixin(obj, num2, this));
+        obj = mixinMergeStrategy(obj, mixin(obj, num3, this));
       }
-      const s = this[asJsonSym](obj, msg, num2, t);
+      const s = this[asJsonSym](obj, msg, num3, t);
       const stream = this[streamSym];
       if (stream[needsMetadataGsym] === true) {
-        stream.lastLevel = num2;
+        stream.lastLevel = num3;
         stream.lastObj = obj;
         stream.lastMsg = msg;
         stream.lastTime = t.slice(this[timeSliceIndexSym]);
@@ -32785,8 +32785,8 @@ var require_postgres_date = __commonJS({
     function bcYearToNegativeYear(year) {
       return -(year - 1);
     }
-    function is0To99(num2) {
-      return num2 >= 0 && num2 < 100;
+    function is0To99(num3) {
+      return num3 >= 0 && num3 < 100;
     }
   }
 });
@@ -34962,18 +34962,18 @@ var require_buffer_writer = __commonJS({
           oldBuffer.copy(this.buffer, 0, 0, this.offset);
         }
       }
-      addInt32(num2) {
+      addInt32(num3) {
         this.ensure(4);
-        this.buffer[this.offset++] = num2 >>> 24 & 255;
-        this.buffer[this.offset++] = num2 >>> 16 & 255;
-        this.buffer[this.offset++] = num2 >>> 8 & 255;
-        this.buffer[this.offset++] = num2 >>> 0 & 255;
+        this.buffer[this.offset++] = num3 >>> 24 & 255;
+        this.buffer[this.offset++] = num3 >>> 16 & 255;
+        this.buffer[this.offset++] = num3 >>> 8 & 255;
+        this.buffer[this.offset++] = num3 >>> 0 & 255;
         return this;
       }
-      addInt16(num2) {
+      addInt16(num3) {
         this.ensure(2);
-        this.buffer[this.offset++] = num2 >>> 8 & 255;
-        this.buffer[this.offset++] = num2 >>> 0 & 255;
+        this.buffer[this.offset++] = num3 >>> 8 & 255;
+        this.buffer[this.offset++] = num3 >>> 0 & 255;
         return this;
       }
       addCString(string) {
@@ -38364,8 +38364,8 @@ var init_dialect = __esm({
       escapeName(name) {
         return `"${name.replace(/"/g, '""')}"`;
       }
-      escapeParam(num2) {
-        return `$${num2 + 1}`;
+      escapeParam(num3) {
+        return `$${num3 + 1}`;
       }
       escapeString(str4) {
         return `'${str4.replace(/'/g, "''")}'`;
@@ -42707,6 +42707,13 @@ var init_school = __esm({
       monthlyFee: integer("monthly_fee").notNull().default(0),
       /** First month that is charged, "YYYY-MM". */
       billingStart: text("billing_start"),
+      /** The currency of the monthly sum: "UZS" (сум) or "USD". */
+      billingCurrency: text("billing_currency").notNull().default("UZS"),
+      /** Day of the month the payment is due (1–28). */
+      billingDay: integer("billing_day").notNull().default(1),
+      /** Who to call about the payment, and the phone. */
+      billingContact: text("billing_contact"),
+      billingPhone: text("billing_phone"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("schools_region_idx").on(table.region)]);
@@ -42793,6 +42800,8 @@ var init_school = __esm({
       submissionId: uuid("submission_id").notNull().references(() => assignmentSubmissionsTable.id, { onDelete: "cascade" }),
       position: integer("position").notNull().default(0),
       data: text("data").notNull(),
+      /** How the photo was taken (camera/gallery), when, which camera, and a small picture fingerprint — for the honest check. */
+      meta: jsonb("meta"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("submission_files_submission_idx").on(table.submissionId)]);
     lessonsTable = pgTable("lessons", {
@@ -43559,6 +43568,9 @@ var init_src = __esm({
     dbInstance = null;
     if (configured) {
       poolInstance = new Pool3({ connectionString: process.env.DATABASE_URL });
+      poolInstance.on("error", (error) => {
+        console.error("[db] idle connection lost:", error.message);
+      });
       dbInstance = drizzle(poolInstance, { schema: schema_exports });
     } else {
       console.error(
@@ -43597,6 +43609,7 @@ __export(ai_content_exports, {
   generateStudentQuestion: () => generateStudentQuestion,
   generateTopicPackage: () => generateTopicPackage,
   generateTopicTest: () => generateTopicTest,
+  honestHomeworkCheck: () => honestHomeworkCheck,
   isAiConfigured: () => isAiConfigured,
   lessonHelp: () => lessonHelp,
   reviewHomework: () => reviewHomework
@@ -44180,6 +44193,51 @@ async function checkPhotoIsAi(photos, language) {
     reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 3) : []
   };
 }
+async function honestHomeworkCheck(input) {
+  if (!isAiConfigured() || input.photos.length === 0) return null;
+  const lang = input.language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : input.language === "en" ? "in English" : "\u043F\u043E-\u0440\u0443\u0441\u0441\u043A\u0438";
+  const photos = input.photos.slice(0, 3);
+  const raw = await callModel([
+    {
+      role: "system",
+      content: `\u0422\u044B \u0441\u0442\u0440\u043E\u0433\u0438\u0439, \u043D\u043E \u0447\u0435\u0441\u0442\u043D\u044B\u0439 \u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A \u0443\u0447\u0438\u0442\u0435\u043B\u044F 7 \u043A\u043B\u0430\u0441\u0441\u0430 \u0432 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0435. \u0423\u0447\u0435\u043D\u0438\u043A \u0441\u0434\u0430\u043B \u0434\u043E\u043C\u0430\u0448\u043D\u044E\u044E \u0440\u0430\u0431\u043E\u0442\u0443 \u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u044F\u043C\u0438 \u0442\u0435\u0442\u0440\u0430\u0434\u0438. \u0423\u0447\u0435\u043D\u0438\u043A\u0438 \u0438\u043D\u043E\u0433\u0434\u0430 \u043E\u0431\u043C\u0430\u043D\u044B\u0432\u0430\u044E\u0442: \u0433\u0435\u043D\u0435\u0440\u0438\u0440\u0443\u044E\u0442 \xAB\u0442\u0435\u0442\u0440\u0430\u0434\u044C\xBB \u043D\u0435\u0439\u0440\u043E\u0441\u0435\u0442\u044C\u044E, \u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0440\u0443\u044E\u0442 \u0442\u0430\u043A\u0443\u044E \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0443 \u0441 \u044D\u043A\u0440\u0430\u043D\u0430 \u0434\u0440\u0443\u0433\u043E\u0433\u043E \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0430 \u0438\u043B\u0438 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430 \u0442\u0430\u043A, \u0447\u0442\u043E\u0431\u044B \u043D\u0435 \u0431\u044B\u043B\u043E \u0432\u0438\u0434\u043D\u043E \u043A\u0440\u0430\u0451\u0432, \u0441\u0434\u0430\u044E\u0442 \u0447\u0443\u0436\u0443\u044E \u0438\u043B\u0438 \u0441\u0442\u0430\u0440\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443. \u041F\u0440\u043E\u0432\u0435\u0440\u044C \u043F\u043E \u0444\u043E\u0442\u043E:
+1) aiImage \u2014 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0430 \u0441\u043E\u0437\u0434\u0430\u043D\u0430 \u0438\u043B\u0438 \u0434\u043E\u0440\u0438\u0441\u043E\u0432\u0430\u043D\u0430 \u0418\u0418? \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438: \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0440\u043E\u0432\u043D\u044B\u0439 \xAB\u0440\u0443\u043A\u043E\u043F\u0438\u0441\u043D\u044B\u0439\xBB \u0442\u0435\u043A\u0441\u0442, \u043E\u0434\u0438\u043D\u0430\u043A\u043E\u0432\u044B\u0435 \u0431\u0443\u043A\u0432\u044B, \u0431\u0435\u0441\u0441\u043C\u044B\u0441\u043B\u0435\u043D\u043D\u044B\u0435 \u0441\u0438\u043C\u0432\u043E\u043B\u044B \u0438 \u0446\u0438\u0444\u0440\u044B, \u043A\u043B\u0435\u0442\u043A\u0430 \u0442\u0435\u0442\u0440\u0430\u0434\u0438 \xAB\u043F\u043B\u044B\u0432\u0451\u0442\xBB \u0438\u043B\u0438 \u043D\u0435 \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442 \u0441 \u0442\u0435\u043A\u0441\u0442\u043E\u043C, \u043D\u0435\u0440\u0435\u0430\u043B\u044C\u043D\u044B\u0435 \u0442\u0435\u043D\u0438 \u0438 \u0431\u0443\u043C\u0430\u0433\u0430, \u0442\u0435\u043A\u0441\u0442 \u043D\u0435 \u043F\u043E \u0441\u043C\u044B\u0441\u043B\u0443.
+2) screenPhoto \u2014 \u044D\u0442\u043E \u0444\u043E\u0442\u043E \u044D\u043A\u0440\u0430\u043D\u0430 (\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0430, \u043C\u043E\u043D\u0438\u0442\u043E\u0440\u0430), \u0430 \u043D\u0435 \u0431\u0443\u043C\u0430\u0433\u0438? \u041F\u0440\u0438\u0437\u043D\u0430\u043A\u0438: \u043C\u0443\u0430\u0440 (\u0432\u043E\u043B\u043D\u0438\u0441\u0442\u044B\u0435 \u0446\u0432\u0435\u0442\u043D\u044B\u0435 \u043F\u043E\u043B\u043E\u0441\u044B), \u0432\u0438\u0434\u043D\u0430 \u0441\u0435\u0442\u043A\u0430 \u043F\u0438\u043A\u0441\u0435\u043B\u0435\u0439, \u0431\u043B\u0438\u043A\u0438 \u0441\u0442\u0435\u043A\u043B\u0430, \u0441\u0432\u0435\u0447\u0435\u043D\u0438\u0435, \u0440\u0430\u043C\u043A\u0430 \u0438\u043B\u0438 \u043A\u0440\u0430\u0439 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0430, \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u044F\u0440\u043A\u0438\u0439 \u0431\u0435\u043B\u044B\u0439, \u043F\u043E\u043B\u043E\u0441\u044B \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F \u044D\u043A\u0440\u0430\u043D\u0430, \u043F\u0438\u043A\u0441\u0435\u043B\u0438 \u043F\u0440\u0438 \u0443\u0432\u0435\u043B\u0438\u0447\u0435\u043D\u0438\u0438.
+3) codeFound \u2014 \u043D\u0430 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435 (\u043E\u0431\u044B\u0447\u043D\u043E \u0432 \u0443\u0433\u043B\u0443) \u043E\u0442 \u0440\u0443\u043A\u0438 \u043D\u0430\u043F\u0438\u0441\u0430\u043D \u043A\u043E\u0434 \xAB${input.code}\xBB? yes \u2014 \u043A\u043E\u0434 \u0435\u0441\u0442\u044C \u0438 \u0441\u043E\u0432\u043F\u0430\u0434\u0430\u0435\u0442, no \u2014 \u043A\u043E\u0434\u0430 \u043D\u0435\u0442 \u0438\u043B\u0438 \u0434\u0440\u0443\u0433\u043E\u0439 \u043A\u043E\u0434, unsure \u2014 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C.
+4) onTopic \u2014 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0441\u044F \u043A \u0437\u0430\u0434\u0430\u043D\u0438\u044E \u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0443?
+5) sameHandwriting \u2014 \u0435\u0441\u043B\u0438 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u043E \u041F\u041E\u0421\u041B\u0415\u0414\u041D\u0415\u0415 \u0444\u043E\u0442\u043E \u0441 \u043F\u043E\u0434\u043F\u0438\u0441\u044C\u044E \xAB\u043F\u0440\u043E\u0448\u043B\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430\xBB, \u0442\u043E\u0442 \u0436\u0435 \u043B\u0438 \u044D\u0442\u043E \u043F\u043E\u0447\u0435\u0440\u043A? \u0415\u0441\u043B\u0438 \u0435\u0433\u043E \u043D\u0435\u0442 \u2014 null.
+6) handwritten \u2014 \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u043E\u0442 \u0440\u0443\u043A\u0438 \u0440\u0443\u0447\u043A\u043E\u0439 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438?
+7) solution \u2014 \u043F\u0440\u043E\u0432\u0435\u0440\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043F\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044E: correct / partly / wrong / unreadable; mistakes \u2014 \u0433\u0434\u0435 \u043E\u0448\u0438\u0431\u043A\u0430 \u0438 \u043F\u043E\u0447\u0435\u043C\u0443 (\u043A\u043E\u0440\u043E\u0442\u043A\u043E, \u0431\u0435\u0437 \u0433\u043E\u0442\u043E\u0432\u043E\u0433\u043E \u043E\u0442\u0432\u0435\u0442\u0430); suggestedMark \u2014 \u043E\u0446\u0435\u043D\u043A\u0430 1\u201310 \u0438\u043B\u0438 null.
+reasons \u2014 2\u20134 \u0441\u0430\u043C\u044B\u0445 \u0432\u0430\u0436\u043D\u044B\u0445 \u043D\u0430\u0431\u043B\u044E\u0434\u0435\u043D\u0438\u044F; advice \u2014 \u0447\u0442\u043E \u0441\u043F\u0440\u043E\u0441\u0438\u0442\u044C \u0443 \u0443\u0447\u0435\u043D\u0438\u043A\u0430, \u0447\u0442\u043E\u0431\u044B \u0443\u0431\u0435\u0434\u0438\u0442\u044C\u0441\u044F, \u0447\u0442\u043E \u043E\u043D \u0441\u0434\u0435\u043B\u0430\u043B \u0441\u0430\u043C.
+\u042D\u0442\u043E \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u0443\u0447\u0438\u0442\u0435\u043B\u044E, \u043D\u0435 \u043E\u0431\u0432\u0438\u043D\u0435\u043D\u0438\u0435. \u0415\u0441\u043B\u0438 \u0441\u043E\u043C\u043D\u0435\u0432\u0430\u0435\u0448\u044C\u0441\u044F \u2014 \u0441\u0442\u0430\u0432\u044C unsure. \u041F\u0438\u0448\u0438 ${lang}, \u043A\u043E\u0440\u043E\u0442\u043A\u043E. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"aiImage":"yes|no|unsure","screenPhoto":"yes|no|unsure","codeFound":"yes|no|unsure","onTopic":"yes|no|unsure","sameHandwriting":"yes|no|unsure"|null,"handwritten":true|false,"solution":"correct|partly|wrong|unreadable","mistakes":[{"where":"...","why":"..."}],"suggestedMark":1-10|null,"reasons":["..."],"advice":"..."}`
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `\u041F\u0440\u0435\u0434\u043C\u0435\u0442: ${input.subject.slice(0, 60)}. \u0417\u0430\u0434\u0430\u043D\u0438\u0435: ${input.task.slice(0, 1200)}.${input.explanation ? ` \u0423\u0447\u0435\u043D\u0438\u043A \u043D\u0430\u043F\u0438\u0441\u0430\u043B: \xAB${input.explanation.slice(0, 600)}\xBB.` : ""} \u041A\u043E\u0434, \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0443\u0447\u0435\u043D\u0438\u043A \u0434\u043E\u043B\u0436\u0435\u043D \u0431\u044B\u043B \u043D\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u043D\u0430 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435: ${input.code}. \u0424\u043E\u0442\u043E \u0440\u0430\u0431\u043E\u0442\u044B: ${photos.length}.${input.previousPhoto ? " \u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u0444\u043E\u0442\u043E \u2014 \u043F\u0440\u043E\u0448\u043B\u0430\u044F \u0440\u0430\u0431\u043E\u0442\u0430 \u044D\u0442\u043E\u0433\u043E \u0436\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0430, \u0442\u043E\u043B\u044C\u043A\u043E \u0434\u043B\u044F \u0441\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u044F \u043F\u043E\u0447\u0435\u0440\u043A\u0430." : ""}` },
+        ...photos.map((url) => ({ type: "image_url", image_url: { url } })),
+        ...input.previousPhoto ? [{ type: "image_url", image_url: { url: input.previousPhoto } }] : []
+      ]
+    }
+  ]);
+  const parsed = raw ? safeJsonObject(raw) : null;
+  if (!parsed) return null;
+  const markRaw = Number(parsed.suggestedMark);
+  const solution = ["correct", "partly", "wrong", "unreadable"].includes(String(parsed.solution)) ? String(parsed.solution) : "unreadable";
+  return {
+    aiImage: tri(parsed.aiImage),
+    screenPhoto: tri(parsed.screenPhoto),
+    codeFound: tri(parsed.codeFound),
+    onTopic: tri(parsed.onTopic),
+    sameHandwriting: input.previousPhoto ? tri(parsed.sameHandwriting) : null,
+    handwritten: parsed.handwritten === true,
+    solution,
+    mistakes: Array.isArray(parsed.mistakes) ? parsed.mistakes.filter((item) => typeof item === "object" && item !== null).map((item) => ({ where: str(item.where).slice(0, 120), why: str(item.why).slice(0, 300) })).filter((item) => item.why).slice(0, 5) : [],
+    suggestedMark: parsed.suggestedMark === null || !Number.isFinite(markRaw) ? null : Math.max(1, Math.min(10, Math.round(markRaw))),
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons.map((item) => str(item)).filter(Boolean).slice(0, 4) : [],
+    advice: str(parsed.advice).slice(0, 300)
+  };
+}
 async function explainWord(word, topic, subject, language) {
   if (!isAiConfigured()) return null;
   const lang = language === "uz" ? "\u043D\u0430 \u0443\u0437\u0431\u0435\u043A\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435 (\u043B\u0430\u0442\u0438\u043D\u0438\u0446\u0430)" : language === "en" ? "in simple English" : "\u043D\u0430 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u044F\u0437\u044B\u043A\u0435";
@@ -44273,7 +44331,7 @@ async function lessonHelp(input) {
   const answer = parsed ? str(parsed.answer) : "";
   return answer ? answer.slice(0, 2500) : null;
 }
-var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, GEMINI_FALLBACKS, MODEL_CHAIN, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES;
+var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, GEMINI_FALLBACKS, MODEL_CHAIN, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES, tri;
 var init_ai_content = __esm({
   "src/lib/ai-content.ts"() {
     "use strict";
@@ -44401,6 +44459,82 @@ var init_ai_content = __esm({
       "water"
     ];
     VALID_SHAPES = ["sphere", "torus", "cone", "cylinder", "box", "ring"];
+    tri = (value) => value === "yes" || value === "no" ? value : "unsure";
+  }
+});
+
+// src/lib/honest-check.ts
+var honest_check_exports = {};
+__export(honest_check_exports, {
+  hashDistance: () => hashDistance,
+  honestCode: () => honestCode,
+  photoSignals: () => photoSignals,
+  readPhotoMeta: () => readPhotoMeta
+});
+function honestCode(assignmentId, studentId) {
+  let h = 2166136261;
+  for (const ch of `${assignmentId}:${studentId}`) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return String(100 + h % 900);
+}
+function readPhotoMeta(body, count) {
+  const raw = typeof body === "object" && body !== null ? body.photoMeta : void 0;
+  const list = Array.isArray(raw) ? raw : [];
+  return Array.from({ length: count }, (_, index2) => {
+    const item = list[index2];
+    if (typeof item !== "object" || item === null) return null;
+    const row = item;
+    return {
+      source: row.source === "camera" || row.source === "gallery" ? row.source : null,
+      takenAt: num2(row.takenAt),
+      fileAt: num2(row.fileAt),
+      camera: typeof row.camera === "string" ? row.camera.slice(0, 60) : null,
+      hash: typeof row.hash === "string" && /^[0-9a-f]{16}$/.test(row.hash) ? row.hash : null
+    };
+  });
+}
+function hashDistance(a, b) {
+  let distance = 0;
+  for (let i = 0; i < 16; i += 4) {
+    let x = parseInt(a.slice(i, i + 4), 16) ^ parseInt(b.slice(i, i + 4), 16);
+    while (x) {
+      distance += x & 1;
+      x >>= 1;
+    }
+  }
+  return distance;
+}
+function photoSignals(input) {
+  const out = [];
+  const metas = input.metas.filter((item) => item !== null);
+  if (!metas.length) {
+    out.push({ level: "warn", ru: "\u041D\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0445 \u043E \u0442\u043E\u043C, \u043A\u0430\u043A \u0441\u0434\u0435\u043B\u0430\u043D\u043E \u0444\u043E\u0442\u043E (\u0441\u0442\u0430\u0440\u0430\u044F \u0432\u0435\u0440\u0441\u0438\u044F \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u044F \u0438\u043B\u0438 \u0447\u0435\u0440\u043D\u043E\u0432\u0438\u043A).", uz: "Rasm qanday olingani haqida ma\u2019lumot yo\u2018q.", en: "No data on how the photo was taken." });
+    return out;
+  }
+  const gallery = metas.filter((item) => item.source === "gallery");
+  if (gallery.length) out.push({ level: "warn", ru: `\u0424\u043E\u0442\u043E \u0438\u0437 \u0433\u0430\u043B\u0435\u0440\u0435\u0438 (${gallery.length} \u0438\u0437 ${metas.length}), \u043D\u0435 \u0441 \u043A\u0430\u043C\u0435\u0440\u044B \u0432 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0438.`, uz: `Rasm galereyadan (${gallery.length}/${metas.length}), ilova kamerasidan emas.`, en: `Photo from the gallery (${gallery.length} of ${metas.length}), not the in-app camera.` });
+  else out.push({ level: "ok", ru: "\u0421\u043D\u044F\u0442\u043E \u043A\u0430\u043C\u0435\u0440\u043E\u0439 \u0432 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0438.", uz: "Ilova kamerasida olingan.", en: "Taken with the in-app camera." });
+  const early = metas.filter((item) => item.takenAt !== null && item.takenAt < input.givenAt.getTime() - 12 * 36e5);
+  if (early.length) out.push({ level: "risk", ru: "\u0424\u043E\u0442\u043E \u0441\u0434\u0435\u043B\u0430\u043D\u043E \u0440\u0430\u043D\u044C\u0448\u0435, \u0447\u0435\u043C \u0437\u0430\u0434\u0430\u043B\u0438 \u0437\u0430\u0434\u0430\u043D\u0438\u0435.", uz: "Rasm topshiriq berilishidan oldin olingan.", en: "The photo was taken before the task was given." });
+  const noCamera = gallery.filter((item) => !item.camera && item.takenAt === null);
+  if (noCamera.length) out.push({ level: "warn", ru: "\u0412 \u0444\u043E\u0442\u043E \u0438\u0437 \u0433\u0430\u043B\u0435\u0440\u0435\u0438 \u043D\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u0430\u043C\u0435\u0440\u044B \u2014 \u0442\u0430\u043A \u0431\u044B\u0432\u0430\u0435\u0442 \u0443 \u0441\u043A\u0430\u0447\u0430\u043D\u043D\u044B\u0445, \u043F\u0435\u0440\u0435\u0441\u043B\u0430\u043D\u043D\u044B\u0445 \u0438 \u0441\u043E\u0437\u0434\u0430\u043D\u043D\u044B\u0445 \u043A\u0430\u0440\u0442\u0438\u043D\u043E\u043A.", uz: "Galereyadagi rasmda kamera ma\u2019lumoti yo\u2018q \u2014 yuklab olingan yoki yaratilgan rasmlarda shunday bo\u2018ladi.", en: "The gallery photo has no camera data \u2014 common for downloaded, forwarded or generated pictures." });
+  for (const meta of metas) {
+    if (!meta.hash) continue;
+    const twin = input.others.find((other) => hashDistance(other.hash, meta.hash) <= 5);
+    if (twin) {
+      out.push({ level: "risk", ru: `\u041F\u043E\u0447\u0442\u0438 \u0442\u0430\u043A\u043E\u0435 \u0436\u0435 \u0444\u043E\u0442\u043E \u0441\u0434\u0430\u043B(\u0430) ${twin.name}.`, uz: `Deyarli xuddi shunday rasmni ${twin.name} topshirgan.`, en: `${twin.name} handed in almost the same photo.` });
+      break;
+    }
+  }
+  return out;
+}
+var num2;
+var init_honest_check = __esm({
+  "src/lib/honest-check.ts"() {
+    "use strict";
+    num2 = (value) => typeof value === "number" && Number.isFinite(value) && value > 0 && value < 41024448e5 ? Math.round(value) : null;
   }
 });
 
@@ -54261,8 +54395,10 @@ router5.post(
     }).returning();
     if (photos?.length) {
       await db.delete(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id));
+      const { readPhotoMeta: readPhotoMeta2 } = await Promise.resolve().then(() => (init_honest_check(), honest_check_exports));
+      const metas = readPhotoMeta2(req.body, photos.length);
       await db.insert(submissionFilesTable).values(
-        photos.map((data, position) => ({ submissionId: submission.id, position, data }))
+        photos.map((data, position) => ({ submissionId: submission.id, position, data, meta: metas[position] }))
       );
     }
     res.status(201).json({ submission });
@@ -54291,22 +54427,61 @@ router5.post(
       res.status(404).json({ error: "Submission not found." });
       return;
     }
-    const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
-    const [student] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, studentId)).limit(1);
-    const photos = await db.select({ data: submissionFilesTable.data }).from(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id)).orderBy(submissionFilesTable.position).limit(2);
-    const { analyzeHomework: analyzeHomework2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
-    const check = await analyzeHomework2({
-      subject: info?.subject ?? "",
-      task: `${info?.title ?? ""}. ${info?.description ?? ""}`.slice(0, 600),
-      studentName: student?.name ?? "",
-      explanation: submission.content,
-      photos: photos.map((row) => row.data).filter((data) => data.startsWith("data:image/"))
+    const [info] = await db.select({ title: assignmentsTable.title, subject: assignmentsTable.subject, description: assignmentsTable.description, createdAt: assignmentsTable.createdAt }).from(assignmentsTable).where(eq(assignmentsTable.id, assignmentId)).limit(1);
+    const files = await db.select({ data: submissionFilesTable.data, meta: submissionFilesTable.meta }).from(submissionFilesTable).where(eq(submissionFilesTable.submissionId, submission.id)).orderBy(submissionFilesTable.position).limit(3);
+    const others = await db.select({ name: usersTable.username, meta: submissionFilesTable.meta }).from(submissionFilesTable).innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id)).innerJoin(usersTable, eq(usersTable.id, assignmentSubmissionsTable.studentId)).where(and(eq(assignmentSubmissionsTable.assignmentId, assignmentId), ne(assignmentSubmissionsTable.studentId, studentId))).limit(200);
+    const [previous] = await db.select({ data: submissionFilesTable.data }).from(submissionFilesTable).innerJoin(assignmentSubmissionsTable, eq(submissionFilesTable.submissionId, assignmentSubmissionsTable.id)).where(and(eq(assignmentSubmissionsTable.studentId, studentId), ne(assignmentSubmissionsTable.assignmentId, assignmentId), eq(submissionFilesTable.position, 0))).orderBy(desc(assignmentSubmissionsTable.submittedAt)).limit(1);
+    const body = isRecord4(req.body) ? req.body : {};
+    const lang = body.lang === "uz" || body.lang === "en" ? body.lang : "ru";
+    const { honestCode: honestCode2, photoSignals: photoSignals2, readPhotoMeta: readPhotoMeta2 } = await Promise.resolve().then(() => (init_honest_check(), honest_check_exports));
+    const code = honestCode2(assignmentId, studentId);
+    const metas = readPhotoMeta2({ photoMeta: files.map((row) => row.meta) }, files.length);
+    const otherHashes = others.flatMap((row) => {
+      const hash = row.meta?.hash;
+      return typeof hash === "string" && /^[0-9a-f]{16}$/.test(hash) ? [{ name: row.name, hash }] : [];
     });
-    if (!check) {
-      res.status(503).json({ error: "The AI check is not available right now." });
-      return;
+    const signals = photoSignals2({ metas, givenAt: info?.createdAt ?? /* @__PURE__ */ new Date(0), others: otherHashes });
+    const images = files.map((row) => row.data).filter((data) => data.startsWith("data:image/"));
+    const { honestHomeworkCheck: honestHomeworkCheck2 } = await Promise.resolve().then(() => (init_ai_content(), ai_content_exports));
+    const ai = images.length ? await honestHomeworkCheck2({
+      subject: info?.subject ?? "",
+      task: `${info?.title ?? ""}. ${info?.description ?? ""}`,
+      explanation: submission.content ?? "",
+      photos: images,
+      code,
+      previousPhoto: previous?.data?.startsWith("data:image/") ? previous.data : null,
+      language: lang
+    }) : null;
+    const add = (level, ru, uz, en) => signals.push({ level, ru, uz, en });
+    if (ai) {
+      if (ai.aiImage === "yes") add("risk", "\u041F\u043E\u0445\u043E\u0436\u0435 \u043D\u0430 \u043A\u0430\u0440\u0442\u0438\u043D\u043A\u0443, \u0441\u043E\u0437\u0434\u0430\u043D\u043D\u0443\u044E \u043D\u0435\u0439\u0440\u043E\u0441\u0435\u0442\u044C\u044E.", "Neyrotarmoq yaratgan rasmga o\u2018xshaydi.", "Looks like a picture made by AI.");
+      else if (ai.aiImage === "unsure") add("warn", "\u041D\u0435 \u0443\u0432\u0435\u0440\u0435\u043D, \u0447\u0442\u043E \u044D\u0442\u043E \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0430\u044F \u0442\u0435\u0442\u0440\u0430\u0434\u044C.", "Haqiqiy daftar ekaniga ishonch yo\u2018q.", "Not sure it is a real notebook.");
+      if (ai.screenPhoto === "yes") add("risk", "\u041F\u043E\u0445\u043E\u0436\u0435 \u043D\u0430 \u0444\u043E\u0442\u043E \u0441 \u044D\u043A\u0440\u0430\u043D\u0430 \u0434\u0440\u0443\u0433\u043E\u0433\u043E \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0430 \u0438\u043B\u0438 \u043A\u043E\u043C\u043F\u044C\u044E\u0442\u0435\u0440\u0430.", "Boshqa telefon yoki kompyuter ekranidan olingan rasmga o\u2018xshaydi.", "Looks like a photo of another screen.");
+      else if (ai.screenPhoto === "unsure") add("warn", "\u0412\u043E\u0437\u043C\u043E\u0436\u043D\u043E, \u044D\u0442\u043E \u0444\u043E\u0442\u043E \u044D\u043A\u0440\u0430\u043D\u0430.", "Ekran rasmi bo\u2018lishi mumkin.", "May be a photo of a screen.");
+      if (ai.codeFound === "yes") add("ok", `\u041A\u043E\u0434 ${code} \u043D\u0430 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435 \u0435\u0441\u0442\u044C.`, `${code} kodi sahifada bor.`, `Code ${code} is on the page.`);
+      else if (ai.codeFound === "no") add("risk", `\u041A\u043E\u0434\u0430 ${code} \u043D\u0430 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435 \u043D\u0435\u0442.`, `${code} kodi sahifada yo\u2018q.`, `Code ${code} is not on the page.`);
+      else add("warn", `\u041A\u043E\u0434 ${code} \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C.`, `${code} kodini o\u2018qib bo\u2018lmadi.`, `Code ${code} is unreadable.`);
+      if (ai.onTopic === "no") add("risk", "\u0420\u0430\u0431\u043E\u0442\u0430 \u043D\u0435 \u043F\u043E \u044D\u0442\u043E\u043C\u0443 \u0437\u0430\u0434\u0430\u043D\u0438\u044E.", "Ish bu topshiriq bo\u2018yicha emas.", "The work is not on this task.");
+      if (ai.sameHandwriting === "no") add("risk", "\u041F\u043E\u0447\u0435\u0440\u043A \u043D\u0435 \u043F\u043E\u0445\u043E\u0436 \u043D\u0430 \u043F\u0440\u043E\u0448\u043B\u044B\u0435 \u0440\u0430\u0431\u043E\u0442\u044B \u0443\u0447\u0435\u043D\u0438\u043A\u0430.", "Husnixat oldingi ishlariga o\u2018xshamaydi.", "The handwriting differs from earlier work.");
+      else if (ai.sameHandwriting === "yes") add("ok", "\u041F\u043E\u0447\u0435\u0440\u043A \u043A\u0430\u043A \u0432 \u043F\u0440\u043E\u0448\u043B\u044B\u0445 \u0440\u0430\u0431\u043E\u0442\u0430\u0445.", "Husnixat oldingi ishlardagidek.", "Same handwriting as earlier work.");
+      if (!ai.handwritten) add("warn", "\u041D\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u043D\u0435 \u043E\u0442 \u0440\u0443\u043A\u0438.", "Qo\u2018lda yozilmagan.", "Not handwritten.");
     }
-    res.json({ check });
+    const risks = signals.filter((item) => item.level === "risk").length;
+    const warns = signals.filter((item) => item.level === "warn").length;
+    const verdict = risks ? "risk" : warns >= 2 ? "doubt" : "honest";
+    res.json({
+      check: {
+        verdict,
+        code,
+        signals: signals.map((item) => ({ level: item.level, text: item[lang] })),
+        ai: Boolean(ai),
+        solution: ai?.solution ?? null,
+        mistakes: ai?.mistakes ?? [],
+        suggestedMark: ai?.suggestedMark ?? null,
+        reasons: ai?.reasons ?? [],
+        advice: ai?.advice ?? ""
+      }
+    });
   }
 );
 router5.post(
@@ -56676,10 +56851,11 @@ router10.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_
   res.json({ plan, until });
 });
 router10.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
-  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart, billingCurrency: schoolsTable.billingCurrency, billingDay: schoolsTable.billingDay, billingContact: schoolsTable.billingContact, billingPhone: schoolsTable.billingPhone }).from(schoolsTable);
   const paid = schools.length ? await db.select({ schoolId: schoolBillingPaymentsTable.schoolId, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month }).from(schoolBillingPaymentsTable).where(inArray(schoolBillingPaymentsTable.schoolId, schools.map((school2) => school2.id))) : [];
   const ids = schools.map((school2) => school2.id);
   const counts = ids.length ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids)) : [];
+  const directors = ids.length ? await db.select({ schoolId: schoolMembersTable.schoolId, name: usersTable.username, phone: usersTable.phone }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(inArray(schoolMembersTable.schoolId, ids), eq(schoolMembersTable.role, "school_director"))) : [];
   const now = Date.now();
   const rows = schools.map((school2) => {
     const until = school2.planUntil ? school2.planUntil.getTime() : null;
@@ -56691,9 +56867,12 @@ router10.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_r
       students: counts.filter((row) => row.schoolId === school2.id && row.role === "student").length,
       teachers: counts.filter((row) => row.schoolId === school2.id && row.role === "teacher").length,
       ...(() => {
-        const sum = billingSummary(school2.monthlyFee, school2.billingStart, paid.filter((row) => row.schoolId === school2.id));
+        const sum = billingSummary(school2.monthlyFee, school2.billingStart, paid.filter((row) => row.schoolId === school2.id), school2.billingDay);
         return { debt: sum.debt, monthsOwed: sum.monthsOwed };
-      })()
+      })(),
+      ...nextDue(school2.billingDay),
+      contact: school2.billingContact || directors.find((row) => row.schoolId === school2.id)?.name || null,
+      phone: school2.billingPhone || directors.find((row) => row.schoolId === school2.id)?.phone || null
     };
   });
   res.setHeader("Cache-Control", "private, no-store");
@@ -56717,8 +56896,21 @@ function monthsBetween(from, to) {
   }
   return out;
 }
-function billingSummary(monthlyFee, billingStart, payments) {
-  const months = monthlyFee > 0 && billingStart && MONTH_RE.test(billingStart) ? monthsBetween(billingStart, currentMonth()) : [];
+var tashkentToday = () => new Date(Date.now() + 5 * 36e5).toISOString().slice(0, 10);
+function previousMonth(month) {
+  const [y, m] = month.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+function nextDue(billingDay, today2 = tashkentToday()) {
+  const day2 = Math.min(28, Math.max(1, Math.round(billingDay) || 1));
+  const [y, m, d] = today2.split("-").map(Number);
+  const due = d <= day2 ? new Date(Date.UTC(y, m - 1, day2)) : new Date(Date.UTC(y, m, day2));
+  const dueDate = due.toISOString().slice(0, 10);
+  return { nextDue: dueDate, daysToDue: Math.round((due.getTime() - Date.UTC(y, m - 1, d)) / 864e5) };
+}
+function billingSummary(monthlyFee, billingStart, payments, billingDay = 1, today2 = tashkentToday()) {
+  const lastMonth = Number(today2.slice(8, 10)) >= Math.min(28, Math.max(1, billingDay)) ? today2.slice(0, 7) : previousMonth(today2.slice(0, 7));
+  const months = monthlyFee > 0 && billingStart && MONTH_RE.test(billingStart) && billingStart <= lastMonth ? monthsBetween(billingStart, lastMonth) : [];
   const paidBy = /* @__PURE__ */ new Map();
   for (const payment of payments) paidBy.set(payment.month, (paidBy.get(payment.month) ?? 0) + payment.amount);
   const rows = months.map((month) => ({ month, due: monthlyFee, paid: paidBy.get(month) ?? 0 }));
@@ -56728,10 +56920,10 @@ function billingSummary(monthlyFee, billingStart, payments) {
   return { months: rows, charged, paid, debt, monthsOwed: monthlyFee > 0 ? Math.ceil(debt / monthlyFee) : 0 };
 }
 async function loadBilling(schoolId) {
-  const [school2] = await db.select({ monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  const [school2] = await db.select({ monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart, currency: schoolsTable.billingCurrency, billingDay: schoolsTable.billingDay, contact: schoolsTable.billingContact, phone: schoolsTable.billingPhone }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
   if (!school2) return null;
   const payments = await db.select({ id: schoolBillingPaymentsTable.id, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month, paidOn: schoolBillingPaymentsTable.paidOn, note: schoolBillingPaymentsTable.note }).from(schoolBillingPaymentsTable).where(eq(schoolBillingPaymentsTable.schoolId, schoolId)).orderBy(desc(schoolBillingPaymentsTable.paidOn), desc(schoolBillingPaymentsTable.createdAt));
-  return { monthlyFee: school2.monthlyFee, billingStart: school2.billingStart, payments, ...billingSummary(school2.monthlyFee, school2.billingStart, payments) };
+  return { monthlyFee: school2.monthlyFee, billingStart: school2.billingStart, currency: school2.currency, billingDay: school2.billingDay, contact: school2.contact, phone: school2.phone, ...nextDue(school2.billingDay), payments, ...billingSummary(school2.monthlyFee, school2.billingStart, payments, school2.billingDay) };
 }
 router10.get("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const schoolId = String(req.params.schoolId);
@@ -56764,12 +56956,20 @@ router10.put("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWN
     res.status(400).json({ error: "Choose the first month." });
     return;
   }
-  const [row] = await db.update(schoolsTable).set({ monthlyFee: fee, billingStart: start, updatedAt: /* @__PURE__ */ new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  const update = { monthlyFee: fee, billingStart: start, updatedAt: /* @__PURE__ */ new Date() };
+  if ("currency" in body) update.billingCurrency = body.currency === "USD" ? "USD" : "UZS";
+  if ("billingDay" in body) {
+    const day2 = Number(body.billingDay);
+    update.billingDay = Number.isInteger(day2) && day2 >= 1 && day2 <= 28 ? day2 : 1;
+  }
+  if ("contact" in body) update.billingContact = cleanText(body.contact, 80) || null;
+  if ("phone" in body) update.billingPhone = typeof body.phone === "string" ? body.phone.replace(/[^\d+ ()-]/g, "").trim().slice(0, 24) || null : null;
+  const [row] = await db.update(schoolsTable).set(update).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
   if (!row) {
     res.status(404).json({ error: "School not found." });
     return;
   }
-  await writeAudit(schoolId, viewerOf5(res).id, "billing", null, { monthlyFee: fee, billingStart: start });
+  await writeAudit(schoolId, viewerOf5(res).id, "billing", null, { monthlyFee: fee, billingStart: start, currency: update.billingCurrency, billingDay: update.billingDay });
   res.json(await loadBilling(schoolId));
 });
 router10.post("/admin/schools/:schoolId/billing/payments", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {

@@ -62,7 +62,7 @@ import {
   type Language,
   type SchoolData,
 } from './school-data';
-import { HomeworkAiCheck, PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos } from './homework';
+import { HomeworkAiCheck, PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos, honestCode, photoMetaFor } from './homework';
 import { MARKS, markBand, markOf, scoreOf } from './marks';
 import { COURSE, pdfPageOf } from './course-data';
 
@@ -314,8 +314,8 @@ export function ServerClassesPanel({
     try {
       await submitAssignment(assignment.id, {
         content: draftContent.trim() || t(language, 'Notebook photo', 'Фото тетради', 'Daftar rasmi'),
-        ...(draftPhotos.length ? { attachments: draftPhotos } : {}),
-      });
+        ...(draftPhotos.length ? { attachments: draftPhotos, photoMeta: photoMetaFor(draftPhotos) } : {}),
+      } as Parameters<typeof submitAssignment>[1]);
       setDraftAssignmentId(null);
       setDraftContent('');
       setDraftPhotos([]);
@@ -444,6 +444,10 @@ export function ServerClassesPanel({
                           <>
                             <div className="control">
                               <label>{t(language, '1. Do it in your notebook, then photograph it', '1. Выполните в тетради и сфотографируйте', '1. Daftarda bajaring va suratga oling')}</label>
+                              <div className="hw-code">
+                                <b>{honestCode(assignment.id, user.id)}</b>
+                                <span>{t(language, 'Write this code in the corner of the page before taking the photo.', 'Напишите этот код в углу страницы, потом сфотографируйте.', 'Bu kodni sahifa burchagiga yozing, keyin suratga oling.')}</span>
+                              </div>
                               <PhotoPicker
                                 photos={draftPhotos}
                                 onChange={setDraftPhotos}
@@ -1891,6 +1895,7 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
             {(submission.attachmentCount ?? 0) > 0
               ? <SubmissionPhotos assignmentId={assignmentId} studentId={studentId} count={submission.attachmentCount ?? 0} language={language} refreshKey={submission.updatedAt} />
               : <p className="muted">{t(language, 'No photos attached.', 'Фото не прикреплено.', 'Rasm biriktirilmagan.')}</p>}
+            {(submission.attachmentCount ?? 0) > 0 && <HomeworkAiCheck key={`honest-${studentId}`} assignmentId={assignmentId} studentId={studentId} language={language} />}
             {(submission.attachmentCount ?? 0) > 0 && <HomeworkHelpCheck assignmentId={assignmentId} studentId={studentId} language={language} onUseMark={(mark, feedback) => { setDraft((current) => ({ ...current, status: mark >= 5 ? 'checked' : 'needs_revision', score: String(scoreOf(mark)), feedback: current.feedback.trim() ? current.feedback : feedback })); setVerdictKey((value) => value + 1); }} />}
             {submission.content && <p className="school-assignment-copy"><b>{t(language, 'In their words', 'Своими словами', 'O‘z so‘zlari bilan')}:</b> {submission.content}</p>}
             <ReviewVerdict key={verdictKey} draft={draft} language={language} onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))} />

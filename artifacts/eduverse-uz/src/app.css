@@ -1146,7 +1146,7 @@ html[data-theme="night"] .journal-pick-label { color: #b8c0cc !important; }
 .journal-kind-dot { width: 14px; height: 14px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.08); }
 /* Owner's cash book for a school */
 .billing { display: grid; gap: 12px; }
-.billing-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.billing-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
 .billing-kpis > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, #faf6ee); border: 1px solid var(--line, #ece4d6); }
 .billing-kpis b { font-size: 18px; }
 .billing-kpis span { font-size: 12px; opacity: .7; }
@@ -1154,6 +1154,7 @@ html[data-theme="night"] .journal-pick-label { color: #b8c0cc !important; }
 .billing-kpis .good b { color: #15803d; }
 .billing-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .billing-row label { display: grid; gap: 4px; font-size: 13px; flex: 1 1 150px; min-width: 0; }
+.billing-row .input { width: 100%; min-width: 0; box-sizing: border-box; }
 .billing-months { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .billing-months li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 8px; font-size: 14px; }
 .billing-months li.paid { background: rgba(21, 128, 61, .08); }
@@ -1162,4 +1163,4 @@ html[data-theme="night"] .journal-pick-label { color: #b8c0cc !important; }
 .billing-history > summary { cursor: pointer; font-size: 14px; opacity: .8; }
 .billing-history ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
 .billing-history li { display: grid; grid-template-columns: 90px 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; }
-@media (max-width: 480px) { .billing-kpis { grid-template-columns: 1fr 1fr; } .billing-kpis > div:last-child { grid-column: 1 / -1; } }
+@media (max-width: 480px) { .billing-kpis { grid-template-columns: 1fr 1fr; } .billing-kpis > div:last-child:nth-child(odd) { grid-column: 1 / -1; } }
