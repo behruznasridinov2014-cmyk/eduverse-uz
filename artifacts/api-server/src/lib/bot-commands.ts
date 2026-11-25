@@ -133,8 +133,9 @@ async function grades(person: Person, L: BotLang): Promise<string> {
     if (!marks.length) { out.push(T(L, "Hali baho yo‘q.", "Оценок пока нет.", "No marks yet.")); continue; }
     for (const row of marks) {
       const behavior = row.subject.startsWith("behavior:");
-      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : row.subject));
-      out.push(`${day(row.date)} · ${name}${behavior ? ` (${T(L, "xulq", "поведение", "behaviour")})` : ""}: ${row.absent ? T(L, "nb", "нб", "ab") : `<b>${row.mark}</b>/10`}`);
+      const homework = row.subject.startsWith("homework:");
+      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : homework ? row.subject.slice(9) : row.subject));
+      out.push(`${day(row.date)} · ${name}${behavior ? ` (${T(L, "xulq", "поведение", "behaviour")})` : homework ? ` (${T(L, "uy vazifasi", "домашка", "homework")})` : ""}: ${row.absent ? T(L, "nb", "нб", "ab") : `<b>${row.mark}</b>/10`}`);
     }
     const numbers = marks.filter((row) => !row.subject.startsWith("behavior:")).map((row) => row.mark).filter((mark): mark is number => typeof mark === "number");
     if (numbers.length) out.push(`${T(L, "O‘rtacha", "Средняя", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);

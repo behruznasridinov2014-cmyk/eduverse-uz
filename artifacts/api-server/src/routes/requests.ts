@@ -6,6 +6,7 @@ import {
   classesTable,
   db,
   schoolMembersTable,
+  schoolBillingPaymentsTable,
   schoolRequestsTable,
   schoolsTable,
   sessionsTable,
@@ -366,7 +367,10 @@ router.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_RO
 
 /** The owner's overview of plans: which schools end their trial / paid period soon, who is on free. */
 router.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
-  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo }).from(schoolsTable);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable);
+  const paid = schools.length
+    ? await db.select({ schoolId: schoolBillingPaymentsTable.schoolId, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month }).from(schoolBillingPaymentsTable).where(inArray(schoolBillingPaymentsTable.schoolId, schools.map((school) => school.id)))
+    : [];
   const ids = schools.map((school) => school.id);
   const counts = ids.length
     ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids))
@@ -381,10 +385,99 @@ router.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req
       daysLeft,
       students: counts.filter((row) => row.schoolId === school.id && row.role === "student").length,
       teachers: counts.filter((row) => row.schoolId === school.id && row.role === "teacher").length,
+      ...(() => { const sum = billingSummary(school.monthlyFee, school.billingStart, paid.filter((row) => row.schoolId === school.id)); return { debt: sum.debt, monthsOwed: sum.monthsOwed }; })(),
     };
   });
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ schools: rows });
+});
+
+/* ------------------------------------------------------------------ */
+/* Billing: the school pays the owner in cash, a fixed sum per month    */
+/* ------------------------------------------------------------------ */
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+/** This month in Tashkent, "YYYY-MM". */
+function currentMonth(): string {
+  return new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
+}
+function monthsBetween(from: string, to: string): string[] {
+  const out: string[] = [];
+  let [y, m] = from.split("-").map(Number) as [number, number];
+  const [ty, tm] = to.split("-").map(Number) as [number, number];
+  while ((y < ty || (y === ty && m <= tm)) && out.length < 240) {
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1; if (m > 12) { m = 1; y += 1; }
+  }
+  return out;
+}
+/** Months charged so far, what was paid for each, and the debt. */
+export function billingSummary(monthlyFee: number, billingStart: string | null, payments: Array<{ amount: number; month: string }>) {
+  const months = monthlyFee > 0 && billingStart && MONTH_RE.test(billingStart) ? monthsBetween(billingStart, currentMonth()) : [];
+  const paidBy = new Map<string, number>();
+  for (const payment of payments) paidBy.set(payment.month, (paidBy.get(payment.month) ?? 0) + payment.amount);
+  const rows = months.map((month) => ({ month, due: monthlyFee, paid: paidBy.get(month) ?? 0 }));
+  const charged = months.length * monthlyFee;
+  const paid = payments.reduce((total, payment) => total + payment.amount, 0);
+  const debt = Math.max(0, charged - paid);
+  return { months: rows, charged, paid, debt, monthsOwed: monthlyFee > 0 ? Math.ceil(debt / monthlyFee) : 0 };
+}
+
+async function loadBilling(schoolId: string) {
+  const [school] = await db.select({ monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school) return null;
+  const payments = await db.select({ id: schoolBillingPaymentsTable.id, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month, paidOn: schoolBillingPaymentsTable.paidOn, note: schoolBillingPaymentsTable.note })
+    .from(schoolBillingPaymentsTable).where(eq(schoolBillingPaymentsTable.schoolId, schoolId)).orderBy(desc(schoolBillingPaymentsTable.paidOn), desc(schoolBillingPaymentsTable.createdAt));
+  return { monthlyFee: school.monthlyFee, billingStart: school.billingStart, payments, ...billingSummary(school.monthlyFee, school.billingStart, payments) };
+}
+
+router.get("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const billing = await loadBilling(schoolId);
+  if (!billing) { res.status(404).json({ error: "School not found." }); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(billing);
+});
+
+router.put("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const body = isRecord(req.body) ? req.body : {};
+  const fee = Number(body.monthlyFee);
+  if (!Number.isInteger(fee) || fee < 0 || fee > 1_000_000_000) { res.status(400).json({ error: "Monthly sum must be a whole number." }); return; }
+  const start = typeof body.billingStart === "string" && MONTH_RE.test(body.billingStart) ? body.billingStart : null;
+  if (fee > 0 && !start) { res.status(400).json({ error: "Choose the first month." }); return; }
+  const [row] = await db.update(schoolsTable).set({ monthlyFee: fee, billingStart: start, updatedAt: new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  if (!row) { res.status(404).json({ error: "School not found." }); return; }
+  await writeAudit(schoolId, viewerOf(res).id, "billing", null, { monthlyFee: fee, billingStart: start });
+  res.json(await loadBilling(schoolId));
+});
+
+router.post("/admin/schools/:schoolId/billing/payments", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const body = isRecord(req.body) ? req.body : {};
+  const amount = Number(body.amount);
+  if (!Number.isInteger(amount) || amount <= 0 || amount > 1_000_000_000) { res.status(400).json({ error: "Enter the sum." }); return; }
+  const month = typeof body.month === "string" && MONTH_RE.test(body.month) ? body.month : currentMonth();
+  const paidOn = typeof body.paidOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.paidOn) ? body.paidOn : new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+  const note = cleanText(body.note, 200) || null;
+  const [school] = await db.select({ id: schoolsTable.id }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school) { res.status(404).json({ error: "School not found." }); return; }
+  await db.insert(schoolBillingPaymentsTable).values({ schoolId, amount, month, paidOn, note, createdBy: viewerOf(res).id });
+  await writeAudit(schoolId, viewerOf(res).id, "billing_payment", null, { amount, month, paidOn });
+  res.status(201).json(await loadBilling(schoolId));
+});
+
+router.delete("/admin/schools/:schoolId/billing/payments/:paymentId", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const paymentId = String(req.params.paymentId);
+  if (!isValidUuid(schoolId) || !isValidUuid(paymentId)) { res.status(400).json({ error: "Invalid payment." }); return; }
+  const [row] = await db.delete(schoolBillingPaymentsTable).where(and(eq(schoolBillingPaymentsTable.id, paymentId), eq(schoolBillingPaymentsTable.schoolId, schoolId))).returning({ amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month });
+  if (!row) { res.status(404).json({ error: "Payment not found." }); return; }
+  await writeAudit(schoolId, viewerOf(res).id, "billing_payment_removed", null, row);
+  res.json(await loadBilling(schoolId));
 });
 
 export default router;

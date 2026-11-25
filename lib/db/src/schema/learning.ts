@@ -503,6 +503,8 @@ export const journalMarksTable = pgTable("journal_marks", {
   date: text("date").notNull(),
   mark: integer("mark"),
   absent: boolean("absent").notNull().default(false),
+  /** What the mark is for, a few words from the teacher. */
+  comment: text("comment"),
   markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

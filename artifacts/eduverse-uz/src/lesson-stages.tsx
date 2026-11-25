@@ -435,16 +435,25 @@ function modelEmbed(url: string): string | null {
   return null;
 }
 
-function VisualStage({ topic, language, save, result, ask, content }: StageProps) {
+function VisualStage({ topic, book, language, save, result, ask, content }: StageProps) {
   const [touched, setTouched] = useState(false);
+  // Any other topic of the book can be looked at in 3D too; the lesson's own topic stays the default.
+  const [otherKey, setOtherKey] = useState(topic.key);
+  const shown = book.topics.find((item) => item.key === otherKey) ?? topic;
   const done = Boolean(result(3)?.done);
   const media = (content?.blocks ?? []).filter((block) => block.kind !== 'text');
   const finish = () => void save(3, { score: 1, total: 1, done: true, answers: [] });
   return (
     <div className="ls-visual">
       <div onPointerDown={() => setTouched(true)}>
-        <CourseScene3D scene={topic.scene} language={language} />
+        <CourseScene3D key={shown.key} scene={shown.scene} language={language} />
       </div>
+      <label className="ls-other-3d">
+        <span className="muted">{t(language, 'Boshqa mavzu', 'Другая тема', 'Another topic')}</span>
+        <select className="input" value={otherKey} onChange={(event) => setOtherKey(event.target.value)}>
+          {book.topics.map((item) => <option key={item.key} value={item.key}>{item.key === topic.key ? `★ ${item.title}` : item.title}</option>)}
+        </select>
+      </label>
       <div className="ls-visual-actions">
         <span className="muted">{t(language, 'Barmoq bilan aylantiring', 'Крутите пальцем', 'Rotate with a finger')}</span>
         <button type="button" className={`btn small ${done ? '' : 'primary'}`} disabled={!touched && !done} onClick={finish}>
@@ -1006,7 +1015,6 @@ function HomeworkStage({ topic, book, language, save, content, user, school, cla
             : <p className="muted">{t(language, '«Darsni yakunlash» bosilganda beriladi.', 'Задаётся при «Завершить урок».', 'Given with “Finish the lesson”.')}</p>}
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             {!assignment && classId && <button type="button" className="btn primary" disabled={busy} onClick={() => void assign()}><Send size={14} /> {t(language, 'Hozir berish', 'Задать сейчас', 'Give now')}</button>}
-            <button type="button" className="btn" onClick={() => onOpen('/check')}><CheckCircle2 size={14} /> {t(language, 'Tekshirishga', 'К проверке домашки', 'To checking')}</button>
           </div>
         </div>
       )}

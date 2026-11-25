@@ -100,10 +100,18 @@ export function BoardControls({ classId, topic, stage, language, live, content }
   return (
     <section className={`ls-board ${on ? 'on' : ''}`}>
       <div className="ls-board-head">
-        <span className="ls-board-title"><MonitorPlay size={16} /> {t(language, 'Sinf doskasi', 'Доска класса', 'Class board')}{on && <span className="ls-live-dot">{t(language, 'jonli', 'в эфире', 'live')}</span>}</span>
+        <span className="ls-board-title">
+          <MonitorPlay size={16} />
+          <span>
+            {t(language, 'Sinf bilan birga', 'Урок вместе с классом', 'Together with the class')}{on && <span className="ls-live-dot">{t(language, 'yoqilgan', 'идёт', 'on')}</span>}
+            <small className="ls-board-sub">{on
+              ? t(language, 'O‘quvchilar ekranida siz turgan qadam. Savol bering — javoblar shu yerda.', 'У учеников на экране ваш шаг. Задайте вопрос — ответы появятся здесь.', 'Pupils see your step. Ask a question — answers show here.')
+              : t(language, 'Yoqsangiz, o‘quvchilar telefonida siz bilan bir xil qadam ochiladi.', 'Включите — у учеников откроется тот же шаг, что у вас.', 'Turn on — pupils see the same step as you.')}</small>
+          </span>
+        </span>
         {on
-          ? <button type="button" className="btn small" disabled={busy} onClick={() => void put({ active: false, question: null })}><Square size={13} /> {t(language, 'Tugatish', 'Завершить', 'Stop')}</button>
-          : <button type="button" className="btn small primary" disabled={busy} onClick={() => void put({ stage, question: null })}><Radio size={13} /> {t(language, 'Sinf bilan boshlash', 'Вести урок с классом', 'Run with the class')}</button>}
+          ? <button type="button" className="btn small" disabled={busy} onClick={() => void put({ active: false, question: null })}><Square size={13} /> {t(language, 'O‘chirish', 'Выключить', 'Turn off')}</button>
+          : <button type="button" className="btn small primary" disabled={busy} onClick={() => void put({ stage, question: null })}><Radio size={13} /> {t(language, 'Yoqish', 'Включить', 'Turn on')}</button>}
       </div>
       {state && (
         <>
@@ -114,7 +122,7 @@ export function BoardControls({ classId, topic, stage, language, live, content }
                 {questions.map((item, index) => <option key={item.key} value={index}>{item.prompt.slice(0, 90)}</option>)}
               </select>
               <button type="button" className="btn primary small" disabled={busy} onClick={() => { const item = questions[pick]!; void put({ question: { id: `${item.key}:${Date.now().toString(36)}`, prompt: item.prompt, choices: item.choices, correct: item.correct } }); }}>
-                <HelpCircle size={13} /> {t(language, 'Savolni chiqarish', 'Вывести вопрос', 'Show question')}
+                <HelpCircle size={13} /> {t(language, 'Savol berish', 'Задать вопрос классу', 'Ask the class')}
               </button>
             </div>
           )}

@@ -308,13 +308,11 @@ export function TeacherDayPage({ language, onOpen }: { language: Language; onOpe
   const today = useLoad<{ lessons: TodayLesson[]; now: string }>('/api/me/today');
   const now = Date.now();
   const lessons = today.data?.lessons ?? [];
-  const reviewTotal = work.data?.toReview.reduce((total, item) => total + item.count, 0) ?? 0;
   return (
     <div className="eco">
       {work.error ? <ErrorNote error={work.error} language={language} /> : null}
       <div className="eco-stats">
         <Stat icon={<CalendarClock size={18} />} label={t(language, 'Bugungi darslar', 'Уроков сегодня', 'Lessons today')} value={today.data ? String(lessons.length) : '…'} />
-        <Stat icon={<ClipboardCheck size={18} />} label={t(language, 'Tekshirishni kutmoqda', 'Ждут проверки', 'Waiting for review')} value={work.data ? String(reviewTotal) : '…'} tone={reviewTotal > 0 ? 'warn' : 'good'} />
         <Stat icon={<NotebookPen size={18} />} label={t(language, 'Bo‘sh jurnallar', 'Незаполненные журналы', 'Empty journals')} value={work.data ? String(work.data.emptyJournals.length) : '…'} tone={work.data?.emptyJournals.length ? 'warn' : 'good'} />
         <Stat icon={<AlertTriangle size={18} />} label={t(language, 'E’tibor kerak', 'Ученики в зоне внимания', 'Pupils to watch')} value={work.data ? String(work.data.attention.length) : '…'} tone={work.data?.attention.length ? 'bad' : 'good'} />
         <Stat icon={<MessageCircle size={18} />} label={t(language, 'Ota-onalardan xabar', 'Сообщения родителей', 'Parent messages')} value={work.data ? String(work.data.unreadMessages) : '…'} tone={work.data?.unreadMessages ? 'warn' : ''} />
@@ -337,19 +335,6 @@ export function TeacherDayPage({ language, onOpen }: { language: Language; onOpe
                 );
               })}
             </ol>
-          )}
-        </Section>
-        <Section icon={<ClipboardCheck size={16} />} title={t(language, 'Tekshirish kerak', 'Нужно проверить', 'To check')} actions={<button type="button" className="btn small" onClick={() => onOpen('/check')}>{t(language, 'Tekshirish', 'Проверка', 'Check')} <ArrowRight size={13} /></button>}>
-          {!work.data ? <LoadingBlock language={language} /> : work.data.toReview.length === 0 ? <p className="muted eco-empty"><CheckCircle2 size={15} /> {t(language, 'Hammasi tekshirilgan.', 'Всё проверено.', 'Everything is checked.')}</p> : (
-            <ul className="eco-list">
-              {work.data.toReview.slice(0, 8).map((item) => (
-                <li key={item.id}>
-                  <span className="eco-count">{item.count}</span>
-                  <span><b>{item.className}</b> · {subj(item.subject, language)}<br /><span className="muted">{item.title}</span></span>
-                  {item.oldest && <span className="muted">{t(language, 'dan', 'с', 'since')} {shortDate(item.oldest)}</span>}
-                </li>
-              ))}
-            </ul>
           )}
         </Section>
       </div>
