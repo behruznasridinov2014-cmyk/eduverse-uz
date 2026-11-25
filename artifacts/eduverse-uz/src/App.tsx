@@ -24,7 +24,7 @@ import { GradesPage } from './grades';
 import { WorksheetBuilder } from './worksheet';
 import { SchoolSetupWizard } from './setup-wizard';
 import { TrainerPage } from './trainer';
-import { PlansOverview, ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
+import { PlansOverview, SchoolBillingPanel, ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, EnrollRequestPanel, MyRequestsPanel, OwnerRequestsPanel, SchoolPeoplePanel } from './school-requests';
 import { LoadingBlock } from './ui/loading';
 import { ClassJournal } from './journal';
@@ -592,6 +592,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
    {tab==='schools'&&setup&&<div className="admin-school-setup">
      <div className="row-between admin-school-setup-head"><button className="btn small" onClick={closeSchool}><ArrowLeft size={14}/>{text('All schools','Все школы','Barcha maktablar')}</button><b>{setup.name}</b></div>
      <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>
+     <details className="panel admin-more" open><summary><b>{text('Payment','Оплата','To‘lov')}</b></summary><SchoolBillingPanel key={`billing-${setup.id}`} schoolId={setup.id} language={language}/></details>
      <details className="panel admin-more"><summary><b>{text('Plan','Тариф','Tarif')}</b></summary><SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/></details>
      <details className="panel admin-more"><summary><b>{text('People of the school','Люди школы','Maktab odamlari')}</b></summary><SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/></details>
      <details className="panel admin-more"><summary><b>{text('Paste Excel','Вставить Excel','Excel qo‘yish')}</b></summary><SchoolImport schoolId={setup.id} language={language}/></details>

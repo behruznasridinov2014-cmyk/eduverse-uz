@@ -17,8 +17,8 @@ import { GradeJournal } from './extras';
 
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
 
-type Mark = { studentId: string; date: string; mark: number | null; absent: boolean };
-type Kind = 'class' | 'behavior' | 'homework';
+type Kind = 'class' | 'homework';
+type Mark = { kind?: Kind; studentId: string; date: string; mark: number | null; absent: boolean; comment?: string | null };
 type Data = { subject: string; subjects: string[]; today: string; dates: string[]; students: Array<{ id: string; name: string }>; marks: Mark[]; absences: Array<{ studentId: string; date: string }> };
 
 const MONTHS_SHORT: Record<Language, string[]> = {
@@ -36,49 +36,55 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
-  const [kind, setKind] = useState<Kind>('class');
   const [saved, setSaved] = useState('');
   const [hideAsked, setHideAsked] = useState(false);
 
+  // One table: for every lesson the mark for the lesson and the mark for homework, side by side.
   const load = useCallback(async () => {
-    if (!classId || kind === 'homework') return;
+    if (!classId) return;
     setError('');
     try {
-      const next = await customFetch<Data>(`/api/classes/${classId}/marks?kind=${kind}${subject ? `&subject=${encodeURIComponent(subject)}` : ''}`, { method: 'GET' });
+      const query = `${subject ? `&subject=${encodeURIComponent(subject)}` : ''}`;
+      const lesson = await customFetch<Data>(`/api/classes/${classId}/marks?kind=class${query}`, { method: 'GET' });
       tried.current.add(classId);
-      if (!picked.current && next.dates.length === 0) {
+      if (!picked.current && lesson.dates.length === 0) {
         const other = school.classes.find((item) => !tried.current.has(item.id));
         if (other) { setClassId(other.id); setSubject(''); return; }
       }
-      setData(next);
-      if (next.subject !== subject) setSubject(next.subject);
+      const home = lesson.subject
+        ? await customFetch<Data>(`/api/classes/${classId}/marks?kind=homework&subject=${encodeURIComponent(lesson.subject)}`, { method: 'GET' })
+        : null;
+      const dates = [...new Set([...lesson.dates, ...(home?.dates ?? [])])].sort();
+      setData({ ...lesson, dates, marks: [...lesson.marks.map((mark): Mark => ({ ...mark, kind: 'class' })), ...(home?.marks ?? []).map((mark): Mark => ({ ...mark, kind: 'homework' }))] });
+      if (lesson.subject !== subject) setSubject(lesson.subject);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     }
-  }, [classId, subject, kind, language]);
+  }, [classId, subject, language]);
   useEffect(() => { setData(null); void load(); }, [load]);
 
   const cells = useMemo(() => {
     const map = new Map<string, Mark>();
-    for (const mark of data?.marks ?? []) map.set(`${mark.studentId}:${mark.date}`, mark);
+    for (const mark of data?.marks ?? []) map.set(`${mark.kind}:${mark.studentId}:${mark.date}`, mark);
     return map;
   }, [data]);
   const absentAt = useMemo(() => new Set((data?.absences ?? []).map((row) => `${row.studentId}:${row.date}`)), [data]);
 
-  async function put(studentId: string, date: string, mark: number | null, absent = false) {
+  async function put(kind: Kind, studentId: string, date: string, mark: number | null, absent = false, note = comment) {
     if (!data) return;
     setSaving(true); setError('');
     try {
-      await customFetch(`/api/classes/${classId}/marks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: data.subject, kind, date, studentId, mark, absent }) });
+      await customFetch(`/api/classes/${classId}/marks`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: data.subject, kind, date, studentId, mark, absent, comment: note.trim() }) });
       setData((current) => {
         if (!current) return current;
-        const rest = current.marks.filter((item) => !(item.studentId === studentId && item.date === date));
-        return { ...current, marks: mark === null && !absent ? rest : [...rest, { studentId, date, mark, absent }] };
+        const rest = current.marks.filter((item) => !(item.kind === kind && item.studentId === studentId && item.date === date));
+        return { ...current, marks: mark === null && !absent ? rest : [...rest, { kind, studentId, date, mark, absent, comment: note.trim() || null }] };
       });
-      setEditing(null);
       const who = data.students.find((item) => item.id === studentId)?.name ?? '';
-      setSaved(mark === null && !absent ? '' : `✓ ${t(language, 'Saqlandi', 'Сохранено', 'Saved')}: ${who} — ${absent ? t(language, 'nb', 'нб', 'ab') : mark}`);
+      const label = kind === 'homework' ? t(language, 'uy vazifasi', 'домашка', 'homework') : t(language, 'dars', 'урок', 'lesson');
+      setSaved(mark === null && !absent ? '' : `✓ ${who} — ${label}: ${absent ? t(language, 'nb', 'нб', 'ab') : mark}`);
       window.setTimeout(() => setSaved(''), 2600);
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -86,9 +92,36 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
       setSaving(false);
     }
   }
+  /** The comment is saved with the marks already in the cell. */
+  async function saveComment(studentId: string, date: string) {
+    for (const kind of ['class', 'homework'] as Kind[]) {
+      const cell = cells.get(`${kind}:${studentId}:${date}`);
+      if (cell && (cell.comment ?? '') !== comment.trim()) await put(kind, studentId, date, cell.mark, cell.absent, comment);
+    }
+    setEditing(null);
+  }
+  const open = (studentId: string, date: string) => {
+    const lessonCell = cells.get(`class:${studentId}:${date}`);
+    const homeCell = cells.get(`homework:${studentId}:${date}`);
+    setComment(lessonCell?.comment ?? homeCell?.comment ?? '');
+    setEditing(`${studentId}:${date}`);
+  };
 
   if (!school.classes.length) return null;
   const dateLabel = (date: string) => { const [, m, d] = date.split('-').map(Number); return `${d} ${MONTHS_SHORT[language][(m ?? 1) - 1]}`; };
+  const picker = (kind: Kind, studentId: string, date: string) => {
+    const cell = cells.get(`${kind}:${studentId}:${date}`);
+    return (
+      <div className="journal-pick-row">
+        <span className="journal-pick-label">{kind === 'homework' ? t(language, 'Uy vazifasi', 'Домашка', 'Homework') : t(language, 'Dars', 'За урок', 'Lesson')}</span>
+        <span className="journal-marks">
+          {MARKS.map((mark) => <button type="button" key={mark} className={`grade-pick ${markBand(mark)} ${cell?.mark === mark ? 'on' : ''}`} disabled={saving} onClick={() => void put(kind, studentId, date, mark)}>{mark}</button>)}
+          {kind === 'class' && <button type="button" className={`grade-pick nb ${cell?.absent ? 'on' : ''}`} disabled={saving} onClick={() => void put(kind, studentId, date, null, true)}>{t(language, 'nb', 'нб', 'ab')}</button>}
+          {cell && <button type="button" className="grade-pick cancel" disabled={saving} onClick={() => void put(kind, studentId, date, null)} aria-label={t(language, 'O‘chirish', 'Стереть', 'Clear')}>⌫</button>}
+        </span>
+      </div>
+    );
+  };
   return (
     <section className="panel journal class-journal">
       <div className="section-head">
@@ -103,21 +136,19 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
           <button type="button" className="btn small" onClick={() => void load()} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
         </div>
       </div>
-      <div className="row journal-kinds" role="tablist">
-        {([['class', t(language, 'Darsdagi baho', 'За урок', 'Lesson')], ['behavior', t(language, 'Xulq', 'Поведение', 'Behaviour')], ['homework', t(language, 'Uy vazifasi', 'Домашка', 'Homework')]] as Array<[Kind, string]>).map(([value, label]) => (
-          <button type="button" role="tab" key={value} aria-selected={kind === value} className={`studio-tab ${kind === value ? 'active' : ''}`} onClick={() => { setKind(value); setEditing(null); setData(null); }}>{label}</button>
-        ))}
-        {kind !== 'homework' && data?.dates.includes(data.today) && (
+      <div className="row journal-legend">
+        <span><span className="journal-kind-dot" /> {t(language, 'dars', 'за урок', 'lesson')}</span>
+        <span><span className="journal-kind-dot hw" /> {t(language, 'uy vazifasi', 'домашка', 'homework')}</span>
+        {data?.dates.includes(data.today) && (
           <label className="journal-hide-asked"><input type="checkbox" checked={hideAsked} onChange={(event) => setHideAsked(event.target.checked)} /> {t(language, 'Bugun so‘ralganlarni yashirish', 'Скрыть уже спрошенных сегодня', 'Hide pupils already asked today')}</label>
         )}
       </div>
       {saved && <div className="notice school-inline-success journal-saved" role="status">{saved}</div>}
-      {kind === 'homework' && <GradeJournal school={school} language={language} />}
       {error && <div className="notice" role="alert">{error}</div>}
-      {kind !== 'homework' && !data && !error && <LoadingBlock language={language} kind="inline" />}
+      {!data && !error && <LoadingBlock language={language} kind="inline" />}
       {data && data.students.length === 0 && <p className="muted">{t(language, 'Sinfda hali o‘quvchi yo‘q.', 'В классе пока нет учеников.', 'No students in this class yet.')}</p>}
       {data && data.students.length > 0 && data.dates.length === 0 && <div className="notice">{t(language, 'Bu fan jadvalda yo‘q — jadvalni direktor yoki zavuch to‘ldiradi.', 'Этого предмета нет в расписании — расписание заполняет директор или завуч.', 'This subject is not in the timetable yet.')}</div>}
-      {kind !== 'homework' && data && data.students.length > 0 && data.dates.length > 0 && (
+      {data && data.students.length > 0 && data.dates.length > 0 && (
         <div className="journal-scroll">
           <table className="grade-table journal-table class-journal-table">
             <thead>
@@ -128,31 +159,26 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
               </tr>
             </thead>
             <tbody>
-              {data.students.filter((student) => !hideAsked || !cells.get(`${student.id}:${data.today}`)).map((student, index) => {
-                const asked = Boolean(cells.get(`${student.id}:${data.today}`));
-                const marks = data.dates.map((date) => cells.get(`${student.id}:${date}`)?.mark).filter((mark): mark is number => typeof mark === 'number');
+              {data.students.filter((student) => !hideAsked || !cells.get(`class:${student.id}:${data.today}`)).map((student, index) => {
+                const asked = Boolean(cells.get(`class:${student.id}:${data.today}`));
+                const marks = data.marks.filter((mark) => mark.studentId === student.id && typeof mark.mark === 'number').map((mark) => mark.mark as number);
                 const average = marks.length ? marks.reduce((sum, mark) => sum + mark, 0) / marks.length : null;
                 return (
                   <tr key={student.id}>
-                    <td className={`journal-name ${asked ? 'is-asked' : ''}`}><span className="muted">{index + 1}.</span> <b>{student.name}</b>{asked && <span className="tag green journal-asked">✓ {t(language, 'so‘raldi', 'спрошен', 'asked')}</span>}</td>
+                    <td className={`journal-name ${asked ? 'is-asked' : ''}`}><span className="muted">{index + 1}.</span> <b>{student.name}</b>{asked && <span className="tag green journal-asked">✓</span>}</td>
                     {data.dates.map((date) => {
                       const key = `${student.id}:${date}`;
-                      const cell = cells.get(key);
-                      const absent = cell?.absent || (kind === 'class' && !cell && absentAt.has(key));
+                      const lessonCell = cells.get(`class:${key}`);
+                      const homeCell = cells.get(`homework:${key}`);
+                      const absent = lessonCell?.absent || (!lessonCell && absentAt.has(key));
+                      const note = lessonCell?.comment || homeCell?.comment || '';
                       return (
                         <td key={date} className={`journal-cell ${date === data.today ? 'is-today' : ''}`}>
-                          {editing === key ? (
-                            <span className="journal-marks">
-                              {MARKS.map((mark) => <button type="button" key={mark} className={`grade-pick ${markBand(mark)} ${cell?.mark === mark ? 'on' : ''}`} disabled={saving} onClick={() => void put(student.id, date, mark)}>{mark}</button>)}
-                              {kind === 'class' && <button type="button" className={`grade-pick nb ${cell?.absent ? 'on' : ''}`} disabled={saving} onClick={() => void put(student.id, date, null, true)}>{t(language, 'nb', 'нб', 'ab')}</button>}
-                              {cell && <button type="button" className="grade-pick cancel" disabled={saving} onClick={() => void put(student.id, date, null)} aria-label={t(language, 'O‘chirish', 'Стереть', 'Clear')}>⌫</button>}
-                              <button type="button" className="grade-pick cancel" onClick={() => setEditing(null)} aria-label={t(language, 'Bekor', 'Отмена', 'Cancel')}>×</button>
-                            </span>
-                          ) : (
-                            <button type="button" className="journal-cell-btn" onClick={() => setEditing(key)}>
-                              {typeof cell?.mark === 'number' ? <span className={`grade-mark ${markBand(cell.mark)}`}>{cell.mark}</span> : absent ? <span className="journal-nb">{t(language, 'nb', 'нб', 'ab')}</span> : <span className="journal-empty">·</span>}
-                            </button>
-                          )}
+                          <button type="button" className="journal-cell-btn journal-two" onClick={() => open(student.id, date)} title={note || undefined}>
+                            <span className="journal-half">{typeof lessonCell?.mark === 'number' ? <span className={`grade-mark ${markBand(lessonCell.mark)}`}>{lessonCell.mark}</span> : absent ? <span className="journal-nb">{t(language, 'nb', 'нб', 'ab')}</span> : <span className="journal-empty">·</span>}</span>
+                            <span className="journal-half hw">{typeof homeCell?.mark === 'number' ? <span className={`grade-mark ${markBand(homeCell.mark)}`}>{homeCell.mark}</span> : <span className="journal-empty">·</span>}</span>
+                            {note && <span className="journal-note-dot" aria-label={note} />}
+                          </button>
                         </td>
                       );
                     })}
@@ -164,6 +190,27 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
           </table>
         </div>
       )}
+      {editing && data && (() => {
+        const [studentId, date] = [editing.slice(0, editing.lastIndexOf(':')), editing.slice(editing.lastIndexOf(':') + 1)];
+        const who = data.students.find((item) => item.id === studentId)?.name ?? '';
+        return (
+          <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditing(null); }}>
+            <section className="modal journal-editor" role="dialog" aria-modal="true" aria-label={who}>
+              <div className="row-between"><b>{who}</b><span className="muted">{dateLabel(date)}</span></div>
+              {picker('class', studentId, date)}
+              {picker('homework', studentId, date)}
+              <input className="input" value={comment} maxLength={200} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveComment(studentId, date); }} placeholder={t(language, 'Izoh: nima uchun (ixtiyoriy)', 'Комментарий: за что (по желанию)', 'Comment: what for (optional)')} />
+              <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
+                <button type="button" className="btn primary" disabled={saving} onClick={() => void saveComment(studentId, date)}>{t(language, 'Tayyor', 'Готово', 'Done')}</button>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
+      <details className="journal-assignments">
+        <summary>{t(language, 'Topshirilgan vazifalar baholari', 'Оценки за сданные задания', 'Marks for handed-in work')}</summary>
+        <GradeJournal school={school} language={language} />
+      </details>
     </section>
   );
 }

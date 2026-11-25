@@ -34,6 +34,9 @@ import { tashkentNow } from "./timetable";
  *  4. tuition of a private school: the monthly fee, payments with receipts, debts;
  *  5. timetable changes: a substitute teacher, a cancelled lesson, another room.
  */
+/** Journal marks for homework are stored as "homework:<subject>": count them under the subject. */
+const baseSubject = (subject: string) => subject.replace(/^(homework|behavior):/, "");
+
 const router: IRouter = Router();
 type Viewer = { id: string; role: AccountRole };
 const viewerOf = (res: Response) => res.locals.authenticatedUser as Viewer;
@@ -93,6 +96,7 @@ async function emptyJournals(slotFilter: { schoolId?: string; teacherId?: string
     db.select({ classId: timetableChangesTable.classId, date: timetableChangesTable.date, period: timetableChangesTable.period }).from(timetableChangesTable)
       .where(and(inArray(timetableChangesTable.classId, classIds), gte(timetableChangesTable.date, from), eq(timetableChangesTable.kind, "cancelled"))),
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const filled = new Set([...attendance, ...marks].map((row) => `${row.classId}|${row.date}|${row.subject.toLowerCase()}`));
   const wholeDay = new Set(attendance.filter((row) => row.subject === "").map((row) => `${row.classId}|${row.date}`));
   const off = new Set(cancelled.map((row) => `${row.classId}|${row.date}|${row.period}`));
@@ -135,6 +139,7 @@ async function pupilsNeedingAttention(classIds: string[], days: number, subjects
     db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId, subject: assignmentsTable.subject }).from(assignmentsTable)
       .where(and(inArray(assignmentsTable.classId, classIds), lte(assignmentsTable.dueAt, new Date(now)), gte(assignmentsTable.dueAt, new Date(now - days * DAY)))),
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const dueAssignments = subjectFilter(assignments);
   const submitted = dueAssignments.length
     ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, studentId: assignmentSubmissionsTable.studentId }).from(assignmentSubmissionsTable)
@@ -197,6 +202,7 @@ router.get("/schools/:schoolId/analytics", requireAuthenticatedRole(...MANAGERS)
     db.select({ classId: classMembersTable.classId, userId: classMembersTable.userId }).from(classMembersTable)
       .where(and(inArray(classMembersTable.classId, scopeIds), eq(classMembersTable.role, "teacher"))),
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const submissions = assignments.length
     ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, submittedAt: assignmentSubmissionsTable.submittedAt, updatedAt: assignmentSubmissionsTable.updatedAt })
       .from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id)))
@@ -454,6 +460,7 @@ router.get("/me/children/:studentId/report", requireAuthenticatedRole("parent"),
       .where(and(eq(attendanceTable.studentId, studentId), gte(attendanceTable.attendanceDate, from))),
     db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student"))),
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const homework = classes.length
     ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt, createdAt: assignmentsTable.createdAt }).from(assignmentsTable)
       .where(and(inArray(assignmentsTable.classId, classes.map((item) => item.id)), gte(assignmentsTable.createdAt, new Date(now - 7 * DAY))))

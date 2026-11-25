@@ -72,6 +72,22 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
     }
   }, [classId, language]);
   useEffect(() => { setJournal(null); void load(); }, [load]);
+  // After a work is saved it closes and the next one waiting opens by itself.
+  const [savedAll, setSavedAll] = useState(false);
+  const goNext = useRef<string | null>(null);
+  useEffect(() => {
+    const done = goNext.current;
+    if (!journal || done === null) return;
+    goNext.current = null;
+    const at = journal.assignments.findIndex((item) => item.id === assignmentId);
+    const nextHere = at >= 0 ? journal.rows.find((row) => row.studentId !== done && row.cells[at]?.state === 'review') : undefined;
+    if (nextHere) { setOpen({ studentId: nextHere.studentId, studentName: nextHere.studentName }); return; }
+    for (let other = journal.assignments.length - 1; other >= 0; other -= 1) {
+      const row = journal.rows.find((item) => item.cells[other]?.state === 'review');
+      if (row) { setAssignmentId(journal.assignments[other]!.id); setOpen({ studentId: row.studentId, studentName: row.studentName }); return; }
+    }
+    setSavedAll(true);
+  }, [journal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const index = journal?.assignments.findIndex((item) => item.id === assignmentId) ?? -1;
   const assignment = index >= 0 ? journal!.assignments[index] : undefined;
@@ -135,6 +151,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
           })()}
           {assignment && (
             <>
+              {savedAll && counts.review === 0 && <div className="notice success" role="status"><CheckCircle2 size={15} /> {t(language, 'Hammasi tekshirildi', 'Всё проверено', 'All checked')}</div>}
               <div className="check-hw-counts">
                 <button type="button" className={`people-stat ${filter === 'review' ? 'on' : ''}`} onClick={() => setFilter(filter === 'review' ? 'all' : 'review')}><b>{counts.review}</b><span>{t(language, 'Tekshirish kerak', 'Ждут проверки', 'To check')}</span></button>
                 <button type="button" className={`people-stat ${filter === 'graded' ? 'on' : ''}`} onClick={() => setFilter(filter === 'graded' ? 'all' : 'graded')}><b>{counts.graded}</b><span>{t(language, 'Tekshirildi', 'Проверено', 'Checked')}</span></button>
@@ -168,7 +185,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
         </>
       )}
       {open && assignment && (
-        <SubmissionReviewDialog assignmentId={assignment.id} assignmentTitle={`${assignment.subject} · ${assignment.title}`} studentId={open.studentId} studentName={open.studentName} language={language} onClose={() => setOpen(null)} onSaved={() => void load()} />
+        <SubmissionReviewDialog assignmentId={assignment.id} assignmentTitle={`${assignment.subject} · ${assignment.title}`} studentId={open.studentId} studentName={open.studentName} language={language} onClose={() => setOpen(null)} onSaved={() => { goNext.current = open.studentId; setSavedAll(false); void load(); }} />
       )}
     </section>
   );

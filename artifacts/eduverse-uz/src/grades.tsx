@@ -31,6 +31,7 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
     for (const row of journal ?? []) {
       if (!inYear(row.date)) continue;
       if (row.subject.startsWith('behavior:')) slot(row.subject.slice(9)).behavior.push(row);
+      else if (row.subject.startsWith('homework:')) slot(row.subject.slice(9)).homework.push(row);
       else slot(row.subject).lesson.push(row);
     }
     for (const item of school.assignments) {
@@ -47,6 +48,7 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
     : <span key={index} className={`grade-mark ${markBand(row.mark ?? 0)}`} title={row.date.slice(0, 10).split('-').reverse().join('.')}>{row.mark}</span>);
   const average = (rows: Row[]) => { const n = rows.map((row) => row.mark).filter((mark): mark is number => typeof mark === 'number'); return n.length ? (n.reduce((a, b) => a + b, 0) / n.length).toFixed(1) : '—'; };
 
+  const hasBehavior = table.some(([, item]) => item.behavior.length > 0);
   return (
     <section className="grades-page">
       <div className="page-heading">
@@ -74,7 +76,7 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
                 <th>{t(language, 'Fan', 'Предмет', 'Subject')}</th>
                 <th>{t(language, 'Darsda', 'За урок', 'Lesson')}</th>
                 <th>{t(language, 'Uy vazifasi', 'Домашка', 'Homework')}</th>
-                <th>{t(language, 'Xulq', 'Поведение', 'Behaviour')}</th>
+                {hasBehavior && <th>{t(language, 'Xulq', 'Поведение', 'Behaviour')}</th>}
                 <th>{t(language, 'O‘rtacha', 'Средняя', 'Average')}</th>
               </tr>
             </thead>
@@ -84,7 +86,7 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
                   <td className="my-grades-subject"><b>{SUBJECTS[subject] ? t(language, ...SUBJECTS[subject]!) : subjectLabel(subject, language)}</b></td>
                   <td data-label={t(language, 'Darsda', 'За урок', 'Lesson')}><span className="journal-mine-marks">{chips(item.lesson)}</span></td>
                   <td data-label={t(language, 'Uy vazifasi', 'Домашка', 'Homework')}><span className="journal-mine-marks">{chips(item.homework)}</span></td>
-                  <td data-label={t(language, 'Xulq', 'Поведение', 'Behaviour')}><span className="journal-mine-marks">{chips(item.behavior)}</span></td>
+                  {hasBehavior && <td data-label={t(language, 'Xulq', 'Поведение', 'Behaviour')}><span className="journal-mine-marks">{chips(item.behavior)}</span></td>}
                   <td data-label={t(language, 'O‘rtacha', 'Средняя', 'Average')}><b>{average([...item.lesson, ...item.homework])}</b></td>
                 </tr>
               ))}

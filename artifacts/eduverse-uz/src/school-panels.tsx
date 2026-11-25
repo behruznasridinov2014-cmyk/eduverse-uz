@@ -1307,7 +1307,7 @@ export function ServerAdminSchoolsPanel({ language, onSelect, onCreated, selecte
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [form, setForm] = useState({ name: '', region: '', district: '', address: '' });
+  const [form, setForm] = useState({ name: '', region: '', district: '', address: '', fee: '' });
   const [creating, setCreating] = useState(false);
   const [revision, setRevision] = useState(0);
 
@@ -1344,11 +1344,16 @@ export function ServerAdminSchoolsPanel({ language, onSelect, onCreated, selecte
         address: form.address.trim() || undefined,
       };
       const response = await createSchool(payload);
+      const fee = Number(form.fee || 0);
+      if (fee > 0 && response?.school?.id) {
+        const month = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
+        await customFetch(`/api/admin/schools/${response.school.id}/billing`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ monthlyFee: fee, billingStart: month }) }).catch(() => undefined);
+      }
       if (onCreated && response?.school?.id) {
         onCreated({ id: response.school.id, name: response.school.name });
         return;
       }
-      setForm({ name: '', region: form.region, district: '', address: '' });
+      setForm({ name: '', region: form.region, district: '', address: '', fee: '' });
       setNotice(t(language, 'School created.', 'Школа создана.', 'Maktab yaratildi.'));
       setRevision((value) => value + 1);
     } catch (requestError) {
@@ -1429,6 +1434,10 @@ export function ServerAdminSchoolsPanel({ language, onSelect, onCreated, selecte
               maxLength={120}
             />
           </div>
+        </div>
+        <div className="control">
+          <label htmlFor="new-school-fee">{t(language, 'Sum per month (cash)', 'Сумма в месяц (наличными)', 'Oyiga summa (naqd)')}</label>
+          <input id="new-school-fee" inputMode="numeric" value={form.fee} onChange={(event) => setForm({ ...form, fee: event.target.value.replace(/\D/g, '').slice(0, 10) })} placeholder="1500000" />
         </div>
         <details className="admin-more-fields">
           <summary>{t(language, 'More', 'Ещё', 'Yana')}</summary>

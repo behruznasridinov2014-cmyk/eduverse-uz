@@ -1127,3 +1127,39 @@ h3 { font-size:14px;margin:0 0 8px;font-weight:600; }
 .course-book { min-width: 0; max-width: 100%; }
 .parent-stack { display: grid; gap: 18px; }
 .parent-stack .cabinet { display: grid; gap: 14px; }
+/* Journal: lesson mark and homework mark in one cell */
+.journal-legend { gap: 14px; align-items: center; flex-wrap: wrap; font-size: 13px; margin: 4px 0 10px; }
+.journal-kind-dot { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; font-size: 11px; font-weight: 700; background: var(--ev-primary-soft, #f1e6d2); }
+.journal-kind-dot.hw { background: #e3eefb; }
+.journal-two { position: relative; display: inline-flex; gap: 3px; align-items: center; }
+.journal-half { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; border-radius: 6px; }
+.journal-half.hw { background: rgba(75, 163, 219, .10); }
+.journal-note-dot { position: absolute; top: -2px; right: -4px; width: 7px; height: 7px; border-radius: 50%; background: #d39b2a; }
+.journal-editor { display: grid; gap: 12px; max-width: 560px; }
+.journal-pick-row { display: grid; gap: 6px; }
+.journal-pick-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.journal-editor .journal-marks { display: flex; flex-wrap: wrap; gap: 6px; }
+.journal-assignments { margin-top: 14px; }
+.journal-assignments > summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; font-weight: 600; opacity: .8; }
+.journal-pick-label { color: #6b7280 !important; }
+html[data-theme="night"] .journal-pick-label { color: #b8c0cc !important; }
+.journal-kind-dot { width: 14px; height: 14px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.08); }
+/* Owner's cash book for a school */
+.billing { display: grid; gap: 12px; }
+.billing-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.billing-kpis > div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, #faf6ee); border: 1px solid var(--line, #ece4d6); }
+.billing-kpis b { font-size: 18px; }
+.billing-kpis span { font-size: 12px; opacity: .7; }
+.billing-kpis .bad b { color: #c2410c; }
+.billing-kpis .good b { color: #15803d; }
+.billing-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.billing-row label { display: grid; gap: 4px; font-size: 13px; flex: 1 1 150px; min-width: 0; }
+.billing-months { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.billing-months li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; border-radius: 8px; font-size: 14px; }
+.billing-months li.paid { background: rgba(21, 128, 61, .08); }
+.billing-months li.part { background: rgba(217, 119, 6, .10); }
+.billing-months li.owed { background: rgba(194, 65, 12, .10); }
+.billing-history > summary { cursor: pointer; font-size: 14px; opacity: .8; }
+.billing-history ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; }
+.billing-history li { display: grid; grid-template-columns: 90px 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; }
+@media (max-width: 480px) { .billing-kpis { grid-template-columns: 1fr 1fr; } .billing-kpis > div:last-child { grid-column: 1 / -1; } }

@@ -92,7 +92,7 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
   );
 }
 
-type PlanRow = { id: string; name: string; region: string; plan: 'free' | 'pilot' | 'pro'; planUntil: string | null; daysLeft: number | null; isDemo: boolean; students: number; teachers: number };
+type PlanRow = { id: string; name: string; region: string; plan: 'free' | 'pilot' | 'pro'; planUntil: string | null; daysLeft: number | null; isDemo: boolean; students: number; teachers: number ; debt?: number; monthsOwed?: number };
 
 /**
  * The owner's overview: who is close to paying. Trials and paid periods that end within 30 days
@@ -140,6 +140,8 @@ export function PlansOverview({ language, onOpenSchool }: { language: Language; 
         <div className="plans-kpi"><BadgeCheck size={18} /><b>{rows.filter((row) => row.plan === 'pro').length}</b><span>Pro</span></div>
         <div className="plans-kpi"><AlarmClock size={18} /><b>{soon.length}</b><span>{t('Tez orada to‘lov', 'Скоро оплата', 'Payment soon')}</span></div>
       </div>
+      <List title={t('Qarzi bor (oylar bo‘yicha)', 'Должны за месяцы', 'Owe for months')} items={rows.filter((row) => (row.monthsOwed ?? 0) > 0).sort((a, b) => (b.debt ?? 0) - (a.debt ?? 0))} tone="red"
+        empty={t('Qarz yo‘q.', 'Долгов нет.', 'No debts.')} note={(row) => t(`${row.monthsOwed} oy · ${money(row.debt ?? 0)}`, `${row.monthsOwed} мес. · ${money(row.debt ?? 0)}`, `${row.monthsOwed} mo · ${money(row.debt ?? 0)}`)} />
       <List title={t('Tez orada to‘lov (30 kun ichida)', 'Скоро оплата (в течение 30 дней)', 'Payment soon (within 30 days)')} items={soon} tone="gold"
         empty={t('Hozircha hech kim yo‘q.', 'Пока никого.', 'Nobody yet.')} note={(row) => t(`${row.daysLeft} kun qoldi · ${date(row.planUntil)}`, `осталось ${row.daysLeft} дн. · до ${date(row.planUntil)}`, `${row.daysLeft} days left · ${date(row.planUntil)}`)} />
       <List title={t('Muddat tugagan — qo‘ng‘iroq qiling', 'Срок закончился — пора позвонить', 'Period ended — time to call')} items={ended} tone="red"
@@ -148,6 +150,84 @@ export function PlansOverview({ language, onOpenSchool }: { language: Language; 
         empty={t('Yo‘q.', 'Нет.', 'None.')} note={() => t('Bepul', 'Бесплатно', 'Free')} />
       <List title={t('To‘laydi (Pro)', 'Платят (Pro)', 'Paying (Pro)')} items={paying} tone="green"
         empty={t('Hozircha yo‘q.', 'Пока нет.', 'None yet.')} note={(row) => row.planUntil ? t(`${date(row.planUntil)} gacha`, `до ${date(row.planUntil)}`, `until ${date(row.planUntil)}`) : t('Muddatsiz', 'Без срока', 'No end date')} />
+    </div>
+  );
+}
+
+const money = (value: number) => `${value.toLocaleString('ru-RU').replace(/,/g, ' ')} сум`;
+type Billing = { monthlyFee: number; billingStart: string | null; payments: Array<{ id: string; amount: number; month: string; paidOn: string; note: string | null }>; months: Array<{ month: string; due: number; paid: number }>; debt: number; monthsOwed: number };
+const thisMonth = () => new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 7);
+const monthText = (month: string, language: Language) => {
+  const names: Record<Language, string[]> = {
+    Uzbek: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
+    'Русский': ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'],
+    English: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  };
+  const [y, m] = month.split('-').map(Number);
+  return `${names[language][(m ?? 1) - 1]} ${y}`;
+};
+
+/** The owner's cash book for one school: the sum per month, what was paid, how many months are owed. */
+export function SchoolBillingPanel({ schoolId, language }: { schoolId: string; language: Language }) {
+  const [data, setData] = useState<Billing | null>(null);
+  const [error, setError] = useState('');
+  const [fee, setFee] = useState('');
+  const [start, setStart] = useState(thisMonth());
+  const [amount, setAmount] = useState('');
+  const [month, setMonth] = useState(thisMonth());
+  const [busy, setBusy] = useState(false);
+  const apply = (next: Billing) => { setData(next); setFee(next.monthlyFee ? String(next.monthlyFee) : ''); setStart(next.billingStart ?? thisMonth()); const owed = next.months.find((row) => row.paid < row.due); setMonth(owed?.month ?? thisMonth()); setAmount(next.monthlyFee ? String(next.monthlyFee) : ''); };
+  useEffect(() => {
+    void customFetch<Billing>(`/api/admin/schools/${schoolId}/billing`, { method: 'GET' }).then(apply).catch((requestError) => setError(friendlyError(requestError, language)));
+  }, [schoolId, language]);
+  const call = async (path: string, method: string, body?: unknown) => {
+    setBusy(true); setError('');
+    try { apply(await customFetch<Billing>(`/api/admin/schools/${schoolId}/billing${path}`, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })); }
+    catch (requestError) { setError(friendlyError(requestError, language)); }
+    finally { setBusy(false); }
+  };
+  if (!data && !error) return <LoadingBlock language={language} kind="inline" />;
+  const digits = (value: string) => value.replace(/\D/g, '').slice(0, 10);
+  return (
+    <div className="billing">
+      {error && <div className="notice" role="alert">{error}</div>}
+      {data && (
+        <>
+          <div className="billing-kpis">
+            <div><b>{data.monthlyFee ? money(data.monthlyFee) : '—'}</b><span>{t(language, 'Oyiga', 'В месяц', 'Per month')}</span></div>
+            <div className={data.monthsOwed ? 'bad' : 'good'}><b>{data.monthsOwed}</b><span>{t(language, 'Qarz oylar', 'Месяцев долга', 'Months owed')}</span></div>
+            <div className={data.debt ? 'bad' : 'good'}><b>{money(data.debt)}</b><span>{t(language, 'Qarz', 'Долг', 'Debt')}</span></div>
+          </div>
+          <div className="billing-row">
+            <label>{t(language, 'Oyiga summa', 'Сумма в месяц', 'Sum per month')}<input className="input" inputMode="numeric" value={fee} onChange={(event) => setFee(digits(event.target.value))} placeholder="1 500 000" /></label>
+            <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<input className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} /></label>
+            <button type="button" className="btn" disabled={busy} onClick={() => void call('', 'PUT', { monthlyFee: Number(fee || 0), billingStart: start })}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
+          </div>
+          {data.monthlyFee > 0 && (
+            <div className="billing-row">
+              <label>{t(language, 'Naqd olindi', 'Получено наличными', 'Cash received')}<input className="input" inputMode="numeric" value={amount} onChange={(event) => setAmount(digits(event.target.value))} /></label>
+              <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<input className="input" type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label>
+              <button type="button" className="btn primary" disabled={busy || !Number(amount)} onClick={() => void call('/payments', 'POST', { amount: Number(amount), month })}>{t(language, 'Qo‘shish', 'Записать оплату', 'Add payment')}</button>
+            </div>
+          )}
+          {data.months.length > 0 && (
+            <ul className="billing-months">
+              {[...data.months].reverse().map((row) => (
+                <li key={row.month} className={row.paid >= row.due ? 'paid' : row.paid > 0 ? 'part' : 'owed'}>
+                  <span>{monthText(row.month, language)}</span>
+                  <b>{row.paid >= row.due ? t(language, 'to‘langan', 'оплачено', 'paid') : row.paid > 0 ? `${money(row.paid)} / ${money(row.due)}` : t(language, 'to‘lanmagan', 'не оплачено', 'not paid')}</b>
+                </li>
+              ))}
+            </ul>
+          )}
+          {data.payments.length > 0 && (
+            <details className="billing-history">
+              <summary>{t(language, 'To‘lovlar tarixi', 'История оплат', 'Payment history')} ({data.payments.length})</summary>
+              <ul>{data.payments.map((item) => <li key={item.id}><span>{item.paidOn.split('-').reverse().join('.')}</span><span>{monthText(item.month, language)}</span><b>{money(item.amount)}</b><button type="button" className="btn small" disabled={busy} onClick={() => { if (window.confirm(t(language, 'O‘chirilsinmi?', 'Удалить эту запись?', 'Delete this record?'))) void call(`/payments/${item.id}`, 'DELETE'); }}>×</button></li>)}</ul>
+            </details>
+          )}
+        </>
+      )}
     </div>
   );
 }

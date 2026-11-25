@@ -42678,7 +42678,7 @@ var init_auth = __esm({
 });
 
 // ../../lib/db/src/schema/school.ts
-var schoolMemberRoleEnum, classMemberRoleEnum, assignmentStatusEnum, lessonModeEnum, schoolsTable, schoolMembersTable, classesTable, classMembersTable, assignmentsTable, assignmentSubmissionsTable, submissionFilesTable, lessonsTable;
+var schoolMemberRoleEnum, classMemberRoleEnum, assignmentStatusEnum, lessonModeEnum, schoolsTable, schoolBillingPaymentsTable, schoolMembersTable, classesTable, classMembersTable, assignmentsTable, assignmentSubmissionsTable, submissionFilesTable, lessonsTable;
 var init_school = __esm({
   "../../lib/db/src/schema/school.ts"() {
     "use strict";
@@ -42703,9 +42703,24 @@ var init_school = __esm({
       /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
       isDemo: boolean("is_demo").notNull().default(false),
       planUntil: timestamp("plan_until", { withTimezone: true }),
+      /** What the school pays the owner each month (sum, cash). 0 = not set. */
+      monthlyFee: integer("monthly_fee").notNull().default(0),
+      /** First month that is charged, "YYYY-MM". */
+      billingStart: text("billing_start"),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("schools_region_idx").on(table.region)]);
+    schoolBillingPaymentsTable = pgTable("school_billing_payments", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      amount: integer("amount").notNull(),
+      /** The month it pays for, "YYYY-MM". */
+      month: text("month").notNull(),
+      paidOn: text("paid_on").notNull(),
+      note: text("note"),
+      createdBy: uuid("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("school_billing_payments_school_idx").on(table.schoolId)]);
     schoolMembersTable = pgTable("school_members", {
       id: uuid("id").defaultRandom().primaryKey(),
       schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
@@ -43226,6 +43241,8 @@ var init_learning = __esm({
       date: text("date").notNull(),
       mark: integer("mark"),
       absent: boolean("absent").notNull().default(false),
+      /** What the mark is for, a few words from the teacher. */
+      comment: text("comment"),
       markedBy: uuid("marked_by").references(() => usersTable.id, { onDelete: "set null" }),
       updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [
@@ -43427,6 +43444,7 @@ __export(schema_exports, {
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
   schoolBellsTable: () => schoolBellsTable,
+  schoolBillingPaymentsTable: () => schoolBillingPaymentsTable,
   schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
@@ -43504,6 +43522,7 @@ __export(src_exports, {
   quizAttemptsTable: () => quizAttemptsTable,
   rateLimitBucketsTable: () => rateLimitBucketsTable,
   schoolBellsTable: () => schoolBellsTable,
+  schoolBillingPaymentsTable: () => schoolBillingPaymentsTable,
   schoolCalendarTable: () => schoolCalendarTable,
   schoolMemberRoleEnum: () => schoolMemberRoleEnum,
   schoolMembersTable: () => schoolMembersTable,
@@ -55490,8 +55509,9 @@ async function grades(person, L) {
     }
     for (const row of marks) {
       const behavior = row.subject.startsWith("behavior:");
-      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : row.subject));
-      out.push(`${day(row.date)} \xB7 ${name}${behavior ? ` (${T(L, "xulq", "\u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "behaviour")})` : ""}: ${row.absent ? T(L, "nb", "\u043D\u0431", "ab") : `<b>${row.mark}</b>/10`}`);
+      const homework2 = row.subject.startsWith("homework:");
+      const name = escapeHtml(subjectName(L, behavior ? row.subject.slice(9) : homework2 ? row.subject.slice(9) : row.subject));
+      out.push(`${day(row.date)} \xB7 ${name}${behavior ? ` (${T(L, "xulq", "\u043F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "behaviour")})` : homework2 ? ` (${T(L, "uy vazifasi", "\u0434\u043E\u043C\u0430\u0448\u043A\u0430", "homework")})` : ""}: ${row.absent ? T(L, "nb", "\u043D\u0431", "ab") : `<b>${row.mark}</b>/10`}`);
     }
     const numbers = marks.filter((row) => !row.subject.startsWith("behavior:")).map((row) => row.mark).filter((mark) => typeof mark === "number");
     if (numbers.length) out.push(`${T(L, "O\u2018rtacha", "\u0421\u0440\u0435\u0434\u043D\u044F\u044F", "Average")}: <b>${(numbers.reduce((sum, mark) => sum + mark, 0) / numbers.length).toFixed(1)}</b>`);
@@ -56656,7 +56676,8 @@ router10.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_
   res.json({ plan, until });
 });
 router10.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
-  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo }).from(schoolsTable);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable);
+  const paid = schools.length ? await db.select({ schoolId: schoolBillingPaymentsTable.schoolId, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month }).from(schoolBillingPaymentsTable).where(inArray(schoolBillingPaymentsTable.schoolId, schools.map((school2) => school2.id))) : [];
   const ids = schools.map((school2) => school2.id);
   const counts = ids.length ? await db.select({ schoolId: schoolMembersTable.schoolId, role: schoolMembersTable.role }).from(schoolMembersTable).where(inArray(schoolMembersTable.schoolId, ids)) : [];
   const now = Date.now();
@@ -56668,11 +56689,127 @@ router10.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_r
       planUntil: school2.planUntil ? school2.planUntil.toISOString() : null,
       daysLeft,
       students: counts.filter((row) => row.schoolId === school2.id && row.role === "student").length,
-      teachers: counts.filter((row) => row.schoolId === school2.id && row.role === "teacher").length
+      teachers: counts.filter((row) => row.schoolId === school2.id && row.role === "teacher").length,
+      ...(() => {
+        const sum = billingSummary(school2.monthlyFee, school2.billingStart, paid.filter((row) => row.schoolId === school2.id));
+        return { debt: sum.debt, monthsOwed: sum.monthsOwed };
+      })()
     };
   });
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ schools: rows });
+});
+var MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+function currentMonth() {
+  return new Date(Date.now() + 5 * 36e5).toISOString().slice(0, 7);
+}
+function monthsBetween(from, to) {
+  const out = [];
+  let [y, m] = from.split("-").map(Number);
+  const [ty, tm] = to.split("-").map(Number);
+  while ((y < ty || y === ty && m <= tm) && out.length < 240) {
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return out;
+}
+function billingSummary(monthlyFee, billingStart, payments) {
+  const months = monthlyFee > 0 && billingStart && MONTH_RE.test(billingStart) ? monthsBetween(billingStart, currentMonth()) : [];
+  const paidBy = /* @__PURE__ */ new Map();
+  for (const payment of payments) paidBy.set(payment.month, (paidBy.get(payment.month) ?? 0) + payment.amount);
+  const rows = months.map((month) => ({ month, due: monthlyFee, paid: paidBy.get(month) ?? 0 }));
+  const charged = months.length * monthlyFee;
+  const paid = payments.reduce((total, payment) => total + payment.amount, 0);
+  const debt = Math.max(0, charged - paid);
+  return { months: rows, charged, paid, debt, monthsOwed: monthlyFee > 0 ? Math.ceil(debt / monthlyFee) : 0 };
+}
+async function loadBilling(schoolId) {
+  const [school2] = await db.select({ monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school2) return null;
+  const payments = await db.select({ id: schoolBillingPaymentsTable.id, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month, paidOn: schoolBillingPaymentsTable.paidOn, note: schoolBillingPaymentsTable.note }).from(schoolBillingPaymentsTable).where(eq(schoolBillingPaymentsTable.schoolId, schoolId)).orderBy(desc(schoolBillingPaymentsTable.paidOn), desc(schoolBillingPaymentsTable.createdAt));
+  return { monthlyFee: school2.monthlyFee, billingStart: school2.billingStart, payments, ...billingSummary(school2.monthlyFee, school2.billingStart, payments) };
+}
+router10.get("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const billing = await loadBilling(schoolId);
+  if (!billing) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(billing);
+});
+router10.put("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const body = isRecord9(req.body) ? req.body : {};
+  const fee = Number(body.monthlyFee);
+  if (!Number.isInteger(fee) || fee < 0 || fee > 1e9) {
+    res.status(400).json({ error: "Monthly sum must be a whole number." });
+    return;
+  }
+  const start = typeof body.billingStart === "string" && MONTH_RE.test(body.billingStart) ? body.billingStart : null;
+  if (fee > 0 && !start) {
+    res.status(400).json({ error: "Choose the first month." });
+    return;
+  }
+  const [row] = await db.update(schoolsTable).set({ monthlyFee: fee, billingStart: start, updatedAt: /* @__PURE__ */ new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  if (!row) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  await writeAudit(schoolId, viewerOf5(res).id, "billing", null, { monthlyFee: fee, billingStart: start });
+  res.json(await loadBilling(schoolId));
+});
+router10.post("/admin/schools/:schoolId/billing/payments", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const body = isRecord9(req.body) ? req.body : {};
+  const amount = Number(body.amount);
+  if (!Number.isInteger(amount) || amount <= 0 || amount > 1e9) {
+    res.status(400).json({ error: "Enter the sum." });
+    return;
+  }
+  const month = typeof body.month === "string" && MONTH_RE.test(body.month) ? body.month : currentMonth();
+  const paidOn = typeof body.paidOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.paidOn) ? body.paidOn : new Date(Date.now() + 5 * 36e5).toISOString().slice(0, 10);
+  const note = cleanText(body.note, 200) || null;
+  const [school2] = await db.select({ id: schoolsTable.id }).from(schoolsTable).where(eq(schoolsTable.id, schoolId)).limit(1);
+  if (!school2) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  await db.insert(schoolBillingPaymentsTable).values({ schoolId, amount, month, paidOn, note, createdBy: viewerOf5(res).id });
+  await writeAudit(schoolId, viewerOf5(res).id, "billing_payment", null, { amount, month, paidOn });
+  res.status(201).json(await loadBilling(schoolId));
+});
+router10.delete("/admin/schools/:schoolId/billing/payments/:paymentId", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const paymentId = String(req.params.paymentId);
+  if (!isValidUuid(schoolId) || !isValidUuid(paymentId)) {
+    res.status(400).json({ error: "Invalid payment." });
+    return;
+  }
+  const [row] = await db.delete(schoolBillingPaymentsTable).where(and(eq(schoolBillingPaymentsTable.id, paymentId), eq(schoolBillingPaymentsTable.schoolId, schoolId))).returning({ amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month });
+  if (!row) {
+    res.status(404).json({ error: "Payment not found." });
+    return;
+  }
+  await writeAudit(schoolId, viewerOf5(res).id, "billing_payment_removed", null, row);
+  res.json(await loadBilling(schoolId));
 });
 var requests_default = router10;
 
@@ -56820,8 +56957,8 @@ var STAFF = ["teacher", "school_director", "school_admin", "education_admin", "m
 var DATE_RE2 = /^\d{4}-\d{2}-\d{2}$/;
 var SUBJECT_RE2 = /^[\p{L}\p{N} .,'’()\-/]{1,40}$/u;
 var ATTENDANCE_NAME = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
-var kindOf = (value) => value === "behavior" ? "behavior" : "class";
-var keyOf = (subject, kind) => kind === "behavior" ? `behavior:${subject}` : subject;
+var kindOf = (value) => value === "behavior" ? "behavior" : value === "homework" ? "homework" : "class";
+var keyOf = (subject, kind) => kind === "class" ? subject : `${kind}:${subject}`;
 var limiter = createRateLimiter(600, 10 * 60 * 1e3, "Too many changes. Try again later.", "journal-marks");
 async function access(viewer, classId) {
   const [klass] = await db.select({ schoolId: classesTable.schoolId }).from(classesTable).where(eq(classesTable.id, classId)).limit(1);
@@ -56874,7 +57011,7 @@ router12.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), asyn
   const dates = weekdays.size ? lessonDates(weekdays, today2) : [];
   const from = dates[0] ?? today2;
   const [marks, absences] = subject ? await Promise.all([
-    db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, key), gte(journalMarksTable.date, from))),
+    db.select({ studentId: journalMarksTable.studentId, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent, comment: journalMarksTable.comment }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.subject, key), gte(journalMarksTable.date, from))),
     db.select({ studentId: attendanceTable.studentId, date: attendanceTable.attendanceDate }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), eq(attendanceTable.subject, ATTENDANCE_NAME[subject] ?? subject), eq(attendanceTable.status, "absent"), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today2)))
   ]) : [[], []];
   const allDates = [.../* @__PURE__ */ new Set([...dates, ...marks.map((mark) => mark.date)])].sort();
@@ -56909,6 +57046,7 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
   const kind = kindOf(body.kind);
   const absent = kind === "class" && body.absent === true;
   const mark = body.mark === null || body.mark === void 0 ? null : Number(body.mark);
+  const comment = typeof body.comment === "string" ? body.comment.replace(/\s+/g, " ").trim().slice(0, 200) || null : null;
   const realDate = DATE_RE2.test(date2) && !Number.isNaN(Date.parse(`${date2}T12:00:00Z`)) && (/* @__PURE__ */ new Date(`${date2}T12:00:00Z`)).toISOString().slice(0, 10) === date2;
   if (!SUBJECT_RE2.test(subject) || !realDate || !isValidUuid(studentId)) {
     res.status(400).json({ error: "Invalid mark." });
@@ -56938,23 +57076,24 @@ router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limi
   if (mark === null && !absent) {
     await db.delete(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), eq(journalMarksTable.studentId, studentId), eq(journalMarksTable.subject, key), eq(journalMarksTable.date, date2)));
   } else {
-    await db.insert(journalMarksTable).values({ classId, studentId, subject: key, date: date2, mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
+    await db.insert(journalMarksTable).values({ classId, studentId, subject: key, date: date2, mark: absent ? null : mark, absent, comment, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() }).onConflictDoUpdate({ target: [journalMarksTable.classId, journalMarksTable.studentId, journalMarksTable.subject, journalMarksTable.date], set: { mark: absent ? null : mark, absent, comment, markedBy: viewer.id, updatedAt: /* @__PURE__ */ new Date() } });
   }
   if ((mark !== null || absent) && changed) {
     const SUBJECT_NAME2 = { physics: "\u0424\u0438\u0437\u0438\u043A\u0430", chemistry: "\u0425\u0438\u043C\u0438\u044F", biology: "\u0411\u0438\u043E\u043B\u043E\u0433\u0438\u044F", math: "\u041C\u0430\u0442\u0435\u043C\u0430\u0442\u0438\u043A\u0430" };
     const day2 = date2.split("-").reverse().join(".");
     await notifyFamily(studentId, (lang, name) => absent ? `\u26A0\uFE0F <b>${tl(lang, "Jurnalda \xABnb\xBB (kelmadi)", "\u0412 \u0436\u0443\u0440\u043D\u0430\u043B\u0435 \xAB\u043D\u0431\xBB (\u043D\u0435 \u0431\u044B\u043B \u043D\u0430 \u0443\u0440\u043E\u043A\u0435)", "Absent (\xABab\xBB) in the journal")}</b>
 \u{1F464} ${name}
-\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}` : `${kind === "behavior" ? "\u{1F642}" : "\u{1F4D8}"} <b>${kind === "behavior" ? tl(lang, "Xulq", "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "Behaviour") : tl(lang, "Darsdagi baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A", "Lesson mark")}: ${mark}/10</b>
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}` : `${kind === "behavior" ? "\u{1F642}" : "\u{1F4D8}"} <b>${kind === "behavior" ? tl(lang, "Xulq", "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435", "Behaviour") : kind === "homework" ? tl(lang, "Uy vazifasi bahosi", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0434\u043E\u043C\u0430\u0448\u043A\u0443", "Homework mark") : tl(lang, "Darsdagi baho", "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A", "Lesson mark")}: ${mark}/10</b>
 \u{1F464} ${name}
-\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}`, true);
-    await pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME2[subject] ?? subject}` : `${kind === "behavior" ? "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435" : "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A"}: ${mark}/10`, `${SUBJECT_NAME2[subject] ?? subject}, ${day2}`, "/grades");
+\u{1F4D6} ${subjectText(lang, subject)} \xB7 ${day2}${comment ? `
+\u{1F4AC} ${escapeHtml(comment)}` : ""}`, true);
+    await pushNotice(await withParents([studentId]), "grades", absent ? `\xAB\u043D\u0431\xBB \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435: ${SUBJECT_NAME2[subject] ?? subject}` : `${kind === "behavior" ? "\u041F\u043E\u0432\u0435\u0434\u0435\u043D\u0438\u0435" : kind === "homework" ? "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0434\u043E\u043C\u0430\u0448\u043A\u0443" : "\u041E\u0446\u0435\u043D\u043A\u0430 \u0437\u0430 \u0443\u0440\u043E\u043A"}: ${mark}/10`, `${SUBJECT_NAME2[subject] ?? subject}, ${day2}`, "/grades");
   }
   res.json({ ok: true });
 });
 router12.get("/me/marks", requireAuthenticatedRole("student"), async (_req, res) => {
   const viewer = viewerOf7(res);
-  const rows = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(eq(journalMarksTable.studentId, viewer.id));
+  const rows = await db.select({ subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent, comment: journalMarksTable.comment }).from(journalMarksTable).where(eq(journalMarksTable.studentId, viewer.id));
   rows.sort((a, b) => b.date.localeCompare(a.date));
   res.setHeader("Cache-Control", "private, no-store");
   res.json({ marks: rows.slice(0, 200) });
@@ -57017,7 +57156,7 @@ router13.post("/me/practice-test", requireAuthenticatedRole("student"), testLimi
   ]);
   const weakness = /* @__PURE__ */ new Map();
   for (const subject of ["math", "physics", "chemistry", "biology"]) {
-    const own = marks.filter((row) => row.subject === subject && typeof row.mark === "number").map((row) => row.mark);
+    const own = marks.filter((row) => (row.subject === subject || row.subject === `homework:${subject}`) && typeof row.mark === "number").map((row) => row.mark);
     const tried = tests.filter((row) => row.subject === subject);
     const average = own.length ? own.reduce((sum, mark) => sum + mark, 0) / own.length / 2 : 4.5;
     const share = tried.length ? tried.reduce((sum, row) => sum + row.score / Math.max(1, row.total), 0) / tried.length : 0.8;
@@ -57461,6 +57600,7 @@ var lessons_default = router14;
 init_drizzle_orm();
 var import_express15 = __toESM(require_express2(), 1);
 init_src();
+var baseSubject = (subject) => subject.replace(/^(homework|behavior):/, "");
 var router15 = (0, import_express15.Router)();
 var viewerOf10 = (res) => res.locals.authenticatedUser;
 var isRecord11 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -57468,7 +57608,7 @@ var str3 = (value, max2) => typeof value === "string" ? value.trim().slice(0, ma
 var MANAGERS3 = ["school_director", "school_admin", "education_admin", "ministry_admin", "platform_superadmin"];
 var STAFF2 = ["teacher", ...MANAGERS3];
 var DAY = 864e5;
-var MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+var MONTH_RE2 = /^\d{4}-(0[1-9]|1[0-2])$/;
 var DATE_RE3 = /^\d{4}-\d{2}-\d{2}$/;
 var writeLimiter = createRateLimiter(240, 10 * 60 * 1e3, "Too many changes. Wait a minute.", "ecosystem-write");
 var messageLimiter = createRateLimiter(60, 10 * 60 * 1e3, "Too many messages. Wait a few minutes.", "family-messages");
@@ -57510,6 +57650,7 @@ async function emptyJournals(slotFilter, days) {
     db.selectDistinct({ classId: journalMarksTable.classId, date: journalMarksTable.date, subject: journalMarksTable.subject }).from(journalMarksTable).where(and(inArray(journalMarksTable.classId, classIds), gte(journalMarksTable.date, from), lte(journalMarksTable.date, today2.date))),
     db.select({ classId: timetableChangesTable.classId, date: timetableChangesTable.date, period: timetableChangesTable.period }).from(timetableChangesTable).where(and(inArray(timetableChangesTable.classId, classIds), gte(timetableChangesTable.date, from), eq(timetableChangesTable.kind, "cancelled")))
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const filled = new Set([...attendance, ...marks].map((row) => `${row.classId}|${row.date}|${row.subject.toLowerCase()}`));
   const wholeDay = new Set(attendance.filter((row) => row.subject === "").map((row) => `${row.classId}|${row.date}`));
   const off = new Set(cancelled.map((row) => `${row.classId}|${row.date}|${row.period}`));
@@ -57538,6 +57679,7 @@ async function pupilsNeedingAttention(classIds, days, subjects) {
     db.select({ studentId: journalMarksTable.studentId, mark: journalMarksTable.mark, date: journalMarksTable.date, subject: journalMarksTable.subject }).from(journalMarksTable).where(and(inArray(journalMarksTable.studentId, ids), inArray(journalMarksTable.classId, classIds), gte(journalMarksTable.date, prevFrom))),
     db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId, subject: assignmentsTable.subject }).from(assignmentsTable).where(and(inArray(assignmentsTable.classId, classIds), lte(assignmentsTable.dueAt, new Date(now)), gte(assignmentsTable.dueAt, new Date(now - days * DAY))))
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const dueAssignments = subjectFilter(assignments);
   const submitted = dueAssignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, studentId: assignmentSubmissionsTable.studentId }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, dueAssignments.map((item) => item.id))) : [];
   const done = new Set(submitted.map((row) => `${row.assignmentId}|${row.studentId}`));
@@ -57589,6 +57731,7 @@ router15.get("/schools/:schoolId/analytics", requireAuthenticatedRole(...MANAGER
     db.select({ id: assignmentsTable.id, classId: assignmentsTable.classId, createdBy: assignmentsTable.createdBy, subject: assignmentsTable.subject, createdAt: assignmentsTable.createdAt }).from(assignmentsTable).where(inArray(assignmentsTable.classId, scopeIds)),
     db.select({ classId: classMembersTable.classId, userId: classMembersTable.userId }).from(classMembersTable).where(and(inArray(classMembersTable.classId, scopeIds), eq(classMembersTable.role, "teacher")))
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const submissions = assignments.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score, submittedAt: assignmentSubmissionsTable.submittedAt, updatedAt: assignmentSubmissionsTable.updatedAt }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, assignments.map((item) => item.id))) : [];
   const current = attendance.filter((row) => row.date >= from);
   const previous = attendance.filter((row) => row.date < from);
@@ -57824,6 +57967,7 @@ router15.get("/me/children/:studentId/report", requireAuthenticatedRole("parent"
     db.select({ date: attendanceTable.attendanceDate, subject: attendanceTable.subject, status: attendanceTable.status }).from(attendanceTable).where(and(eq(attendanceTable.studentId, studentId), gte(attendanceTable.attendanceDate, from))),
     db.select({ id: classMembersTable.classId }).from(classMembersTable).where(and(eq(classMembersTable.userId, studentId), eq(classMembersTable.role, "student")))
   ]);
+  for (const row of marks) row.subject = baseSubject(row.subject);
   const homework2 = classes.length ? await db.select({ id: assignmentsTable.id, title: assignmentsTable.title, subject: assignmentsTable.subject, dueAt: assignmentsTable.dueAt, createdAt: assignmentsTable.createdAt }).from(assignmentsTable).where(and(inArray(assignmentsTable.classId, classes.map((item) => item.id)), gte(assignmentsTable.createdAt, new Date(now - 7 * DAY)))) : [];
   const subs = homework2.length ? await db.select({ assignmentId: assignmentSubmissionsTable.assignmentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(and(eq(assignmentSubmissionsTable.studentId, studentId), inArray(assignmentSubmissionsTable.assignmentId, homework2.map((item) => item.id)))) : [];
   const week = marks.filter((row) => row.date >= from && row.mark !== null);
@@ -57845,8 +57989,8 @@ router15.get("/me/children/:studentId/report", requireAuthenticatedRole("parent"
     })
   });
 });
-var monthsBetween = (start, end) => {
-  if (!MONTH_RE.test(start) || !MONTH_RE.test(end) || start > end) return [];
+var monthsBetween2 = (start, end) => {
+  if (!MONTH_RE2.test(start) || !MONTH_RE2.test(end) || start > end) return [];
   const out = [];
   let [year, month] = start.split("-").map(Number);
   while (out.length < 240) {
@@ -57871,7 +58015,7 @@ async function financeRows(schoolId, month) {
     const plan = plans.find((item) => item.studentId === pupil.id) ?? null;
     const mine = payments.filter((item) => item.studentId === pupil.id);
     const due = plan ? dueOf(plan) : 0;
-    const months = plan ? monthsBetween(plan.startMonth, month) : [];
+    const months = plan ? monthsBetween2(plan.startMonth, month) : [];
     const totalDue = months.length * due;
     const paidUpTo = mine.filter((item) => item.month <= month).reduce((sum, item) => sum + item.amount, 0);
     const paidThisMonth = mine.filter((item) => item.month === month).reduce((sum, item) => sum + item.amount, 0);
@@ -57890,7 +58034,7 @@ async function financeRows(schoolId, month) {
 }
 router15.get("/schools/:schoolId/finance", requireAuthenticatedRole(...MANAGERS3), async (req, res) => {
   const schoolId = String(req.params.schoolId ?? "");
-  const month = MONTH_RE.test(String(req.query.month ?? "")) ? String(req.query.month) : tashkentNow().date.slice(0, 7);
+  const month = MONTH_RE2.test(String(req.query.month ?? "")) ? String(req.query.month) : tashkentNow().date.slice(0, 7);
   if (!isValidUuid(schoolId)) {
     res.status(400).json({ error: "Invalid school." });
     return;
@@ -57925,7 +58069,7 @@ router15.put("/schools/:schoolId/finance/plans/:studentId", requireAuthenticated
   const monthlyFee = Math.round(Number(body.monthlyFee));
   const discountPercent = Math.round(Number(body.discountPercent ?? 0));
   const startMonth = str3(body.startMonth, 7);
-  if (!isValidUuid(schoolId) || !isValidUuid(studentId) || !Number.isFinite(monthlyFee) || monthlyFee < 0 || monthlyFee > 1e8 || !Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100 || !MONTH_RE.test(startMonth)) {
+  if (!isValidUuid(schoolId) || !isValidUuid(studentId) || !Number.isFinite(monthlyFee) || monthlyFee < 0 || monthlyFee > 1e8 || !Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100 || !MONTH_RE2.test(startMonth)) {
     res.status(400).json({ error: "Check the fee, the discount (0\u2013100%) and the first month." });
     return;
   }
@@ -57951,7 +58095,7 @@ router15.post("/schools/:schoolId/finance/payments", requireAuthenticatedRole(..
   const month = str3(body.month, 7);
   const method = ["cash", "card", "transfer"].includes(String(body.method)) ? String(body.method) : "cash";
   const paidOn = DATE_RE3.test(str3(body.paidOn, 10)) ? str3(body.paidOn, 10) : tashkentNow().date;
-  if (!isValidUuid(schoolId) || !isValidUuid(studentId) || !Number.isFinite(amount) || amount <= 0 || amount > 1e8 || !MONTH_RE.test(month)) {
+  if (!isValidUuid(schoolId) || !isValidUuid(studentId) || !Number.isFinite(amount) || amount <= 0 || amount > 1e8 || !MONTH_RE2.test(month)) {
     res.status(400).json({ error: "Check the pupil, the sum and the month." });
     return;
   }
@@ -58024,7 +58168,7 @@ router15.get("/students/:studentId/payments", requireAuthenticatedRole("parent",
   const payments = await db.select({ id: tuitionPaymentsTable.id, amount: tuitionPaymentsTable.amount, month: tuitionPaymentsTable.month, method: tuitionPaymentsTable.method, paidOn: tuitionPaymentsTable.paidOn, receiptNo: tuitionPaymentsTable.receiptNo, cancelledAt: tuitionPaymentsTable.cancelledAt }).from(tuitionPaymentsTable).where(and(eq(tuitionPaymentsTable.studentId, studentId), inArray(tuitionPaymentsTable.schoolId, allowed))).orderBy(desc(tuitionPaymentsTable.paidOn), desc(tuitionPaymentsTable.receiptNo)).limit(60);
   const plan = plans[0] ?? null;
   const valid = payments.filter((item) => !item.cancelledAt);
-  const totalDue = plan ? monthsBetween(plan.startMonth, month).length * dueOf(plan) : 0;
+  const totalDue = plan ? monthsBetween2(plan.startMonth, month).length * dueOf(plan) : 0;
   const paid = valid.filter((item) => item.month <= month).reduce((sum, item) => sum + item.amount, 0);
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
