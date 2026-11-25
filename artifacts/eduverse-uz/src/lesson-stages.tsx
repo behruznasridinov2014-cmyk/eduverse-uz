@@ -139,6 +139,7 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
             <header className="ls-stage-head">
               <h2>{tx(language, STAGES[stage - 1]!.title)}</h2>
               <span className="ls-stage-time"><Clock3 size={13} /> {minuteOf(stage)} {t(language, 'daq', 'мин', 'min')}</span>
+              <button type="button" className="btn small ls-helper-inline" onClick={() => { setHelperSeed(null); setHelperOpen((value) => !value); setAskOpen(false); }} aria-label={t(language, 'Yordamchi', 'Помощник', 'Helper')}><Sparkles size={16} /></button>
               {canAskTeacher && <button type="button" className="btn small ls-ask-inline" onClick={() => { setAskOpen((value) => !value); setHelperOpen(false); }} aria-expanded={askOpen}><Hand size={15} /> {t(language, 'Savol', 'Вопрос', 'Ask')}</button>}
             </header>
             {stage === 2 && <BookStage {...props} />}
@@ -155,8 +156,8 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
         )}
         {author && content && !isTeacher && <p className="muted ls-author">{t(language, `O‘qituvchi: ${author}`, `Учитель: ${author}`, `Teacher: ${author}`)}</p>}
       </>}
-      {!canAskTeacher && <button type="button" className="ls-helper-fab" onClick={() => { setHelperSeed(null); setHelperOpen((value) => !value); }} aria-expanded={helperOpen}>
-        <MessageCircle size={18} /> <span>{t(language, 'Yordamchi', 'Помощник', 'Helper')}</span>
+      {<button type="button" className="ls-helper-fab" onClick={() => { setHelperSeed(null); setHelperOpen((value) => !value); }} aria-expanded={helperOpen}>
+        <Sparkles size={18} /> <span>{t(language, 'Yordamchi', 'Помощник', 'Helper')}</span>
       </button>}
       {askOpen && canAskTeacher && <AskTeacher classId={classId!} topic={topic} language={language} onClose={() => setAskOpen(false)} onHelper={() => { setHelperSeed(null); setHelperOpen(true); setAskOpen(false); }} />}
       {helperOpen && <LessonHelper topic={topic} language={language} stageName={tx(language, STAGES[stage - 1]!.title)} mistakes={mistakes} seed={helperSeed} onClose={() => setHelperOpen(false)} />}
@@ -1043,10 +1044,7 @@ function LessonHelper({ topic, language, stageName, mistakes, seed, onClose }: {
   const list = useRef<HTMLDivElement>(null);
   const ACTIONS: Array<[string, string]> = [
     ['simple', t(language, 'Soddaroq', 'Объясни проще', 'Explain simply')],
-    ['detail', t(language, 'Batafsil', 'Подробнее', 'More detail')],
-    ['example', t(language, 'Boshqa misol', 'Другой пример', 'Another example')],
-    ['practice', t(language, 'Mashq ber', 'Дай задания', 'Give practice')],
-    ['mistake', t(language, 'Xatolarimni tushuntir', 'Разбери мои ошибки', 'Explain my mistakes')],
+    ['example', t(language, 'Misol', 'Пример', 'Example')],
     ['review', t(language, 'Nimani takrorlay?', 'Что повторить?', 'What to review?')],
   ];
   const run = useCallback(async (action: string, question = '') => {
@@ -1073,7 +1071,7 @@ function LessonHelper({ topic, language, stageName, mistakes, seed, onClose }: {
   return (
     <aside className="ls-helper" role="dialog" aria-label={t(language, 'Yordamchi', 'Помощник', 'Helper')}>
       <header>
-        <div><b>{t(language, 'Dars yordamchisi', 'Помощник урока', 'Lesson helper')}</b><small className="muted">§{topic.code} · {stageName}</small></div>
+        <div><b>{t(language, 'Dars yordamchisi', 'Помощник урока', 'Lesson helper')}</b><small className="muted">{topic.title}</small></div>
         <button type="button" className="btn small" onClick={onClose} aria-label={t(language, 'Yopish', 'Закрыть', 'Close')}><X size={14} /></button>
       </header>
       <div className="ls-helper-list" ref={list}>
@@ -1083,7 +1081,7 @@ function LessonHelper({ topic, language, stageName, mistakes, seed, onClose }: {
       </div>
       <div className="ls-helper-actions">{ACTIONS.map(([key, label]) => <button key={key} type="button" className="btn small" disabled={busy} onClick={() => void run(key)}>{label}</button>)}</div>
       <form className="ls-helper-form" onSubmit={(event) => { event.preventDefault(); const value = input.trim(); if (value.length < 2 || busy) return; setInput(''); void run(value.split(/\s+/).length <= 2 ? 'word' : 'ask', value); }}>
-        <input className="input" value={input} maxLength={400} onChange={(event) => setInput(event.target.value)} placeholder={t(language, 'Savol yoki tushunarsiz so‘z…', 'Вопрос или непонятное слово…', 'A question or a hard word…')} />
+        <input className="input" value={input} maxLength={400} onChange={(event) => setInput(event.target.value)} placeholder={t(language, 'Mavzu bo‘yicha savol…', 'Вопрос по теме…', 'Ask about the topic…')} />
         <button type="submit" className="btn primary" disabled={busy || input.trim().length < 2} aria-label={t(language, 'Yuborish', 'Отправить', 'Send')}><Send size={14} /></button>
       </form>
     </aside>
