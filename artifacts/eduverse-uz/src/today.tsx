@@ -396,7 +396,7 @@ export function LessonDayHeader({ lesson, topic, status, now, language }: { less
       <div>
         <span className="eyebrow">{t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)} · {lesson.start}–{lesson.end}{lesson.room ? ` · ${t(language, 'xona', 'каб.', 'room')} ${lesson.room}` : ''}</span>
         <h1>{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)} · {lessonSubjectName(lesson.subject, language)}</h1>
-        {topic && <p className="lesson-day-topic"><Sparkles size={15} /> §{topic.code} {topic.title}</p>}
+        {topic && <p className="lesson-day-topic"><Sparkles size={15} /> {topic.title}</p>}
       </div>
       <div className="lesson-day-status">
         <span className={`today-status is-${status}`}>{status === 'current' && <i className="today-pulse" aria-hidden="true" />}{statusLabel(status, language)}</span>

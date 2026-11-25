@@ -466,19 +466,19 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
         </aside>}
 
         <article className="course-topic-view" key={topic.key}>
-          <header className="course-hero">
-            <div>
+          <header className={`course-hero ${lesson ? 'in-lesson' : ''}`}>
+            {!lesson && <div>
               <div className="eyebrow">§{topic.code} · {topic.chapter}</div>
               <h2>{topic.title}</h2>
               {marks.has(topic.key) && <span className="tag green"><Users size={12} /> {t(language, `Sinfda o‘tildi: ${markDate(topic.key)}`, `Пройдено в классе: ${markDate(topic.key)}`, `Covered in class: ${markDate(topic.key)}`)}</span>}
-            </div>
+            </div>}
             <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${pdfPage}-${topicEndPage(book, topic, pdfPage)}`); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {lesson ? t(language, `Darslik · ${topic.page}-bet: o‘qish va yozish`, `Учебник · стр. ${topic.page}: читать и писать`, `Textbook · p. ${topic.page}: read and write`) : t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
+              {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${pdfPage}-${topicEndPage(book, topic, pdfPage)}`); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {lesson ? t(language, 'Darslik', 'Учебник', 'Textbook') : t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
               {isTeacher && !lesson && <button type="button" className="btn primary" onClick={() => onOpen(`/lesson/course:${topic.key}`)}><MonitorPlay size={15} /> {t(language, 'Shu mavzuda dars', 'Урок по этой теме', 'Lesson on this topic')}</button>}
             </div>
           </header>
 
-          {isTeacher && course?.canEdit && (
+          {isTeacher && course?.canEdit && !lesson && (
             <section className="panel course-mark">
               <GraduationCap size={18} />
               <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Mavzu dars tugagach o‘zi belgilanadi.', 'Тема отметится сама после урока.', 'Marked by itself after the lesson.')}</span>
@@ -490,7 +490,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           )}
 
 
-          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} />}
+          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} onFinished={reload} />}
 
           {!lesson && <>
           <section className="panel course-essence" id="step-topic">
@@ -532,7 +532,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           </>}
 
           <div className="course-footer">
-            {isStudent && <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
+            {isStudent && !lesson && <button type="button" className={`btn ${isStudied ? '' : 'primary'}`} onClick={() => setStudied((current) => current.includes(topic.key) ? current.filter((key) => key !== topic.key) : [...current, topic.key])}>
               <CheckCircle2 size={15} /> {isStudied ? t(language, 'O‘rganildi ✓', 'Изучено ✓', 'Studied ✓') : t(language, 'Mavzuni o‘rgandim', 'Я изучил тему', 'I studied this topic')}
             </button>}
             {(() => {

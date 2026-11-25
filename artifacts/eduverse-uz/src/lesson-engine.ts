@@ -19,15 +19,24 @@ export type Scenario = { id: string; situation: string; choices: string[]; corre
 export type Pair = { left: string; right: string };
 export type TrueFalse = { id: string; text: string; answer: boolean; why: string };
 
-export const STAGES: Array<{ n: number; key: string; title: Txt; goal: Txt; minutes: number }> = [
-  { n: 1, key: 'mission', title: ['Missiya', 'Миссия', 'Mission'], goal: ['Mavzuga sahna orqali kiring', 'Войдите в тему через ситуацию', 'Enter the topic through a scenario'], minutes: 5 },
-  { n: 2, key: 'book', title: ['Darslik', 'Учебник', 'Textbook'], goal: ['Asosiysini o‘qing va tushuning', 'Прочитайте и поймите главное', 'Read and understand the main idea'], minutes: 8 },
-  { n: 3, key: 'visual', title: ['3D va ko‘rgazma', '3D и наглядно', '3D & visual'], goal: ['Ko‘ring, aylantiring, o‘zgartiring', 'Посмотрите, покрутите, измените', 'See, rotate, change'], minutes: 6 },
-  { n: 4, key: 'practice', title: ['Amaliyot', 'Практика', 'Practice'], goal: ['Bilimni qo‘llang', 'Примените знания', 'Apply what you learned'], minutes: 8 },
-  { n: 5, key: 'test', title: ['Tekshiruv', 'Проверка знаний', 'Assessment'], goal: ['Nimani bilasiz — tekshiring', 'Проверьте, что вы знаете', 'Check what you know'], minutes: 8 },
-  { n: 6, key: 'challenge', title: ['Mustahkamlash', 'Закрепление', 'Reinforcement'], goal: ['Tezkor sinovlar va yutuqlar', 'Быстрые испытания и награды', 'Quick challenges and awards'], minutes: 5 },
-  { n: 7, key: 'homework', title: ['Uy vazifasi', 'Домашнее задание', 'Homework'], goal: ['Uyda mustahkamlang', 'Закрепите дома', 'Practise at home'], minutes: 5 },
+/*
+ * The 40-minute lesson: explanation 15 · 3D 10 · practice 8 · test 5 · achievements ~1 · results 1.
+ * Stage numbers stay as they were (saved pupils' progress keeps its meaning);
+ * the old "mission" (1) is no longer shown — FLOW is the order on screen.
+ */
+export const STAGES: Array<{ n: number; key: string; title: Txt; goal: Txt; minutes: number; hidden?: boolean }> = [
+  { n: 1, key: 'mission', title: ['Missiya', 'Миссия', 'Mission'], goal: ['Mavzuga sahna orqali kiring', 'Войдите в тему через ситуацию', 'Enter the topic through a scenario'], minutes: 0, hidden: true },
+  { n: 2, key: 'book', title: ['Tushuntirish', 'Объяснение', 'Explanation'], goal: ['Asosiysi', 'Главное', 'The main idea'], minutes: 15 },
+  { n: 3, key: 'visual', title: ['3D', '3D', '3D'], goal: ['Ko‘ring va aylantiring', 'Смотрите и крутите', 'Look and rotate'], minutes: 10 },
+  { n: 4, key: 'practice', title: ['Amaliyot', 'Практика', 'Practice'], goal: ['O‘zingiz bajaring', 'Сделайте сами', 'Do it yourself'], minutes: 8 },
+  { n: 5, key: 'test', title: ['Test', 'Тест', 'Test'], goal: ['Tekshiring', 'Проверьте себя', 'Check yourself'], minutes: 5 },
+  { n: 6, key: 'challenge', title: ['Yutuqlar', 'Достижения', 'Achievements'], goal: ['Natijangiz', 'Ваш результат', 'Your result'], minutes: 1 },
+  { n: 7, key: 'homework', title: ['Yakun', 'Итоги', 'Results'], goal: ['Dars tugadi', 'Урок окончен', 'Lesson over'], minutes: 1 },
 ];
+/** The stages in the order they are shown. */
+export const FLOW = STAGES.filter((item) => !item.hidden);
+/** Position of a stage on screen (1…6), for "step 2 of 6". */
+export const stepOf = (n: number) => Math.max(1, FLOW.findIndex((item) => item.n === n) + 1);
 
 /* ------------------------------------------------------------------ */
 /* Seeded random: the same topic always gives the same questions        */
@@ -290,7 +299,7 @@ export function localHelp(action: string, topic: CourseTopic, language: Language
       const sentence = parts.find((item) => item.toLowerCase().includes(question.toLowerCase().slice(0, Math.max(3, question.length - 2))));
       return found ? `${found.term} — ${found.meaning}.` : sentence ?? tx(language, ['Bu so‘z darslikda yo‘q. O‘qituvchidan so‘rang.', 'Этого слова нет в тексте темы. Спросите учителя.', 'This word is not in the topic. Ask the teacher.']);
     }
-    case 'practice': return topic.tasks.map((task, index) => `${index + 1}. ${task.q}`).join('\n') + `\n\n${tx(language, ['Javobni o‘zingiz toping, keyin «Tekshiruv» bosqichida tekshiring.', 'Решите сами, а потом проверьте себя на этапе «Проверка знаний».', 'Solve them yourself, then check in the Assessment stage.'])}`;
+    case 'practice': return topic.tasks.map((task, index) => `${index + 1}. ${task.q}`).join('\n') + `\n\n${tx(language, ['Javobni o‘zingiz toping, keyin «Test»da tekshiring.', 'Решите сами, а потом проверьте себя в «Тесте».', 'Solve them yourself, then check in the Test.'])}`;
     case 'mistake':
     case 'review': {
       if (!mistakes.length) return tx(language, ['Hozircha xato yo‘q — zo‘r! Keyingi bosqichga o‘ting.', 'Пока ошибок нет — отлично! Переходите дальше.', 'No mistakes yet — great! Go on.']);

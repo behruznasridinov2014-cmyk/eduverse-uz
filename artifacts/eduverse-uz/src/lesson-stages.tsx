@@ -3,39 +3,29 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { createAssignment, customFetch, submitAssignment, type User } from '@workspace/api-client-react';
 import {
   ArrowLeft, ArrowRight, Award, BookOpen, Box, Camera, CheckCircle2, Clock3, ExternalLink, Flag, GripVertical, Highlighter,
-  Lightbulb, MessageCircle, Minus, Play, Plus, RotateCcw, Send, Sparkles, Square, Target, Timer, Trophy, Volume2, X, XCircle, Zap,
+  Hand, Lightbulb, MessageCircle, Minus, NotebookPen, Play, Plus, RotateCcw, Send, Sparkles, Square, Star, Target, Timer, Trophy, Volume2, X, XCircle, Zap,
 } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import type { CourseBook, CourseTopic } from './course-data';
-import { pdfPageOf } from './course-data';
 import { CourseScene3D, TopicBookPages } from './course';
 import {
-  STAGES, checkShortAnswer, findTheMistake, glossary, localHelp, matchingPairs, missionScenarios, orderingSteps, sentences, topicQuestions, trueFalse, tx,
-  type Choice, type Scenario,
+  FLOW, STAGES, checkShortAnswer, findTheMistake, glossary, localHelp, matchingPairs, orderingSteps, sentences, stepOf, topicQuestions, trueFalse, tx,
+  type Choice,
 } from './lesson-engine';
 import { PhotoPicker } from './homework';
 import { friendlyError } from './errors';
 import { LoadingBlock } from './ui/loading';
-import { LessonBuilder, ClassProgressPanel, BoardControls, StudentBoard, useLive, type LessonContent } from './lesson-teacher';
+import { LessonBuilder, ClassProgressPanel, BoardControls, OnlineAndAsks, StudentBoard, useLive, type LessonContent, type LiveHook, type LiveState } from './lesson-teacher';
 
 /*
- * The seven-stage lesson of a textbook topic:
- *  1 mission · 2 textbook · 3 visual & 3D · 4 practice · 5 assessment · 6 reinforcement · 7 homework.
+ * The 40-minute lesson of a textbook topic (one main button per screen):
+ *  explanation 15 · 3D 10 · practice 8 · test 5 · achievements 30 s · results and closing 1.
+ *  Homework is given after the lesson.
  * Every answer is saved for the pupil (and the teacher sees the class), the lesson helper
  * knows the topic, the stage and the pupil's mistakes, and the teacher can run the class board.
  */
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Uzbek' ? uz : language === 'Русский' ? ru : en);
 const langCode = (language: Language) => (language === 'Uzbek' ? 'uz' : language === 'English' ? 'en' : 'ru');
-const SUBJECT: Record<CourseBook['subject'], [string, string, string]> = {
-  physics: ['Fizika', 'Физика', 'Physics'], chemistry: ['Kimyo', 'Химия', 'Chemistry'], biology: ['Biologiya', 'Биология', 'Biology'], math: ['Matematika', 'Математика', 'Mathematics'],
-};
-const WELCOME: Record<CourseBook['subject'], [string, string, string]> = {
-  chemistry: ['Kimyo laboratoriyasiga xush kelibsiz!', 'Добро пожаловать в химическую лабораторию!', 'Welcome to the chemistry laboratory!'],
-  physics: ['Fizika tajribaxonasiga xush kelibsiz!', 'Добро пожаловать в физическую лабораторию!', 'Welcome to the physics lab!'],
-  biology: ['Tirik tabiat dunyosiga xush kelibsiz!', 'Добро пожаловать в мир живой природы!', 'Welcome to the world of living things!'],
-  math: ['Matematik sirlar xonasiga xush kelibsiz!', 'Добро пожаловать в комнату математических загадок!', 'Welcome to the room of maths puzzles!'],
-};
-
 export type Answer = { id: string; ok: boolean; v?: string; q?: string };
 export type StageResult = { stage: number; score: number; total: number; done: boolean; answers: Answer[]; attempts?: number };
 
@@ -80,43 +70,47 @@ function useLessonContent(topicKey: string, classId: string | null) {
   return { content, author, reload: () => setRevision((value) => value + 1) };
 }
 
-export function LessonStages({ user, school, book, topic, classId, language, onOpen }: {
-  user: User; school: SchoolData; book: CourseBook; topic: CourseTopic; classId: string | null; language: Language; onOpen: (path: string) => void;
+export function LessonStages({ user, school, book, topic, classId, language, onOpen, onFinished }: {
+  user: User; school: SchoolData; book: CourseBook; topic: CourseTopic; classId: string | null; language: Language; onOpen: (path: string) => void; onFinished?: () => void;
 }) {
   const isStudent = user.role === 'student';
   const isTeacher = !isStudent && user.role !== 'parent';
   const progress = useLessonProgress(topic.key, classId, isStudent || isTeacher);
   const { content, author, reload } = useLessonContent(topic.key, classId);
   const live = useLive(classId, isStudent || isTeacher);
-  const [stage, setStage] = useState(1);
+  const [stage, setStage] = useState(FLOW[0]!.n);
   const [view, setView] = useState<'lesson' | 'builder' | 'class'>('lesson');
   const [follow, setFollow] = useState(true);
   const [helperOpen, setHelperOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
   const [helperSeed, setHelperSeed] = useState<{ action: string; question?: string } | null>(null);
   const top = useRef<HTMLDivElement>(null);
   const liveHere = live.state && live.state.topicKey === topic.key ? live.state : null;
+  const at = Math.max(0, FLOW.findIndex((item) => item.n === stage));
+  const nextStage = FLOW[at + 1];
+  const prevStage = FLOW[at - 1];
 
   // The pupil follows the stage the teacher shows on the board (can be switched off).
-  useEffect(() => { if (isStudent && follow && liveHere && liveHere.stage !== stage) setStage(liveHere.stage); }, [isStudent, follow, liveHere?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (isStudent && follow && liveHere && liveHere.stage !== stage && FLOW.some((item) => item.n === liveHere.stage)) setStage(liveHere.stage); }, [isStudent, follow, liveHere?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
   const go = (next: number) => {
-    setStage(Math.max(1, Math.min(7, next)));
-    if (isStudent && liveHere) setFollow(next === liveHere.stage);
+    const target = FLOW.some((item) => item.n === next) ? next : FLOW[0]!.n;
+    setStage(target);
+    if (isStudent && liveHere) setFollow(target === liveHere.stage);
     window.setTimeout(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
   };
-  const minutes = STAGES.map((item, index) => content?.minutes?.[index] || item.minutes);
-  const totalMinutes = minutes.reduce((sum, value) => sum + value, 0);
-  const doneCount = STAGES.filter((item) => progress.stages[item.n]?.done).length;
+  const minuteOf = (n: number) => content?.minutes?.[n - 1] || STAGES[n - 1]!.minutes;
+  const doneCount = FLOW.filter((item) => progress.stages[item.n]?.done).length;
   const mistakes = useMemo(() => Object.values(progress.stages).flatMap((item) => (item.answers ?? []).filter((answer) => !answer.ok && answer.q).map((answer) => answer.q!)).slice(0, 8), [progress.stages]);
-  const ask = (action: string, question?: string) => { setHelperSeed({ action, question }); setHelperOpen(true); };
-  const subject = t(language, ...SUBJECT[book.subject]);
-  const props = { topic, book, language, save: progress.save, result: (n: number) => progress.stages[n], next: () => go(stage + 1), ask, content };
+  const ask = (action: string, question?: string) => { setHelperSeed({ action, question }); setHelperOpen(true); setAskOpen(false); };
+  const props = { topic, book, language, save: progress.save, result: (n: number) => progress.stages[n], next: () => nextStage && go(nextStage.n), ask, content };
+  const canAskTeacher = isStudent && Boolean(classId);
 
   return (
     <div className="ls" ref={top}>
       {isTeacher && (
         <div className="ls-teacher-tabs" role="tablist">
-          {([['lesson', t(language, 'Dars', 'Урок', 'Lesson'), Play], ['builder', t(language, 'Dars konstruktori', 'Конструктор урока', 'Lesson builder'), Plus], ['class', t(language, 'Sinf natijalari', 'Результаты класса', 'Class results'), Target]] as const).map(([key, label, Icon]) => (
-            <button key={key} type="button" role="tab" aria-selected={view === key} className={`studio-tab ${view === key ? 'active' : ''}`} onClick={() => setView(key)} disabled={key !== 'lesson' && !classId && key === 'class'}>
+          {([['lesson', t(language, 'Dars', 'Урок', 'Lesson'), Play], ['builder', t(language, 'Tayyorlash', 'Подготовить', 'Prepare'), Plus], ['class', t(language, 'Natijalar', 'Результаты', 'Results'), Target]] as const).map(([key, label, Icon]) => (
+            <button key={key} type="button" role="tab" aria-selected={view === key} className={`studio-tab ${view === key ? 'active' : ''}`} onClick={() => setView(key)} disabled={key === 'class' && !classId}>
               <Icon size={14} /> {label}
             </button>
           ))}
@@ -125,49 +119,86 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
       {view === 'builder' && isTeacher && <LessonBuilder topic={topic} language={language} initial={content} onSaved={reload} />}
       {view === 'class' && isTeacher && classId && <ClassProgressPanel classId={classId} topic={topic} language={language} />}
       {view === 'lesson' && <>
-        <nav className="ls-rail" aria-label={t(language, 'Dars bosqichlari', 'Этапы урока', 'Lesson stages')}>
-          {STAGES.map((item) => {
+        <nav className="ls-steps" aria-label={t(language, 'Dars bosqichlari', 'Этапы урока', 'Lesson stages')}>
+          {FLOW.map((item) => {
             const result = progress.stages[item.n];
             return (
-              <button key={item.n} type="button" className={`ls-rail-step ${stage === item.n ? 'on' : ''} ${result?.done ? 'done' : ''} ${liveHere?.stage === item.n ? 'live' : ''}`} onClick={() => go(item.n)} aria-current={stage === item.n ? 'step' : undefined}>
-                <span className="ls-rail-num">{result?.done ? <CheckCircle2 size={15} /> : item.n}</span>
-                <span className="ls-rail-text"><b>{tx(language, item.title)}</b><small>{minutes[item.n - 1]} {t(language, 'daq', 'мин', 'min')}</small></span>
+              <button key={item.n} type="button" className={`ls-step ${stage === item.n ? 'on' : ''} ${result?.done ? 'done' : ''} ${liveHere?.stage === item.n ? 'live' : ''}`} onClick={() => go(item.n)} aria-current={stage === item.n ? 'step' : undefined} title={`${tx(language, item.title)} · ${minuteOf(item.n)} ${t(language, 'daq', 'мин', 'min')}`}>
+                <span className="ls-step-dot">{result?.done ? <CheckCircle2 size={14} /> : stepOf(item.n)}</span>
+                <span className="ls-step-name">{tx(language, item.title)}</span>
               </button>
             );
           })}
         </nav>
-        <div className="ls-meter">
-          <div className="test-progress"><span style={{ width: `${(doneCount / 7) * 100}%` }} /></div>
-          <span className="muted">{t(language, `${doneCount} / 7 bosqich`, `${doneCount} из 7 этапов`, `${doneCount} of 7 stages`)} · ~{totalMinutes} {t(language, 'daqiqa', 'мин', 'min')}{progress.saveError ? ` · ${t(language, 'saqlanmadi, internetni tekshiring', 'не сохранилось, проверьте интернет', 'not saved, check the internet')}` : ''}</span>
-        </div>
+        <div className="ls-meter" aria-hidden="true"><div className="test-progress"><span style={{ width: `${(doneCount / FLOW.length) * 100}%` }} /></div></div>
+        {progress.saveError && <p className="ls-save-error">{t(language, 'Saqlanmadi — internetni tekshiring', 'Не сохранилось — проверьте интернет', 'Not saved — check the internet')}</p>}
         {isTeacher && classId && <BoardControls classId={classId} topic={topic} stage={stage} language={language} live={live} content={content} />}
-        {isStudent && liveHere && <StudentBoard classId={classId!} state={liveHere} language={language} follow={follow} onFollow={() => { setFollow(true); setStage(liveHere.stage); }} onAnswered={live.refresh} />}
+        {isStudent && liveHere && <StudentBoard classId={classId!} state={liveHere} language={language} follow={follow} onFollow={() => { setFollow(true); if (FLOW.some((item) => item.n === liveHere.stage)) setStage(liveHere.stage); }} onAnswered={live.refresh} />}
         {!progress.loaded ? <LoadingBlock language={language} /> : (
           <section className={`ls-stage ls-stage-${stage}`} key={stage}>
             <header className="ls-stage-head">
-              <span className="eyebrow">{t(language, `${stage}-bosqich`, `Этап ${stage}`, `Stage ${stage}`)} · {tx(language, STAGES[stage - 1]!.goal)}</span>
               <h2>{tx(language, STAGES[stage - 1]!.title)}</h2>
+              <span className="ls-stage-time"><Clock3 size={13} /> {minuteOf(stage)} {t(language, 'daq', 'мин', 'min')}</span>
+              {canAskTeacher && <button type="button" className="btn small ls-ask-inline" onClick={() => { setAskOpen((value) => !value); setHelperOpen(false); }} aria-expanded={askOpen}><Hand size={15} /> {t(language, 'Savol', 'Вопрос', 'Ask')}</button>}
             </header>
-            {stage === 1 && <MissionStage {...props} subject={subject} welcome={t(language, ...WELCOME[book.subject])} totalMinutes={totalMinutes} />}
             {stage === 2 && <BookStage {...props} />}
             {stage === 3 && <VisualStage {...props} />}
             {stage === 4 && <PracticeStage {...props} />}
             {stage === 5 && <TestStage {...props} goTo={go} />}
-            {stage === 6 && <ChallengeStage {...props} stages={progress.stages} />}
-            {stage === 7 && <HomeworkStage {...props} user={user} school={school} classId={classId} isTeacher={isTeacher} stages={progress.stages} onOpen={onOpen} />}
+            {stage === 6 && <AchievementsStage {...props} stages={progress.stages} autoNext={!(isStudent && liveHere && follow)} />}
+            {stage === 7 && <ResultsStage {...props} user={user} school={school} classId={classId} isTeacher={isTeacher} stages={progress.stages} onOpen={onOpen} live={live} onFinished={onFinished} />}
             <footer className="ls-stage-nav">
-              <button type="button" className="btn" disabled={stage === 1} onClick={() => go(stage - 1)}><ArrowLeft size={15} /> {t(language, 'Oldingi', 'Назад', 'Back')}</button>
-              {stage < 7 && <button type="button" className="btn primary" onClick={() => go(stage + 1)}>{t(language, 'Keyingi bosqich', 'Следующий этап', 'Next stage')}: {tx(language, STAGES[stage]!.title)} <ArrowRight size={15} /></button>}
+              {prevStage ? <button type="button" className="btn ls-back" onClick={() => go(prevStage.n)} aria-label={t(language, 'Orqaga', 'Назад', 'Back')}><ArrowLeft size={18} /></button> : <span />}
+              {nextStage && <button type="button" className="btn primary ls-next" onClick={() => go(nextStage.n)}>{t(language, 'Keyingisi', 'Дальше', 'Next')} <ArrowRight size={18} /></button>}
             </footer>
           </section>
         )}
-        {author && content && !isTeacher && <p className="muted ls-author">{t(language, `O‘qituvchi qo‘shgan materiallar: ${author}`, `Материалы учителя: ${author}`, `Teacher’s materials: ${author}`)}</p>}
+        {author && content && !isTeacher && <p className="muted ls-author">{t(language, `O‘qituvchi: ${author}`, `Учитель: ${author}`, `Teacher: ${author}`)}</p>}
       </>}
-      <button type="button" className="ls-helper-fab" onClick={() => { setHelperSeed(null); setHelperOpen((value) => !value); }} aria-expanded={helperOpen}>
+      {!canAskTeacher && <button type="button" className="ls-helper-fab" onClick={() => { setHelperSeed(null); setHelperOpen((value) => !value); }} aria-expanded={helperOpen}>
         <MessageCircle size={18} /> <span>{t(language, 'Yordamchi', 'Помощник', 'Helper')}</span>
-      </button>
+      </button>}
+      {askOpen && canAskTeacher && <AskTeacher classId={classId!} topic={topic} language={language} onClose={() => setAskOpen(false)} onHelper={() => { setHelperSeed(null); setHelperOpen(true); setAskOpen(false); }} />}
       {helperOpen && <LessonHelper topic={topic} language={language} stageName={tx(language, STAGES[stage - 1]!.title)} mistakes={mistakes} seed={helperSeed} onClose={() => setHelperOpen(false)} />}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* "Ask the teacher": a short question goes to the teacher's board      */
+/* ------------------------------------------------------------------ */
+function AskTeacher({ classId, topic, language, onClose, onHelper }: { classId: string; topic: CourseTopic; language: Language; onClose: () => void; onHelper: () => void }) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  async function send() {
+    const value = text.trim();
+    if (value.length < 2 || busy) return;
+    setBusy(true); setError('');
+    try {
+      await customFetch(`/api/classes/${classId}/live/ask`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topicKey: topic.key, text: value }) });
+      setText(''); setSent(true);
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <aside className="ls-helper ls-ask" role="dialog" aria-label={t(language, 'O‘qituvchiga savol', 'Вопрос учителю', 'Ask the teacher')}>
+      <div className="ls-helper-head">
+        <b><Hand size={16} /> {t(language, 'O‘qituvchiga savol', 'Вопрос учителю', 'Ask the teacher')}</b>
+        <button type="button" className="btn small" onClick={onClose} aria-label={t(language, 'Yopish', 'Закрыть', 'Close')}><X size={14} /></button>
+      </div>
+      {sent && <div className="notice good" role="status"><CheckCircle2 size={14} /> {t(language, 'Yuborildi. O‘qituvchi ko‘radi.', 'Отправлено. Учитель увидит.', 'Sent. The teacher will see it.')}</div>}
+      <form className="ls-helper-form" onSubmit={(event) => { event.preventDefault(); void send(); }}>
+        <input className="input" value={text} maxLength={300} onChange={(event) => { setText(event.target.value); setSent(false); }} placeholder={t(language, 'Nima tushunarsiz?', 'Что непонятно?', 'What is unclear?')} autoFocus />
+        <button type="submit" className="btn primary" disabled={busy || text.trim().length < 2} aria-label={t(language, 'Yuborish', 'Отправить', 'Send')}><Send size={14} /></button>
+      </form>
+      {error && <div className="notice" role="alert">{error}</div>}
+      <button type="button" className="btn small ls-ask-helper" onClick={onHelper}><Sparkles size={13} /> {t(language, 'Yordamchidan so‘rash', 'Спросить помощника', 'Ask the helper')}</button>
+    </aside>
   );
 }
 
@@ -225,71 +256,6 @@ function ChoiceCard({ prompt, choices, correct, why, language, onFirstAnswer, on
 }
 
 /* ------------------------------------------------------------------ */
-/* 1. Mission                                                           */
-/* ------------------------------------------------------------------ */
-function MissionStage({ topic, book, language, save, result, next, ask, content, subject, welcome, totalMinutes }: StageProps & { subject: string; welcome: string; totalMinutes: number }) {
-  const scenarios: Scenario[] = useMemo(() => missionScenarios(topic, book.subject, language), [topic, book.subject, language]);
-  const previous = result(1);
-  const [started, setStarted] = useState(false);
-  const [index, setIndex] = useState(0);
-  const answers = useRef<Answer[]>([]);
-  const finished = index >= scenarios.length;
-  const record = (scenario: Scenario, ok: boolean, value: string) => {
-    answers.current = [...answers.current.filter((item) => item.id !== scenario.id), { id: scenario.id, ok, v: value, q: scenario.situation.slice(0, 280) }];
-  };
-  const advance = () => {
-    const nextIndex = index + 1;
-    setIndex(nextIndex);
-    const score = answers.current.filter((item) => item.ok).length;
-    void save(1, { score, total: scenarios.length, done: nextIndex >= scenarios.length, answers: answers.current });
-  };
-  if (!started) {
-    return (
-      <div className={`ls-mission-hero subject-${book.subject}`}>
-        <div className="ls-particles" aria-hidden="true">{Array.from({ length: 18 }, (_, i) => <span key={i} style={{ ['--i' as string]: i }} />)}</div>
-        <div className="ls-mission-inner">
-          <span className="ls-mission-no"><Flag size={14} /> {t(language, `Missiya §${topic.code}`, `Миссия §${topic.code}`, `Mission §${topic.code}`)}</span>
-          <h3>{content?.intro?.title || welcome}</h3>
-          <p className="ls-mission-topic">{topic.title}</p>
-          {content?.intro?.text && <p className="ls-mission-text">{content.intro.text}</p>}
-          <div className="ls-mission-meta">
-            <span>{subject} · {t(language, `${book.grade}-sinf`, `${book.grade} класс`, `Grade ${book.grade}`)}</span>
-            <span><Clock3 size={13} /> ~{totalMinutes} {t(language, 'daqiqa', 'мин', 'min')}</span>
-            <span><Target size={13} /> {t(language, `${scenarios.length} ta vaziyat`, `${scenarios.length} ситуации`, `${scenarios.length} scenarios`)}</span>
-          </div>
-          {previous?.done && <p className="ls-mission-prev"><CheckCircle2 size={14} /> {t(language, `Avval bajarilgan: ${previous.score} / ${previous.total}`, `Уже пройдено: ${previous.score} из ${previous.total}`, `Done before: ${previous.score} of ${previous.total}`)}</p>}
-          <button type="button" className="btn primary ls-start" onClick={() => setStarted(true)}><Play size={16} /> {t(language, 'Missiyani boshlash', 'Начать миссию', 'Start mission')}</button>
-        </div>
-      </div>
-    );
-  }
-  if (finished) {
-    const score = answers.current.filter((item) => item.ok).length;
-    return (
-      <div className="ls-summary">
-        <Trophy size={28} />
-        <h3>{t(language, 'Missiya bajarildi!', 'Миссия выполнена!', 'Mission complete!')}</h3>
-        <p>{t(language, `Birinchi urinishda to‘g‘ri: ${score} / ${scenarios.length}`, `С первой попытки верно: ${score} из ${scenarios.length}`, `Right at first try: ${score} of ${scenarios.length}`)}</p>
-        <div className="row" style={{ justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" className="btn" onClick={() => { answers.current = []; setIndex(0); }}><RotateCcw size={14} /> {t(language, 'Qaytadan', 'Пройти заново', 'Again')}</button>
-          <button type="button" className="btn primary" onClick={next}>{t(language, 'Darslikka o‘tish', 'К учебнику', 'To the textbook')} <ArrowRight size={14} /></button>
-        </div>
-      </div>
-    );
-  }
-  const scenario = scenarios[index]!;
-  return (
-    <div className="ls-mission-play">
-      <div className="ls-step-dots" aria-hidden="true">{scenarios.map((item, i) => <span key={item.id} className={i < index ? 'done' : i === index ? 'on' : ''} />)}</div>
-      <ChoiceCard key={scenario.id} prompt={scenario.situation} choices={scenario.choices} correct={scenario.correct} why={scenario.why} language={language}
-        onFirstAnswer={(ok, value) => record(scenario, ok, value)} onDone={advance}
-        doneLabel={index + 1 < scenarios.length ? t(language, 'Keyingi vaziyat', 'Следующая ситуация', 'Next scenario') : t(language, 'Yakunlash', 'Завершить', 'Finish')}
-        ask={() => ask('mistake', scenario.situation)} />
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /* 2. Interactive textbook                                              */
 /* ------------------------------------------------------------------ */
 function useSpeech(language: Language) {
@@ -316,12 +282,14 @@ function BookStage({ topic, book, language, save, result, ask, content }: StageP
   const parts = useMemo(() => sentences(topic.essence), [topic.essence]);
   const terms = useMemo(() => glossary(topic), [topic]);
   const notes = (content?.blocks ?? []).filter((block) => block.kind === 'text');
+  // The first sentence is the main idea on top; the pages go on from there.
+  const body = parts.length > 1 && !content?.intro?.text ? parts.slice(1) : parts;
   const pages = useMemo(() => {
     const out: Array<{ title: string; lines: string[]; kind: 'main' | 'note' }> = [];
-    for (let i = 0; i < Math.max(1, parts.length); i += 2) out.push({ title: i === 0 ? t(language, 'Asosiysi', 'Главное', 'The main idea') : t(language, 'Davomi', 'Дальше', 'Next'), lines: parts.slice(i, i + 2), kind: 'main' });
+    for (let i = 0; i < Math.max(1, body.length); i += 2) out.push({ title: i === 0 ? t(language, 'Asosiysi', 'Главное', 'The main idea') : t(language, 'Davomi', 'Дальше', 'Next'), lines: body.slice(i, i + 2), kind: 'main' });
     for (const note of notes) if (note.kind === 'text') out.push({ title: note.title || t(language, 'O‘qituvchidan', 'От учителя', 'From the teacher'), lines: sentences(note.text).length ? sentences(note.text) : [note.text], kind: 'note' });
     return out;
-  }, [parts, notes, language]);
+  }, [body, notes, language]); // eslint-disable-line react-hooks/exhaustive-deps
   const [page, setPage] = useState(0);
   const [seen, setSeen] = useState<Set<number>>(() => new Set([0]));
   const [zoom, setZoom] = useState(1);
@@ -353,21 +321,27 @@ function BookStage({ topic, book, language, save, result, ask, content }: StageP
     });
   };
   const current = pages[page]!;
+  const mainIdea = parts[0] ?? topic.essence;
   return (
     <div className="ls-book">
-      <div className="ls-book-tools">
-        <span className="muted">{t(language, `Darslik, ${topic.page}-bet`, `Учебник, стр. ${topic.page}`, `Textbook, p. ${topic.page}`)}</span>
-        <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
-          <button type="button" className="btn small" onClick={() => setZoom((value) => Math.max(0.85, value - 0.15))} aria-label={t(language, 'Kichraytirish', 'Уменьшить текст', 'Smaller text')}><Minus size={13} /> A</button>
-          <button type="button" className="btn small" onClick={() => setZoom((value) => Math.min(1.9, value + 0.15))} aria-label={t(language, 'Kattalashtirish', 'Увеличить текст', 'Bigger text')}><Plus size={13} /> A</button>
-          <button type="button" className={`btn small ${marking ? 'primary' : ''}`} onClick={() => setMarking((value) => !value)} aria-pressed={marking}><Highlighter size={13} /> {t(language, 'Belgilash', 'Выделять', 'Highlight')}</button>
-          {speech.supported && (speech.speaking
-            ? <button type="button" className="btn small primary" onClick={speech.stop}><Square size={13} /> {t(language, 'To‘xtatish', 'Стоп', 'Stop')}</button>
-            : <button type="button" className="btn small" onClick={() => speech.speak(current.lines.join(' '))}><Volume2 size={13} /> {t(language, 'Ovozli o‘qish', 'Прочитать вслух', 'Read aloud')}</button>)}
+      <div className="ls-main-idea">
+        <Lightbulb size={22} />
+        <div>
+          {content?.intro?.title && <b className="ls-main-topic">{content.intro.title}</b>}
+          {content?.intro?.text ? <p>{content.intro.text}</p> : <p>{mainIdea}</p>}
+          {topic.hook && <p className="ls-hook">❓ {topic.hook}</p>}
         </div>
       </div>
+      <div className="ls-book-tools">
+        <button type="button" className="btn small" onClick={() => setZoom((value) => Math.max(0.85, value - 0.15))} aria-label={t(language, 'Kichraytirish', 'Уменьшить текст', 'Smaller text')}><Minus size={13} /> A</button>
+        <button type="button" className="btn small" onClick={() => setZoom((value) => Math.min(1.9, value + 0.15))} aria-label={t(language, 'Kattalashtirish', 'Увеличить текст', 'Bigger text')}><Plus size={13} /> A</button>
+        <button type="button" className={`btn small ${marking ? 'primary' : ''}`} onClick={() => setMarking((value) => !value)} aria-pressed={marking} aria-label={t(language, 'Belgilash', 'Выделять', 'Highlight')}><Highlighter size={13} /></button>
+        {speech.supported && (speech.speaking
+          ? <button type="button" className="btn small primary" onClick={speech.stop} aria-label={t(language, 'To‘xtatish', 'Стоп', 'Stop')}><Square size={13} /></button>
+          : <button type="button" className="btn small" onClick={() => speech.speak(current.lines.join(' '))} aria-label={t(language, 'Ovozli o‘qish', 'Прочитать вслух', 'Read aloud')}><Volume2 size={13} /></button>)}
+      </div>
       <article className={`ls-page ${current.kind === 'note' ? 'is-note' : ''}`} style={{ fontSize: `${zoom}em` }} onClick={() => setPopover(null)}>
-        <h3>{current.title}</h3>
+        {current.kind === 'note' && <h3>{current.title}</h3>}
         {current.lines.map((line, index) => (
           <p key={index} className={`ls-line ${marks.includes(line) ? 'marked' : ''} ${marking ? 'can-mark' : ''}`}
             onClick={(event) => { if (!marking) return; event.stopPropagation(); setMarks((list) => (list.includes(line) ? list.filter((item) => item !== line) : [...list, line])); }}>
@@ -379,40 +353,61 @@ function BookStage({ topic, book, language, save, result, ask, content }: StageP
             <b>{popover.term}</b>
             <p>{popover.meaning}</p>
             <div className="row" style={{ gap: 6 }}>
-              <button type="button" className="btn small" onClick={() => ask('word', popover.term)}><Sparkles size={13} /> {t(language, 'Soddaroq', 'Объясни проще', 'Simpler')}</button>
-              <button type="button" className="btn small" onClick={() => setPopover(null)}><X size={13} /></button>
+              <button type="button" className="btn small" onClick={() => ask('word', popover.term)}><Sparkles size={13} /> {t(language, 'Soddaroq', 'Проще', 'Simpler')}</button>
+              <button type="button" className="btn small" onClick={() => setPopover(null)} aria-label={t(language, 'Yopish', 'Закрыть', 'Close')}><X size={13} /></button>
             </div>
           </div>
         )}
       </article>
-      <div className="ls-pager">
-        <button type="button" className="btn small" disabled={page === 0} onClick={() => goPage(page - 1)}><ArrowLeft size={14} /></button>
-        <div className="ls-pager-dots">{pages.map((_, index) => <button key={index} type="button" className={`${index === page ? 'on' : ''} ${seen.has(index) ? 'seen' : ''}`} onClick={() => goPage(index)} aria-label={`${index + 1}`} />)}</div>
-        <button type="button" className="btn small" disabled={page === pages.length - 1} onClick={() => goPage(page + 1)}><ArrowRight size={14} /></button>
-      </div>
-      {terms.length > 0 && (
-        <div className="ls-definitions">
-          <b>{t(language, 'Muhim ta’riflar', 'Важные определения', 'Key definitions')}</b>
-          <dl>{terms.map((item) => <div key={item.term}><dt>{item.term}</dt><dd>{item.meaning}</dd></div>)}</dl>
+      {pages.length > 1 && (
+        <div className="ls-pager">
+          <button type="button" className="btn small" disabled={page === 0} onClick={() => goPage(page - 1)} aria-label={t(language, 'Orqaga', 'Назад', 'Back')}><ArrowLeft size={14} /></button>
+          <div className="ls-pager-dots">{pages.map((_, index) => <button key={index} type="button" className={`${index === page ? 'on' : ''} ${seen.has(index) ? 'seen' : ''}`} onClick={() => goPage(index)} aria-label={`${index + 1}`} />)}</div>
+          <button type="button" className="btn small" disabled={page === pages.length - 1} onClick={() => goPage(page + 1)} aria-label={t(language, 'Oldinga', 'Вперёд', 'Forward')}><ArrowRight size={14} /></button>
         </div>
       )}
+      {terms.length > 0 && (
+        <details className="ls-definitions">
+          <summary><b>{t(language, 'Ta’riflar', 'Определения', 'Definitions')}</b> · {terms.length}</summary>
+          <dl>{terms.map((item) => <div key={item.term}><dt>{item.term}</dt><dd>{item.meaning}</dd></div>)}</dl>
+        </details>
+      )}
       <div className="topic-extras-buttons">
-        <button type="button" className={`btn small ${extra === 'life' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'life' ? '' : 'life')}>🌍 {t(language, 'Hayotda', 'Пример из жизни', 'In real life')}</button>
-        {topic.facts.length > 0 && <button type="button" className={`btn small ${extra === 'facts' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'facts' ? '' : 'facts')}>✨ {t(language, 'Qo‘shimcha', 'Дополнительно', 'Extra')}</button>}
-        <button type="button" className={`btn small ${extra === 'hard' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'hard' ? '' : 'hard')}><Lightbulb size={13} /> {t(language, 'Qiyin joy', 'Сложное понятие', 'Hard part')}</button>
-        <button type="button" className="btn small" onClick={() => ask('simple')}><MessageCircle size={13} /> {t(language, 'Soddaroq tushuntiring', 'Объясните проще', 'Explain simply')}</button>
+        <button type="button" className={`btn small ${extra === 'life' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'life' ? '' : 'life')}>🌍 {t(language, 'Hayotda', 'Из жизни', 'Real life')}</button>
+        {topic.facts.length > 0 && <button type="button" className={`btn small ${extra === 'facts' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'facts' ? '' : 'facts')}>✨ {t(language, 'Qiziq', 'Интересно', 'Fun facts')}</button>}
+        <button type="button" className={`btn small ${extra === 'hard' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'hard' ? '' : 'hard')}><Lightbulb size={13} /> {t(language, 'Qiyin joy', 'Сложное', 'Hard part')}</button>
+        <button type="button" className="btn small" onClick={() => ask('simple')}><MessageCircle size={13} /> {t(language, 'Soddaroq', 'Проще', 'Simpler')}</button>
       </div>
       {extra === 'life' && <p className="topic-extras-panel">🌍 {topic.life}</p>}
       {extra === 'facts' && <ul className="topic-extras-panel">{topic.facts.map((fact, index) => <li key={index}>✨ {fact}</li>)}</ul>}
       {extra === 'hard' && (
         <div className="topic-extras-panel">
           <p>{parts.reduce((longest, item) => (item.length > longest.length ? item : longest), '')}</p>
-          <button type="button" className="btn small" onClick={() => ask('detail')}><Sparkles size={13} /> {t(language, 'Bosqichma-bosqich tushuntirish', 'Разобрать по шагам', 'Step by step')}</button>
+          <button type="button" className="btn small" onClick={() => ask('detail')}><Sparkles size={13} /> {t(language, 'Qadamma-qadam', 'По шагам', 'Step by step')}</button>
         </div>
       )}
-      {marks.length > 0 && <p className="muted ls-marks-count"><Highlighter size={13} /> {t(language, `Belgilangan: ${marks.length}`, `Выделено: ${marks.length}`, `Highlighted: ${marks.length}`)}</p>}
+      <NotesBox topicKey={topic.key} marks={marks} language={language} onUnmark={(line) => setMarks((list) => list.filter((item) => item !== line))} />
       <TopicBookPages book={book} topic={topic} language={language} />
     </div>
+  );
+}
+
+/* My notes: highlighted lines + own notes, kept on this device. */
+function NotesBox({ topicKey, marks, language, onUnmark }: { topicKey: string; marks: string[]; language: Language; onUnmark: (line: string) => void }) {
+  const key = `eduverse:notes:${topicKey}`;
+  const [text, setText] = useState(() => { try { return localStorage.getItem(key) ?? ''; } catch { return ''; } });
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { try { localStorage.setItem(key, text); setSaved(true); } catch { /* private mode */ } }, 500);
+    return () => window.clearTimeout(timer);
+  }, [text, key]);
+  return (
+    <details className="ls-notes" open={marks.length > 0 || text.length > 0}>
+      <summary><NotebookPen size={15} /> <b>{t(language, 'Konspekt', 'Конспект', 'My notes')}</b>{marks.length > 0 && <span className="tag">{marks.length}</span>}</summary>
+      {marks.length > 0 && <ul className="ls-notes-marks">{marks.map((line) => <li key={line}><span>{line}</span><button type="button" className="btn small" onClick={() => onUnmark(line)} aria-label={t(language, 'Olib tashlash', 'Убрать', 'Remove')}><X size={12} /></button></li>)}</ul>}
+      <textarea className="input" rows={3} value={text} maxLength={3000} onChange={(event) => { setText(event.target.value); setSaved(false); }} placeholder={t(language, 'Qisqa yozing…', 'Запишите коротко…', 'Write briefly…')} />
+      {saved && text && <small className="muted"><CheckCircle2 size={12} /> {t(language, 'Saqlandi', 'Сохранено', 'Saved')}</small>}
+    </details>
   );
 }
 
@@ -443,9 +438,9 @@ function VisualStage({ topic, language, save, result, ask, content }: StageProps
         <CourseScene3D scene={topic.scene} language={language} />
       </div>
       <div className="ls-visual-actions">
-        <span className="muted">{t(language, 'Barmoq yoki sichqoncha bilan aylantiring, tugmalar bilan o‘zgartiring. «To‘liq ekran» — doskada ko‘rsatish uchun.', 'Крутите пальцем или мышью, меняйте кнопками. «На весь экран» — для доски.', 'Rotate with a finger or mouse, change with the buttons. “Full screen” is for the board.')}</span>
+        <span className="muted">{t(language, 'Barmoq bilan aylantiring', 'Крутите пальцем', 'Rotate with a finger')}</span>
         <button type="button" className={`btn small ${done ? '' : 'primary'}`} disabled={!touched && !done} onClick={finish}>
-          <CheckCircle2 size={14} /> {done ? t(language, 'Ko‘rildi ✓', 'Изучено ✓', 'Explored ✓') : touched ? t(language, 'Modelni o‘rgandim', 'Я изучил модель', 'I explored the model') : t(language, 'Avval modelni aylantiring', 'Сначала покрутите модель', 'Rotate the model first')}
+          <CheckCircle2 size={14} /> {done ? t(language, 'Ko‘rildi', 'Готово', 'Done') : touched ? t(language, 'Ko‘rdim', 'Посмотрел', 'Seen it') : t(language, 'Avval aylantiring', 'Сначала покрутите', 'Rotate first')}
         </button>
       </div>
       {media.length > 0 && (
@@ -465,8 +460,8 @@ function VisualStage({ topic, language, save, result, ask, content }: StageProps
         </div>
       )}
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <a className="btn small" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${topic.title} 7 класс`)}`} target="_blank" rel="noreferrer"><Play size={13} /> {t(language, 'Mavzu bo‘yicha video', 'Видео по теме', 'Videos on the topic')}</a>
-        <button type="button" className="btn small" onClick={() => ask('example')}><Lightbulb size={13} /> {t(language, 'Yana bir misol', 'Ещё пример', 'Another example')}</button>
+        <a className="btn small" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${topic.title} 7 класс`)}`} target="_blank" rel="noreferrer"><Play size={13} /> {t(language, 'Video', 'Видео', 'Video')}</a>
+        <button type="button" className="btn small" onClick={() => ask('example')}><Lightbulb size={13} /> {t(language, 'Misol', 'Пример', 'Example')}</button>
       </div>
     </div>
   );
@@ -503,7 +498,6 @@ function MatchingActivity({ topic, language, onResult }: { topic: CourseTopic; l
   return (
     <div className="ls-activity">
       <h4><GripVertical size={16} /> {t(language, 'Juftini toping', 'Найдите пару', 'Match the pairs')}</h4>
-      <p className="muted">{t(language, 'Chapdan bittasini tanlang, keyin o‘ngdan unga mosini bosing yoki sudrab olib boring.', 'Выберите слева, затем нажмите подходящее справа или перетащите на него.', 'Pick one on the left, then tap or drag onto the match on the right.')}</p>
       <div className="ls-match">
         <div className="ls-match-col">
           {pairs.map((pair, index) => (
@@ -550,7 +544,6 @@ function OrderingActivity({ topic, language, onResult }: { topic: CourseTopic; l
   return (
     <div className="ls-activity">
       <h4><Target size={16} /> {t(language, 'To‘g‘ri tartibga qo‘ying', 'Расставьте по порядку', 'Put in the right order')}</h4>
-      <p className="muted">{t(language, 'Tushuntirish qismlari aralashib ketdi. Strelkalar bilan tartibga keltiring.', 'Части объяснения перепутались. Расставьте их стрелками.', 'The explanation got mixed up. Order it with the arrows.')}</p>
       <ol className="ls-order">
         {order.map((value, at) => (
           <li key={value} className={checked === null ? '' : value === at ? 'right' : 'wrong'}>
@@ -569,23 +562,27 @@ function OrderingActivity({ topic, language, onResult }: { topic: CourseTopic; l
 }
 
 function PracticeStage({ topic, language, save }: StageProps) {
-  const results = useRef<{ match?: { score: number; total: number; answers: Answer[] }; order?: boolean }>({});
+  const results = useRef<{ match?: { score: number; total: number; answers: Answer[] }; order?: boolean; speed?: { score: number; total: number }; hunt?: boolean }>({});
   const hasOrder = orderingSteps(topic).length >= 3;
   const hasMatch = matchingPairs(topic).length >= 2;
   const store = () => {
-    const match = results.current.match;
-    const order = results.current.order;
-    const score = (match?.score ?? 0) + (order ? 1 : 0);
-    const total = (hasMatch ? match?.total ?? 0 : 0) + (hasOrder ? 1 : 0);
-    const answers = [...(match?.answers ?? []), ...(order === undefined ? [] : [{ id: 'order', ok: order, q: t(language, 'Tartib', 'Порядок объяснения', 'Order of the explanation') }])];
+    const { match, order, speed, hunt } = results.current;
+    const score = (match?.score ?? 0) + (order ? 1 : 0) + (hunt ? 1 : 0);
+    const total = (hasMatch ? match?.total ?? 0 : 0) + (hasOrder ? 1 : 0) + (hunt === undefined ? 0 : 1);
+    const answers: Answer[] = [...(match?.answers ?? [])];
+    if (order !== undefined) answers.push({ id: 'order', ok: order, q: t(language, 'Tartib', 'Порядок объяснения', 'Order of the explanation') });
+    if (hunt !== undefined) answers.push({ id: 'hunt', ok: hunt, q: t(language, 'Xatoni toping', 'Найдите ошибку', 'Find the mistake') });
+    if (speed) answers.push({ id: 'speed', ok: speed.total > 0 && speed.score / speed.total >= 0.75, v: `${speed.score}/${speed.total}`, q: t(language, 'Tezkor raund', 'Блиц', 'Speed round') });
     const done = (!hasMatch || Boolean(match)) && (!hasOrder || order !== undefined);
     void save(4, { score, total: Math.max(total, score), done, answers });
   };
+  const onSpeed = useCallback((score: number, total: number) => { results.current.speed = { score, total }; store(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="ls-practice">
       {hasMatch && <MatchingActivity topic={topic} language={language} onResult={(score, total, answers) => { results.current.match = { score, total, answers }; store(); }} />}
       {hasOrder && <OrderingActivity topic={topic} language={language} onResult={(ok) => { results.current.order = ok; store(); }} />}
-      {!hasMatch && !hasOrder && <div className="notice">{t(language, 'Bu mavzu uchun amaliy topshiriqlar 3D bosqichida.', 'Практика по этой теме — в 3D-модели на этапе 3.', 'Practice for this topic is in the 3D stage.')}</div>}
+      <MistakeHunt topic={topic} language={language} onDone={(ok) => { results.current.hunt = ok; store(); }} />
+      <SpeedRound topic={topic} language={language} onDone={onSpeed} />
     </div>
   );
 }
@@ -622,6 +619,25 @@ function TestStage({ topic, book, language, save, result, ask, content, goTo }: 
   const previous = result(5);
   const [review, setReview] = useState(Boolean(previous?.done));
   const item = items[index];
+  // A short test with a timer: when the time is over the answers given so far count.
+  const limit = (content?.minutes?.[4] || STAGES[4]!.minutes) * 60;
+  const [left, setLeft] = useState(limit);
+  const running = Boolean(item) && !(review && previous);
+  const answersRef = useRef<Answer[]>([]);
+  answersRef.current = answers;
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => setLeft((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [running]);
+  useEffect(() => {
+    if (left > 0 || !running) return;
+    const given = answersRef.current;
+    void save(5, { score: given.filter((entry) => entry.ok).length, total: items.length, done: true, answers: given });
+    setShown(null);
+    setIndex(items.length);
+  }, [left, running]); // eslint-disable-line react-hooks/exhaustive-deps
+  const restart = () => { setAnswers([]); setIndex(0); setLeft(limit); };
   const answer = (ok: boolean, value: string, feedback: string, close = false) => {
     const next = [...answers.filter((entry) => entry.id !== item!.id), { id: item!.id, ok, v: value.slice(0, 280), q: item!.prompt.slice(0, 280) }];
     setAnswers(next);
@@ -634,16 +650,16 @@ function TestStage({ topic, book, language, save, result, ask, content, goTo }: 
     if (nextIndex >= items.length) void save(5, { score: answers.filter((entry) => entry.ok).length, total: items.length, done: true, answers });
   };
   if (review && previous) {
-    return <TestSummary topic={topic} book={book} language={language} answers={(previous.answers ?? []) as Answer[]} score={previous.score} total={previous.total} onRetry={() => { setReview(false); setAnswers([]); setIndex(0); }} goTo={goTo} ask={ask} />;
+    return <TestSummary topic={topic} book={book} language={language} answers={(previous.answers ?? []) as Answer[]} score={previous.score} total={previous.total} onRetry={() => { setReview(false); restart(); }} goTo={goTo} ask={ask} />;
   }
   if (!item) {
-    return <TestSummary topic={topic} book={book} language={language} answers={answers} score={answers.filter((entry) => entry.ok).length} total={items.length} onRetry={() => { setAnswers([]); setIndex(0); }} goTo={goTo} ask={ask} />;
+    return <TestSummary topic={topic} book={book} language={language} answers={answers} score={answers.filter((entry) => entry.ok).length} total={items.length} onRetry={restart} goTo={goTo} ask={ask} />;
   }
   return (
     <div className="ls-test">
       <div className="ls-test-head">
-        <span>{t(language, `Savol ${index + 1} / ${items.length}`, `Вопрос ${index + 1} из ${items.length}`, `Question ${index + 1} of ${items.length}`)}</span>
-        <span className="tag">{item.kind === 'choice' ? t(language, 'Variantli', 'Выбор ответа', 'Multiple choice') : item.kind === 'tf' ? t(language, 'Ha / Yo‘q', 'Верно / Неверно', 'True / False') : item.kind === 'short' ? t(language, 'Qisqa javob', 'Короткий ответ', 'Short answer') : t(language, 'Yozma tushuntirish', 'Письменное объяснение', 'Written explanation')}</span>
+        <span><b>{index + 1}</b> / {items.length}</span>
+        <span className={`ls-timer ${left <= 60 ? 'low' : ''}`}><Timer size={14} /> {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>
       </div>
       <div className="test-progress"><span style={{ width: `${(index / items.length) * 100}%` }} /></div>
       <div className="ls-card">
@@ -696,7 +712,6 @@ function TestStage({ topic, book, language, save, result, ask, content, goTo }: 
 function TestSummary({ topic, book, language, answers, score, total, onRetry, goTo, ask }: { topic: CourseTopic; book: CourseBook; language: Language; answers: Answer[]; score: number; total: number; onRetry: () => void; goTo: (stage: number) => void; ask: (action: string, question?: string) => void }) {
   const wrong = answers.filter((entry) => !entry.ok);
   const share = total ? score / total : 0;
-  const page = pdfPageOf(book, topic);
   return (
     <div className="ls-result">
       <div className={`ls-score ${share >= 0.8 ? 'good' : share >= 0.5 ? 'mid' : 'low'}`}>
@@ -712,9 +727,9 @@ function TestSummary({ topic, book, language, answers, score, total, onRetry, go
           <b>{t(language, 'Takrorlash kerak', 'Что повторить', 'Needs review')}</b>
           <ul>{wrong.map((entry) => <li key={entry.id}>{entry.q}</li>)}</ul>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" className="btn small" onClick={() => goTo(2)}><BookOpen size={13} /> {t(language, 'Darslikni qayta o‘qish', 'Перечитать учебник', 'Re-read the textbook')}{page ? ` · ${t(language, `${topic.page}-bet`, `стр. ${topic.page}`, `p. ${topic.page}`)}` : ''}</button>
-            <button type="button" className="btn small" onClick={() => goTo(3)}><Box size={13} /> {t(language, '3D ni qayta ko‘rish', 'Посмотреть 3D', 'See the 3D again')}</button>
-            <button type="button" className="btn small" onClick={() => ask('review')}><MessageCircle size={13} /> {t(language, 'Nimani takrorlash kerak?', 'Что мне повторить?', 'What should I review?')}</button>
+            <button type="button" className="btn small" onClick={() => goTo(2)}><BookOpen size={13} /> {t(language, 'Tushuntirish', 'Объяснение', 'Explanation')}</button>
+            <button type="button" className="btn small" onClick={() => goTo(3)}><Box size={13} /> 3D</button>
+            <button type="button" className="btn small" onClick={() => ask('review')}><MessageCircle size={13} /> {t(language, 'Yordam', 'Помощь', 'Help')}</button>
           </div>
         </div>
       ) : <p className="ls-feedback good"><b><Trophy size={16} /> {t(language, 'Xatosiz! Mavzu o‘zlashtirildi.', 'Без ошибок! Тема усвоена.', 'No mistakes! Topic mastered.')}</b></p>}
@@ -770,7 +785,6 @@ function MistakeHunt({ topic, language, onDone }: { topic: CourseTopic; language
   return (
     <div className="ls-activity">
       <h4><Target size={16} /> {t(language, 'Xatoni toping', 'Найдите ошибку', 'Find the mistake')}</h4>
-      <p className="muted">{t(language, 'Bitta gapda son noto‘g‘ri. Qaysi biri?', 'В одном утверждении неверное число. В каком?', 'One statement has a wrong number. Which one?')}</p>
       <div className="ls-choices">
         {puzzle.items.map((item, index) => (
           <button key={index} type="button" disabled={picked !== null} className={`ls-choice ${picked !== null && index === puzzle.wrong ? 'wrong-target' : ''} ${picked === index && index !== puzzle.wrong ? 'wrong' : ''}`}
@@ -785,39 +799,133 @@ function MistakeHunt({ topic, language, onDone }: { topic: CourseTopic; language
 }
 
 const BADGES: Array<{ id: string; icon: ReactNode; title: [string, string, string]; test: (stages: Record<number, StageResult>) => boolean }> = [
-  { id: 'mission', icon: <Flag size={18} />, title: ['Xatosiz missiya', 'Миссия без ошибок', 'Flawless mission'], test: (s) => Boolean(s[1]?.done && s[1].total > 0 && s[1].score === s[1].total) },
-  { id: 'reader', icon: <BookOpen size={18} />, title: ['Diqqatli kitobxon', 'Внимательный читатель', 'Careful reader'], test: (s) => Boolean(s[2]?.done) },
-  { id: 'explorer', icon: <Box size={18} />, title: ['3D tadqiqotchi', '3D-исследователь', '3D explorer'], test: (s) => Boolean(s[3]?.done) },
-  { id: 'practice', icon: <GripVertical size={18} />, title: ['Usta amaliyotchi', 'Мастер практики', 'Practice master'], test: (s) => Boolean(s[4]?.done && s[4].total > 0 && s[4].score / s[4].total >= 0.8) },
-  { id: 'test', icon: <Award size={18} />, title: ['Bilimdon: 80%+', 'Знаток: 80%+', 'Expert: 80%+'], test: (s) => Boolean(s[5]?.done && s[5].total > 0 && s[5].score / s[5].total >= 0.8) },
-  { id: 'speed', icon: <Zap size={18} />, title: ['Chaqmoq', 'Молния', 'Lightning'], test: (s) => Boolean(s[6]?.answers?.some((item) => item.id === 'speed' && item.ok)) },
+  { id: 'all', icon: <Flag size={22} />, title: ['Hammasi bajarildi', 'Всё пройдено', 'All done'], test: (s) => [2, 3, 4, 5].every((n) => s[n]?.done) },
+  { id: 'reader', icon: <BookOpen size={22} />, title: ['Diqqatli', 'Внимательный', 'Attentive'], test: (s) => Boolean(s[2]?.done) },
+  { id: 'explorer', icon: <Box size={22} />, title: ['3D tadqiqotchi', '3D-исследователь', '3D explorer'], test: (s) => Boolean(s[3]?.done) },
+  { id: 'practice', icon: <GripVertical size={22} />, title: ['Usta', 'Мастер практики', 'Practice master'], test: (s) => Boolean(s[4]?.done && s[4].total > 0 && s[4].score / s[4].total >= 0.8) },
+  { id: 'test', icon: <Award size={22} />, title: ['Bilimdon', 'Знаток', 'Expert'], test: (s) => Boolean(s[5]?.done && s[5].total > 0 && s[5].score / s[5].total >= 0.8) },
+  { id: 'speed', icon: <Zap size={22} />, title: ['Chaqmoq', 'Молния', 'Lightning'], test: (s) => Boolean([s[4], s[6]].some((item) => item?.answers?.some((answer) => answer.id === 'speed' && answer.ok))) },
 ];
 
-function ChallengeStage({ topic, language, save, stages }: StageProps & { stages: Record<number, StageResult> }) {
-  const state = useRef<{ speed?: { score: number; total: number }; hunt?: boolean }>({});
-  const store = useCallback(() => {
-    const { speed, hunt } = state.current;
-    const answers: Answer[] = [];
-    if (speed) answers.push({ id: 'speed', ok: speed.total > 0 && speed.score / speed.total >= 0.75, v: `${speed.score}/${speed.total}`, q: t(language, 'Tezkor raund', 'Блиц', 'Speed round') });
-    if (hunt !== undefined) answers.push({ id: 'hunt', ok: hunt, q: t(language, 'Xatoni toping', 'Найдите ошибку', 'Find the mistake') });
-    void save(6, { score: (speed?.score ?? 0) + (hunt ? 1 : 0), total: (speed?.total ?? 0) + (hunt === undefined ? 0 : 1), done: Boolean(speed) || hunt !== undefined, answers });
-  }, [save, language]);
-  const onSpeed = useCallback((score: number, total: number) => { state.current.speed = { score, total }; store(); }, [store]);
+/* 30 seconds: the result, the awards and what to repeat — then on to the results by itself. */
+const ACHIEVE_SECONDS = 30;
+function AchievementsStage({ language, save, stages, next, autoNext }: StageProps & { stages: Record<number, StageResult>; autoNext: boolean }) {
+  const [left, setLeft] = useState(ACHIEVE_SECONDS);
+  const [paused, setPaused] = useState(!autoNext);
+  useEffect(() => { void save(6, { score: 1, total: 1, done: true, answers: stages[6]?.answers ?? [] }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (paused) return;
+    const timer = window.setInterval(() => setLeft((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [paused]);
+  useEffect(() => { if (left === 0 && !paused) next(); }, [left, paused]); // eslint-disable-line react-hooks/exhaustive-deps
+  const test = stages[5];
+  const share = test?.done && test.total ? test.score / test.total : null;
+  const stars = share === null ? 0 : share >= 0.8 ? 3 : share >= 0.5 ? 2 : 1;
+  const earned = BADGES.filter((badge) => badge.test(stages));
+  const repeat = Object.values(stages).flatMap((item) => (item.answers ?? []).filter((answer) => !answer.ok && answer.q).map((answer) => answer.q!))
+    .filter((item, index, all) => all.indexOf(item) === index).slice(0, 2);
+  const short = (text: string) => (text.length > 70 ? `${text.slice(0, 68)}…` : text);
   return (
-    <div className="ls-challenge">
-      <SpeedRound topic={topic} language={language} onDone={onSpeed} />
-      <MistakeHunt topic={topic} language={language} onDone={(ok) => { state.current.hunt = ok; store(); }} />
-      <div className="ls-activity">
-        <h4><Trophy size={16} /> {t(language, 'Yutuqlar', 'Достижения', 'Achievements')}</h4>
-        <p className="muted">{t(language, 'Yutuqlar faqat to‘g‘ri javoblar va bajarilgan bosqichlar uchun beriladi.', 'Награды даются только за верные ответы и пройденные этапы.', 'Awards are given only for right answers and finished stages.')}</p>
-        <div className="ls-badges">
-          {BADGES.map((badge) => {
-            const earned = badge.test(stages);
-            return <div key={badge.id} className={`ls-badge ${earned ? 'earned' : ''}`}>{badge.icon}<span>{t(language, ...badge.title)}</span></div>;
-          })}
-        </div>
-        <p className="muted">{t(language, 'Sinf musobaqasi: o‘qituvchi doskada savol chiqaradi — telefoningizdan javob bering.', 'Соревнование класса: учитель выводит вопрос на доску — отвечайте с телефона.', 'Class contest: the teacher shows a question on the board — answer from your phone.')}</p>
+    <div className="ls-achieve">
+      <div className="ls-achieve-score">
+        {share !== null
+          ? <><b>{Math.round(share * 100)}%</b><span className="ls-stars" aria-label={`${stars} / 3`}>{[1, 2, 3].map((n) => <Star key={n} size={26} className={n <= stars ? 'on' : ''} />)}</span></>
+          : <Trophy size={44} />}
       </div>
+      <div className="ls-achieve-badges">
+        {(earned.length ? earned : [{ id: 'join', icon: <Sparkles size={22} />, title: ['Darsda qatnashdi', 'Был на уроке', 'Took part'] as [string, string, string] }]).map((badge) => (
+          <div key={badge.id} className="ls-badge earned big">{badge.icon}<span>{t(language, ...badge.title)}</span></div>
+        ))}
+      </div>
+      {repeat.length > 0 && (
+        <div className="ls-achieve-repeat">
+          <b><RotateCcw size={14} /> {t(language, 'Takrorlang', 'Повторить', 'Repeat')}</b>
+          <ul>{repeat.map((item) => <li key={item}>{short(item)}</li>)}</ul>
+        </div>
+      )}
+      <div className="ls-achieve-timer">
+        <span className="ls-ring" style={{ ['--p' as string]: `${(left / ACHIEVE_SECONDS) * 100}%` }}>{left}</span>
+        {!paused
+          ? <button type="button" className="btn small" onClick={() => setPaused(true)}>{t(language, 'To‘xtatish', 'Остаться', 'Stay')}</button>
+          : <button type="button" className="btn small" onClick={() => setPaused(false)}><Play size={13} /></button>}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Results and closing: the class, the questions, "Finish the lesson"   */
+/* ------------------------------------------------------------------ */
+const todayIso = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
+
+function ResultsStage(props: StageProps & {
+  user: User; school: SchoolData; classId: string | null; isTeacher: boolean; stages: Record<number, StageResult>; onOpen: (path: string) => void; live: LiveHook; onFinished?: () => void;
+}) {
+  const { topic, book, language, save, stages, classId, isTeacher, school, live, onFinished, content } = props;
+  const [busy, setBusy] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [error, setError] = useState('');
+  const liveHere = live.state && live.state.topicKey === topic.key ? live.state : null;
+  const assignment = school.assignments.find((item) => item.topicId === `course:${topic.key}` && (!classId || item.classId === classId));
+  useEffect(() => { if (!isTeacher) void save(7, { score: stages[7]?.score ?? 0, total: stages[7]?.total ?? 0, done: true, answers: [] }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function finish() {
+    if (!classId) return;
+    setBusy(true); setError('');
+    try {
+      // 1. the topic is covered today (the journal and the course plan move on)
+      await customFetch(`/api/classes/${classId}/course/${topic.key}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ doneOn: todayIso() }) });
+      // 2. the homework goes to the class, if it was not given yet
+      if (!assignment) await giveHomework(classId, topic, book, content?.homework || topic.homework);
+      // 3. the class board is closed
+      if (liveHere) {
+        const response = await customFetch<{ live: LiveState | null }>(`/api/classes/${classId}/live`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topicKey: topic.key, stage: 7, question: null, reveal: false, active: false }) });
+        live.set(response.live);
+      }
+      setFinished(true);
+      await school.refresh();
+      onFinished?.();
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!isTeacher) {
+    const test = stages[5];
+    const done = FLOW.filter((item) => stages[item.n]?.done).length;
+    return (
+      <div className="ls-results">
+        <div className="ls-results-hero"><CheckCircle2 size={40} /><b>{t(language, 'Dars tugadi!', 'Урок окончен!', 'Lesson over!')}</b></div>
+        <div className="ls-result-grid">
+          <div className="ls-result-box good"><Award size={16} /> <b>{test?.done && test.total ? `${Math.round((test.score / test.total) * 100)}%` : '—'}</b> {t(language, 'test', 'тест', 'test')}</div>
+          <div className="ls-result-box"><CheckCircle2 size={16} /> <b>{done}/{FLOW.length}</b> {t(language, 'bosqich', 'этапов', 'stages')}</div>
+        </div>
+        <details className="ls-hw-box" open>
+          <summary><b>{t(language, 'Uy vazifasi', 'Домашка', 'Homework')}</b></summary>
+          <HomeworkStage {...props} />
+        </details>
+      </div>
+    );
+  }
+  return (
+    <div className="ls-results">
+      {classId ? (
+        <>
+          {liveHere && <OnlineAndAsks classId={classId} state={liveHere} language={language} onChange={live.refresh} />}
+          <ClassProgressPanel classId={classId} topic={topic} language={language} />
+          {finished
+            ? <div className="notice good" role="status"><CheckCircle2 size={15} /> {t(language, 'Dars yakunlandi. Mavzu belgilandi, uy vazifasi berildi.', 'Урок завершён. Тема отмечена, домашка задана.', 'Lesson finished. Topic marked, homework given.')}</div>
+            : <button type="button" className="btn primary ls-finish" disabled={busy} onClick={() => void finish()}><Flag size={18} /> {busy ? '…' : t(language, 'Darsni yakunlash', 'Завершить урок', 'Finish the lesson')}</button>}
+          {error && <div className="notice" role="alert">{error}</div>}
+        </>
+      ) : <div className="notice">{t(language, 'Natijalar uchun sinfni tanlang.', 'Выберите класс, чтобы видеть результаты.', 'Choose a class to see results.')}</div>}
+      <details className="ls-hw-box">
+        <summary><b>{t(language, 'Uy vazifasi', 'Домашка', 'Homework')}</b></summary>
+        <HomeworkStage {...props} />
+      </details>
     </div>
   );
 }
@@ -826,6 +934,10 @@ function ChallengeStage({ topic, language, save, stages }: StageProps & { stages
 /* 7. Homework and personal learning                                    */
 /* ------------------------------------------------------------------ */
 const SUBJECT_RU: Record<CourseBook['subject'], string> = { physics: 'Физика', chemistry: 'Химия', biology: 'Биология', math: 'Математика' };
+async function giveHomework(classId: string, topic: CourseTopic, book: CourseBook, text: string) {
+  const due = new Date(); due.setDate(due.getDate() + 1); due.setHours(23, 59, 0, 0);
+  await createAssignment(classId, { title: `§${topic.code} ${topic.title}`.slice(0, 160), subject: SUBJECT_RU[book.subject], description: text.slice(0, 4000), topicId: `course:${topic.key}`, topicTitle: `§${topic.code} ${topic.title}`.slice(0, 180), dueAt: due.toISOString() });
+}
 
 function HomeworkStage({ topic, book, language, save, content, user, school, classId, isTeacher, stages, onOpen, ask }: StageProps & {
   user: User; school: SchoolData; classId: string | null; isTeacher: boolean; stages: Record<number, StageResult>; onOpen: (path: string) => void;
@@ -860,8 +972,7 @@ function HomeworkStage({ topic, book, language, save, content, user, school, cla
     if (!classId) return;
     setBusy(true); setError(''); setMessage('');
     try {
-      const due = new Date(); due.setDate(due.getDate() + 1); due.setHours(23, 59, 0, 0);
-      await createAssignment(classId, { title: `§${topic.code} ${topic.title}`.slice(0, 160), subject: SUBJECT_RU[book.subject], description: text.slice(0, 4000), topicId: `course:${topic.key}`, topicTitle: `§${topic.code} ${topic.title}`.slice(0, 180), dueAt: due.toISOString() });
+      await giveHomework(classId, topic, book, text);
       setMessage(t(language, 'Uy vazifasi sinfga berildi ✓', 'Домашка задана классу ✓', 'Homework given to the class ✓'));
       await school.refresh();
     } catch (requestError) {
@@ -873,7 +984,6 @@ function HomeworkStage({ topic, book, language, save, content, user, school, cla
   return (
     <div className="ls-homework">
       <div className="ls-card ls-hw-task">
-        <span className="eyebrow">{t(language, 'Darslikdan', 'Из учебника', 'From the textbook')} · §{topic.code}</span>
         <p className="ls-prompt">{text}</p>
         {assignment?.dueAt && <span className="tag"><Clock3 size={12} /> {t(language, 'Muddat', 'Срок', 'Due')}: {new Date(assignment.dueAt).toLocaleString(language === 'English' ? 'en-GB' : language === 'Uzbek' ? 'uz-UZ' : 'ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</span>}
       </div>
@@ -881,7 +991,7 @@ function HomeworkStage({ topic, book, language, save, content, user, school, cla
         <div className="ls-activity">
           {assignment
             ? <p><CheckCircle2 size={15} /> {t(language, `Sinfga berilgan. Topshirganlar: ${assignment.submissionCount ?? 0}`, `Задано классу. Сдали: ${assignment.submissionCount ?? 0}`, `Given to the class. Handed in: ${assignment.submissionCount ?? 0}`)}</p>
-            : <p className="muted">{t(language, 'Dars tugagach darslikdagi vazifa sinfga o‘zi beriladi. Hozir berish ham mumkin.', 'После урока задание из учебника уйдёт классу само. Можно задать и сейчас.', 'After the lesson the textbook homework goes to the class by itself. You can give it now too.')}</p>}
+            : <p className="muted">{t(language, '«Darsni yakunlash» bosilganda beriladi.', 'Задаётся при «Завершить урок».', 'Given with “Finish the lesson”.')}</p>}
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             {!assignment && classId && <button type="button" className="btn primary" disabled={busy} onClick={() => void assign()}><Send size={14} /> {t(language, 'Hozir berish', 'Задать сейчас', 'Give now')}</button>}
             <button type="button" className="btn" onClick={() => onOpen('/check')}><CheckCircle2 size={14} /> {t(language, 'Tekshirishga', 'К проверке домашки', 'To checking')}</button>
@@ -904,9 +1014,9 @@ function HomeworkStage({ topic, book, language, save, content, user, school, cla
       {message && <div className="notice good" role="status">{message}</div>}
       {error && <div className="notice" role="alert">{error}</div>}
       <div className="ls-activity">
-        <h4><Sparkles size={16} /> {t(language, 'Shaxsiy tavsiya', 'Персональный план', 'Personal plan')}</h4>
+        <h4><Sparkles size={16} /> {t(language, 'Takrorlash', 'Повторить', 'Review')}</h4>
         {weak.length
-          ? <><p className="muted">{t(language, 'Darsda xato qilgan savollaringiz — uyda yana bir bor ko‘ring:', 'Вопросы, где были ошибки, — посмотрите их дома ещё раз:', 'Questions you got wrong — look at them again at home:')}</p><ul>{weak.map((item) => <li key={item.id}>{item.q}</li>)}</ul></>
+          ? <><p className="muted">{t(language, 'Uyda yana ko‘ring:', 'Посмотрите дома ещё раз:', 'Look again at home:')}</p><ul>{weak.map((item) => <li key={item.id}>{item.q}</li>)}</ul></>
           : <p className="muted">{t(language, 'Xatolar yo‘q. Qo‘shimcha mashq oling.', 'Ошибок нет. Возьмите дополнительную практику.', 'No mistakes. Take extra practice.')}</p>}
         <button type="button" className="btn small" onClick={() => ask('practice')}><Plus size={13} /> {t(language, 'Qo‘shimcha mashq', 'Дополнительные задания', 'Extra practice')}</button>
       </div>
