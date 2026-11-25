@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import type { User } from '@workspace/api-client-react';
-import { ArrowLeft, Box, CalendarCheck2, Lock, PartyPopper } from 'lucide-react';
+import { ArrowLeft, BookOpen, Box, CalendarCheck2, Lock, PartyPopper } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
-import { CoursePage, CourseScene3D } from './course';
+import { CoursePage, CourseScene3D, openTextbook } from './course';
 import { AttendancePage } from './attendance-page';
 import {
   LESSON_TABS, LessonDayHeader, nextBookLesson, openLessonPreview, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
@@ -65,12 +65,12 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
   const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
   return (
     <section className="today-course">
-      <LessonDayHeader lesson={lesson} topic={topic} status={status} now={now} language={language} />
-      <div className="lesson-day-actions">
-        <button type="button" className="btn" onClick={() => onOpen(`/today/${lesson.id}`)}><CalendarCheck2 size={15} /> {t(language, 'Dars sahifasi', 'Страница урока', 'Lesson page')}</button>
-        {bookForLesson(lesson) && <button type="button" className="btn" onClick={() => { rememberLessonFor3D(lesson); onOpen('/lab'); }}><Box size={15} /> {t(language, '3D studiyada ochish', 'Открыть в 3D-студии', 'Open in the 3D studio')}</button>}
+      <LessonDayHeader lesson={lesson} topic={topic} status={status} now={now} language={language} compact />
+      <div className="lesson-day-actions compact">
+        <button type="button" className="btn small" onClick={() => onOpen(`/today/${lesson.id}`)} title={t(language, 'Dars sahifasi', 'Страница урока', 'Lesson page')}><CalendarCheck2 size={15} /> {t(language, 'Dars', 'Урок', 'Lesson')}</button>
+        {bookForLesson(lesson) && <button type="button" className="btn small" onClick={() => { rememberLessonFor3D(lesson); onOpen('/lab'); }} title={t(language, '3D studiyada ochish', 'Открыть в 3D-студии', 'Open in the 3D studio')}><Box size={15} /> 3D</button>}
+        {bookForLesson(lesson) && topic && <button type="button" className="btn small" onClick={() => openTextbook(bookForLesson(lesson)!, topic, onOpen)}><BookOpen size={15} /> {t(language, 'Darslik', 'Учебник', 'Textbook')}</button>}
       </div>
-      <UpNext lessons={lessons} now={now} current={lesson} language={language} />
       <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} />
     </section>
   );

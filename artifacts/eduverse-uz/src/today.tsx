@@ -390,7 +390,19 @@ function ClassTodayDetail({ row, date, now, language }: { row: { classId: string
 /* The page of one lesson: topic, attendance, online lesson, textbook   */
 /* ------------------------------------------------------------------ */
 
-export function LessonDayHeader({ lesson, topic, status, now, language }: { lesson: TodayLesson; topic?: CourseTopic; status: LessonStatus; now: number; language: Language }) {
+export function LessonDayHeader({ lesson, topic, status, now, language, compact }: { lesson: TodayLesson; topic?: CourseTopic; status: LessonStatus; now: number; language: Language; compact?: boolean }) {
+  // The lesson topic page: the topic is the title, everything else is one short line.
+  if (compact) {
+    return (
+      <header className={`lesson-day-head compact is-${status}`}>
+        <div>
+          <span className="eyebrow">{lesson.className} · {lessonSubjectName(lesson.subject, language)} · {lesson.start}–{lesson.end}</span>
+          <h1>{topic?.title ?? `${lesson.className} · ${lessonSubjectName(lesson.subject, language)}`}</h1>
+        </div>
+        <span className={`today-status is-${status}`}>{status === 'current' && <i className="today-pulse" aria-hidden="true" />}{timeText(lesson, now, language)}</span>
+      </header>
+    );
+  }
   return (
     <header className={`lesson-day-head is-${status}`}>
       <div>

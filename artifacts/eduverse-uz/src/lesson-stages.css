@@ -405,3 +405,20 @@
 .ls-more-box > summary { list-style: none; display: inline-flex; width: auto; }
 .ls-more-box > summary::-webkit-details-marker { display: none; }
 .ls-more-box[open] { display: grid; gap: 8px; }
+/* helper button: a small round icon on phones, so it never covers "Next" */
+@media (max-width: 820px) {
+  .ls-helper-fab { width: 52px; height: 52px; padding: 0; justify-content: center; bottom: calc(110px + env(safe-area-inset-bottom)); }
+}
+
+/* "Lesson topic" page: topic as the title, one short line, small buttons */
+.lesson-day-head.compact { padding: 14px 18px; align-items: center; }
+.lesson-day-head.compact h1 { font-size: clamp(20px, 4.5vw, 28px); margin: 4px 0 0; }
+.lesson-day-head.compact .today-status { white-space: nowrap; }
+.lesson-day-actions.compact { gap: 6px; }
+.ls-helper-inline { display: none; min-width: 40px; min-height: 40px; justify-content: center; }
+.ls-helper-inline svg { color: var(--ev-primary); }
+@media (max-width: 820px) {
+  .ls-helper-inline { display: inline-flex; }
+  .ls-helper-fab { display: none; }
+}
+@media (max-width: 480px) { .ls-stage-time { display: none; } }

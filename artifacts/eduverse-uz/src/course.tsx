@@ -144,6 +144,13 @@ function keyPoints(topic: CourseTopic): string[] {
   return topic.essence.split(/(?<=[.!?])\s+(?=[A-ZА-ЯЁЎҚҒҲ0-9«])/u).map((item) => item.trim()).filter((item) => item.length > 12);
 }
 
+/** Opens the topic's pages in the textbook reader (read and write). */
+export function openTextbook(book: CourseBook, topic: CourseTopic, onOpen: (path: string) => void) {
+  const page = pdfPageOf(book, topic);
+  if (page) { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(page)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${page}-${topicEndPage(book, topic, page)}`); } catch { /* private mode */ } }
+  onOpen(`/read/${book.bookId}`);
+}
+
 export function topicEndPage(book: CourseBook, topic: CourseTopic, start: number): number {
   const later = book.topics.map((item) => item.page + book.pdfOffset).filter((page) => page > start).sort((a, b) => a - b)[0];
   return Math.min(book.pdfPages, later ? Math.max(start, later - 1) : start + 3);
@@ -466,7 +473,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
         </aside>}
 
         <article className="course-topic-view" key={topic.key}>
-          <header className={`course-hero ${lesson ? 'in-lesson' : ''}`}>
+          {!lesson && <header className="course-hero">
             {!lesson && <div>
               <div className="eyebrow">§{topic.code} · {topic.chapter}</div>
               <h2>{topic.title}</h2>
@@ -476,7 +483,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
               {pdfPage && <button type="button" className="btn" onClick={() => { try { localStorage.setItem(`eduverse:pdf-page:/books/${book.bookId}.pdf`, String(pdfPage)); localStorage.setItem(`eduverse:pdf-range:/books/${book.bookId}.pdf`, `${pdfPage}-${topicEndPage(book, topic, pdfPage)}`); } catch { /* private mode */ } onOpen(`/read/${book.bookId}`); }}><BookOpen size={15} /> {lesson ? t(language, 'Darslik', 'Учебник', 'Textbook') : t(language, `Darslikda ochish · ${topic.page}-bet`, `Открыть в учебнике · стр. ${topic.page}`, `Open in textbook · p. ${topic.page}`)}</button>}
               {isTeacher && !lesson && <button type="button" className="btn primary" onClick={() => onOpen(`/lesson/course:${topic.key}`)}><MonitorPlay size={15} /> {t(language, 'Shu mavzuda dars', 'Урок по этой теме', 'Lesson on this topic')}</button>}
             </div>
-          </header>
+          </header>}
 
           {isTeacher && course?.canEdit && !lesson && (
             <section className="panel course-mark">
