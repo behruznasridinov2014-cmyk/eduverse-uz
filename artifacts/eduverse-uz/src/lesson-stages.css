@@ -401,3 +401,7 @@
 .ls-achieve-repeat b { display: inline-flex; align-items: center; gap: 6px; }
 .ls { padding-bottom: 64px; }
 .ls-page { min-height: 0; }
+.ls-more { justify-self: start; }
+.ls-more-box > summary { list-style: none; display: inline-flex; width: auto; }
+.ls-more-box > summary::-webkit-details-marker { display: none; }
+.ls-more-box[open] { display: grid; gap: 8px; }

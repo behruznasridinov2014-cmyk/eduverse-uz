@@ -298,6 +298,8 @@ function BookStage({ topic, book, language, save, result, ask, content }: StageP
   const [marks, setMarks] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(markKey) ?? '[]') as string[]; } catch { return []; } });
   const [popover, setPopover] = useState<{ term: string; meaning: string } | null>(null);
   const [extra, setExtra] = useState<'' | 'life' | 'facts' | 'hard'>('');
+  const [tools, setTools] = useState(false);
+  const [more, setMore] = useState(false);
   const speech = useSpeech(language);
   useEffect(() => { try { localStorage.setItem(markKey, JSON.stringify(marks)); } catch { /* private mode */ } }, [marks, markKey]);
   const done = Boolean(result(2)?.done);
@@ -333,12 +335,15 @@ function BookStage({ topic, book, language, save, result, ask, content }: StageP
         </div>
       </div>
       <div className="ls-book-tools">
+        <button type="button" className={`btn small ${tools ? 'primary' : ''}`} onClick={() => setTools((value) => !value)} aria-expanded={tools} aria-label={t(language, 'Sozlamalar', 'Настройки текста', 'Text settings')}>Aa</button>
+        {tools && <>
         <button type="button" className="btn small" onClick={() => setZoom((value) => Math.max(0.85, value - 0.15))} aria-label={t(language, 'Kichraytirish', 'Уменьшить текст', 'Smaller text')}><Minus size={13} /> A</button>
         <button type="button" className="btn small" onClick={() => setZoom((value) => Math.min(1.9, value + 0.15))} aria-label={t(language, 'Kattalashtirish', 'Увеличить текст', 'Bigger text')}><Plus size={13} /> A</button>
         <button type="button" className={`btn small ${marking ? 'primary' : ''}`} onClick={() => setMarking((value) => !value)} aria-pressed={marking} aria-label={t(language, 'Belgilash', 'Выделять', 'Highlight')}><Highlighter size={13} /></button>
         {speech.supported && (speech.speaking
           ? <button type="button" className="btn small primary" onClick={speech.stop} aria-label={t(language, 'To‘xtatish', 'Стоп', 'Stop')}><Square size={13} /></button>
           : <button type="button" className="btn small" onClick={() => speech.speak(current.lines.join(' '))} aria-label={t(language, 'Ovozli o‘qish', 'Прочитать вслух', 'Read aloud')}><Volume2 size={13} /></button>)}
+        </>}
       </div>
       <article className={`ls-page ${current.kind === 'note' ? 'is-note' : ''}`} style={{ fontSize: `${zoom}em` }} onClick={() => setPopover(null)}>
         {current.kind === 'note' && <h3>{current.title}</h3>}
@@ -366,18 +371,19 @@ function BookStage({ topic, book, language, save, result, ask, content }: StageP
           <button type="button" className="btn small" disabled={page === pages.length - 1} onClick={() => goPage(page + 1)} aria-label={t(language, 'Oldinga', 'Вперёд', 'Forward')}><ArrowRight size={14} /></button>
         </div>
       )}
-      {terms.length > 0 && (
+      {more && terms.length > 0 && (
         <details className="ls-definitions">
           <summary><b>{t(language, 'Ta’riflar', 'Определения', 'Definitions')}</b> · {terms.length}</summary>
           <dl>{terms.map((item) => <div key={item.term}><dt>{item.term}</dt><dd>{item.meaning}</dd></div>)}</dl>
         </details>
       )}
-      <div className="topic-extras-buttons">
+      <button type="button" className={`btn small ls-more ${more ? 'primary' : ''}`} onClick={() => { setMore((value) => !value); setExtra(''); }} aria-expanded={more}><Plus size={13} /> {t(language, 'Batafsil', 'Подробнее', 'More')}</button>
+      {more && <div className="topic-extras-buttons">
         <button type="button" className={`btn small ${extra === 'life' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'life' ? '' : 'life')}>🌍 {t(language, 'Hayotda', 'Из жизни', 'Real life')}</button>
         {topic.facts.length > 0 && <button type="button" className={`btn small ${extra === 'facts' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'facts' ? '' : 'facts')}>✨ {t(language, 'Qiziq', 'Интересно', 'Fun facts')}</button>}
         <button type="button" className={`btn small ${extra === 'hard' ? 'primary' : ''}`} onClick={() => setExtra(extra === 'hard' ? '' : 'hard')}><Lightbulb size={13} /> {t(language, 'Qiyin joy', 'Сложное', 'Hard part')}</button>
         <button type="button" className="btn small" onClick={() => ask('simple')}><MessageCircle size={13} /> {t(language, 'Soddaroq', 'Проще', 'Simpler')}</button>
-      </div>
+      </div>}
       {extra === 'life' && <p className="topic-extras-panel">🌍 {topic.life}</p>}
       {extra === 'facts' && <ul className="topic-extras-panel">{topic.facts.map((fact, index) => <li key={index}>✨ {fact}</li>)}</ul>}
       {extra === 'hard' && (
@@ -433,7 +439,6 @@ function VisualStage({ topic, language, save, result, ask, content }: StageProps
   const finish = () => void save(3, { score: 1, total: 1, done: true, answers: [] });
   return (
     <div className="ls-visual">
-      <div className="ls-visual-hint"><Box size={16} /> <span>{topic.sceneHint}</span></div>
       <div onPointerDown={() => setTouched(true)}>
         <CourseScene3D scene={topic.scene} language={language} />
       </div>
@@ -459,10 +464,14 @@ function VisualStage({ topic, language, save, result, ask, content }: StageProps
           })}
         </div>
       )}
+      <details className="ls-more-box">
+        <summary className="btn small"><Plus size={13} /> {t(language, 'Batafsil', 'Подробнее', 'More')}</summary>
+        <p className="muted">{topic.sceneHint}</p>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
         <a className="btn small" href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${topic.title} 7 класс`)}`} target="_blank" rel="noreferrer"><Play size={13} /> {t(language, 'Video', 'Видео', 'Video')}</a>
         <button type="button" className="btn small" onClick={() => ask('example')}><Lightbulb size={13} /> {t(language, 'Misol', 'Пример', 'Example')}</button>
       </div>
+      </details>
     </div>
   );
 }

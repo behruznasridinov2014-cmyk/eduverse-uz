@@ -94,7 +94,6 @@ export function BoardControls({ classId, topic, stage, language, live, content }
           ? <button type="button" className="btn small" disabled={busy} onClick={() => void put({ active: false, question: null })}><Square size={13} /> {t(language, 'Tugatish', 'Завершить', 'Stop')}</button>
           : <button type="button" className="btn small primary" disabled={busy} onClick={() => void put({ stage, question: null })}><Radio size={13} /> {t(language, 'Sinf bilan boshlash', 'Вести урок с классом', 'Run with the class')}</button>}
       </div>
-      {!on && <p className="muted">{t(language, 'O‘quvchilar ekrani sizning bosqichingizga o‘tadi.', 'Экраны учеников идут за вашим этапом.', 'Pupils’ screens follow your stage.')}</p>}
       {state && (
         <>
           <OnlineAndAsks classId={classId} state={state} language={language} onChange={live.refresh} />
