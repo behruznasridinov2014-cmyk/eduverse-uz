@@ -102,8 +102,10 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
   const doneCount = FLOW.filter((item) => progress.stages[item.n]?.done).length;
   const mistakes = useMemo(() => Object.values(progress.stages).flatMap((item) => (item.answers ?? []).filter((answer) => !answer.ok && answer.q).map((answer) => answer.q!)).slice(0, 8), [progress.stages]);
   const ask = (action: string, question?: string) => { setHelperSeed({ action, question }); setHelperOpen(true); setAskOpen(false); };
-  const props = { topic, book, language, save: progress.save, result: (n: number) => progress.stages[n], next: () => nextStage && go(nextStage.n), ask, content };
+  const props = { topic, book, language, save: progress.save, result: (n: number) => progress.stages[n], next: () => { if (nextStage && !locked(nextStage.n)) go(nextStage.n); }, ask, content };
   const canAskTeacher = isStudent && Boolean(classId);
+  // While the teacher runs the lesson with the class, a pupil cannot run ahead of the teacher.
+  const locked = (n: number) => Boolean(isStudent && liveHere && FLOW.findIndex((item) => item.n === n) > FLOW.findIndex((item) => item.n === liveHere.stage));
 
   return (
     <div className="ls" ref={top}>
@@ -123,7 +125,7 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
           {FLOW.map((item) => {
             const result = progress.stages[item.n];
             return (
-              <button key={item.n} type="button" className={`ls-step ${stage === item.n ? 'on' : ''} ${result?.done ? 'done' : ''} ${liveHere?.stage === item.n ? 'live' : ''}`} onClick={() => go(item.n)} aria-current={stage === item.n ? 'step' : undefined} title={`${tx(language, item.title)} · ${minuteOf(item.n)} ${t(language, 'daq', 'мин', 'min')}`}>
+              <button key={item.n} type="button" className={`ls-step ${stage === item.n ? 'on' : ''} ${result?.done ? 'done' : ''} ${liveHere?.stage === item.n ? 'live' : ''}`} onClick={() => go(item.n)} disabled={locked(item.n)} aria-current={stage === item.n ? 'step' : undefined} title={`${tx(language, item.title)} · ${minuteOf(item.n)} ${t(language, 'daq', 'мин', 'min')}`}>
                 <span className="ls-step-dot">{result?.done ? <CheckCircle2 size={14} /> : stepOf(item.n)}</span>
                 <span className="ls-step-name">{tx(language, item.title)}</span>
               </button>
@@ -150,7 +152,9 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
             {stage === 7 && <ResultsStage {...props} user={user} school={school} classId={classId} isTeacher={isTeacher} stages={progress.stages} onOpen={onOpen} live={live} onFinished={onFinished} />}
             <footer className="ls-stage-nav">
               {prevStage ? <button type="button" className="btn ls-back" onClick={() => go(prevStage.n)} aria-label={t(language, 'Orqaga', 'Назад', 'Back')}><ArrowLeft size={18} /></button> : <span />}
-              {nextStage && <button type="button" className="btn primary ls-next" onClick={() => go(nextStage.n)}>{t(language, 'Keyingisi', 'Дальше', 'Next')} <ArrowRight size={18} /></button>}
+              {nextStage && (locked(nextStage.n)
+                ? <span className="ls-wait"><Clock3 size={15} /> {t(language, 'O‘qituvchini kutamiz', 'Ждём учителя', 'Waiting for the teacher')}</span>
+                : <button type="button" className="btn primary ls-next" onClick={() => go(nextStage.n)}>{t(language, 'Keyingisi', 'Дальше', 'Next')} <ArrowRight size={18} /></button>)}
             </footer>
           </section>
         )}
@@ -160,7 +164,7 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
         <Sparkles size={18} /> <span>{t(language, 'Yordamchi', 'Помощник', 'Helper')}</span>
       </button>}
       {askOpen && canAskTeacher && <AskTeacher classId={classId!} topic={topic} language={language} onClose={() => setAskOpen(false)} onHelper={() => { setHelperSeed(null); setHelperOpen(true); setAskOpen(false); }} />}
-      {helperOpen && <LessonHelper topic={topic} language={language} stageName={tx(language, STAGES[stage - 1]!.title)} mistakes={mistakes} seed={helperSeed} onClose={() => setHelperOpen(false)} />}
+      {helperOpen && <LessonHelper topic={topic} language={language} stageName={tx(language, STAGES[stage - 1]!.title)} mistakes={mistakes} seed={helperSeed} onClose={() => setHelperOpen(false)} askTeacher={user.role === 'student' && classId ? async (text: string) => { await customFetch(`/api/classes/${classId}/live/ask`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topicKey: topic.key, text }) }); } : undefined} />}
     </div>
   );
 }
@@ -1047,17 +1051,74 @@ function HomeworkStage({ topic, book, language, save, content, user, school, cla
 /* ------------------------------------------------------------------ */
 /* The lesson helper                                                    */
 /* ------------------------------------------------------------------ */
-function LessonHelper({ topic, language, stageName, mistakes, seed, onClose }: { topic: CourseTopic; language: Language; stageName: string; mistakes: string[]; seed: { action: string; question?: string } | null; onClose: () => void }) {
+/** «Узнать мой уровень»: five questions on the topic right in the helper, then the level and what to do next. */
+function LevelQuiz({ topic, language, onDone }: { topic: CourseTopic; language: Language; onDone: (score: number, total: number, missed: string[]) => void }) {
+  const questions = useMemo(() => topicQuestions(topic, 5, `level:${Date.now() % 997}`), [topic]);
+  const [at, setAt] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const score = useRef(0);
+  const missed = useRef<string[]>([]);
+  const question = questions[at];
+  if (!question) return null;
+  const choose = (index: number) => {
+    if (picked !== null) return;
+    setPicked(index);
+    if (index === question.correct) score.current += 1; else missed.current.push(question.prompt);
+    window.setTimeout(() => {
+      if (at + 1 >= questions.length) onDone(score.current, questions.length, missed.current);
+      else { setAt(at + 1); setPicked(null); }
+    }, 900);
+  };
+  return (
+    <div className="ls-level">
+      <small className="muted">{at + 1} / {questions.length}</small>
+      <b>{question.prompt}</b>
+      <div className="ls-level-choices">
+        {question.choices.map((choice, index) => (
+          <button key={index} type="button" className={`btn small ${picked === null ? '' : index === question.correct ? 'ok' : index === picked ? 'bad' : ''}`} onClick={() => choose(index)}>{choice}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LessonHelper({ topic, language, stageName, mistakes, seed, onClose, askTeacher }: { topic: CourseTopic; language: Language; stageName: string; mistakes: string[]; seed: { action: string; question?: string } | null; onClose: () => void; askTeacher?: (text: string) => Promise<void> }) {
   const [messages, setMessages] = useState<Array<{ who: 'me' | 'helper'; text: string }>>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+  const [quiz, setQuiz] = useState(false);
+  const [weak, setWeak] = useState<string[] | null>(null);
+  const [sentToTeacher, setSentToTeacher] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const ACTIONS: Array<[string, string]> = [
+    ['level', t(language, 'Darajamni bilish', 'Узнать мой уровень', 'Check my level')],
     ['simple', t(language, 'Soddaroq', 'Объясни проще', 'Explain simply')],
-    ['example', t(language, 'Misol', 'Пример', 'Example')],
-    ['review', t(language, 'Nimani takrorlay?', 'Что повторить?', 'What to review?')],
+    ['example', t(language, 'Hayotdan misol', 'Пример из жизни', 'Real-life example')],
+    ['practice', t(language, 'Qo‘shimcha vazifa', 'Доп. задание', 'Extra task')],
   ];
+  const startQuiz = () => {
+    setMessages((current) => [...current, { who: 'me', text: t(language, 'Darajamni bilish', 'Узнать мой уровень', 'Check my level') }, { who: 'helper', text: t(language, 'Bir necha savol. Javobni tanlang.', 'Несколько вопросов. Выберите ответ.', 'A few questions. Pick an answer.') }]);
+    setQuiz(true); setWeak(null); setSentToTeacher(false);
+  };
+  const quizDone = (score: number, total: number, missed: string[]) => {
+    setQuiz(false);
+    const share = score / total;
+    const level = share >= 0.8 ? t(language, 'Yuqori daraja', 'Высокий уровень', 'High level') : share >= 0.5 ? t(language, 'O‘rta daraja', 'Средний уровень', 'Middle level') : t(language, 'Boshlang‘ich daraja', 'Начальный уровень', 'Starting level');
+    const next = share >= 0.8
+      ? t(language, 'Zo‘r! Qo‘shimcha vazifani sinab ko‘ring.', 'Отлично! Попробуйте доп. задание.', 'Great! Try the extra task.')
+      : t(language, 'Quyidagilarni takrorlang:', 'Повторите эти вопросы:', 'Review these:') + (missed.length ? `\n• ${missed.slice(0, 3).join('\n• ')}` : '');
+    setMessages((current) => [...current, { who: 'helper', text: `${level}: ${score} / ${total}.\n${next}` }]);
+    setWeak(share < 0.8 ? missed : null);
+  };
+  const callTeacher = async () => {
+    if (!askTeacher || !weak) return;
+    try {
+      await askTeacher(t(language, `Yordam kerak: «${topic.title}». Tushunmadim: ${weak.slice(0, 2).join('; ')}`, `Нужна помощь по теме «${topic.title}». Не понял: ${weak.slice(0, 2).join('; ')}`, `Need help with «${topic.title}». Not clear: ${weak.slice(0, 2).join('; ')}`).slice(0, 300));
+      setSentToTeacher(true);
+    } catch { /* the pupil can still ask with the button in the lesson */ }
+  };
   const run = useCallback(async (action: string, question = '') => {
+    if (action === 'level') { startQuiz(); return; }
     const label = ACTIONS.find(([key]) => key === action)?.[1] ?? question;
     setMessages((current) => [...current, { who: 'me', text: action === 'ask' || action === 'word' ? question : label }]);
     setBusy(true);
@@ -1088,9 +1149,17 @@ function LessonHelper({ topic, language, stageName, mistakes, seed, onClose }: {
         {messages.length === 0 && <p className="muted">{t(language, 'Men javobni aytib qo‘ymayman — tushunishga yordam beraman. Tugmani tanlang yoki savol yozing.', 'Я не подсказываю готовые ответы — помогаю понять. Выберите кнопку или напишите вопрос.', 'I don’t give ready answers — I help you understand. Pick a button or ask.')}</p>}
         {messages.map((message, index) => <div key={index} className={`ls-msg ${message.who}`}>{message.text}</div>)}
         {busy && <div className="ls-msg helper"><LoadingBlock language={language} kind="inline" /></div>}
+        {quiz && <div className="ls-msg helper"><LevelQuiz topic={topic} language={language} onDone={quizDone} /></div>}
+        {weak && askTeacher && (
+          <div className="ls-msg helper">
+            {sentToTeacher
+              ? <span><CheckCircle2 size={13} /> {t(language, 'O‘qituvchiga yuborildi', 'Учитель увидит вашу просьбу', 'Sent to the teacher')}</span>
+              : <button type="button" className="btn small primary" onClick={() => void callTeacher()}>{t(language, 'O‘qituvchidan yordam so‘rash', 'Попросить учителя помочь', 'Ask the teacher for help')}</button>}
+          </div>
+        )}
       </div>
       <div className="ls-helper-actions">{ACTIONS.map(([key, label]) => <button key={key} type="button" className="btn small" disabled={busy} onClick={() => void run(key)}>{label}</button>)}</div>
-      <form className="ls-helper-form" onSubmit={(event) => { event.preventDefault(); const value = input.trim(); if (value.length < 2 || busy) return; setInput(''); void run(value.split(/\s+/).length <= 2 ? 'word' : 'ask', value); }}>
+      <form className="ls-helper-form" onSubmit={(event) => { event.preventDefault(); const value = input.trim(); if (value.length < 2 || busy) return; setInput(''); if (/(тест|уровен|daraja|test|level)/i.test(value)) { startQuiz(); return; } void run(value.split(/\s+/).length <= 2 ? 'word' : 'ask', value); }}>
         <input className="input" value={input} maxLength={400} onChange={(event) => setInput(event.target.value)} placeholder={t(language, 'Mavzu bo‘yicha savol…', 'Вопрос по теме…', 'Ask about the topic…')} />
         <button type="submit" className="btn primary" disabled={busy || input.trim().length < 2} aria-label={t(language, 'Yuborish', 'Отправить', 'Send')}><Send size={14} /></button>
       </form>
