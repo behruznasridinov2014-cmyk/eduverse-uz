@@ -84,7 +84,7 @@ function solidMath(solid: Solid, a: number, h: number): { volume: number; area: 
   }
 }
 
-export function MathLab({ language, initial = 'cube' }: { language: Language; initial?: Solid }) {
+export function MathLab({ language, initial = 'cube', onState }: { language: Language; initial?: Solid; onState?: (state: Record<string, number | string | boolean>) => void }) {
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const [solid, setSolid] = useState<Solid>(initial);
   const [a, setA] = useState(2);
@@ -94,6 +94,7 @@ export function MathLab({ language, initial = 'cube' }: { language: Language; in
   const usesH = solid !== 'cube' && solid !== 'sphere';
   const round = solid === 'cylinder' || solid === 'cone' || solid === 'sphere';
   const math = solidMath(solid, a, h);
+  useEffect(() => { onState?.({ solid, a, h, volume: math.volume, area: math.area }); }, [solid, a, h, math.volume, math.area, onState]);
 
   useEffect(() => {
     const element = canvas.current;

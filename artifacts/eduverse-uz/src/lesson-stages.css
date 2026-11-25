@@ -428,3 +428,12 @@
 .ls-other-3d select { flex: 1 1 220px; min-width: 0; max-width: 100%; }
 .ls-board-title > span { display: grid; gap: 2px; }
 .ls-board-sub { font-weight: 400; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.ls-level { display: grid; gap: 8px; }
+.ls-level-choices { display: grid; gap: 6px; }
+.ls-level-choices .btn { justify-content: flex-start; text-align: left; white-space: normal; height: auto; min-height: 36px; }
+.ls-level-choices .btn.ok { background: rgba(21, 128, 61, .14); border-color: rgba(21, 128, 61, .5); }
+.ls-level-choices .btn.bad { background: rgba(194, 65, 12, .12); border-color: rgba(194, 65, 12, .5); }
+.ls-msg { white-space: pre-line; }
+.ls-helper-actions { flex-wrap: wrap; }
+.ls-wait { display: inline-flex; align-items: center; gap: 6px; min-height: 52px; padding: 0 16px; border-radius: 999px; background: var(--surface-2); border: 1px dashed var(--line); font-weight: 600; opacity: .85; }
+.ls-step:disabled { opacity: .45; cursor: not-allowed; }

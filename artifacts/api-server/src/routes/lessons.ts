@@ -17,6 +17,8 @@ import {
 import { createRateLimiter, requireAuthenticatedRole } from "./auth";
 import { canManageClass, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { lessonHelp, type LessonHelpAction } from "../lib/ai-content";
+import { pushNotice } from "../lib/inbox";
+import { escapeHtml, notifyUsers, tl } from "../lib/notify";
 import BOOKS from "../lib/book-topics.json";
 
 /*
@@ -431,6 +433,15 @@ router.post("/classes/:classId/live/ask", requireAuthenticatedRole("student"), l
     .where(and(eq(lessonLiveAsksTable.classId, classId), eq(lessonLiveAsksTable.userId, viewer.id), eq(lessonLiveAsksTable.done, false), gt(lessonLiveAsksTable.createdAt, new Date(Date.now() - LIVE_FRESH_MS))));
   if ((open?.count ?? 0) >= 5) { res.status(429).json({ error: "Wait until the teacher answers your questions." }); return; }
   const [row] = await db.insert(lessonLiveAsksTable).values({ classId, userId: viewer.id, topicKey, text }).returning({ id: lessonLiveAsksTable.id });
+  // The class teachers hear about it in the bell and, when connected, in Telegram.
+  const teachers = (await db.select({ id: classMembersTable.userId }).from(classMembersTable)
+    .where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "teacher")))).map((item) => item.id);
+  if (teachers.length) {
+    const [pupil] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
+    const title = topicOf(topicKey)?.topic.title ?? "";
+    await pushNotice(teachers, "messages", `Вопрос ученика: ${pupil?.name ?? ""}`, `${title ? `«${title}» · ` : ""}${text}`.slice(0, 300), "/course");
+    await notifyUsers(teachers, (lang) => `🙋 <b>${tl(lang, "O‘quvchi savoli", "Вопрос ученика", "A pupil asks")}</b>\n👤 ${escapeHtml(pupil?.name ?? "")}${title ? `\n📖 ${escapeHtml(title)}` : ""}\n💬 ${escapeHtml(text)}`);
+  }
   res.status(201).json({ id: row?.id });
 });
 

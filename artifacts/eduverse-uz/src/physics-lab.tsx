@@ -42,7 +42,8 @@ function Slider({ label, value, min, max, step, unit, onChange }: { label: strin
   );
 }
 
-export function Pendulum({ language }: { language: Language }) {
+export type LabState = Record<string, number | string | boolean>;
+export function Pendulum({ language, onState }: { language: Language; onState?: (state: LabState) => void }) {
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const [length, setLength] = useState(1.0);
   const [angle, setAngle] = useState(30);
@@ -50,6 +51,7 @@ export function Pendulum({ language }: { language: Language }) {
   const [running, setRunning] = useState(true);
   const g = PLANETS.find((item) => item.id === planet)!.g;
   const period = 2 * Math.PI * Math.sqrt(length / g);
+  useEffect(() => { onState?.({ length, planet, period }); }, [length, planet, period, onState]);
   const state = useRef({ theta: (30 * Math.PI) / 180, omega: 0, trail: [] as Array<[number, number]>, swings: 0, lastSign: 1, time: 0 });
   // The animation reads the settings from a ref, so moving a slider never restarts the swing.
   const params = useRef({ g, length, angle, running });
@@ -180,13 +182,14 @@ export function Pendulum({ language }: { language: Language }) {
   );
 }
 
-export function Circuit({ language }: { language: Language }) {
+export function Circuit({ language, onState }: { language: Language; onState?: (state: LabState) => void }) {
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const [voltage, setVoltage] = useState(6);
   const [resistance, setResistance] = useState(12);
   const [closed, setClosed] = useState(true);
   const current = closed ? voltage / resistance : 0;
   const power = current * voltage;
+  useEffect(() => { onState?.({ voltage, resistance, closed, current }); }, [voltage, resistance, closed, current, onState]);
 
   useEffect(() => {
     const element = canvas.current;
