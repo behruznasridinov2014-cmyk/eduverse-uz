@@ -1,8 +1,8 @@
 import { PracticeTest } from './practice-test';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
-import { Check, Trophy, X } from 'lucide-react';
-import { SUBJECT_LABEL, type CourseBook, type CourseTopic } from './course-data';
+import { Check, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
+import { COURSE, SUBJECT_LABEL, type CourseBook, type CourseTopic } from './course-data';
 import { bookForLesson, statusOf, topicForLesson, useLessonCourses, useToday, type TodayLesson } from './today';
 import type { Language, SchoolData } from './school-data';
 
@@ -95,9 +95,11 @@ function testQuestions(book: CourseBook, topic: CourseTopic, seed: string, langu
   return picked.slice(0, count);
 }
 const progressKey = (userId: string) => `eduverse:trainer:${userId}`;
-type Progress = { id: string; step: number; score: number; chosen: string | null; checked: boolean };
+type Progress = { id: string; step: number; score: number; chosen: string | null; checked: boolean; round?: number };
 
-type Test = { id: string; day: string; subject: string; classId: string; book: CourseBook; topic: CourseTopic; until: number; isToday: boolean };
+/** `review`: a subject with no lesson today — the last topic the class covered, to keep it fresh. */
+type Test = { id: string; day: string; subject: string; classId: string; book: CourseBook; topic: CourseTopic; until: number; isToday: boolean; review?: boolean };
+const langCode = (language: Language) => (language === 'English' ? 'en' : language === 'Русский' ? 'ru' : 'uz');
 
 /**
  * Trainer: one test of 8 questions for each textbook subject of today's lessons (after the
@@ -105,7 +107,7 @@ type Test = { id: string; day: string; subject: string; classId: string; book: C
  */
 export function TrainerPage({ user, language }: { user: User; school: SchoolData; language: Language }) {
   const { data, now } = useToday();
-  const courses = useLessonCourses(data?.lessons, data?.prev ? [data.prev] : undefined);
+  const courses = useLessonCourses(data?.lessons, data ? [...(data.prev ? [data.prev] : []), ...(data.next ?? [])] : undefined);
   const isStudent = user.role === 'student';
   const [done, setDone] = useState<Record<string, { score: number; total: number }> | null>(null);
   const days = data ? [data.date, data.prev?.date].filter(Boolean).join(',') : '';
@@ -134,13 +136,31 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
     };
     for (const lesson of data.lessons) add(lesson, data.date, true);
     for (const lesson of data.prev?.lessons ?? []) add(lesson, data.prev!.date, false);
+    // Every other textbook subject of the class: a daily review of the last topic it covered.
+    const anyLesson = [...data.lessons, ...(data.prev?.lessons ?? []), ...(data.next ?? []).flatMap((day) => day.lessons)].find((lesson) => courses[lesson.classId]);
+    if (anyLesson) {
+      const covered = new Set((courses[anyLesson.classId]?.progress ?? []).map((item) => item.topicKey));
+      const todaySubjects = new Set(data.lessons.map((lesson) => lesson.subject));
+      const until = Date.parse(`${data.date}T23:59:59+05:00`);
+      for (const book of COURSE.filter((item) => item.grade === anyLesson.grade)) {
+        const id = `${data.date}:${book.subject}`;
+        if (todaySubjects.has(book.subject) || out.some((test) => test.id === id)) continue;
+        const last = book.topics.reduce((index, item, i) => (covered.has(item.key) ? i : index), -1);
+        if (last < 0) continue;
+        out.push({ id, day: data.date, subject: book.subject, classId: anyLesson.classId, book, topic: book.topics[last]!, until, isToday: true, review: true });
+      }
+    }
     return out;
   }, [data, courses, now]);
   const pending = done ? tests.filter((test) => !done[test.id]) : [];
+  const finished = done ? tests.filter((test) => done[test.id]) : [];
 
   const [asking, setAsking] = useState<Test | null>(null);
   const [active, setActive] = useState<Test | null>(null);
-  const questions = useMemo(() => (active ? testQuestions(active.book, active.topic, `${active.id}:${user.id}`, language) : []), [active, user.id, language]);
+  // Round 0 is the test of the day; "New questions" asks for another set of the same topic.
+  const [round, setRound] = useState(0);
+  const questions = useMemo(() => (active ? testQuestions(active.book, active.topic, `${active.id}:${user.id}${round ? `:${round}` : ''}`, language) : []), [active, user.id, language, round]);
+  const [explain, setExplain] = useState<{ busy: boolean; text: string } | null>(null);
   const [step, setStep] = useState(0);
   const [chosen, setChosen] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -157,15 +177,15 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
       const raw = localStorage.getItem(progressKey(user.id));
       const saved = raw ? JSON.parse(raw) as Progress : null;
       const test = saved ? tests.find((item) => item.id === saved.id && !done[item.id]) : null;
-      if (test && saved) { setActive(test); setStep(saved.step); setScore(saved.score); setChosen(saved.chosen); setChecked(saved.checked); }
+      if (test && saved) { setActive(test); setRound(saved.round ?? 0); setStep(saved.step); setScore(saved.score); setChosen(saved.chosen); setChecked(saved.checked); }
     } catch { /* private mode */ }
   }, [restored, done, tests, active, user.id]);
   useEffect(() => {
     try {
-      if (active && !result) localStorage.setItem(progressKey(user.id), JSON.stringify({ id: active.id, step, score, chosen, checked } satisfies Progress));
+      if (active && !result) localStorage.setItem(progressKey(user.id), JSON.stringify({ id: active.id, step, score, chosen, checked, round } satisfies Progress));
       else if (result || (!active && restored)) localStorage.removeItem(progressKey(user.id));
     } catch { /* private mode */ }
-  }, [active, step, score, chosen, checked, result, restored, user.id]);
+  }, [active, step, score, chosen, checked, result, restored, user.id, round]);
 
   // The lesson topics arrive a moment after the tests: keep the open test on the real topic of the lesson.
   useEffect(() => {
@@ -174,7 +194,25 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
     if (fresh && fresh.topic.key !== active.topic.key) setActive(fresh);
   }, [tests, active]);
 
-  function start(test: Test) { setAsking(null); setActive(test); setStep(0); setChosen(null); setChecked(false); setHintOpen(false); setScore(0); setResult(null); }
+  function start(test: Test, nextRound = 0) { setAsking(null); setActive(test); setRound(nextRound); setStep(0); setChosen(null); setChecked(false); setHintOpen(false); setExplain(null); setScore(0); setResult(null); }
+  /** The helper explains the question the pupil got wrong, at home, in simple words. */
+  async function askHelper() {
+    if (!active) return;
+    const item = questions[step];
+    if (!item) return;
+    setExplain({ busy: true, text: '' });
+    const text = t(language,
+      `Savol: «${item.q}». Men «${chosen}» deb javob berdim, to‘g‘risi «${item.answer}». Nega shunday? Sodda tushuntiring.`,
+      `Вопрос: «${item.q}». Я ответил «${chosen}», а верно «${item.answer}». Почему так? Объясни просто.`,
+      `Question: “${item.q}”. I answered “${chosen}”, the right answer is “${item.answer}”. Why? Explain simply.`);
+    const fallback = item.explain ?? shortHint(active.topic);
+    try {
+      const response = await customFetch<{ answer: string | null }>('/api/ai/lesson-help', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topicKey: active.topic.key, action: 'ask', question: text.slice(0, 400), stage: 'trainer', mistakes: [], lang: langCode(language) }) });
+      setExplain({ busy: false, text: response.answer || fallback });
+    } catch {
+      setExplain({ busy: false, text: fallback });
+    }
+  }
   function back() { setAsking(null); setActive(null); setResult(null); loadDone(); }
   function reveal() {
     if (chosen === null || checked) return;
@@ -186,6 +224,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
     if (!checked || !active) return;
     const total = score;
     setHintOpen(false);
+    setExplain(null);
     if (step + 1 < questions.length) { setStep(step + 1); setChosen(null); setChecked(false); return; }
     setResult({ score: total, total: questions.length });
     if (isStudent) {
@@ -195,6 +234,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
   const subjectName = (subject: string) => { const label = SUBJECT_LABEL[subject as keyof typeof SUBJECT_LABEL]; return label ? t(language, label[0], label[1], label[2]) : subject; };
   const untilText = (test: Test) => {
     const time = new Date(test.until).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
+    if (test.review) return t(language, 'Takrorlash · bugun', 'Повторение · сегодня', 'Review · today');
     return test.isToday ? t(language, `Ertaga ${time} gacha`, `До завтра, ${time}`, `Until tomorrow ${time}`) : t(language, `Kechagi dars · bugun ${time} gacha`, `Вчерашний урок · до ${time}`, `Yesterday’s lesson · until ${time}`);
   };
 
@@ -205,8 +245,8 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
       <div className="page-heading">
         <div>
           <div className="eyebrow">{t(language, 'KUNLIK TRENAJYOR', 'ТРЕНАЖЁР ДНЯ', 'DAILY TRAINER')}</div>
-          <h1>{t(language, 'Bugungi darslar bo‘yicha test', 'Тесты по сегодняшним урокам', 'Tests on today’s lessons')}</h1>
-          <p className="page-subtitle">{t(language, 'Har bir fandan 8 ta savol, faqat darsda o‘tilgan mavzu bo‘yicha.', 'По каждому предмету 8 вопросов — только по теме, которую прошли на уроке.', '8 questions per subject, only on the topic of the lesson.')}</p>
+          <h1>{t(language, 'Har kuni barcha fanlar bo‘yicha', 'Каждый день по всем предметам', 'Every day, every subject')}</h1>
+          <p className="page-subtitle">{t(language, 'Har bir fandan 8 ta savol — sinfda o‘tilgan mavzu bo‘yicha.', 'По каждому предмету 8 вопросов — по теме, которую прошли в классе.', '8 questions per subject, on the topic covered in class.')}</p>
         </div>
       </div>
       {isStudent && <PracticeTest userId={user.id} language={language} />}
@@ -223,12 +263,15 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
             <p className="muted">{result.score >= Math.ceil(result.total * 0.75)
               ? t(language, 'Zo‘r! O‘qituvchi baho qo‘yganda buni ko‘radi.', 'Отлично! Учитель увидит это, когда будет ставить оценку.', 'Great! The teacher sees it when grading.')
               : t(language, 'Natija saqlandi. O‘qituvchi ko‘radi.', 'Результат сохранён, учитель его увидит.', 'Saved. The teacher will see it.')}</p>
-            <button type="button" className="btn primary" onClick={back}>{t(language, 'Testlarga qaytish', 'К тестам', 'Back to tests')}</button>
+            <div className="row trainer-result-actions">
+              <button type="button" className="btn" onClick={() => start(active, round + 1)}><RefreshCw size={15} /> {t(language, 'Yangi savollar', 'Новые вопросы', 'New questions')}</button>
+              <button type="button" className="btn primary" onClick={back}>{t(language, 'Testlarga qaytish', 'К тестам', 'Back to tests')}</button>
+            </div>
           </div>
         ) : question ? (
           <div className="panel trainer-card trainer-pop" key={step}>
             <div className="trainer-progress"><span style={{ width: `${(step / questions.length) * 100}%` }} /></div>
-            <small className="muted">{subjectName(active.subject)} · {step + 1} / {questions.length} · {question.topic}</small>
+            <small className="muted">{subjectName(active.subject)}{round ? ` · ${t(language, 'qo‘shimcha', 'дополнительно', 'extra')}` : ''} · {step + 1} / {questions.length} · {question.topic}</small>
             <h2>{question.q}</h2>
             <div className="trainer-options">
               {question.options.map((option) => {
@@ -250,6 +293,9 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
                 <b>{chosen === question.answer ? `✅ ${t(language, 'To‘g‘ri!', 'Верно!', 'Correct!')}` : `❌ ${t(language, 'Noto‘g‘ri', 'Неверно', 'Not quite')}`}</b>
                 {chosen !== question.answer && <p>{t(language, 'To‘g‘ri javob', 'Верный ответ', 'Correct answer')}: <b>{question.answer}</b></p>}
                 <p className="muted">💡 {question.explain ?? shortHint(active.topic)}</p>
+                {chosen !== question.answer && (explain
+                  ? <div className="trainer-explain">{explain.busy ? <span className="trainer-loading-dots"><i /><i /><i /></span> : <p>{explain.text}</p>}</div>
+                  : <button type="button" className="btn small" onClick={() => void askHelper()}><Sparkles size={14} /> {t(language, 'Tushunmadim — tushuntiring', 'Непонятно — объясни', 'I don’t get it — explain')}</button>)}
                 <button type="button" className="btn primary" onClick={() => void next()}>
                   {step + 1 < questions.length ? t(language, 'Keyingisi', 'Дальше', 'Next') : t(language, 'Yakunlash', 'Завершить', 'Finish')}
                 </button>
@@ -261,13 +307,15 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
         )
       ) : !isStudent ? (
         <div className="empty-state"><span className="empty-icon"><Trophy /></span><h2>{t(language, 'Trenajyor o‘quvchilar uchun', 'Тренажёр — для учеников', 'The trainer is for students')}</h2><p>{t(language, 'Natijalar jurnalda, o‘quvchi ismi yonida.', 'Результаты видны в журнале, рядом с именем ученика.', 'Results are in the journal, next to each name.')}</p></div>
-      ) : pending.length === 0 ? (
+      ) : pending.length === 0 && finished.length === 0 ? (
         <div className="empty-state trainer-pop">
           <span className="empty-icon"><Trophy /></span>
           <h2>{tests.length ? t(language, 'Hamma testlar bajarildi', 'Все тесты сделаны', 'All tests done') : t(language, 'Hozircha test yo‘q', 'Пока тестов нет', 'No tests yet')}</h2>
           <p>{tests.length ? t(language, 'Ertaga yangi darslar — yangi testlar.', 'Завтра новые уроки — новые тесты.', 'New lessons tomorrow — new tests.') : t(language, 'Test dars boshlangach chiqadi.', 'Тест появится, когда начнётся урок.', 'A test appears when the lesson starts.')}</p>
         </div>
       ) : (
+        <>
+        {pending.length === 0 && <p className="trainer-all-done"><Trophy size={16} /> {t(language, 'Bugungi testlar bajarildi. Xohlasangiz — yangi savollar.', 'Тесты на сегодня сделаны. Хотите ещё — новые вопросы.', 'Today’s tests are done. Want more? New questions.')}</p>}
         <div className="trainer-tests">
           {pending.map((test, index) => (
             <button type="button" key={test.id} className={`trainer-test ${asking?.id === test.id ? 'open' : ''}`} style={{ animationDelay: `${index * 60}ms` }} onClick={() => setAsking(asking?.id === test.id ? null : test)}>
@@ -276,7 +324,15 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
               <small className="muted">{t(language, '8 ta savol', '8 вопросов', '8 questions')}</small>
             </button>
           ))}
+          {finished.map((test) => (
+            <div key={test.id} className="trainer-test done">
+              <span className="trainer-test-top"><b>{subjectName(test.subject)}</b><small className="trainer-score"><Check size={13} /> {done?.[test.id]?.score} / {done?.[test.id]?.total}</small></span>
+              <span>§{test.topic.code} {test.topic.title}</span>
+              <button type="button" className="btn small" onClick={() => start(test, 1 + Math.floor(Math.random() * 1000))}><RefreshCw size={14} /> {t(language, 'Yangi savollar', 'Новые вопросы', 'New questions')}</button>
+            </div>
+          ))}
         </div>
+        </>
       )}
 
       {asking && !active && (
