@@ -1112,3 +1112,11 @@ h3 { font-size:14px;margin:0 0 8px;font-weight:600; }
 .pdfv-canvas.is-busy { opacity: .6; }
 .pdfv-note { position: absolute; inset: 0; display: grid; place-items: center; color: #ccc; text-align: center; padding: 20px; gap: 10px; }
 @media (max-width: 640px) { .pdfv-fit { display: none; } .pdfv-stage { height: 72vh; padding: 6px; } }
+.admin-school-setup{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.admin-school-setup-head{gap:10px;flex-wrap:wrap}
+.admin-more>summary,.admin-more-fields>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;min-height:40px}
+.admin-more>summary::after,.admin-more-fields>summary::after{content:'▾';margin-left:auto;opacity:.6}
+.admin-more[open]>summary::after,.admin-more-fields[open]>summary::after{content:'▴'}
+.admin-more>summary::-webkit-details-marker,.admin-more-fields>summary::-webkit-details-marker{display:none}
+.admin-more[open]>summary{margin-bottom:10px}
+.admin-more-fields>summary{color:inherit;opacity:.7;font-size:14px}
