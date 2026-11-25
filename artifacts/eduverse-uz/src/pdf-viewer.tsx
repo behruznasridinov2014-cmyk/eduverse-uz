@@ -129,7 +129,9 @@ export function PdfViewer({ url, title, language = 'English', range }: { url: st
     try {
       const current = await pdf.getPage(page);
       const base = current.getViewport({ scale: 1 });
-      const available = Math.max(240, host.clientWidth - 2);
+      const style = window.getComputedStyle(host);
+      const padding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+      const available = Math.max(240, host.clientWidth - padding - 2);
       const factor = scale || available / base.width;
       shownScale.current = factor;
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -168,7 +170,12 @@ export function PdfViewer({ url, title, language = 'English', range }: { url: st
     const host = stage.current;
     if (!host || state !== 'ready') return;
     let timer = 0;
+    let lastWidth = host.clientWidth;
     const observer = new ResizeObserver(() => {
+      // redraw only when the box itself changed width, never because the page we drew got bigger
+      const width = host.clientWidth;
+      if (Math.abs(width - lastWidth) < 4) return;
+      lastWidth = width;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => void draw(), 150);
     });

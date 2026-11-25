@@ -34,6 +34,17 @@ export type LiveState = {
 };
 export type LiveHook = { state: LiveState | null; refresh: () => void; set: (state: LiveState | null) => void };
 
+/** The same question may come from the topic and from the teacher's own list: show it once. */
+function uniqueByPrompt<T extends { key: string; prompt: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const norm = item.prompt.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!norm || seen.has(norm) || seen.has(`k:${item.key}`)) return false;
+    seen.add(norm); seen.add(`k:${item.key}`);
+    return true;
+  });
+}
+
 export function useLive(classId: string | null, enabled: boolean): LiveHook {
   const [state, setState] = useState<LiveState | null>(null);
   const refresh = useCallback(() => {
@@ -58,11 +69,11 @@ export function BoardControls({ classId, topic, stage, language, live, content }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const book = bookOf(topic);
-  const questions: BoardQuestion[] = useMemo(() => [
+  const questions: BoardQuestion[] = useMemo(() => uniqueByPrompt([
     ...(content?.questions ?? []).map((item) => ({ key: `t:${item.id}`, prompt: item.prompt, choices: item.choices, correct: item.correct })),
     ...topicQuestions(topic, 6, 'board').map((item) => ({ key: item.id, prompt: item.prompt, choices: item.choices, correct: item.correct })),
     ...(book ? missionScenarios(topic, book.subject, language).map((item) => ({ key: item.id, prompt: item.situation, choices: item.choices, correct: item.correct })) : []),
-  ], [content, topic, book, language]);
+  ]), [content, topic, book, language]);
   const [pick, setPick] = useState(0);
   const put = useCallback(async (patch: { stage?: number; question?: LiveState['question'] | null; reveal?: boolean; active?: boolean }) => {
     setBusy(true); setError('');

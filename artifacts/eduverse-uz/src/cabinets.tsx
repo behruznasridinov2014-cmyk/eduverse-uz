@@ -47,7 +47,6 @@ export function ParentCabinet({ language }: { language: Language }) {
     );
   }
   const child = children[Math.min(active, children.length - 1)]!;
-  const missing = child.homework.filter((item) => item.state === 'missing').length;
   return (
     <section className="cabinet">
       {children.length > 1 && (
@@ -67,32 +66,7 @@ export function ParentCabinet({ language }: { language: Language }) {
       <div className="kpi-grid">
         <Kpi icon={GraduationCap} label={t(language, 'O‘rtacha baho', 'Средняя оценка', 'Average grade')} value={child.average !== null ? child.average.toFixed(1) : '—'} />
         <Kpi icon={CalendarCheck2} label={t(language, 'Davomat', 'Посещаемость', 'Attendance')} value={child.attendancePercent !== null ? `${child.attendancePercent}%` : '—'} />
-        <Kpi icon={NotebookPen} label={t(language, 'Bajarilmagan vazifa', 'Не сдано заданий', 'Missing homework')} value={String(missing)} warn={missing > 0} />
       </div>
-      {child.absences.length > 0 && (
-        <div className="notice">{t(language, 'Kelmagan kunlar', 'Пропуски', 'Absent on')}: {child.absences.map((day) => { const d = new Date(`${day}T12:00:00`); return Number.isNaN(d.getTime()) ? day : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`; }).join(', ')}</div>
-      )}
-      <section className="panel">
-        <div className="section-head"><h2><NotebookPen size={16} /> {t(language, 'Uy vazifalari va baholar', 'Домашние задания и оценки', 'Homework and grades')}</h2></div>
-        {child.homework.length === 0 ? <p className="muted">{t(language, 'Hozircha vazifa yo‘q.', 'Заданий пока нет.', 'No homework yet.')}</p> : (
-          <table className="grade-table">
-            <thead><tr>
-              <th>{t(language, 'Topshiriq', 'Задание', 'Assignment')}</th>
-              <th>{t(language, 'Holat', 'Статус', 'Status')}</th>
-              <th>{t(language, 'Baho', 'Оценка', 'Grade')}</th>
-            </tr></thead>
-            <tbody>
-              {child.homework.map((item) => (
-                <tr key={item.id}>
-                  <td><b>{item.title}</b><br /><span className="muted">{item.subject}{item.feedback ? ` · ${item.feedback}` : ''}</span></td>
-                  <td>{item.state === 'graded' ? t(language, 'Tekshirildi', 'Проверено', 'Checked') : item.state === 'review' ? t(language, 'Tekshirilmoqda', 'На проверке', 'In review') : <span className="tag gold">{t(language, 'Topshirilmagan', 'Не сдано', 'Not submitted')}</span>}</td>
-                  <td>{item.grade !== null ? <span className="grade-mark">{item.grade}</span> : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
     </section>
   );
 }

@@ -341,35 +341,12 @@ export function ServerClassesPanel({
   // A pupil sees only what is still to do; handed-in work goes to "My grades".
   // Homework is accepted until 00:00 of the lesson day; missed work stays visible for 3 days, marked late.
   const isOverdue = (item: MyAssignment) => !item.mySubmission && Boolean(item.dueAt) && new Date(item.dueAt as string).getTime() < Date.now();
-  const todoAssignments = classAssignments.filter((item) => !item.mySubmission && !(isOverdue(item) && Date.now() - new Date(item.dueAt as string).getTime() > 3 * 86_400_000));
+  const todoAssignments = classAssignments.filter((item) => !item.mySubmission && !isOverdue(item));
+  // Missed work: can be looked at, but not handed in any more.
+  const expiredAssignments = classAssignments.filter((item) => isOverdue(item) && Date.now() - new Date(item.dueAt as string).getTime() < 14 * 86_400_000);
   const [showStudents, setShowStudents] = useState(false);
   if (isStudent) {
-    // A pupil sees only the homework that is still to do.
-    return (
-      <Panel>
-          {/* On a phone the top of the page is off screen: the result of sending pops up at the bottom. */}
-          {notice && <div className="notice school-inline-success hw-toast" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
-          {mutationError && <div className="hw-toast is-error" role="alert"><InlineError>{mutationError}</InlineError></div>}
-          {todoAssignments.length === 0 ? (
-            <div className="callout">
-              {classAssignments.length === 0
-                ? t(language, 'No homework yet.', 'Заданий пока нет.', 'Hali vazifa yo‘q.')
-                : t(language, 'All homework is done. Grades are in “My grades”.', 'Все задания сделаны. Оценки — во вкладке «Мои оценки».', 'Barcha vazifalar bajarilgan. Baholar — «Mening baholarim»da.')}
-            </div>
-          ) : (
-            <div className="stack school-assignment-list">
-              {(() => {
-                // Subjects to hand in today: one glance, then the cards below grouped by subject.
-                const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
-                const dueToday = [...new Set(todoAssignments.filter((item) => !isOverdue(item) && item.dueAt && new Date(new Date(item.dueAt).getTime() + 5 * 3600_000).toISOString().slice(0, 10) === today).map((item) => item.subject))];
-                return dueToday.length > 0 && (
-                  <div className="hw-today">
-                    <b>{t(language, 'Today, by 00:00', 'Сегодня до 00:00', 'Bugun 00:00 gacha')}:</b>
-                    {dueToday.map((subject) => <span key={subject} className="tag gold">{subject}</span>)}
-                  </div>
-                );
-              })()}
-              {[...todoAssignments].sort((a, b) => a.subject.localeCompare(b.subject)).map((assignment, at, list) => {
+    const renderCard = (assignment: MyAssignment, at: number, list: MyAssignment[]) => {
                 const submission = assignment.mySubmission;
                 const subjectHead = at === 0 || list[at - 1]!.subject !== assignment.subject;
                 const isEditing = draftAssignmentId === assignment.id;
@@ -396,13 +373,10 @@ export function ServerClassesPanel({
                     <div className="row-between" style={{ gap: 8, alignItems: 'flex-start' }}>
                       <div>
                         <b>{assignment.title}</b>
-                        <div className="list-meta">
-                          {assignment.subject} · {formatDue(assignment.dueAt)}
-                        </div>
                       </div>
                       <span className={`tag ${overdue ? 'red' : submission ? (submission.score !== null && submission.score !== undefined ? 'green' : 'blue') : 'gold'}`}>
                         {overdue
-                          ? t(language, 'Late — not counted', 'Срок прошёл — не засчитано', 'Muddat o‘tdi — hisoblanmaydi')
+                          ? t(language, 'Time is up', 'Срок истёк', 'Muddat tugadi')
                           : !submission
                           ? (() => {
                             const due = assignment.dueAt ? new Date(assignment.dueAt) : null;
@@ -415,12 +389,17 @@ export function ServerClassesPanel({
                             : t(language, 'In review', 'На проверке', 'Tekshirilmoqda')}
                       </span>
                     </div>
-                    <p className="muted school-assignment-copy">{assignment.description}</p>
+                    {bookTopic && !assignment.title.includes(bookTopic.topic.title) && <div className="hw-topic-line"><BookOpen size={14} /> §{bookTopic.topic.code} · {bookTopic.topic.title}</div>}
+                    {assignment.description && (
+                      <details className="hw-task">
+                        <summary>{t(language, 'What to do', 'Что сделать', 'Nima qilish kerak')}</summary>
+                        <p className="muted school-assignment-copy">{assignment.description}</p>
+                      </details>
+                    )}
                     {(assignment.topicTitle || bookTopic) && (
-                      <button type="button" className="hw-topic-link" onClick={openBook}>
+                      <button type="button" className="btn small hw-book-btn" onClick={openBook}>
                         <BookOpen size={14} />
-                        {t(language, 'More: open the textbook (examples)', 'Подробнее: открыть учебник (примеры)', 'Batafsil: darslikni ochish (misollar)')}
-                        <ArrowRight size={13} />
+                        {t(language, 'Textbook', 'Учебник', 'Darslik')}
                       </button>
                     )}
                     {submission && (
@@ -531,8 +510,40 @@ export function ServerClassesPanel({
                   </article>
                   </div>
                 );
-              })}
+    };
+    // A pupil sees only the homework that is still to do.
+    return (
+      <Panel>
+          {/* On a phone the top of the page is off screen: the result of sending pops up at the bottom. */}
+          {notice && <div className="notice school-inline-success hw-toast" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
+          {mutationError && <div className="hw-toast is-error" role="alert"><InlineError>{mutationError}</InlineError></div>}
+          {todoAssignments.length === 0 ? (
+            <div className="callout">
+              {classAssignments.length === 0
+                ? t(language, 'No homework yet.', 'Заданий пока нет.', 'Hali vazifa yo‘q.')
+                : t(language, 'All homework is done. Grades are in “My grades”.', 'Все задания сделаны. Оценки — во вкладке «Мои оценки».', 'Barcha vazifalar bajarilgan. Baholar — «Mening baholarim»da.')}
             </div>
+          ) : (
+            <div className="stack school-assignment-list">
+              {(() => {
+                // Subjects to hand in today: one glance, then the cards below grouped by subject.
+                const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+                const dueToday = [...new Set(todoAssignments.filter((item) => !isOverdue(item) && item.dueAt && new Date(new Date(item.dueAt).getTime() + 5 * 3600_000).toISOString().slice(0, 10) === today).map((item) => item.subject))];
+                return dueToday.length > 0 && (
+                  <div className="hw-today">
+                    <b>{t(language, 'Today, by 00:00', 'Сегодня до 00:00', 'Bugun 00:00 gacha')}:</b>
+                    {dueToday.map((subject) => <span key={subject} className="tag gold">{subject}</span>)}
+                  </div>
+                );
+              })()}
+              {[...todoAssignments].sort((a, b) => a.subject.localeCompare(b.subject)).map(renderCard)}
+            </div>
+          )}
+          {expiredAssignments.length > 0 && (
+            <details className="hw-expired">
+              <summary>{t(language, `Time is up (${expiredAssignments.length})`, `Срок истёк (${expiredAssignments.length})`, `Muddati tugagan (${expiredAssignments.length})`)}</summary>
+              <div className="stack school-assignment-list">{[...expiredAssignments].sort((a, b) => a.subject.localeCompare(b.subject)).map(renderCard)}</div>
+            </details>
           )}
       </Panel>
     );

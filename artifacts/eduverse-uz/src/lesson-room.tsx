@@ -320,6 +320,10 @@ export function LessonRoomPage({
                 onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
                 placeholder="ABC-123"
                 maxLength={7}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                name={`lesson-code-${Date.now()}`}
               />
             </div>
             <button type="button" className="btn primary" disabled={busy || joinCode.trim().length < 7} onClick={() => void joinByCode()}>

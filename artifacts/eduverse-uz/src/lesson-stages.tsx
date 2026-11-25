@@ -404,12 +404,14 @@ function NotesBox({ topicKey, marks, language, onUnmark }: { topicKey: string; m
   const key = `eduverse:notes:${topicKey}`;
   const [text, setText] = useState(() => { try { return localStorage.getItem(key) ?? ''; } catch { return ''; } });
   const [saved, setSaved] = useState(false);
+  const [open, setOpen] = useState(() => marks.length > 0 || text.length > 0);
+  useEffect(() => { if (marks.length > 0) setOpen(true); }, [marks.length]);
   useEffect(() => {
     const timer = window.setTimeout(() => { try { localStorage.setItem(key, text); setSaved(true); } catch { /* private mode */ } }, 500);
     return () => window.clearTimeout(timer);
   }, [text, key]);
   return (
-    <details className="ls-notes" open={marks.length > 0 || text.length > 0}>
+    <details className="ls-notes" open={open} onToggle={(event) => setOpen((event.currentTarget as HTMLDetailsElement).open)}>
       <summary><NotebookPen size={15} /> <b>{t(language, 'Konspekt', 'Конспект', 'My notes')}</b>{marks.length > 0 && <span className="tag">{marks.length}</span>}</summary>
       {marks.length > 0 && <ul className="ls-notes-marks">{marks.map((line) => <li key={line}><span>{line}</span><button type="button" className="btn small" onClick={() => onUnmark(line)} aria-label={t(language, 'Olib tashlash', 'Убрать', 'Remove')}><X size={12} /></button></li>)}</ul>}
       <textarea className="input" rows={3} value={text} maxLength={3000} onChange={(event) => { setText(event.target.value); setSaved(false); }} placeholder={t(language, 'Qisqa yozing…', 'Запишите коротко…', 'Write briefly…')} />
