@@ -3,6 +3,7 @@ import { customFetch } from '@workspace/api-client-react';
 import { CalendarCheck2, Download, GraduationCap, Link2, NotebookPen, RefreshCw, School, Users, Video } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
+import { TelegramOneTap } from './school-tools';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -49,6 +50,7 @@ export function ParentCabinet({ language }: { language: Language }) {
   const child = children[Math.min(active, children.length - 1)]!;
   return (
     <section className="cabinet">
+      <TelegramOneTap language={language} />
       {children.length > 1 && (
         <div className="row cabinet-tabs">
           {children.map((item, index) => (

@@ -287,6 +287,10 @@ export const telegramNotifyTable = pgTable("telegram_notify", {
   nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
   /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
   lang: text("lang"),
+  /** "Forgot password": a 6-digit code sent to this chat (stored hashed), its end time and wrong tries. */
+  resetCodeHash: text("reset_code_hash"),
+  resetExpiresAt: timestamp("reset_expires_at", { withTimezone: true }),
+  resetTries: integer("reset_tries").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
 

@@ -43085,6 +43085,10 @@ var init_learning = __esm({
       nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
       /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
       lang: text("lang"),
+      /** "Forgot password": a 6-digit code sent to this chat (stored hashed), its end time and wrong tries. */
+      resetCodeHash: text("reset_code_hash"),
+      resetExpiresAt: timestamp("reset_expires_at", { withTimezone: true }),
+      resetTries: integer("reset_tries").notNull().default(0),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [uniqueIndex("telegram_notify_nonce_unique").on(table.nonce)]);
     labReportsTable = pgTable("lab_reports", {
@@ -44114,13 +44118,18 @@ async function analyzeHomework(input) {
     advice: str(parsed.advice)
   };
 }
+function mentionsMissingPicture(text2) {
+  return /рисун|график|таблиц|схем[аеуы]|изображ|по фото|figure|picture|diagram|graph|table|rasm|jadval|grafik|chizma/i.test(text2);
+}
 async function generateTopicTest(subject, grade, title, count = 5) {
   const questionCount = Math.max(1, Math.min(10, count));
   if (!isAiConfigured()) return localTestQuestions(subject, grade, title, questionCount);
   const raw = await callModel([
     {
       role: "system",
-      content: '\u0422\u044B \u2014 \u0443\u0447\u0438\u0442\u0435\u043B\u044C. \u0421\u043E\u0437\u0434\u0430\u0439 \u0442\u0435\u0441\u0442 \u0438\u0437 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432 \u043F\u043E \u0442\u0435\u043C\u0435. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":"...","explanation":"..."}]}. \u0420\u043E\u0432\u043D\u043E \u043E\u0434\u0438\u043D \u0432\u0435\u0440\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0432 \u043A\u0430\u0436\u0434\u043E\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0435.'
+      content: `\u0422\u044B \u2014 \u043E\u043F\u044B\u0442\u043D\u044B\u0439 \u0443\u0447\u0438\u0442\u0435\u043B\u044C \u0432 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0435. \u0421\u043E\u0437\u0434\u0430\u0439 \u0442\u0435\u0441\u0442 \u043F\u043E \u0442\u0435\u043C\u0435 \u0443\u0440\u043E\u043A\u0430, \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u0432\u043E\u043F\u0440\u043E\u0441\u0430 \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443. \u0420\u043E\u0432\u043D\u043E \u043E\u0434\u0438\u043D \u0432\u0435\u0440\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442 \u0432 \u043A\u0430\u0436\u0434\u043E\u043C \u0432\u043E\u043F\u0440\u043E\u0441\u0435; explanation \u2014 1-2 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F, \u043F\u043E\u0447\u0435\u043C\u0443 \u043E\u0442\u0432\u0435\u0442 \u0432\u0435\u0440\u043D\u044B\u0439.
+${CLEAR_TASK_RULES}
+\u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":"...","explanation":"..."}]}`
     },
     {
       role: "user",
@@ -44128,7 +44137,7 @@ async function generateTopicTest(subject, grade, title, count = 5) {
     }
   ]);
   const parsed = raw ? safeJsonObject(raw) : null;
-  const questions = Array.isArray(parsed?.questions) ? parsed.questions.map(parseQuiz).filter((q) => Boolean(q)) : [];
+  const questions = Array.isArray(parsed?.questions) ? parsed.questions.map(parseQuiz).filter((q) => Boolean(q) && !mentionsMissingPicture(q.prompt)) : [];
   return questions.length > 0 ? questions.slice(0, questionCount) : localTestQuestions(subject, grade, title, questionCount);
 }
 function localTestQuestions(subject, grade, title, count) {
@@ -44162,7 +44171,9 @@ async function generateStudentQuestion(subject, title, studentName, options = {}
   const raw = await callModel([
     {
       role: "system",
-      content: "\u0422\u044B \u2014 \u0443\u0447\u0438\u0442\u0435\u043B\u044C. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u041E\u0414\u0418\u041D \u0438\u043D\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0432\u0435\u0440\u043E\u0447\u043D\u044B\u0439 \u0432\u043E\u043F\u0440\u043E\u0441 \u043F\u043E \u0442\u0435\u043C\u0435 \u0434\u043B\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u0443\u0447\u0435\u043D\u0438\u043A\u0430. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E JSON: {prompt, choices[4], correct, explanation, focus}. \u041E\u0434\u0438\u043D \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442."
+      content: `\u0422\u044B \u2014 \u0443\u0447\u0438\u0442\u0435\u043B\u044C. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u041E\u0414\u0418\u041D \u0438\u043D\u0434\u0438\u0432\u0438\u0434\u0443\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0432\u0435\u0440\u043E\u0447\u043D\u044B\u0439 \u0432\u043E\u043F\u0440\u043E\u0441 \u043F\u043E \u0442\u0435\u043C\u0435 \u0434\u043B\u044F \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0433\u043E \u0443\u0447\u0435\u043D\u0438\u043A\u0430: \u0443\u0440\u043E\u0432\u0435\u043D\u044C support \u2014 \u0441\u0430\u043C\u044B\u0439 \u043F\u0440\u043E\u0441\u0442\u043E\u0439 \u0448\u0430\u0433 \u0442\u0435\u043C\u044B, core \u2014 \u043E\u0431\u044B\u0447\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430, challenge \u2014 \u0437\u0430\u0434\u0430\u0447\u0430 \u0432 \u0434\u0432\u0430 \u0448\u0430\u0433\u0430. \u041E\u0434\u0438\u043D \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442.
+${CLEAR_TASK_RULES}
+\u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E JSON: {"prompt":"...","choices":["...","...","...","..."],"correct":"...","explanation":"...","focus":"\u0447\u0442\u043E \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u0432\u043E\u043F\u0440\u043E\u0441"}`
     },
     {
       role: "user",
@@ -44173,7 +44184,7 @@ async function generateStudentQuestion(subject, title, studentName, options = {}
   const parsed = safeJsonObject(raw);
   if (!parsed) return fallback;
   const quiz = parseQuiz(parsed);
-  if (!quiz) return fallback;
+  if (!quiz || mentionsMissingPicture(quiz.prompt)) return fallback;
   return { ...quiz, focus: str(parsed.focus) || fallback.focus };
 }
 async function checkPhotoIsAi(photos, language) {
@@ -44260,7 +44271,9 @@ async function generatePracticeTest(topics, language) {
   const raw = await callModel([
     {
       role: "system",
-      content: `\u0422\u044B \u0443\u0447\u0438\u0442\u0435\u043B\u044C 7 \u043A\u043B\u0430\u0441\u0441\u0430. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043E\u0447\u043D\u044B\u0439 \u0442\u0435\u0441\u0442 \u0434\u043B\u044F \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043F\u043E \u0442\u0435\u043C\u0430\u043C, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0435\u043C\u0443 \u0442\u0440\u0443\u0434\u043D\u043E \u0434\u0430\u044E\u0442\u0441\u044F. 5 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432, \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443, ${lang}. \u0412 \u043A\u0430\u0436\u0434\u043E\u043C 4 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430, \u0440\u043E\u0432\u043D\u043E \u043E\u0434\u0438\u043D \u0432\u0435\u0440\u043D\u044B\u0439. \u041F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u2014 \u043E\u0434\u043D\u043E \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0435 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u0435, \u043A\u0430\u043A \u0440\u0435\u0448\u0430\u0442\u044C, \u0431\u0435\u0437 \u043E\u0442\u0432\u0435\u0442\u0430. \u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`
+      content: `\u0422\u044B \u0443\u0447\u0438\u0442\u0435\u043B\u044C 7 \u043A\u043B\u0430\u0441\u0441\u0430. \u0421\u043E\u0441\u0442\u0430\u0432\u044C \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0442\u0440\u0435\u043D\u0438\u0440\u043E\u0432\u043E\u0447\u043D\u044B\u0439 \u0442\u0435\u0441\u0442 \u0434\u043B\u044F \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043F\u043E \u0442\u0435\u043C\u0430\u043C, \u043A\u043E\u0442\u043E\u0440\u044B\u0435 \u0435\u043C\u0443 \u0442\u0440\u0443\u0434\u043D\u043E \u0434\u0430\u044E\u0442\u0441\u044F. 5 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432, \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443, ${lang}. \u0412 \u043A\u0430\u0436\u0434\u043E\u043C 4 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430, \u0440\u043E\u0432\u043D\u043E \u043E\u0434\u0438\u043D \u0432\u0435\u0440\u043D\u044B\u0439. \u041F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u2014 \u043E\u0434\u043D\u043E \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u0435 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u0435, \u043A\u0430\u043A \u0440\u0435\u0448\u0430\u0442\u044C, \u0431\u0435\u0437 \u043E\u0442\u0432\u0435\u0442\u0430.
+${CLEAR_TASK_RULES}
+\u041E\u0442\u0432\u0435\u0442 \u0441\u0442\u0440\u043E\u0433\u043E JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`
     },
     { role: "user", content: topics.slice(0, 3).map((topic, index2) => `${index2 + 1}) ${topic.subject}: ${topic.title}. \u0421\u0443\u0442\u044C: ${topic.essence.slice(0, 400)}`).join("\n") }
   ]);
@@ -44272,7 +44285,7 @@ async function generatePracticeTest(topics, language) {
     const row = item;
     const choices = Array.isArray(row.choices) ? row.choices.map((choice) => str(choice)).filter(Boolean).slice(0, 4) : [];
     const correct = Number(row.correct);
-    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3) continue;
+    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3 || mentionsMissingPicture(str(row.prompt))) continue;
     out.push({ prompt: str(row.prompt).slice(0, 400), choices: choices.map((choice) => choice.slice(0, 200)), correct, hint: str(row.hint).slice(0, 240) });
   }
   return out.length ? out.slice(0, 5) : null;
@@ -44313,7 +44326,8 @@ async function lessonHelp(input) {
     detail: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438 \u0442\u0435\u043C\u0443 \u043F\u043E\u0434\u0440\u043E\u0431\u043D\u0435\u0435: 2-3 \u0430\u0431\u0437\u0430\u0446\u0430, \u043F\u043E \u0448\u0430\u0433\u0430\u043C, \u0441 \u043E\u0434\u043D\u043E\u0439 \u0444\u043E\u0440\u043C\u0443\u043B\u043E\u0439 \u0438\u043B\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u043E\u043C, \u0435\u0441\u043B\u0438 \u0435\u0441\u0442\u044C.",
     example: "\u0414\u0430\u0439 \u043E\u0434\u0438\u043D \u043F\u0440\u0438\u043C\u0435\u0440 \u0438\u0437 \u0436\u0438\u0437\u043D\u0438 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u0432 \u0423\u0437\u0431\u0435\u043A\u0438\u0441\u0442\u0430\u043D\u0435 (\u0434\u043E\u043C, \u0443\u043B\u0438\u0446\u0430, \u0431\u0430\u0437\u0430\u0440, \u043A\u0443\u0445\u043D\u044F, \u0441\u043F\u043E\u0440\u0442), \u043D\u0435 \u0438\u0437 \u0443\u0447\u0435\u0431\u043D\u0438\u043A\u0430. \u0421\u0442\u0440\u043E\u0433\u043E 3 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0445 \u0441\u0442\u0440\u043E\u043A\u0438: \xAB\u0421\u0438\u0442\u0443\u0430\u0446\u0438\u044F: \u2026\xBB, \xAB\u0413\u0434\u0435 \u0442\u0443\u0442 \u0442\u0435\u043C\u0430: \u2026\xBB, \xAB\u041F\u0440\u043E\u0432\u0435\u0440\u044C \u0441\u0435\u0431\u044F: \u2026\xBB (\u0432\u043E\u043F\u0440\u043E\u0441 \u0431\u0435\u0437 \u043E\u0442\u0432\u0435\u0442\u0430). \u0411\u0435\u0437 \u0441\u043B\u043E\u0436\u043D\u044B\u0445 \u0441\u043B\u043E\u0432.",
     word: "\u041E\u0431\u044A\u044F\u0441\u043D\u0438 \u044D\u0442\u043E \u0441\u043B\u043E\u0432\u043E \u0438\u043B\u0438 \u0432\u044B\u0440\u0430\u0436\u0435\u043D\u0438\u0435 \u043E\u0447\u0435\u043D\u044C \u043F\u0440\u043E\u0441\u0442\u043E \u0438 \u0434\u0430\u0439 \u043F\u0440\u0438\u043C\u0435\u0440.",
-    practice: "\u0414\u0430\u0439 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: 3 \u043D\u043E\u0432\u044B\u0445 \u0443\u043F\u0440\u0430\u0436\u043D\u0435\u043D\u0438\u044F \u043F\u043E \u0442\u0435\u043C\u0435 \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443, \u043F\u0440\u043E\u043D\u0443\u043C\u0435\u0440\u0443\u0439. \u041E\u0442\u0432\u0435\u0442\u044B \u041D\u0415 \u043F\u0438\u0448\u0438, \u043A \u043A\u0430\u0436\u0434\u043E\u043C\u0443 \u043E\u0434\u043D\u0430 \u043A\u043E\u0440\u043E\u0442\u043A\u0430\u044F \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430. \u0412 \u043A\u043E\u043D\u0446\u0435 \u043E\u0434\u043D\u0430 \u0441\u0442\u0440\u043E\u043A\u0430: \xAB\u0421\u0434\u0435\u043B\u0430\u0439 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438\xBB.",
+    practice: `\u0414\u0430\u0439 \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0434\u043E\u043C\u0430\u0448\u043D\u0435\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435: 3 \u043D\u043E\u0432\u044B\u0445 \u0443\u043F\u0440\u0430\u0436\u043D\u0435\u043D\u0438\u044F \u043F\u043E \u0442\u0435\u043C\u0435 \u043E\u0442 \u043B\u0451\u0433\u043A\u043E\u0433\u043E \u043A \u0441\u043B\u043E\u0436\u043D\u043E\u043C\u0443, \u043F\u0440\u043E\u043D\u0443\u043C\u0435\u0440\u0443\u0439. \u041A\u0430\u0436\u0434\u043E\u0435 \u0443\u043F\u0440\u0430\u0436\u043D\u0435\u043D\u0438\u0435: \u0443\u0441\u043B\u043E\u0432\u0438\u0435 \u0441\u043E \u0432\u0441\u0435\u043C\u0438 \u0434\u0430\u043D\u043D\u044B\u043C\u0438 \u0438 \u043F\u0440\u044F\u043C\u043E\u0439 \u0432\u043E\u043F\u0440\u043E\u0441 \xAB\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u2026\xBB / \xAB\u041E\u0431\u044A\u044F\u0441\u043D\u0438\u0442\u0435 \u2026\xBB, \u0437\u0430\u0442\u0435\u043C \u0441\u0442\u0440\u043E\u043A\u0430 \xAB\u041F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430: \u2026\xBB (\u043A\u0430\u043A \u043D\u0430\u0447\u0430\u0442\u044C, \u0431\u0435\u0437 \u043E\u0442\u0432\u0435\u0442\u0430). \u041E\u0442\u0432\u0435\u0442\u044B \u041D\u0415 \u043F\u0438\u0448\u0438. \u0412 \u043A\u043E\u043D\u0446\u0435 \u043E\u0434\u043D\u0430 \u0441\u0442\u0440\u043E\u043A\u0430: \xAB\u0421\u0434\u0435\u043B\u0430\u0439 \u0432 \u0442\u0435\u0442\u0440\u0430\u0434\u0438\xBB.
+${CLEAR_TASK_RULES}`,
     mistake: "\u0423\u0447\u0435\u043D\u0438\u043A \u043E\u0448\u0438\u0431\u0441\u044F \u0432 \u044D\u0442\u0438\u0445 \u0432\u043E\u043F\u0440\u043E\u0441\u0430\u0445. \u041F\u043E\u043C\u043E\u0433\u0438 \u043F\u043E\u043D\u044F\u0442\u044C, \u0433\u0434\u0435 \u043E\u0431\u044B\u0447\u043D\u043E \u043E\u0448\u0438\u0431\u0430\u044E\u0442\u0441\u044F \u0438 \u043A\u0430\u043A \u0440\u0430\u0441\u0441\u0443\u0436\u0434\u0430\u0442\u044C, \u043D\u043E \u043D\u0435 \u043D\u0430\u0437\u044B\u0432\u0430\u0439 \u0433\u043E\u0442\u043E\u0432\u044B\u0439 \u043E\u0442\u0432\u0435\u0442 \u2014 \u0437\u0430\u0434\u0430\u0439 \u043D\u0430\u0432\u043E\u0434\u044F\u0449\u0438\u0439 \u0432\u043E\u043F\u0440\u043E\u0441.",
     review: "\u041F\u043E \u043E\u0448\u0438\u0431\u043A\u0430\u043C \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u0441\u043A\u0430\u0436\u0438, \u0447\u0442\u043E \u0438\u043C\u0435\u043D\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C (2-3 \u043F\u0443\u043D\u043A\u0442\u0430) \u0438 \u0432 \u043A\u0430\u043A\u043E\u043C \u043F\u043E\u0440\u044F\u0434\u043A\u0435.",
     ask: "\u041E\u0442\u0432\u0435\u0442\u044C \u043D\u0430 \u0432\u043E\u043F\u0440\u043E\u0441 \u0443\u0447\u0435\u043D\u0438\u043A\u0430 \u043F\u043E \u0442\u0435\u043C\u0435. \u0415\u0441\u043B\u0438 \u043E\u043D \u043F\u0440\u043E\u0441\u0438\u0442 \u0433\u043E\u0442\u043E\u0432\u044B\u0439 \u043E\u0442\u0432\u0435\u0442 \u043D\u0430 \u0437\u0430\u0434\u0430\u0447\u0443 \u2014 \u043D\u0435 \u0434\u0430\u0432\u0430\u0439 \u0435\u0433\u043E, \u0430 \u043E\u0431\u044A\u044F\u0441\u043D\u0438 \u043F\u0443\u0442\u044C \u0440\u0435\u0448\u0435\u043D\u0438\u044F \u0438 \u0437\u0430\u0434\u0430\u0439 \u043D\u0430\u0432\u043E\u0434\u044F\u0449\u0438\u0439 \u0432\u043E\u043F\u0440\u043E\u0441."
@@ -44333,7 +44347,7 @@ async function lessonHelp(input) {
   const answer = parsed ? str(parsed.answer) : "";
   return answer ? answer.slice(0, 2500) : null;
 }
-var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, GEMINI_FALLBACKS, MODEL_CHAIN, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES, tri;
+var AI_BASE_URL, AI_API_KEY, AI_MODEL, AI_ENABLED, AI_TIMEOUT_MS, GEMINI_API_KEY, GEMINI_MODEL, GEMINI_BASE_URL, USE_GEMINI, EFFECTIVE_BASE_URL, EFFECTIVE_API_KEY, EFFECTIVE_MODEL, SUBJECT_BLUEPRINTS, SUPPORTED_SUBJECTS, GEMINI_FALLBACKS, MODEL_CHAIN, SYSTEM_PROMPT, VALID_KINDS, VALID_SHAPES, CLEAR_TASK_RULES, tri;
 var init_ai_content = __esm({
   "src/lib/ai-content.ts"() {
     "use strict";
@@ -44461,6 +44475,14 @@ var init_ai_content = __esm({
       "water"
     ];
     VALID_SHAPES = ["sphere", "torus", "cone", "cylinder", "box", "ring"];
+    CLEAR_TASK_RULES = `\u041F\u0440\u0430\u0432\u0438\u043B\u0430 \u043F\u043E\u043D\u044F\u0442\u043D\u043E\u0433\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u044F:
+1) \u041A\u0430\u0436\u0434\u043E\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u0435 \u0441\u0430\u043C\u043E\u0434\u043E\u0441\u0442\u0430\u0442\u043E\u0447\u043D\u043E: \u0432\u0441\u0435 \u0447\u0438\u0441\u043B\u0430, \u0435\u0434\u0438\u043D\u0438\u0446\u044B \u0438\u0437\u043C\u0435\u0440\u0435\u043D\u0438\u044F \u0438 \u0443\u0441\u043B\u043E\u0432\u0438\u044F \u043D\u0430\u043F\u0438\u0441\u0430\u043D\u044B \u0432 \u0442\u0435\u043A\u0441\u0442\u0435. \u041D\u0435\u043B\u044C\u0437\u044F \u0441\u0441\u044B\u043B\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u0440\u0438\u0441\u0443\u043D\u043E\u043A, \u0433\u0440\u0430\u0444\u0438\u043A, \u0442\u0430\u0431\u043B\u0438\u0446\u0443, \u0443\u0447\u0435\u0431\u043D\u0438\u043A \u0438\u043B\u0438 \xAB\u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0443\u044E \u0437\u0430\u0434\u0430\u0447\u0443\xBB.
+2) \u041E\u0434\u043D\u043E \u0437\u0430\u0434\u0430\u043D\u0438\u0435 \u2014 \u043E\u0434\u043D\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435. \u0412 \u043A\u043E\u043D\u0446\u0435 \u043F\u0440\u044F\u043C\u043E\u0439 \u0432\u043E\u043F\u0440\u043E\u0441: \u0447\u0442\u043E \u043D\u0430\u0439\u0442\u0438 \u0438\u043B\u0438 \u0447\u0442\u043E \u0432\u044B\u0431\u0440\u0430\u0442\u044C (\xAB\u041D\u0430\u0439\u0434\u0438\u0442\u0435 \u2026\xBB, \xAB\u041A\u0430\u043A\u043E\u0435 \u2026?\xBB).
+3) \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0435 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u044F (\u0434\u043E 20 \u0441\u043B\u043E\u0432), \u0441\u043B\u043E\u0432\u0430, \u043F\u043E\u043D\u044F\u0442\u043D\u044B\u0435 \u0443\u0447\u0435\u043D\u0438\u043A\u0443 7 \u043A\u043B\u0430\u0441\u0441\u0430; \u0442\u0435\u0440\u043C\u0438\u043D \u0438\u0437 \u0442\u0435\u043C\u044B \u2014 \u0442\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u043B\u0438 \u043E\u043D \u043E\u0431\u044A\u044F\u0441\u043D\u0451\u043D \u0432 \u0442\u0435\u043C\u0435.
+4) \u0414\u0430\u043D\u043D\u044B\u0435 \u0440\u0435\u0430\u043B\u0438\u0441\u0442\u0438\u0447\u043D\u044B\u0435, \u043E\u0442\u0432\u0435\u0442 \u043E\u0434\u043D\u043E\u0437\u043D\u0430\u0447\u043D\u044B\u0439 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u043C\u044B\u0439; \u0447\u0438\u0441\u043B\u0430 \u0443\u0434\u043E\u0431\u043D\u044B\u0435 \u0434\u043B\u044F \u0441\u0447\u0451\u0442\u0430 \u0431\u0435\u0437 \u043A\u0430\u043B\u044C\u043A\u0443\u043B\u044F\u0442\u043E\u0440\u0430.
+5) \u0411\u0435\u0437 \u0444\u043E\u0440\u043C\u0443\u043B\u0438\u0440\u043E\u0432\u043E\u043A \xAB\u0447\u0442\u043E \u041D\u0415\u2026\xBB, \xAB\u0432\u0441\u0435 \u043E\u0442\u0432\u0435\u0442\u044B \u0432\u0435\u0440\u043D\u044B\xBB, \xAB\u043D\u0435\u0442 \u0432\u0435\u0440\u043D\u043E\u0433\u043E \u043E\u0442\u0432\u0435\u0442\u0430\xBB, \u0431\u0435\u0437 \u0434\u0432\u0443\u0441\u043C\u044B\u0441\u043B\u0435\u043D\u043D\u043E\u0441\u0442\u0438.
+6) \u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0435 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043F\u0440\u0430\u0432\u0434\u043E\u043F\u043E\u0434\u043E\u0431\u043D\u044B (\u0442\u0438\u043F\u0438\u0447\u043D\u044B\u0435 \u043E\u0448\u0438\u0431\u043A\u0438), \u043D\u043E \u0442\u043E\u0447\u043D\u043E \u043D\u0435\u0432\u0435\u0440\u043D\u044B; \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u044B \u043E\u0434\u043D\u043E\u0439 \u0434\u043B\u0438\u043D\u044B \u0438 \u0444\u043E\u0440\u043C\u044B.
+7) \u041D\u0435 \u0441\u0442\u0430\u0432\u044C \u043E\u0442\u0432\u0435\u0442 \u0438\u043B\u0438 \u0435\u0433\u043E \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0443 \u0432 \u0441\u0430\u043C\u043E \u0443\u0441\u043B\u043E\u0432\u0438\u0435.`;
     tri = (value) => value === "yes" || value === "no" ? value : "unsure";
   }
 });
@@ -54748,7 +54770,7 @@ var schools_default = router5;
 init_drizzle_orm();
 var import_express8 = __toESM(require_express2(), 1);
 init_src();
-import { randomBytes as randomBytes6, scrypt as scryptCallback3 } from "node:crypto";
+import { createHash as createHash4, randomBytes as randomBytes6, randomInt, scrypt as scryptCallback3, timingSafeEqual as timingSafeEqual4 } from "node:crypto";
 
 // src/lib/bot-commands.ts
 init_drizzle_orm();
@@ -56240,6 +56262,75 @@ router8.post("/me/password", requireAuthenticatedRole(...everyRole4), passwordLi
   const closed = await db.delete(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.tokenHash, currentHash))).returning({ id: sessionsTable.id });
   await writeAudit(null, viewer.id, "password-change", viewer.id, { otherSessionsClosed: closed.length });
   res.json({ changed: true, otherSessionsClosed: closed.length });
+});
+var forgotLimiter = createRateLimiter(8, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-reset");
+var resetCodeHash = (code, userId) => createHash4("sha256").update(`${userId}:${code}`).digest("hex");
+var RESET_SENT = { sent: true };
+router8.post("/auth/password-reset/request", forgotLimiter, async (req, res) => {
+  const login = isRecord7(req.body) && typeof req.body.login === "string" ? normalizeLogin(req.body.login.trim()).slice(0, 64) : "";
+  if (!login) {
+    res.status(400).json({ error: "Enter a valid login and password." });
+    return;
+  }
+  if (!telegramBotConfigured()) {
+    res.status(503).json({ error: "Telegram notifications are not configured." });
+    return;
+  }
+  const [account] = await db.select({ id: usersTable.id, role: usersTable.role, status: usersTable.status, chatId: telegramNotifyTable.chatId, lang: telegramNotifyTable.lang }).from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id)).where(eq(usersTable.loginNormalized, login)).limit(1);
+  if (!account?.chatId || account.role === "platform_superadmin" || account.status && account.status !== "active") {
+    res.json(RESET_SENT);
+    return;
+  }
+  const code = String(randomInt(0, 1e6)).padStart(6, "0");
+  await db.update(telegramNotifyTable).set({ resetCodeHash: resetCodeHash(code, account.id), resetExpiresAt: new Date(Date.now() + 10 * 60 * 1e3), resetTries: 0 }).where(eq(telegramNotifyTable.userId, account.id));
+  const L = account.lang === "uz" || account.lang === "en" ? account.lang : "ru";
+  const text2 = L === "uz" ? `\u{1F511} EDUVERSE parolini tiklash kodi: <b>${code}</b>
+10 daqiqa ishlaydi. Agar siz so\u2018ramagan bo\u2018lsangiz \u2014 hech kimga bermang.` : L === "en" ? `\u{1F511} EDUVERSE password reset code: <b>${code}</b>
+Valid for 10 minutes. If you did not ask for it, do not share it.` : `\u{1F511} \u041A\u043E\u0434 \u0434\u043B\u044F \u043D\u043E\u0432\u043E\u0433\u043E \u043F\u0430\u0440\u043E\u043B\u044F EDUVERSE: <b>${code}</b>
+\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 10 \u043C\u0438\u043D\u0443\u0442. \u0415\u0441\u043B\u0438 \u0432\u044B \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u043B\u0438 \u2014 \u043D\u0438\u043A\u043E\u043C\u0443 \u043D\u0435 \u0441\u043E\u043E\u0431\u0449\u0430\u0439\u0442\u0435.`;
+  const sent = await sendTelegramMessage(account.chatId, text2);
+  if (!sent.ok) logger.warn({ errorCode: sent.errorCode }, "password reset code not delivered");
+  res.json(RESET_SENT);
+});
+router8.post("/auth/password-reset/confirm", forgotLimiter, async (req, res) => {
+  const body = isRecord7(req.body) ? req.body : {};
+  const login = typeof body.login === "string" ? normalizeLogin(body.login.trim()).slice(0, 64) : "";
+  const code = typeof body.code === "string" ? body.code.replace(/\D/g, "") : "";
+  const next = typeof body.password === "string" ? body.password : "";
+  if (!login || code.length !== 6) {
+    res.status(400).json({ error: "That code is not valid." });
+    return;
+  }
+  if (next.length < 10 || next.length > 128) {
+    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
+    return;
+  }
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
+    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
+    return;
+  }
+  const [account] = await db.select({ id: usersTable.id, login: usersTable.login, role: usersTable.role, hash: telegramNotifyTable.resetCodeHash, until: telegramNotifyTable.resetExpiresAt, tries: telegramNotifyTable.resetTries }).from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id)).where(eq(usersTable.loginNormalized, login)).limit(1);
+  const fresh = account?.hash && account.until && account.until.getTime() > Date.now() && account.tries < 5;
+  if (!account || !fresh || account.role === "platform_superadmin") {
+    res.status(400).json({ error: "The confirmation code is invalid or expired." });
+    return;
+  }
+  const given = Buffer.from(resetCodeHash(code, account.id));
+  const stored = Buffer.from(account.hash);
+  if (given.length !== stored.length || !timingSafeEqual4(given, stored)) {
+    await db.update(telegramNotifyTable).set({ resetTries: account.tries + 1 }).where(eq(telegramNotifyTable.userId, account.id));
+    res.status(400).json({ error: "The confirmation code is invalid or expired." });
+    return;
+  }
+  if (next.toLowerCase() === account.login.toLowerCase()) {
+    res.status(400).json({ error: "The password must not equal the login." });
+    return;
+  }
+  await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, account.id));
+  await db.update(telegramNotifyTable).set({ resetCodeHash: null, resetExpiresAt: null, resetTries: 0 }).where(eq(telegramNotifyTable.userId, account.id));
+  const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, account.id)).returning({ id: sessionsTable.id });
+  await writeAudit(null, account.id, "password-reset-telegram", account.id, { sessionsClosed: closed.length });
+  res.json({ changed: true });
 });
 var AVATAR_MAX = 80 * 1024;
 var AVATAR_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/;

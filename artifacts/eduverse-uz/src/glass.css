@@ -519,3 +519,10 @@ html[data-theme="night"] .live-lesson-banner { background: rgba(30, 60, 45, .9);
 /* Owner: test mode switch on the school plan panel */
 .plan-anytime{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px 12px;border-radius:14px;background:var(--lg-bg, rgba(255,255,255,.5));box-shadow:inset 0 0 0 1px var(--lg-rim, rgba(255,255,255,.6));cursor:pointer;font-size:13px;line-height:1.4}
 .plan-anytime input{flex:none;margin-top:2px}
+
+/* Parents: one button to get marks and attendance in Telegram */
+.tg-onetap{display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:14px;border-radius:20px;background:linear-gradient(135deg,rgba(42,171,238,.12),rgba(42,171,238,.04)),var(--lg-bg,rgba(255,255,255,.6));box-shadow:inset 0 0 0 1px rgba(42,171,238,.25);animation:ev-glass-pop .5s var(--spring,ease) both}
+.tg-onetap>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.tg-onetap small{color:#5f6b75;font-size:12.5px;line-height:1.35}
+.tg-onetap-icon{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;background:#2aabee}
+@media (max-width:520px){.tg-onetap{flex-wrap:wrap}.tg-onetap .btn{width:100%}}
