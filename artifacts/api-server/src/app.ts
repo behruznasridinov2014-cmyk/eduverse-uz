@@ -139,8 +139,17 @@ const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   }
 
   logger.error({ err: error }, "Unhandled API request error");
+  // A lost database connection is temporary: say "busy", the next request reconnects.
+  const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code?: unknown }).code) : "";
+  if (/^(ECONNREFUSED|ECONNRESET|ETIMEDOUT|EPIPE|57P01|57P03|08000|08003|08006)$/.test(code) || /terminat|Connection|timeout/i.test(error instanceof Error ? error.message : "")) {
+    res.status(503).json({ error: "The check is not available right now. Try again in a minute." });
+    return;
+  }
   res.status(500).json({ error: "Internal server error." });
 };
+
+// One failed promise or a dropped database connection must never stop the whole server.
+process.on("unhandledRejection", (reason) => { logger.error({ err: reason }, "unhandled promise rejection"); });
 
 app.use(errorHandler);
 

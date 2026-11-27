@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { BarChart3, CheckCircle2, Eye, Image as ImageIcon, MonitorPlay, Plus, Radio, RefreshCw, Save, Square, Trash2, Type, Video, Box, HelpCircle, Users } from 'lucide-react';
 import type { Language } from './school-data';
@@ -118,9 +119,9 @@ export function BoardControls({ classId, topic, stage, language, live, content }
           <OnlineAndAsks classId={classId} state={state} language={language} onChange={live.refresh} />
           {!state.question && questions.length > 0 && (
             <div className="ls-board-launch">
-              <select className="input" value={pick} onChange={(event) => setPick(Number(event.target.value))} aria-label={t(language, 'Savol', 'Вопрос', 'Question')}>
+              <Select className="input" value={pick} onChange={(event) => setPick(Number(event.target.value))} aria-label={t(language, 'Savol', 'Вопрос', 'Question')}>
                 {questions.map((item, index) => <option key={item.key} value={index}>{item.prompt.slice(0, 90)}</option>)}
-              </select>
+              </Select>
               <button type="button" className="btn primary small" disabled={busy} onClick={() => { const item = questions[pick]!; void put({ question: { id: `${item.key}:${Date.now().toString(36)}`, prompt: item.prompt, choices: item.choices, correct: item.correct } }); }}>
                 <HelpCircle size={13} /> {t(language, 'Savol berish', 'Задать вопрос классу', 'Ask the class')}
               </button>

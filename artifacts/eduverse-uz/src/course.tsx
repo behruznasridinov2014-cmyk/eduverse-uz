@@ -1,4 +1,5 @@
 import './scenes.css';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { SceneText } from './scene-text';
 import { createPortal } from 'react-dom';
@@ -489,7 +490,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
             <section className="panel course-mark">
               <GraduationCap size={18} />
               <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Mavzu dars tugagach o‘zi belgilanadi.', 'Тема отметится сама после урока.', 'Marked by itself after the lesson.')}</span>
-              {!lesson && <input className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
+              {!lesson && <DateField className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
               {marks.has(topic.key)
                 ? <button type="button" className="btn small" disabled={busy} onClick={() => void mark(topic, false)}>{t(language, 'Belgini olib tashlash', 'Снять отметку', 'Remove mark')}</button>
                 : <button type="button" className="btn small primary" disabled={busy} onClick={() => void mark(topic, true)}><CheckCircle2 size={14} /> {t(language, 'Darsda o‘tdik', 'Прошли на уроке', 'Covered in class')}</button>}

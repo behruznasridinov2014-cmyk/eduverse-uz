@@ -1,4 +1,5 @@
 import './lesson-stages.css';
+import { Select } from './ui/select';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createAssignment, customFetch, submitAssignment, type User } from '@workspace/api-client-react';
 import {
@@ -454,9 +455,9 @@ function VisualStage({ topic, book, language, save, result, ask, content }: Stag
       </div>
       <label className="ls-other-3d">
         <span className="muted">{t(language, 'Boshqa mavzu', 'Другая тема', 'Another topic')}</span>
-        <select className="input" value={otherKey} onChange={(event) => setOtherKey(event.target.value)}>
+        <Select className="input" value={otherKey} onChange={(event) => setOtherKey(event.target.value)}>
           {book.topics.map((item) => <option key={item.key} value={item.key}>{item.key === topic.key ? `★ ${item.title}` : item.title}</option>)}
-        </select>
+        </Select>
       </label>
       <div className="ls-visual-actions">
         <span className="muted">{t(language, 'Barmoq bilan aylantiring', 'Крутите пальцем', 'Rotate with a finger')}</span>

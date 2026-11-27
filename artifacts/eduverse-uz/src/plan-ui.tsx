@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { AlarmClock, BadgeCheck, Lock, School, Users } from 'lucide-react';
@@ -83,7 +84,7 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
           <option value="pilot">{t(language, 'Sinov (bepul Pro)', 'Пилот (Pro бесплатно до даты)', 'Pilot')}</option>
           <option value="pro">Pro</option>
         </Select>
-        <input className="input" type="date" value={until} onChange={(event) => setUntil(event.target.value)} aria-label={t(language, 'Gacha', 'До', 'Until')} />
+        <DateField className="input" type="date" value={until} onChange={(event) => setUntil(event.target.value)} aria-label={t(language, 'Gacha', 'До', 'Until')} />
         <button type="button" className="btn primary" onClick={() => void save()}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
       </div>
       {message && <div className="notice success">{message}</div>}
@@ -232,9 +233,9 @@ export function SchoolBillingPanel({ schoolId, language }: { schoolId: string; l
           </div>
           <div className="billing-row">
             <label>{t(language, 'Oyiga summa', 'Сумма в месяц', 'Sum per month')}<input className="input" inputMode="numeric" value={fee} onChange={(event) => setFee(digits(event.target.value))} placeholder={currency === 'USD' ? '1500' : '1 500 000'} /></label>
-            <label>{t(language, 'Valyuta', 'Валюта', 'Currency')}<select className="input" value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="UZS">{t(language, 'so‘m', 'сум', 'sum')}</option><option value="USD">$</option></select></label>
-            <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<input className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} /></label>
-            <label>{t(language, 'To‘lov kuni', 'День оплаты', 'Payment day')}<select className="input" value={day} onChange={(event) => setDay(event.target.value)}>{Array.from({ length: 28 }, (_, index) => <option key={index} value={index + 1}>{index + 1}</option>)}</select></label>
+            <label>{t(language, 'Valyuta', 'Валюта', 'Currency')}<Select className="input" value={currency} onChange={(event) => setCurrency(event.target.value)}><option value="UZS">{t(language, 'so‘m', 'сум', 'sum')}</option><option value="USD">$</option></Select></label>
+            <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<DateField className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} /></label>
+            <label>{t(language, 'To‘lov kuni', 'День оплаты', 'Payment day')}<Select className="input" value={day} onChange={(event) => setDay(event.target.value)}>{Array.from({ length: 28 }, (_, index) => <option key={index} value={index + 1}>{index + 1}</option>)}</Select></label>
           </div>
           <div className="billing-row">
             <label>{t(language, 'Kimga qo‘ng‘iroq qilish', 'Кому звонить', 'Who to call')}<input className="input" value={contact} maxLength={80} onChange={(event) => setContact(event.target.value)} placeholder={t(language, 'Direktor', 'Директор', 'Director')} /></label>
@@ -244,7 +245,7 @@ export function SchoolBillingPanel({ schoolId, language }: { schoolId: string; l
           {data.monthlyFee > 0 && (
             <div className="billing-row">
               <label>{t(language, 'Naqd olindi', 'Получено наличными', 'Cash received')}<input className="input" inputMode="numeric" value={amount} onChange={(event) => setAmount(digits(event.target.value))} /></label>
-              <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<input className="input" type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label>
+              <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<DateField className="input" type="month" value={month} onChange={(event) => setMonth(event.target.value)} /></label>
               <button type="button" className="btn primary" disabled={busy || !Number(amount)} onClick={() => void call('/payments', 'POST', { amount: Number(amount), month })}>{t(language, 'Qo‘shish', 'Записать оплату', 'Add payment')}</button>
             </div>
           )}

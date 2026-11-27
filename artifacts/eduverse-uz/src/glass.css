@@ -386,3 +386,94 @@ html[data-theme="night"] .pdfv-ink { filter: brightness(0.9) sepia(0.08); }
 .pdfv-notes button { min-width: 30px; height: 26px; border-radius: 999px; border: 1px solid rgba(184, 149, 90, 0.3); background: rgba(255, 255, 255, 0.75); color: var(--text); font: 700 12px var(--font); cursor: pointer; }
 .pdfv-notes button.on { background: linear-gradient(135deg, #D2B26E, #B8955A); color: #fff; border-color: transparent; }
 html[data-theme="night"] .ink-tool, html[data-theme="night"] .pdfv-notes button { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.12); color: var(--text); }
+
+/* ---------- small tab rows with the sliding glass lens (LensRow) ---------- */
+.lens-row {
+  position: relative; display: inline-flex; flex-wrap: nowrap; align-items: stretch; gap: 2px; padding: 3px; max-width: 100%; overflow-x: auto; scrollbar-width: none;
+  border-radius: 999px; background: var(--lg-bg) !important; border: 1px solid var(--lg-rim) !important; box-shadow: var(--lg-shadow);
+  backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%);
+}
+.lens-row::-webkit-scrollbar { display: none; }
+.lens-row > button, .lens-row > a {
+  position: relative; z-index: 1; flex: none; border: 0 !important; background: transparent !important; box-shadow: none !important;
+  color: var(--tab-ink) !important; font: 600 13px var(--font); padding: 7px 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  transition: color .35s var(--ease), transform .45s var(--spring);
+}
+.lens-row > button:active:not(:disabled) { transform: scale(0.92); }
+.lens-row > button:disabled { opacity: .45; cursor: not-allowed; }
+.lens-row > [aria-selected="true"], .lens-row > [aria-pressed="true"], .lens-row > .on, .lens-row > .active { color: var(--tab-active) !important; }
+.lens-row.small > button { padding: 4px 10px; font-size: 12px; }
+.lens-row-lens {
+  position: absolute; z-index: 0; top: 3px; bottom: 3px; left: 0; border-radius: 999px; pointer-events: none;
+  background: var(--lens-bg); border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: inset 2px 3px 6px rgba(255, 255, 255, 0.9), inset -3px -3px 9px rgba(140, 165, 215, 0.32), 0 6px 14px -8px rgba(40, 52, 80, 0.45);
+  transition: transform .62s var(--spring), width .45s var(--ios);
+}
+.lens-row-lens::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px;
+  background: conic-gradient(from 90deg, #ffd3e6, #cfe6ff, #d3ffe6, #fff1bf, #ffd3e6);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: .8;
+}
+html[data-theme="night"] .lens-row-lens { border-color: rgba(255, 255, 255, 0.25); box-shadow: inset 1px 1px 3px rgba(255, 255, 255, 0.18), 0 6px 14px -8px rgba(0, 0, 0, 0.6); }
+
+/* ---------- EDUVERSE date / month / time picker (DateField) ---------- */
+.ev-date-pop {
+  position: fixed; z-index: 2000; width: 296px; max-width: calc(100vw - 24px); padding: 12px;
+  border-radius: 20px; background: var(--lg-bg), rgba(255, 251, 244, 0.95); border: 1px solid var(--lg-rim, rgba(255, 255, 255, 0.8));
+  box-shadow: 0 30px 60px -24px rgba(60, 50, 30, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(26px) saturate(190%); -webkit-backdrop-filter: blur(26px) saturate(190%);
+  transform-origin: top left; animation: ev-glass-pop .5s var(--spring) both;
+}
+.ev-date-pop.is-right { transform-origin: top right; }
+.ev-date-pop.is-up { transform-origin: bottom left; }
+.ev-date-pop.mode-time { width: 200px; }
+@keyframes ev-glass-pop { 0% { opacity: 0; transform: translateY(-8px) scale(.9); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.ev-date-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.ev-date-head b { font-size: 15px; }
+.ev-date-nav { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--lg-rim, rgba(184, 149, 90, .25)); background: rgba(255, 255, 255, .6); display: grid; place-items: center; cursor: pointer; color: var(--text); transition: transform .4s var(--spring), background .25s; }
+.ev-date-nav:active { transform: scale(.85); }
+.ev-date-days { animation: fade-in .25s var(--ease) both; }
+.ev-date-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.ev-date-grid.months { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ev-date-wd { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-3); padding: 2px 0 4px; }
+.ev-date-cell {
+  position: relative; min-height: 36px; border: 0; border-radius: 12px; background: transparent; color: var(--text); font: 600 13.5px var(--font); cursor: pointer;
+  transition: transform .4s var(--spring), background .25s var(--ease), color .25s var(--ease), box-shadow .25s var(--ease);
+}
+.ev-date-grid.months .ev-date-cell { min-height: 42px; }
+.ev-date-cell:hover:not(:disabled) { background: rgba(255, 255, 255, .7); }
+.ev-date-cell:active:not(:disabled) { transform: scale(.88); }
+.ev-date-cell.is-weekend { color: #b5544b; }
+.ev-date-cell.is-today { box-shadow: inset 0 0 0 1.5px var(--ev-primary, #b8955a); }
+.ev-date-cell.is-selected {
+  color: var(--tab-active, #7a5c26) !important; background: var(--lens-bg, #fff); border: 1px solid rgba(255, 255, 255, .95);
+  box-shadow: inset 2px 3px 6px rgba(255, 255, 255, .9), inset -3px -3px 9px rgba(140, 165, 215, .32), 0 6px 14px -8px rgba(40, 52, 80, .45);
+  animation: ev-cell-pick .5s var(--spring) both;
+}
+@keyframes ev-cell-pick { 0% { transform: scale(.8); } 100% { transform: none; } }
+.ev-date-cell:disabled { opacity: .3; cursor: not-allowed; }
+.ev-date-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.ev-date-foot > span { flex: 1; }
+.ev-date-link { border: 0; background: none; color: var(--ev-primary, #9a7434); font: 600 13px var(--font); cursor: pointer; padding: 6px 4px; }
+.ev-time { display: flex; align-items: stretch; justify-content: center; gap: 6px; }
+.ev-time.is-compact { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lg-rim, rgba(184, 149, 90, .2)); }
+.ev-time-col { display: grid; gap: 3px; width: 64px; max-height: 196px; overflow-y: auto; scrollbar-width: none; scroll-snap-type: y proximity; padding: 2px; }
+.ev-time.is-compact .ev-time-col { max-height: 132px; }
+.ev-time-col::-webkit-scrollbar { display: none; }
+.ev-time-col .ev-date-cell { scroll-snap-align: center; }
+.ev-time-colon { align-self: center; font-weight: 800; color: var(--text-3); }
+.ev-date .ev-select-trigger { font-variant-numeric: tabular-nums; }
+html[data-theme="night"] .ev-date-pop { background: rgba(20, 28, 48, 0.97); border-color: rgba(255, 255, 255, 0.12); }
+html[data-theme="night"] .ev-date-nav { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .14); }
+html[data-theme="night"] .ev-date-cell:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
+html[data-theme="night"] .ev-date-cell.is-selected { color: #EDC08C !important; background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .22); box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .6); }
+@media (prefers-reduced-motion: reduce) { .ev-date-pop, .ev-date-cell.is-selected, .ev-date-days { animation: none; } .lens-row-lens { transition: none; } }
+
+/* ---------- crash screen ---------- */
+.crash-screen { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg, #f7f2e8); }
+.crash-card { width: min(420px, 100%); display: grid; gap: 12px; justify-items: center; text-align: center; padding: 28px 22px; border-radius: 24px; background: var(--lg-bg, rgba(255, 255, 255, .85)); border: 1px solid var(--lg-rim, rgba(255, 255, 255, .9)); box-shadow: var(--lg-shadow, 0 20px 40px -20px rgba(0, 0, 0, .3)); animation: ev-glass-pop .5s var(--spring) both; }
+.crash-card h1 { margin: 0; font-size: 20px; }
+.crash-card p { margin: 0; color: var(--text-2); }
+.crash-card pre { max-width: 100%; overflow: auto; font-size: 11px; text-align: left; }
+.crash-card .btn { width: 100%; justify-content: center; }
+.crash-icon { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; color: var(--ev-primary, #b8955a); background: var(--lens-bg, #fff); box-shadow: inset 2px 3px 6px rgba(255, 255, 255, .9), 0 8px 18px -8px rgba(40, 52, 80, .45); }

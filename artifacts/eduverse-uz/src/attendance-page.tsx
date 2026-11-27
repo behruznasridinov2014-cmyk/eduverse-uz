@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
 import { useLocation } from 'wouter';
@@ -334,7 +335,7 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
         </div></>}
         {isManager && <div className="control">
           <label htmlFor="attendance-date">{copy.date}</label>
-          <input id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+          <DateField id="attendance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
         </div>}
         {editable && currentLesson && !lesson && <b className="attendance-now">{currentLesson.start}–{currentLesson.end} · {currentLesson.className} · {lessonSubjectName(currentLesson.subject, language)}</b>}
         {editable && <button type="button" className="btn" onClick={() => setRecords((current) => current.map((record) => ({ ...record, status: 'present' })))}>

@@ -22,3 +22,20 @@
 .content .eco-compose { align-items: flex-end; }
 .content .eco-compose textarea { flex: 1 1 auto; width: auto; min-width: 0; }
 .content .eco-compose .btn { flex: 0 0 auto; width: 46px; height: 42px; padding: 0; justify-content: center; }
+
+/* ---------- login: exactly one screen high, soft shadows ---------- */
+.auth-layout { box-shadow: 0 10px 30px -24px rgba(40, 52, 80, 0.35) !important; }
+.auth-submit, .auth-page-login .auth-submit { box-shadow: none !important; }
+.auth-brand-mark { box-shadow: none !important; }
+@media (min-width: 761px) and (min-height: 560px) {
+  .auth-page { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; box-sizing: border-box; padding-top: 14px; padding-bottom: 10px; }
+  .auth-page .auth-layout { flex: 1 1 auto; min-height: 0 !important; height: auto; margin: 14px auto 8px; }
+  .auth-page .auth-panel { overflow-y: auto; max-height: 100%; scrollbar-width: thin; }
+  .auth-page .auth-footer { flex: none; }
+}
+@media (max-width: 760px) {
+  .auth-page .auth-aside { display: none !important; }
+  .auth-page { min-height: 100dvh; }
+  .auth-page .auth-layout { margin-top: 10px; }
+  .auth-page .auth-panel { padding: 22px 18px 20px; }
+}

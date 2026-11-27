@@ -1,4 +1,7 @@
 import './ecosystem.css';
+import { LensRow } from './glass-nav';
+import { Select } from './ui/select';
+import { DateField } from './ui/date-field';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
 import {
@@ -159,9 +162,9 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
   return (
     <div className="eco">
       <div className="eco-toolbar">
-        <div className="eco-segment" role="tablist">
+        <LensRow>
           {periods.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={period === key} className={period === key ? 'on' : ''} onClick={() => setPeriod(key)}>{label}</button>)}
-        </div>
+        </LensRow>
         {fresh && <span className="muted">{shortDate(fresh.from)} — {shortDate(fresh.to)}</span>}
         <div className="row eco-actions">
           <button type="button" className="btn small" onClick={reload} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
@@ -504,7 +507,7 @@ export function ParentWeekPanel({ language, onOpen }: { language: Language; onOp
   return (
     <div className="eco">
       {children.data.children.length > 1 && (
-        <div className="eco-segment">{children.data.children.map((item, index) => <button key={item.id} type="button" className={index === active ? 'on' : ''} onClick={() => setActive(index)}>{item.name}</button>)}</div>
+        <LensRow>{children.data.children.map((item, index) => <button key={item.id} type="button" className={index === active ? 'on' : ''} onClick={() => setActive(index)}>{item.name}</button>)}</LensRow>
       )}
       <Section icon={<CalendarCheck2 size={16} />} title={children.data.children.length > 1 ? t(language, `Bu hafta · ${child.name}`, `Эта неделя · ${child.name}`, `This week · ${child.name}`) : t(language, 'Bu hafta', 'Эта неделя', 'This week')} actions={<button type="button" className="btn small" onClick={() => onOpen('/messages')}><MessageCircle size={14} /> {t(language, 'O‘qituvchiga yozish', 'Написать учителю', 'Write to a teacher')}</button>}>
         {report.error ? <ErrorNote error={report.error} language={language} /> : !r ? <LoadingBlock language={language} /> : <>
@@ -583,7 +586,7 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
   return (
     <div className="eco">
       <div className="eco-toolbar">
-        <label className="eco-month-label">{t(language, 'Oy', 'Месяц', 'Month')} <input className="eco-month" type="month" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label>
+        <label className="eco-month-label">{t(language, 'Oy', 'Месяц', 'Month')} <DateField className="eco-month" type="month" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label>
         <div className="row eco-actions">
           <button type="button" className="btn small" onClick={reload}><RefreshCw size={14} /></button>
           <button type="button" className="btn small" disabled={!data} onClick={() => data && downloadCsv(`eduverse-oplata-${data.month}.csv`, [
@@ -601,9 +604,9 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
           <Stat icon={<Users size={18} />} label={t(language, 'To‘lov belgilanmagan', 'Без тарифа', 'No fee set')} value={String(data.totals.withoutPlan)} tone={data.totals.withoutPlan ? 'warn' : ''} />
         </div>
         <Section icon={<Users size={16} />} title={t(language, 'O‘quvchilar', 'Ученики', 'Pupils')} actions={<>
-          <div className="eco-segment small">
+          <LensRow className="small">
             {([['all', t(language, 'Hammasi', 'Все', 'All')], ['debt', t(language, 'Qarzdorlar', 'Должники', 'Debtors')], ['noplan', t(language, 'Belgilanmagan', 'Без тарифа', 'No fee')]] as const).map(([key, label]) => <button key={key} type="button" className={filter === key ? 'on' : ''} onClick={() => setFilter(key)}>{label}</button>)}
-          </div>
+          </LensRow>
           <div className="eco-search small"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'Qidirish', 'Поиск', 'Search')} /></div>
         </>}>
           {students.length === 0 ? <p className="muted">{t(language, 'Hech kim topilmadi.', 'Никого не найдено.', 'Nobody found.')}</p> : (
@@ -695,7 +698,7 @@ function PlanDialog({ schoolId, student, month, language, onClose, onSaved }: { 
       <form className="eco-form" onSubmit={save}>
         <label>{t(language, 'Oylik to‘lov, so‘m', 'Оплата в месяц, сум', 'Monthly fee, sum')}<input className="input" inputMode="numeric" value={fee} onChange={(event) => setFee(event.target.value.replace(/[^\d\s]/g, ''))} required /></label>
         <label>{t(language, 'Chegirma, %', 'Скидка, %', 'Discount, %')}<input className="input" type="number" min={0} max={100} value={discount} onChange={(event) => setDiscount(event.target.value)} /></label>
-        <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<input className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} required /></label>
+        <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<DateField className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} required /></label>
         <label>{t(language, 'Izoh (masalan, ikkinchi farzand)', 'Примечание (например, второй ребёнок)', 'Note (e.g. second child)')}<input className="input" value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} /></label>
         <p className="muted">{t(language, 'Oyiga to‘lanadi', 'К оплате в месяц', 'To pay monthly')}: <b>{sum(due)}</b></p>
         {error ? <ErrorNote error={error} language={language} /> : null}
@@ -728,13 +731,13 @@ function PayDialog({ schoolId, school, student, month, language, onClose, onSave
     <Dialog title={`${t(language, 'To‘lov', 'Оплата', 'Payment')} · ${student.name}`} onClose={onClose}>
       <form className="eco-form" onSubmit={save}>
         <label>{t(language, 'Summa, so‘m', 'Сумма, сум', 'Amount, sum')}<input className="input" inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d\s]/g, ''))} required /></label>
-        <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<input className="input" type="month" value={forMonth} onChange={(event) => setForMonth(event.target.value)} required /></label>
+        <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<DateField className="input" type="month" value={forMonth} onChange={(event) => setForMonth(event.target.value)} required /></label>
         <label>{t(language, 'Usul', 'Способ', 'Method')}
-          <select className="input" value={method} onChange={(event) => setMethod(event.target.value)}>
+          <Select className="input" value={method} onChange={(event) => setMethod(event.target.value)}>
             {Object.entries(METHOD).map(([key, label]) => <option key={key} value={key}>{t(language, ...label)}</option>)}
-          </select>
+          </Select>
         </label>
-        <label>{t(language, 'Sana', 'Дата оплаты', 'Paid on')}<input className="input" type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} /></label>
+        <label>{t(language, 'Sana', 'Дата оплаты', 'Paid on')}<DateField className="input" type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} /></label>
         <label>{t(language, 'Izoh', 'Примечание', 'Note')}<input className="input" value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} /></label>
         <label className="eco-check"><input type="checkbox" checked={printAfter} onChange={(event) => setPrintAfter(event.target.checked)} /> {t(language, 'Kvitansiyani chop etish', 'Распечатать квитанцию', 'Print the receipt')}</label>
         {student.debt > 0 && <p className="muted">{t(language, 'Hozirgi qarz', 'Текущий долг', 'Current debt')}: <b>{sum(student.debt)}</b></p>}
@@ -800,29 +803,29 @@ export function TimetableChangesPage({ schoolId, language }: { schoolId: string;
         <div className="eco-grid">
           <Section icon={<CalendarClock size={16} />} title={t(language, 'Yangi o‘zgarish', 'Новое изменение', 'New change')}>
             <form className="eco-form" onSubmit={save}>
-              <label>{t(language, 'Kun', 'День', 'Day')}<input className="input" type="date" min={todayText()} value={date} onChange={(event) => { setDate(event.target.value); setPeriod(0); }} /></label>
+              <label>{t(language, 'Kun', 'День', 'Day')}<DateField className="input" type="date" min={todayText()} value={date} onChange={(event) => { setDate(event.target.value); setPeriod(0); }} /></label>
               <label>{t(language, 'Sinf', 'Класс', 'Class')}
-                <select className="input" value={classId} onChange={(event) => { setClassId(event.target.value); setPeriod(0); }}>
+                <Select className="input" value={classId} onChange={(event) => { setClassId(event.target.value); setPeriod(0); }}>
                   <option value="">—</option>
                   {tt.classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
+                </Select>
               </label>
               <label>{t(language, 'Dars', 'Урок', 'Lesson')}
-                <select className="input" value={period} disabled={!classId} onChange={(event) => setPeriod(Number(event.target.value))}>
+                <Select className="input" value={period} disabled={!classId} onChange={(event) => setPeriod(Number(event.target.value))}>
                   <option value={0}>—</option>
                   {daySlots.map((item) => <option key={item.id} value={item.period}>{item.period}. {tt.bells[item.period - 1]?.start ?? ''} · {subj(item.subject, language)} · {teacherOf(item.teacherId)}</option>)}
-                </select>
+                </Select>
               </label>
               {classId && weekday !== 7 && daySlots.length === 0 && <p className="muted">{t(language, 'Bu kuni bu sinfda dars yo‘q.', 'В этот день у класса нет уроков.', 'No lessons for this class that day.')}</p>}
-              <div className="eco-segment">
+              <LensRow>
                 {(['substitute', 'cancelled', 'room'] as const).map((key) => <button key={key} type="button" className={kind === key ? 'on' : ''} onClick={() => setKind(key)}>{t(language, ...CHANGE_TEXT[key]!)}</button>)}
-              </div>
+              </LensRow>
               {kind === 'substitute' && (
                 <label>{t(language, 'Kim almashtiradi', 'Кто заменяет', 'Substitute teacher')}
-                  <select className="input" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
+                  <Select className="input" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
                     <option value="">—</option>
                     {tt.teachers.filter((item) => item.id !== slot?.teacherId).map((item) => <option key={item.id} value={item.id}>{item.name}{period && busyTeachers.has(item.id) ? ` · ${t(language, 'band', 'занят', 'busy')}` : ` · ${t(language, 'bo‘sh', 'свободен', 'free')}`}</option>)}
-                  </select>
+                  </Select>
                 </label>
               )}
               {kind === 'room' && <label>{t(language, 'Xona', 'Кабинет', 'Room')}<input className="input" value={room} maxLength={40} onChange={(event) => setRoom(event.target.value)} required /></label>}

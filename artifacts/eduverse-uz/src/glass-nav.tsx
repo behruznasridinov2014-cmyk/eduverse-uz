@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { IconMoon, IconSun } from './nav-icons';
 
-export type GlassTab = { key: string; label: string; icon: ReactNode };
+export type GlassTab = { key: string; label: string; icon?: ReactNode };
 
 type Lens = { left: number; width: number };
 
@@ -141,7 +141,7 @@ export function GlassTabs({
           // Pointer taps are handled by the bar; the keyboard still uses click.
           onClick={(event) => { if (event.detail === 0) onSelect(item.key); }}
         >
-          <span className="glass-tab-icon">{item.icon}</span>
+          {item.icon ? <span className="glass-tab-icon">{item.icon}</span> : null}
           <span className="glass-tab-label">{item.label}</span>
         </button>
       ))}
@@ -260,5 +260,34 @@ export function GlassSwitch({ checked, onChange, label, hint, disabled = false }
         <span className="glass-switch-knob" />
       </button>
     </label>
+  );
+}
+
+/**
+ * A row of small tab buttons with the same sliding glass lens as GlassTabs.
+ * The buttons stay as they are; the lens finds the chosen one by
+ * aria-selected="true", aria-pressed="true", .on or .active and springs to it.
+ */
+export function LensRow({ className = '', children, role = 'tablist', ...rest }: { className?: string; children: ReactNode; role?: string; 'aria-label'?: string }) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [lens, setLens] = useState<Lens | null>(null);
+  const measure = useCallback(() => {
+    const row = rowRef.current;
+    const chosen = row?.querySelector<HTMLElement>(':scope > [aria-selected="true"], :scope > [aria-pressed="true"], :scope > .on, :scope > .active');
+    setLens(chosen ? { left: chosen.offsetLeft, width: chosen.offsetWidth } : null);
+  }, []);
+  useLayoutEffect(() => { measure(); });
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [measure]);
+  return (
+    <div ref={rowRef} className={`lens-row ${className}`} role={role} aria-label={rest['aria-label']}>
+      {lens && <span className="lens-row-lens" aria-hidden="true" style={{ width: lens.width, transform: `translateX(${lens.left}px)` }} />}
+      {children}
+    </div>
   );
 }

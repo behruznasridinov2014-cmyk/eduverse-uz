@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
@@ -860,9 +861,9 @@ export function ServerTeachingPanel({
               </div>
               <div className="control">
                 <label htmlFor="server-assignment-due">{t(language, 'Due date', 'Срок', 'Muddat')}</label>
-                <input
+                <DateField
                   id="server-assignment-due"
-                  type="datetime-local"
+                  type="datetime"
                   value={form.dueAt}
                   onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
                 />
