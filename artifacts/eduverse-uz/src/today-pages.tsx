@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from 'react';
 import type { User } from '@workspace/api-client-react';
-import { ArrowLeft, BookOpen, Box, CalendarCheck2, Lock, PartyPopper } from 'lucide-react';
+import { ArrowLeft, BookOpen, Box, CalendarCheck2, Lock, MonitorPlay, PartyPopper } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { CoursePage, CourseScene3D, openTextbook } from './course';
 import { AttendancePage } from './attendance-page';
 import {
-  LESSON_TABS, LessonDayHeader, nextBookLesson, openLessonPreview, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
+  LessonDayHeader, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
   lessonSubjectName, useLessonCourses, useToday, type TodayLesson,
 } from './today';
 import { LoadingBlock } from './ui/loading';
+import { Modal } from './ui/modal';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
@@ -34,6 +35,29 @@ function UpNext({ lessons, now, current, language }: { lessons: TodayLesson[]; n
 }
 
 /**
+ * The few buttons of a lesson, in one row: attendance (in a window), online lesson, 3D and the textbook.
+ * Everything else of the lesson is on the lesson itself.
+ */
+function LessonActions({ lesson, topic, user, language, onOpen }: { lesson: TodayLesson; topic?: ReturnType<typeof topicForLesson>; user: User; language: Language; onOpen: (path: string) => void }) {
+  const [attendance, setAttendance] = useState(false);
+  const staff = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
+  const book = bookForLesson(lesson);
+  return (
+    <>
+      {staff && <button type="button" className="btn small" onClick={() => setAttendance(true)}><CalendarCheck2 size={14} /> {t(language, 'Davomat', 'Давомат', 'Attendance')}</button>}
+      {user.role === 'teacher' && <button type="button" className="btn small" onClick={() => onOpen('/lesson')}><MonitorPlay size={14} /> {t(language, 'Onlayn dars', 'Онлайн-урок', 'Online lesson')}</button>}
+      {book && <button type="button" className="btn small" onClick={() => { rememberLessonFor3D(lesson); onOpen('/lab'); }}><Box size={14} /> 3D</button>}
+      {book && topic && <button type="button" className="btn small" onClick={() => openTextbook(book, topic, onOpen)}><BookOpen size={14} /> {t(language, 'Darslik', 'Учебник', 'Textbook')}</button>}
+      {attendance && (
+        <Modal wide title={`${t(language, 'Davomat', 'Давомат', 'Attendance')} · ${lesson.className} · ${lessonSubjectName(lesson.subject, language)}`} onClose={() => setAttendance(false)}>
+          <AttendancePage user={user} language={language} lesson={{ classId: lesson.classId, subject: lesson.subject }} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/**
  * "Lesson topic": only the lesson that is going on now (or the next one today).
  * When it ends, the next lesson takes its place; after the last lesson the day is closed.
  * A school with no timetable keeps the full textbook course.
@@ -54,9 +78,8 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
           <h2>{none
             ? (data?.weekday === 7 ? t(language, 'Bugun dam olish kuni', 'Сегодня выходной', 'Today is a day off') : t(language, 'Bugun dars yo‘q', 'Сегодня уроков нет', 'No lessons today'))
             : t(language, 'Bugungi darslar tugadi', 'На сегодня уроки закончились', 'Today’s lessons are over')}</h2>
-          <p>{t(language, 'Mavzu dars kuni, dars vaqtida ochiladi. Quyida keyingi darslar rejasi.', 'Тема открывается в день урока, во время урока. Ниже план следующих уроков.', 'A topic opens on the lesson day, during the lesson. Below is the plan of the next lessons.')}</p>
+          <p>{t(language, 'Dars boshlanganda bu yerda uning mavzusi ochiladi.', 'Когда начнётся урок, здесь откроется его тема.', 'When a lesson starts, its topic opens here.')}</p>
         </div>
-        {data && nextBookLesson(data) && <div className="lesson-day-actions" style={{ justifyContent: 'center' }}><button type="button" className="btn primary" onClick={() => openLessonPreview(nextBookLesson(data)!, onOpen)}><CalendarCheck2 size={15} /> {t(language, 'Dars qanday ko‘rinishini ko‘rish', 'Посмотреть, как будет выглядеть урок', 'See how the lesson will look')}</button></div>}
         {data && <UpcomingDays data={data} courses={courses} language={language} />}
       </section>
     );
@@ -66,12 +89,7 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
   return (
     <section className="today-course">
       <LessonDayHeader lesson={lesson} topic={topic} status={status} now={now} language={language} compact />
-      <div className="lesson-day-actions compact">
-        <button type="button" className="btn small" onClick={() => onOpen(`/today/${lesson.id}`)} title={t(language, 'Dars sahifasi', 'Страница урока', 'Lesson page')}><CalendarCheck2 size={15} /> {t(language, 'Dars', 'Урок', 'Lesson')}</button>
-        {bookForLesson(lesson) && <button type="button" className="btn small" onClick={() => { rememberLessonFor3D(lesson); onOpen('/lab'); }} title={t(language, '3D studiyada ochish', 'Открыть в 3D-студии', 'Open in the 3D studio')}><Box size={15} /> 3D</button>}
-        {bookForLesson(lesson) && topic && <button type="button" className="btn small" onClick={() => openTextbook(bookForLesson(lesson)!, topic, onOpen)}><BookOpen size={15} /> {t(language, 'Darslik', 'Учебник', 'Textbook')}</button>}
-      </div>
-      <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} />
+      <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} lessonActions={<LessonActions lesson={lesson} topic={topic} user={user} language={language} onOpen={onOpen} />} />
     </section>
   );
 }
@@ -80,9 +98,6 @@ export function TodayCoursePage({ user, school, language, onOpen }: { user: User
 export function LessonDayPage({ lessonId, user, school, language, onOpen }: { lessonId: string; user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const { data, failed, now } = useToday();
   const courses = useLessonCourses(data?.lessons, data?.next);
-  const canAttend = user.role === 'teacher' || user.role === 'school_director' || user.role === 'school_admin';
-  const tabs = LESSON_TABS.filter((tab) => (tab.id === 'attendance' ? canAttend : true));
-  const [tab, setTab] = useState<string>('topic');
   if (!data && !failed) return <Loading language={language} />;
   const lesson = data?.lessons.find((item) => item.id === lessonId);
   if (!data || !lesson) {
@@ -109,18 +124,7 @@ export function LessonDayPage({ lessonId, user, school, language, onOpen }: { le
     <section className="lesson-day">
       <button type="button" className="btn small lesson-day-back" onClick={() => onOpen('/dashboard')}><ArrowLeft size={14} /> {t(language, 'Bugungi darslar', 'Уроки на сегодня', 'Today’s lessons')}</button>
       <LessonDayHeader lesson={lesson} topic={topic} status={status} now={now} language={language} />
-      {tabs.length > 1 && <div className="lesson-day-tabs" role="tablist">
-        {tabs.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button type="button" role="tab" aria-selected={tab === item.id} key={item.id} className={`studio-tab ${tab === item.id ? 'active' : ''}`} onClick={() => setTab(item.id)}>
-              <Icon size={15} /> {t(language, item.label[0], item.label[1], item.label[2])}
-            </button>
-          );
-        })}
-      </div>}
-      {tab === 'topic' && <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} />}
-      {tab === 'attendance' && canAttend && <AttendancePage key={lesson.id} user={user} language={language} lesson={{ classId: lesson.classId, subject: lesson.subject }} />}
+      <CoursePage key={lesson.id} user={user} school={school} language={language} onOpen={onOpen} lesson={lesson} lessonActions={<LessonActions lesson={lesson} topic={topic} user={user} language={language} onOpen={onOpen} />} />
     </section>
   );
 }

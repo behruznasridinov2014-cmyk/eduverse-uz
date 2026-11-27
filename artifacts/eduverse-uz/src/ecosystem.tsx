@@ -1,4 +1,7 @@
 import './ecosystem.css';
+import { LensRow } from './glass-nav';
+import { Select } from './ui/select';
+import { DateField } from './ui/date-field';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { customFetch, type User } from '@workspace/api-client-react';
 import {
@@ -8,7 +11,8 @@ import {
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
 import { LoadingBlock } from './ui/loading';
-import { lessonSubjectName } from './today';
+import { lessonSubjectName, statusOf, topicForLesson, useLessonCourses, useToday, type TodayLesson as TodayLessonFull } from './today';
+import { Modal } from './ui/modal';
 
 /*
  * EDUVERSE as one school system: the director's analytics, the teacher's day,
@@ -159,9 +163,9 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
   return (
     <div className="eco">
       <div className="eco-toolbar">
-        <div className="eco-segment" role="tablist">
+        <LensRow>
           {periods.map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={period === key} className={period === key ? 'on' : ''} onClick={() => setPeriod(key)}>{label}</button>)}
-        </div>
+        </LensRow>
         {fresh && <span className="muted">{shortDate(fresh.from)} — {shortDate(fresh.to)}</span>}
         <div className="row eco-actions">
           <button type="button" className="btn small" onClick={reload} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
@@ -304,71 +308,88 @@ const CHANGE_TEXT: Record<string, [string, string, string]> = {
 };
 
 export function TeacherDayPage({ language, onOpen }: { language: Language; onOpen: (path: string) => void }) {
+  // Only what the teacher needs today: the lessons. A tap opens the details in a window.
+  const { data, failed, now } = useToday();
+  const courses = useLessonCourses(data?.lessons, data?.next);
   const work = useLoad<Workspace>('/api/me/workspace');
-  const today = useLoad<{ lessons: TodayLesson[]; now: string }>('/api/me/today');
-  const now = Date.now();
-  const lessons = today.data?.lessons ?? [];
+  const [picked, setPicked] = useState<TodayLessonFull | null>(null);
+  const lessons = data?.lessons ?? [];
+  const live = lessons.find((lesson) => statusOf(lesson, now) === 'current' && lesson.change?.kind !== 'cancelled')
+    ?? lessons.find((lesson) => statusOf(lesson, now) === 'upcoming' && lesson.change?.kind !== 'cancelled');
+  const topicOf = (lesson: TodayLessonFull) => (data ? topicForLesson(lesson, courses[lesson.classId], data.date) : undefined);
+  const room = (lesson: TodayLessonFull) => (lesson.room ? t(language, `${lesson.room}-xona`, `каб. ${lesson.room}`, `room ${lesson.room}`) : '');
+  const myChanges = work.data?.changes.filter((item) => item.mine) ?? [];
+  if (failed && !data) return <ErrorNote error={t(language, 'Aloqa yo‘q', 'Нет связи', 'No connection')} language={language} />;
+  if (!data) return <LoadingBlock language={language} />;
   return (
-    <div className="eco">
-      {work.error ? <ErrorNote error={work.error} language={language} /> : null}
-      <div className="eco-stats">
-        <Stat icon={<CalendarClock size={18} />} label={t(language, 'Bugungi darslar', 'Уроков сегодня', 'Lessons today')} value={today.data ? String(lessons.length) : '…'} />
-        <Stat icon={<NotebookPen size={18} />} label={t(language, 'Bo‘sh jurnallar', 'Незаполненные журналы', 'Empty journals')} value={work.data ? String(work.data.emptyJournals.length) : '…'} tone={work.data?.emptyJournals.length ? 'warn' : 'good'} />
-        <Stat icon={<AlertTriangle size={18} />} label={t(language, 'E’tibor kerak', 'Ученики в зоне внимания', 'Pupils to watch')} value={work.data ? String(work.data.attention.length) : '…'} tone={work.data?.attention.length ? 'bad' : 'good'} />
-        <Stat icon={<MessageCircle size={18} />} label={t(language, 'Ota-onalardan xabar', 'Сообщения родителей', 'Parent messages')} value={work.data ? String(work.data.unreadMessages) : '…'} tone={work.data?.unreadMessages ? 'warn' : ''} />
-      </div>
-      <div className="eco-grid">
-        <Section icon={<CalendarClock size={16} />} title={t(language, 'Bugun', 'Сегодня', 'Today')} actions={<button type="button" className="btn small" onClick={() => onOpen('/schedule')}>{t(language, 'Jadval', 'Расписание', 'Timetable')} <ArrowRight size={13} /></button>}>
-          {!today.data ? <LoadingBlock language={language} /> : lessons.length === 0 ? <p className="muted">{t(language, 'Bugun darslar yo‘q.', 'Сегодня уроков нет.', 'No lessons today.')}</p> : (
-            <ol className="eco-timeline">
-              {lessons.map((lesson) => {
-                const state = Date.parse(lesson.endsAt) < now ? 'past' : Date.parse(lesson.startsAt) <= now ? 'now' : 'next';
-                return (
-                  <li key={`${lesson.id}:${lesson.period}`} className={`${state} ${lesson.change?.kind === 'cancelled' ? 'cancelled' : ''}`}>
+    <div className="eco myday">
+      {live && (() => {
+        const status = statusOf(live, now);
+        const topic = topicOf(live);
+        return (
+          <button type="button" className={`myday-now ${status}`} onClick={() => setPicked(live)}>
+            <span className="myday-now-tag">{status === 'current' ? t(language, 'Hozir dars', 'Сейчас урок', 'Lesson now') : t(language, 'Keyingi dars', 'Следующий урок', 'Next lesson')} · {live.start}–{live.end}</span>
+            <b>{live.className} · {subj(live.subject, language)}</b>
+            <span className="myday-now-topic">{topic ? `${topic.code} ${topic.title}` : t(language, 'Mavzu darslik bo‘yicha', 'Тема по учебнику', 'Topic from the textbook')}</span>
+            <span className="muted">{room(live)}</span>
+          </button>
+        );
+      })()}
+      <Section icon={<CalendarClock size={16} />} title={t(language, 'Bugungi darslar', 'Уроки сегодня', 'Today’s lessons')} actions={<button type="button" className="btn small" onClick={() => onOpen('/schedule')}>{t(language, 'Jadval', 'Расписание', 'Timetable')} <ArrowRight size={13} /></button>}>
+        {lessons.length === 0 ? <p className="muted">{t(language, 'Bugun darslar yo‘q.', 'Сегодня уроков нет.', 'No lessons today.')}</p> : (
+          <ol className="eco-timeline myday-list">
+            {lessons.map((lesson) => {
+              const status = statusOf(lesson, now);
+              const state = status === 'done' ? 'past' : status === 'current' ? 'now' : 'next';
+              const topic = topicOf(lesson);
+              return (
+                <li key={`${lesson.id}:${lesson.period}`} className={`${state} ${lesson.change?.kind === 'cancelled' ? 'cancelled' : ''}`}>
+                  <button type="button" className="myday-row" onClick={() => setPicked(lesson)}>
                     <span className="eco-time">{lesson.start}<small>{lesson.end}</small></span>
-                    <div>
+                    <span className="myday-row-main">
                       <b>{lesson.className} · {subj(lesson.subject, language)}</b>
-                      <span className="muted eco-sub">{lesson.room ? t(language, `xona ${lesson.room}`, `каб. ${lesson.room}`, `room ${lesson.room}`) : ''}{lesson.change ? ` · ${t(language, ...(CHANGE_TEXT[lesson.change.kind] ?? CHANGE_TEXT.room!))}` : ''}</span>
-                    </div>
-                    {state === 'now' && lesson.change?.kind !== 'cancelled' && <button type="button" className="btn small primary" onClick={() => onOpen(`/today/${lesson.id}`)}>{t(language, 'Ochish', 'Открыть', 'Open')}</button>}
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </Section>
-      </div>
-      <div className="eco-grid">
-        <Section icon={<NotebookPen size={16} />} title={t(language, 'Jurnal to‘ldirilmagan', 'Журнал не заполнен', 'Journal not filled')} actions={<button type="button" className="btn small" onClick={() => onOpen('/attendance')}>{t(language, 'Davomat', 'Давомат', 'Attendance')} <ArrowRight size={13} /></button>}>
-          {!work.data ? <LoadingBlock language={language} /> : work.data.emptyJournals.length === 0 ? <p className="muted eco-empty"><CheckCircle2 size={15} /> {t(language, 'Barcha darslar belgilangan.', 'Все уроки отмечены.', 'All lessons are marked.')}</p> : (
-            <ul className="eco-list">
-              {work.data.emptyJournals.slice(0, 10).map((item) => (
-                <li key={`${item.date}:${item.classId}:${item.period}`}>
-                  <span className="eco-date">{shortDate(item.date)}</span>
-                  <span><b>{item.className}</b> · {subj(item.subject, language)}</span>
-                  <span className="muted">{t(language, `${item.period}-dars`, `${item.period}-й урок`, `lesson ${item.period}`)}</span>
+                      <span className="muted eco-sub">{[room(lesson), topic?.title, lesson.change ? t(language, ...(CHANGE_TEXT[lesson.change.kind] ?? CHANGE_TEXT.room!)) : ''].filter(Boolean).join(' · ')}</span>
+                    </span>
+                    <ArrowRight size={15} className="myday-row-go" />
+                  </button>
                 </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-        <Section icon={<AlertTriangle size={16} />} title={t(language, 'E’tibor kerak', 'Ученики в зоне внимания', 'Pupils to watch')}>
-          {!work.data ? <LoadingBlock language={language} /> : <AttentionList items={work.data.attention} language={language} empty={t(language, 'Hammasi yaxshi.', 'Все в порядке.', 'All good.')} />}
-        </Section>
-      </div>
-      {work.data && work.data.changes.length > 0 && (
-        <Section icon={<CalendarClock size={16} />} title={t(language, 'Jadval o‘zgarishlari', 'Изменения в расписании', 'Timetable changes')}>
+              );
+            })}
+          </ol>
+        )}
+      </Section>
+      {myChanges.length > 0 && (
+        <Section icon={<CalendarClock size={16} />} title={t(language, 'Siz almashtirasiz', 'Ваши замены', 'Your substitutions')}>
           <ul className="eco-list">
-            {work.data.changes.map((item) => (
+            {myChanges.map((item) => (
               <li key={item.id}>
                 <span className="eco-date">{shortDate(item.date)}</span>
-                <span><b>{item.className}</b> · {t(language, `${item.period}-dars`, `${item.period}-й урок`, `lesson ${item.period}`)} · {t(language, ...(CHANGE_TEXT[item.kind] ?? CHANGE_TEXT.room!))}{item.room ? ` ${item.room}` : ''}</span>
-                <span className="muted">{item.mine ? t(language, 'Siz almashtirasiz', 'Вы заменяете', 'You substitute') : item.note}</span>
+                <span><b>{item.className}</b> · {t(language, `${item.period}-dars`, `${item.period}-й урок`, `lesson ${item.period}`)}{item.room ? ` · ${item.room}` : ''}</span>
               </li>
             ))}
           </ul>
         </Section>
       )}
+      {picked && (() => {
+        const status = statusOf(picked, now);
+        const topic = topicOf(picked);
+        const cancelled = picked.change?.kind === 'cancelled';
+        return (
+          <Modal title={`${picked.className} · ${subj(picked.subject, language)}`} onClose={() => setPicked(null)}
+            footer={!cancelled && status !== 'done' ? <>
+              <button type="button" className="btn" onClick={() => onOpen('/attendance')}>{t(language, 'Davomat', 'Давомат', 'Attendance')}</button>
+              <button type="button" className="btn primary" onClick={() => onOpen(`/today/${picked.id}`)}>{status === 'current' ? t(language, 'Darsni boshlash', 'Начать урок', 'Start the lesson') : t(language, 'Darsni ochish', 'Открыть урок', 'Open the lesson')}</button>
+            </> : undefined}>
+            <dl className="myday-facts">
+              <div><dt>{t(language, 'Vaqt', 'Время', 'Time')}</dt><dd>{picked.start}–{picked.end} · {t(language, `${picked.period}-dars`, `${picked.period}-й урок`, `lesson ${picked.period}`)}</dd></div>
+              <div><dt>{t(language, 'Xona', 'Кабинет', 'Room')}</dt><dd>{picked.room || '—'}</dd></div>
+              <div><dt>{t(language, 'Mavzu', 'Тема', 'Topic')}</dt><dd>{topic ? <><b>{topic.code}</b> {topic.title}<small className="muted"> · {t(language, `${topic.page}-bet`, `стр. ${topic.page}`, `p. ${topic.page}`)}</small></> : t(language, 'Darslik bo‘yicha keyingi mavzu', 'Следующая тема по учебнику', 'Next textbook topic')}</dd></div>
+              {picked.change && <div><dt>{t(language, 'O‘zgarish', 'Изменение', 'Change')}</dt><dd>{t(language, ...(CHANGE_TEXT[picked.change.kind] ?? CHANGE_TEXT.room!))}{picked.change.note ? ` · ${picked.change.note}` : ''}</dd></div>}
+            </dl>
+            {topic?.essence && <p className="myday-essence">{topic.essence}</p>}
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
@@ -504,7 +525,7 @@ export function ParentWeekPanel({ language, onOpen }: { language: Language; onOp
   return (
     <div className="eco">
       {children.data.children.length > 1 && (
-        <div className="eco-segment">{children.data.children.map((item, index) => <button key={item.id} type="button" className={index === active ? 'on' : ''} onClick={() => setActive(index)}>{item.name}</button>)}</div>
+        <LensRow>{children.data.children.map((item, index) => <button key={item.id} type="button" className={index === active ? 'on' : ''} onClick={() => setActive(index)}>{item.name}</button>)}</LensRow>
       )}
       <Section icon={<CalendarCheck2 size={16} />} title={children.data.children.length > 1 ? t(language, `Bu hafta · ${child.name}`, `Эта неделя · ${child.name}`, `This week · ${child.name}`) : t(language, 'Bu hafta', 'Эта неделя', 'This week')} actions={<button type="button" className="btn small" onClick={() => onOpen('/messages')}><MessageCircle size={14} /> {t(language, 'O‘qituvchiga yozish', 'Написать учителю', 'Write to a teacher')}</button>}>
         {report.error ? <ErrorNote error={report.error} language={language} /> : !r ? <LoadingBlock language={language} /> : <>
@@ -583,7 +604,7 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
   return (
     <div className="eco">
       <div className="eco-toolbar">
-        <label className="eco-month-label">{t(language, 'Oy', 'Месяц', 'Month')} <input className="eco-month" type="month" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label>
+        <label className="eco-month-label">{t(language, 'Oy', 'Месяц', 'Month')} <DateField className="eco-month" type="month" value={month} onChange={(event) => event.target.value && setMonth(event.target.value)} /></label>
         <div className="row eco-actions">
           <button type="button" className="btn small" onClick={reload}><RefreshCw size={14} /></button>
           <button type="button" className="btn small" disabled={!data} onClick={() => data && downloadCsv(`eduverse-oplata-${data.month}.csv`, [
@@ -601,9 +622,9 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
           <Stat icon={<Users size={18} />} label={t(language, 'To‘lov belgilanmagan', 'Без тарифа', 'No fee set')} value={String(data.totals.withoutPlan)} tone={data.totals.withoutPlan ? 'warn' : ''} />
         </div>
         <Section icon={<Users size={16} />} title={t(language, 'O‘quvchilar', 'Ученики', 'Pupils')} actions={<>
-          <div className="eco-segment small">
+          <LensRow className="small">
             {([['all', t(language, 'Hammasi', 'Все', 'All')], ['debt', t(language, 'Qarzdorlar', 'Должники', 'Debtors')], ['noplan', t(language, 'Belgilanmagan', 'Без тарифа', 'No fee')]] as const).map(([key, label]) => <button key={key} type="button" className={filter === key ? 'on' : ''} onClick={() => setFilter(key)}>{label}</button>)}
-          </div>
+          </LensRow>
           <div className="eco-search small"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'Qidirish', 'Поиск', 'Search')} /></div>
         </>}>
           {students.length === 0 ? <p className="muted">{t(language, 'Hech kim topilmadi.', 'Никого не найдено.', 'Nobody found.')}</p> : (
@@ -695,7 +716,7 @@ function PlanDialog({ schoolId, student, month, language, onClose, onSaved }: { 
       <form className="eco-form" onSubmit={save}>
         <label>{t(language, 'Oylik to‘lov, so‘m', 'Оплата в месяц, сум', 'Monthly fee, sum')}<input className="input" inputMode="numeric" value={fee} onChange={(event) => setFee(event.target.value.replace(/[^\d\s]/g, ''))} required /></label>
         <label>{t(language, 'Chegirma, %', 'Скидка, %', 'Discount, %')}<input className="input" type="number" min={0} max={100} value={discount} onChange={(event) => setDiscount(event.target.value)} /></label>
-        <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<input className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} required /></label>
+        <label>{t(language, 'Qaysi oydan', 'С какого месяца', 'From month')}<DateField className="input" type="month" value={start} onChange={(event) => setStart(event.target.value)} required /></label>
         <label>{t(language, 'Izoh (masalan, ikkinchi farzand)', 'Примечание (например, второй ребёнок)', 'Note (e.g. second child)')}<input className="input" value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} /></label>
         <p className="muted">{t(language, 'Oyiga to‘lanadi', 'К оплате в месяц', 'To pay monthly')}: <b>{sum(due)}</b></p>
         {error ? <ErrorNote error={error} language={language} /> : null}
@@ -728,13 +749,13 @@ function PayDialog({ schoolId, school, student, month, language, onClose, onSave
     <Dialog title={`${t(language, 'To‘lov', 'Оплата', 'Payment')} · ${student.name}`} onClose={onClose}>
       <form className="eco-form" onSubmit={save}>
         <label>{t(language, 'Summa, so‘m', 'Сумма, сум', 'Amount, sum')}<input className="input" inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value.replace(/[^\d\s]/g, ''))} required /></label>
-        <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<input className="input" type="month" value={forMonth} onChange={(event) => setForMonth(event.target.value)} required /></label>
+        <label>{t(language, 'Qaysi oy uchun', 'За какой месяц', 'For month')}<DateField className="input" type="month" value={forMonth} onChange={(event) => setForMonth(event.target.value)} required /></label>
         <label>{t(language, 'Usul', 'Способ', 'Method')}
-          <select className="input" value={method} onChange={(event) => setMethod(event.target.value)}>
+          <Select className="input" value={method} onChange={(event) => setMethod(event.target.value)}>
             {Object.entries(METHOD).map(([key, label]) => <option key={key} value={key}>{t(language, ...label)}</option>)}
-          </select>
+          </Select>
         </label>
-        <label>{t(language, 'Sana', 'Дата оплаты', 'Paid on')}<input className="input" type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} /></label>
+        <label>{t(language, 'Sana', 'Дата оплаты', 'Paid on')}<DateField className="input" type="date" value={paidOn} onChange={(event) => setPaidOn(event.target.value)} /></label>
         <label>{t(language, 'Izoh', 'Примечание', 'Note')}<input className="input" value={note} maxLength={300} onChange={(event) => setNote(event.target.value)} /></label>
         <label className="eco-check"><input type="checkbox" checked={printAfter} onChange={(event) => setPrintAfter(event.target.checked)} /> {t(language, 'Kvitansiyani chop etish', 'Распечатать квитанцию', 'Print the receipt')}</label>
         {student.debt > 0 && <p className="muted">{t(language, 'Hozirgi qarz', 'Текущий долг', 'Current debt')}: <b>{sum(student.debt)}</b></p>}
@@ -800,29 +821,29 @@ export function TimetableChangesPage({ schoolId, language }: { schoolId: string;
         <div className="eco-grid">
           <Section icon={<CalendarClock size={16} />} title={t(language, 'Yangi o‘zgarish', 'Новое изменение', 'New change')}>
             <form className="eco-form" onSubmit={save}>
-              <label>{t(language, 'Kun', 'День', 'Day')}<input className="input" type="date" min={todayText()} value={date} onChange={(event) => { setDate(event.target.value); setPeriod(0); }} /></label>
+              <label>{t(language, 'Kun', 'День', 'Day')}<DateField className="input" type="date" min={todayText()} value={date} onChange={(event) => { setDate(event.target.value); setPeriod(0); }} /></label>
               <label>{t(language, 'Sinf', 'Класс', 'Class')}
-                <select className="input" value={classId} onChange={(event) => { setClassId(event.target.value); setPeriod(0); }}>
+                <Select className="input" value={classId} onChange={(event) => { setClassId(event.target.value); setPeriod(0); }}>
                   <option value="">—</option>
                   {tt.classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-                </select>
+                </Select>
               </label>
               <label>{t(language, 'Dars', 'Урок', 'Lesson')}
-                <select className="input" value={period} disabled={!classId} onChange={(event) => setPeriod(Number(event.target.value))}>
+                <Select className="input" value={period} disabled={!classId} onChange={(event) => setPeriod(Number(event.target.value))}>
                   <option value={0}>—</option>
                   {daySlots.map((item) => <option key={item.id} value={item.period}>{item.period}. {tt.bells[item.period - 1]?.start ?? ''} · {subj(item.subject, language)} · {teacherOf(item.teacherId)}</option>)}
-                </select>
+                </Select>
               </label>
               {classId && weekday !== 7 && daySlots.length === 0 && <p className="muted">{t(language, 'Bu kuni bu sinfda dars yo‘q.', 'В этот день у класса нет уроков.', 'No lessons for this class that day.')}</p>}
-              <div className="eco-segment">
+              <LensRow>
                 {(['substitute', 'cancelled', 'room'] as const).map((key) => <button key={key} type="button" className={kind === key ? 'on' : ''} onClick={() => setKind(key)}>{t(language, ...CHANGE_TEXT[key]!)}</button>)}
-              </div>
+              </LensRow>
               {kind === 'substitute' && (
                 <label>{t(language, 'Kim almashtiradi', 'Кто заменяет', 'Substitute teacher')}
-                  <select className="input" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
+                  <Select className="input" value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required>
                     <option value="">—</option>
                     {tt.teachers.filter((item) => item.id !== slot?.teacherId).map((item) => <option key={item.id} value={item.id}>{item.name}{period && busyTeachers.has(item.id) ? ` · ${t(language, 'band', 'занят', 'busy')}` : ` · ${t(language, 'bo‘sh', 'свободен', 'free')}`}</option>)}
-                  </select>
+                  </Select>
                 </label>
               )}
               {kind === 'room' && <label>{t(language, 'Xona', 'Кабинет', 'Room')}<input className="input" value={room} maxLength={40} onChange={(event) => setRoom(event.target.value)} required /></label>}

@@ -1,4 +1,5 @@
 import './scenes.css';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { SceneText } from './scene-text';
 import { createPortal } from 'react-dom';
@@ -269,7 +270,7 @@ function useClassCourse(classId: string | null) {
  * `lesson` (from today's timetable) locks the page to that lesson: its class, its subject and the
  * topic the class is on. Without it, the page is the full textbook course (schools with no timetable).
  */
-export function CoursePage({ user, school, language, onOpen, lesson }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void; lesson?: TodayLesson }) {
+export function CoursePage({ user, school, language, onOpen, lesson, lessonActions }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void; lesson?: TodayLesson; lessonActions?: ReactNode }) {
   const isStudent = user.role === 'student';
   const isTeacher = !isStudent;
   const grades = useMemo(() => [...new Set(COURSE.map((book) => book.grade))].sort((a, b) => a - b), []);
@@ -489,7 +490,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
             <section className="panel course-mark">
               <GraduationCap size={18} />
               <span>{marks.has(topic.key) ? t(language, 'Mavzu sinfda o‘tilgan deb belgilangan.', 'Тема отмечена как пройденная в классе.', 'Marked as covered in class.') : t(language, 'Mavzu dars tugagach o‘zi belgilanadi.', 'Тема отметится сама после урока.', 'Marked by itself after the lesson.')}</span>
-              {!lesson && <input className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
+              {!lesson && <DateField className="input" type="date" value={doneOn} onChange={(event) => setDoneOn(event.target.value)} aria-label={t(language, 'Sana', 'Дата', 'Date')} />}
               {marks.has(topic.key)
                 ? <button type="button" className="btn small" disabled={busy} onClick={() => void mark(topic, false)}>{t(language, 'Belgini olib tashlash', 'Снять отметку', 'Remove mark')}</button>
                 : <button type="button" className="btn small primary" disabled={busy} onClick={() => void mark(topic, true)}><CheckCircle2 size={14} /> {t(language, 'Darsda o‘tdik', 'Прошли на уроке', 'Covered in class')}</button>}
@@ -497,7 +498,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           )}
 
 
-          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} onFinished={reload} />}
+          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} onFinished={reload} actions={lessonActions} />}
 
           {!lesson && <>
           <section className="panel course-essence" id="step-topic">

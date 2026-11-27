@@ -238,6 +238,42 @@ export function TelegramConnect({ language }: { language: Language }) {
   );
 }
 
+/**
+ * One button for parents: marks, absences and homework of the child come to Telegram.
+ * Shown only while Telegram is not connected yet; after connecting it disappears.
+ */
+export function TelegramOneTap({ language }: { language: Language }) {
+  const [state, setState] = useState<{ available: boolean; connected: boolean } | null>(null);
+  const [waiting, setWaiting] = useState(false);
+  const load = () => customFetch<{ available: boolean; connected: boolean }>('/api/me/telegram', { method: 'GET' }).then((value) => { setState(value); return value; }).catch(() => null);
+  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!waiting) return;
+    const started = Date.now();
+    const timer = window.setInterval(() => { void load().then((value) => { if (value?.connected || Date.now() - started > 180000) setWaiting(false); }); }, 3000);
+    return () => window.clearInterval(timer);
+  }, [waiting]);
+  async function connect() {
+    // The tab opens right on the press: phones block a window opened later.
+    const tab = window.open('', '_blank');
+    const response = await customFetch<{ link: string }>('/api/me/telegram/link', { method: 'POST' }).catch(() => null);
+    if (!response?.link) { tab?.close(); return; }
+    if (tab) tab.location.href = response.link; else window.location.href = response.link;
+    setWaiting(true);
+  }
+  if (!state?.available || state.connected) return null;
+  return (
+    <section className="tg-onetap">
+      <span className="tg-onetap-icon"><Send size={18} /></span>
+      <div>
+        <b>{t(language, 'Baholar va davomat Telegramga', 'Оценки и посещаемость — в Telegram', 'Marks and attendance in Telegram')}</b>
+        <small>{t(language, 'Bir marta bosing — har bir baho va «nb» darhol keladi.', 'Нажмите один раз — каждая оценка и «нб» придут сразу.', 'Tap once — every mark and absence arrives at once.')}</small>
+      </div>
+      <button type="button" className="btn primary" onClick={() => void connect()} disabled={waiting}>{waiting ? t(language, 'Kutilmoqda…', 'Ждём…', 'Waiting…') : t(language, 'Ulash', 'Подключить', 'Connect')}</button>
+    </section>
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /* 3. AI lesson plan                                                           */
 /* -------------------------------------------------------------------------- */

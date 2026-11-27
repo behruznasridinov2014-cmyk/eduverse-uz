@@ -433,9 +433,9 @@ html[data-theme="night"] .tabbar.glass-tabs {
 .hw-toast { box-sizing: border-box; max-width: calc(100vw - 24px); }
 .hw-toast span { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
 .hw-expired { margin-top: 14px; }
-.hw-expired > summary { cursor: pointer; font-weight: 600; min-height: 40px; display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.hw-expired > summary { cursor: pointer; font-weight: 600; min-height: 40px; display: flex; align-items: center; gap: 8px; color: #77828b; }
 .hw-expired .school-assignment-card { opacity: .75; }
-.hw-task > summary { cursor: pointer; font-size: 14px; color: var(--muted); min-height: 32px; display: flex; align-items: center; }
+.hw-task > summary { cursor: pointer; font-size: 14px; color: #77828b; min-height: 32px; display: flex; align-items: center; }
 .hw-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .hw-topic-line { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; margin-top: 6px; }
 .hw-book-btn { margin: 6px 8px 0 0; }

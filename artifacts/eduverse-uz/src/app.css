@@ -1137,7 +1137,7 @@ h3 { font-size:14px;margin:0 0 8px;font-weight:600; }
 .journal-note-dot { position: absolute; top: -2px; right: -4px; width: 7px; height: 7px; border-radius: 50%; background: #d39b2a; }
 .journal-editor { display: grid; gap: 12px; max-width: 560px; }
 .journal-pick-row { display: grid; gap: 6px; }
-.journal-pick-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.journal-pick-label { font-size: 13px; font-weight: 600; color: #77828b; }
 .journal-editor .journal-marks { display: flex; flex-wrap: wrap; gap: 6px; }
 .journal-assignments { margin-top: 14px; }
 .journal-assignments > summary { cursor: pointer; min-height: 40px; display: flex; align-items: center; font-weight: 600; opacity: .8; }

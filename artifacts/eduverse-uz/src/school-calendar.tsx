@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DateField } from './ui/date-field';
 import { customFetch } from '@workspace/api-client-react';
 import { CalendarDays, Plus, Trash2 } from 'lucide-react';
 import type { Language } from './school-data';
@@ -79,9 +80,9 @@ export function SchoolCalendarPanel({ schoolId, language }: { schoolId: string; 
         {calendar.quarters.map((item, index) => (
           <div key={index} className="calendar-row">
             <b>{t(language, `${index + 1}-chorak`, `${index + 1} четверть`, `Term ${index + 1}`)}</b>
-            <input className="input" type="date" value={item.start} disabled={!canEdit} onChange={(event) => setQuarter(index, 'start', event.target.value)} aria-label={t(language, 'Boshlanishi', 'Начало', 'Start')} />
+            <DateField className="input" type="date" value={item.start} disabled={!canEdit} onChange={(event) => setQuarter(index, 'start', event.target.value)} aria-label={t(language, 'Boshlanishi', 'Начало', 'Start')} />
             <span>—</span>
-            <input className="input" type="date" value={item.end} disabled={!canEdit} onChange={(event) => setQuarter(index, 'end', event.target.value)} aria-label={t(language, 'Tugashi', 'Конец', 'End')} />
+            <DateField className="input" type="date" value={item.end} disabled={!canEdit} onChange={(event) => setQuarter(index, 'end', event.target.value)} aria-label={t(language, 'Tugashi', 'Конец', 'End')} />
           </div>
         ))}
       </div>
@@ -90,9 +91,9 @@ export function SchoolCalendarPanel({ schoolId, language }: { schoolId: string; 
         {calendar.holidays.map((item, index) => (
           <div key={index} className="calendar-row holiday">
             <input className="input" value={item.name} disabled={!canEdit} placeholder={t(language, 'Nomi', 'Название', 'Name')} onChange={(event) => setHoliday(index, 'name', event.target.value)} />
-            <input className="input" type="date" value={item.from} disabled={!canEdit} onChange={(event) => setHoliday(index, 'from', event.target.value)} aria-label={t(language, 'Dan', 'С', 'From')} />
+            <DateField className="input" type="date" value={item.from} disabled={!canEdit} onChange={(event) => setHoliday(index, 'from', event.target.value)} aria-label={t(language, 'Dan', 'С', 'From')} />
             <span>—</span>
-            <input className="input" type="date" value={item.to} disabled={!canEdit} onChange={(event) => setHoliday(index, 'to', event.target.value)} aria-label={t(language, 'Gacha', 'По', 'To')} />
+            <DateField className="input" type="date" value={item.to} disabled={!canEdit} onChange={(event) => setHoliday(index, 'to', event.target.value)} aria-label={t(language, 'Gacha', 'По', 'To')} />
             {canEdit && <button type="button" className="btn small" onClick={() => setCalendar((current) => ({ ...current, holidays: current.holidays.filter((_, i) => i !== index) }))} aria-label={t(language, 'O‘chirish', 'Убрать', 'Remove')}><Trash2 size={14} /></button>}
           </div>
         ))}

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { CheckCircle2, Clock3, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock3, Plus, RefreshCw, XCircle } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
-import { SubmissionReviewDialog } from './school-panels';
+import { ServerTeachingPanel, SubmissionReviewDialog } from './school-panels';
+import { Modal } from './ui/modal';
 import { markBand } from './marks';
 
 /*
@@ -41,6 +42,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const [error, setError] = useState('');
   const [open, setOpen] = useState<{ studentId: string; studentName: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'review' | 'graded'>('review');
+  const [writing, setWriting] = useState(false);
   // The class list arrives after the page opens: pick the first class then.
   useEffect(() => { if (!classId && school.classes[0]) setClassId(school.classes[0].id); }, [classId, school.classes]);
 
@@ -104,11 +106,18 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   if (!school.classes.length) return <div className="notice">{t(language, 'Sizga hali sinf biriktirilmagan.', 'К вам ещё не привязан класс.', 'No class is linked to you yet.')}</div>;
   return (
     <section className="check-hw">
-      <div className="page-heading"><div><h1>{t(language, 'Uy vazifasini tekshirish', 'Проверка домашки', 'Check homework')}</h1></div></div>
+      <div className="page-heading"><div><h1>{t(language, 'Uy vazifalari', 'Домашние задания', 'Homework')}</h1></div></div>
       <div className="check-hw-bar">
         {school.classes.length > 1 && <Select value={classId} onChange={(_event, value) => { picked.current = true; setClassId(value); setAssignmentId(''); }} options={school.classes.map((item) => ({ value: item.id, label: t(language, `${item.name} sinf`, `${item.name} класс`, `Class ${item.name}`) }))} aria-label={t(language, 'Sinf', 'Класс', 'Class')} style={{ width: 170 }} />}
         <button type="button" className="btn small" onClick={() => void load()} aria-label={t(language, 'Yangilash', 'Обновить', 'Refresh')}><RefreshCw size={14} /></button>
+        <button type="button" className="btn small primary" onClick={() => setWriting(true)}><Plus size={14} /> {t(language, 'O‘z topshirig‘im', 'Своё задание', 'My own task')}</button>
       </div>
+      {writing && (
+        <Modal title={t(language, 'O‘z topshirig‘ingiz', 'Своё задание', 'Your own task')} onClose={() => setWriting(false)}>
+          <p className="muted" style={{ margin: 0 }}>{t(language, 'Darslikdagi uy vazifasi o‘zi beriladi. Bu yerda qo‘shimcha topshiriq yozing.', 'Домашка из учебника выдаётся сама. Здесь можно дать дополнительное задание.', 'Textbook homework is given automatically. Add an extra task here.')}</p>
+          <ServerTeachingPanel school={school} language={language} onlyCreate onCreated={() => { setWriting(false); void load(); }} />
+        </Modal>
+      )}
       {error && <div className="notice" role="alert">{error}</div>}
       {!journal && !error && <LoadingBlock language={language} />}
       {journal && !journal.assignments.some((_, at) => sentIn(at)) && <div className="notice">{t(language, 'Hali hech kim ish yubormadi.', 'Пока никто не прислал работу.', 'Nobody has sent work yet.')}</div>}

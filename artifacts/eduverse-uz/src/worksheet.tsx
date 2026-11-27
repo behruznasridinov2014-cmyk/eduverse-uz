@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { createAssignment } from '@workspace/api-client-react';
 import { ClipboardList, Send, Sparkles } from 'lucide-react';
@@ -159,7 +160,7 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
           <ol>{picked.map((item) => <li key={item.id}>{item.q}<small className="muted"> — {t(language, 'javob', 'ответ', 'answer')}: {item.a}</small></li>)}</ol>
           <div className="people-filters">
             <input className="input" value={title} onChange={(event) => setTitle(event.target.value)} placeholder={slots && slot ? `§${slot.topic.code} ${slot.topic.title}` : t(language, 'Nomi (ixtiyoriy)', 'Название (необязательно)', 'Title (optional)')} />
-            <input className="input" type="date" value={due} onChange={(event) => setDue(event.target.value)} aria-label={t(language, 'Muddat', 'Срок', 'Due')} />
+            <DateField className="input" type="date" value={due} onChange={(event) => setDue(event.target.value)} aria-label={t(language, 'Muddat', 'Срок', 'Due')} />
             <button type="button" className="btn primary" disabled={busy || !targetClass} onClick={() => void send()}><Send size={14} /> {t(language, 'Uyga berish', 'Задать на дом', 'Assign')}</button>
           </div>
         </div>

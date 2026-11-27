@@ -32,6 +32,7 @@ import {
 import type { User } from '@workspace/api-client-react';
 import type { AppLanguage } from './localization';
 import { GoogleSignInButton } from './google-auth';
+import { ForgotPassword } from './forgot-password';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
@@ -1013,7 +1014,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           <div className="auth-switch">{copy.noAccount}</div>
         </>
       )}
-      <p className="auth-note">{copy.emailNotice}</p>
+      <ForgotPassword language={language} defaultLogin={login} />
     </AuthFrame>
   );
 }

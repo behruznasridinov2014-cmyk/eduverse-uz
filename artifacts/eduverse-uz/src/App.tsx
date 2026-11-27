@@ -7,14 +7,13 @@ import './ui/ui.css';
 import './phone.css';
 import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocaleDom } from './localization';
 import { Link, Redirect, useLocation } from 'wouter';
 import { authCopy, AuthLoadingPage, AuthStatusPage, getRoleLabel, LoginPage, ProfilePage } from './auth-pages';
 import { useAuth } from './auth-context';
 import { LessonRoomPage } from './lesson-room';
 import { TopicLibraryPage } from './topic-library';
-import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
 import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
@@ -39,7 +38,7 @@ import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic }
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell } from './account';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
-import type { User } from '@workspace/api-client-react';
+import { customFetch, type User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
 import {
   SchoolScopeSummary,
@@ -59,6 +58,7 @@ import {
   Wifi, X, ZoomIn, ZoomOut,
   Atom, BarChart3, BookMarked, CalendarClock, FlaskConical, ListChecks, MessageCircle, Wallet, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
+const PdfViewer = lazy(() => import("./pdf-viewer").then((m) => ({ default: m.PdfViewer })));
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
@@ -106,7 +106,9 @@ function App(){
   const sidebarRef=useRef<HTMLElement>(null);const menuBtnRef=useRef<HTMLButtonElement>(null);
   useDismiss(mobileOpen,()=>setMobileOpen(false),[sidebarRef,menuBtnRef]);
   const userRole=auth.user?.role;
-  const visible=userRole?ROLE_NAV[userRole].map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
+  // A pupil sees the online lesson only while a teacher has it open for their class.
+  const openRoom=useOpenRoom(userRole==='student'&&auth.status==='authenticated');
+  const visible=userRole?ROLE_NAV[userRole].filter(label=>label!=='Lesson room'||(userRole==='student'&&openRoom)).map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
   const [langChanging,setLangChanging]=useState(false);
   function changeLang(value:Lang){
@@ -203,6 +205,7 @@ function App(){
         </div>
       </header>
       <UpdateBanner language={lang}/>
+      {openRoom&&userRole==='student'&&!location.startsWith('/lesson')&&<button type="button" className="live-lesson-banner" onClick={()=>navigate('/lesson')}><span className="live-dot" aria-hidden="true"/><b>{lang==='Uzbek'?'O‘qituvchi onlayn darsni ochdi':lang==='Русский'?'Учитель открыл онлайн-урок':'Your teacher opened an online lesson'}</b><span>{lang==='Uzbek'?'Kirish':lang==='Русский'?'Войти':'Join'} →</span></button>}
       {notice?.kind==='switched'&&<div className="account-banner" role="alert">
         <Info size={18}/>
         <div>
@@ -278,7 +281,7 @@ const NAV_ITEMS:NavItem[]=[
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
   student:['Overview','Schedule','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
-  teacher:['Overview','My day','Schedule','Lesson room','Topics & 3D','Chemistry lab','Attendance','Check homework','Messages','Teacher workspace','Textbook library'],
+  teacher:['Overview','My day','Schedule','Topics & 3D','Chemistry lab','Attendance','Check homework','Messages','Teacher workspace','Textbook library'],
   parent:['Overview','Schedule','Family view','Messages','Textbook library'],
   school_director:['Overview','Analytics','Schedule','Changes','School insights','Classes','Attendance','Finance'],
   school_admin:['Overview','Analytics','Schedule','Changes','School insights','Classes','Attendance','Finance'],
@@ -289,7 +292,7 @@ const ROLE_NAV:Record<User['role'],string[]>={
 /** Phone bottom bar: the five most used sections of each role (the rest are in the ☰ menu). */
 const MOBILE_NAV:Record<User['role'],string[]>={
   student:['Overview','Topics & 3D','Trainer','Homework','Chemistry lab'],
-  teacher:['Overview','My day','Lesson room','Attendance','Messages'],
+  teacher:['Overview','My day','Topics & 3D','Attendance','Check homework'],
   parent:['Overview','Family view','Messages','Textbook library'],
   school_director:['Overview','Analytics','Schedule','School insights','Finance'],
   school_admin:['Overview','Analytics','Schedule','School insights','Finance'],
@@ -315,17 +318,15 @@ type HomeAction={label:Record<Lang,string>;description:Record<Lang,string>;path:
 const L=(uz:string,ru:string,en:string):Record<Lang,string>=>({Uzbek:uz,Русский:ru,English:en});
 const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
  student:[
-  {label:L('Onlayn darsga kirish','Войти на урок','Join a lesson'),description:L('O‘qituvchi boshlagan dars shu yerda chiqadi.','Урок, который начал учитель, появится здесь.','The lesson your teacher starts appears here.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
   {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/course',icon:Atom,tone:'violet'},
   {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
   {label:L('3D studiya','3D-студия','3D studio'),description:L('Kimyo, fizika, matematika, biologiya, geografiya — hammasi 3D da.','Химия, физика, математика, биология, география — всё в 3D.','Chemistry, physics, maths, biology, geography — all in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
   {label:L('Darsliklar','Учебники','Textbooks'),description:L('7-sinf darsliklari va daftarlar.','Учебники и тетради 7 класса.','Grade 7 textbooks and workbooks.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  teacher:[
-  {label:L('Onlayn dars boshlash','Начать онлайн-урок','Start a lesson'),description:L('Kamera, ovoz, ekran, chat va testlar.','Камера, звук, экран, чат и тесты.','Camera, sound, screen, chat and tests.'),path:'/lesson',icon:MonitorPlay,tone:'blue'},
   {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('Darslik bo‘yicha bugungi mavzu: 3D, topshiriqlar, uy vazifasi.','Сегодняшняя тема по учебнику: суть, 3D, задания, домашка.','Today’s textbook topic: 3D, tasks, homework.'),path:'/course',icon:Atom,tone:'violet'},
   {label:L('Davomat','Давомат','Attendance'),description:L('Kim kelganini bir bosishda belgilang.','Отметьте присутствие в один клик.','Mark attendance in one click.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
-  {label:L('Uy vazifasi berish','Выдать задание','Assign homework'),description:L('Topshiriq bering, daftar rasmlarini tekshiring.','Выдайте задание и проверьте фото тетрадей.','Assign work and check notebook photos.'),path:'/teacher',icon:NotebookPen,tone:'orange'},
+  {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmlarini tekshiring yoki o‘z topshirig‘ingizni bering.','Проверьте фото тетрадей или дайте своё задание.','Check notebook photos or give your own task.'),path:'/check',icon:NotebookPen,tone:'orange'},
   {label:L('3D studiya','3D-студия','3D studio'),description:L('Har qanday fanni sinfga 3D da ko‘rsating.','Показывайте классу любой предмет в 3D.','Show any subject to the class in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
   {label:L('Darsliklar','Учебники','Textbooks'),description:L('Darslikni ochib, sinfga ko‘rsating.','Откройте учебник и покажите классу.','Open a textbook and show the class.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
@@ -444,7 +445,7 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
  const RL:Record<string,[string,string]>={Mathematics:['Математика','Matematika'],Physics:['Физика','Fizika'],Biology:['Биология','Biologiya'],Chemistry:['Химия','Kimyo'],Russian:['на русском','rus tilida'],Uzbek:['на узбекском','o‘zbek tilida'],English:['на английском','ingliz tilida']};const rl=(v:string)=>language==='Русский'?(RL[v]?.[0]??v):language==='Uzbek'?(RL[v]?.[1]??v):v;
  return <><PageHeading eyebrow={`${rl(book.subject)} · ${language==='Русский'?'7 класс':language==='Uzbek'?'7-sinf':'Grade 7'} · ${rl(book.language)}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
  {book.pdf?(
-    <div className="reader-pdf">{pdfRange&&(()=>{const pages=pdfRange.from===pdfRange.to?String(pdfRange.from):`${pdfRange.from}–${pdfRange.to}`;return <div className="notice" style={{marginBottom:10}}><Info/>{language==='Русский'?`Открыта только сегодняшняя тема, стр. ${pages}`:language==='Uzbek'?`Faqat bugungi mavzu ochiq, ${pages}-bet`:`Only today’s topic is open, p. ${pages}`}</div>})()}<PdfViewer url={book.pdf} title={book.title} language={language} range={pdfRange}/></div>
+    <div className="reader-pdf">{pdfRange&&(()=>{const pages=pdfRange.from===pdfRange.to?String(pdfRange.from):`${pdfRange.from}–${pdfRange.to}`;return <div className="notice" style={{marginBottom:10}}><Info/>{language==='Русский'?`Открыта только сегодняшняя тема, стр. ${pages}`:language==='Uzbek'?`Faqat bugungi mavzu ochiq, ${pages}-bet`:`Only today’s topic is open, p. ${pages}`}</div>})()}<Suspense fallback={<LoadingBlock language={language}/>}><PdfViewer url={book.pdf} title={book.title} language={language} range={pdfRange}/></Suspense></div>
   ):(
   <>
    <div className="notice" style={{marginBottom:12}}><Info/>Sample page content is original demonstration material, not an official textbook excerpt.</div>
@@ -499,13 +500,12 @@ function ClassesPage({school,user,language,onOpen}:{school:SchoolData;user:User;
    :<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('You are not in a class yet. Contact the school administration.','Вас ещё не добавили в класс. Обратитесь к администрации школы.','Sizni hali sinfga qo‘shishmagan. Maktab ma’muriyatiga murojaat qiling.')}</span></div>}
  </>;
 }
-type TeacherTab='tasks'|'journal'|'class';
+type TeacherTab='journal'|'class';
 function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;language:Lang;onOpen:(path:string)=>void}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- const [savedTab,setTab]=useSavedState<TeacherTab>('teacher-tab','tasks');
- const tab:TeacherTab=(['tasks','journal','class'] as TeacherTab[]).includes(savedTab)?savedTab:'tasks';
+ const [savedTab,setTab]=useSavedState<TeacherTab>('teacher-tab','journal');
+ const tab:TeacherTab=(['journal','class'] as TeacherTab[]).includes(savedTab)?savedTab:'journal';
  const tabs:Array<[TeacherTab,string,ReactNode]>=[
-  ['tasks',text('Homework','Задания','Vazifalar'),<IconHomework size={20}/>],
   ['journal',text('Grades','Журнал','Jurnal'),<IconJournal size={20}/>],
   ['class',text('My class','Мой класс','Sinfim'),<IconClasses size={20}/>],
  ];
@@ -517,7 +517,6 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
   {!ready
    ?(school.status==='loading'?<LoadingBlock language={language}/>:<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>)
    :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
-    {tab==='tasks'&&<ServerTeachingPanel school={school} language={language}/>}
     {tab==='journal'&&<ClassJournal school={school} language={language}/>}
     {tab==='class'&&<><ServerClassesPanel school={school} user={user} language={language} onOpen={onOpen}/></>}
    </div>}
@@ -606,3 +605,17 @@ function NotFound({language,goHome}:{language:Lang;goHome:()=>void}){return <div
 export default App;
 
 
+
+/** True while a lesson room is open for the pupil's class (checked every 30 seconds). */
+function useOpenRoom(enabled:boolean){
+ const [open,setOpen]=useState(false);
+ useEffect(()=>{
+  if(!enabled){setOpen(false);return}
+  let alive=true;
+  const check=()=>{void customFetch<{rooms:Array<{status:string}>}>('/api/rooms',{method:'GET'}).then(data=>{if(alive)setOpen(data.rooms.some(room=>room.status==='open'))}).catch(()=>undefined)};
+  check();
+  const timer=window.setInterval(()=>{if(document.visibilityState==='visible')check()},30_000);
+  return()=>{alive=false;window.clearInterval(timer)};
+ },[enabled]);
+ return open;
+}

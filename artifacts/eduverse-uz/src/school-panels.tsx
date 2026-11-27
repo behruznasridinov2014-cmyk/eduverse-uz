@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
-import { statusOf, useToday } from './today';
+import { lessonSubjectName, statusOf, useToday } from './today';
+import { Modal } from './ui/modal';
 import { customFetch } from '@workspace/api-client-react';
 import {
   assignTopicToClass,
@@ -585,15 +587,7 @@ export function ServerClassesPanel({
               <small className="muted">{t(language, 'Teachers', 'Учителя класса', 'Sinf o‘qituvchilari')}</small>
               <p>{teacherMembers.map((member) => member.username).join(', ') || t(language, 'Not added yet', 'Пока не добавлены', 'Hali qo‘shilmagan')}</p>
             </div>
-            <button type="button" className="btn" onClick={() => setShowStudents((value) => !value)}>
-              <Users size={15} /> {showStudents ? t(language, 'Hide students', 'Скрыть учеников', 'O‘quvchilarni yashirish') : t(language, `Students · ${studentMembers.length}`, `Ученики · ${studentMembers.length}`, `O‘quvchilar · ${studentMembers.length}`)}
-            </button>
-            {showStudents && (
-              <ol className="class-students">
-                {studentMembers.map((member) => <li key={member.userId}>{member.username}</li>)}
-                {studentMembers.length === 0 && <li className="muted">{t(language, 'No students yet.', 'Учеников пока нет.', 'Hali o‘quvchi yo‘q.')}</li>}
-              </ol>
-            )}
+            {activeClassId && <ClassPupils classId={activeClassId} language={language} />}
             {user.role === 'teacher' && canManageClass && (today.data?.lessons ?? []).some((lesson) => lesson.classId === activeClass?.id && statusOf(lesson, today.now) === 'current') && (
               <button type="button" className="btn primary" style={{ marginTop: 14 }} onClick={() => onOpen('/attendance')}>
                 {t(language, 'Mark attendance', 'Отметить давомат', 'Davomatni belgilash')}
@@ -621,12 +615,17 @@ type ReviewDraft = {
 export function ServerTeachingPanel({
   school,
   language,
+  onlyCreate = false,
+  onCreated,
 }: {
   school: SchoolData;
   language: Language;
+  /** Only the "write your own task" form (used in a window on the homework page). */
+  onlyCreate?: boolean;
+  onCreated?: () => void;
 }) {
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(onlyCreate);
   const [form, setForm] = useState({ title: '', subject: 'Mathematics', description: '', dueAt: '', topicId: '' });
   const [topics, setTopics] = useState<LessonTopic[]>([]);
   const [creating, setCreating] = useState(false);
@@ -716,6 +715,7 @@ export function ServerTeachingPanel({
         t(language, 'Assignment published.', 'Задание опубликовано.', 'Topshiriq joylandi.'),
       );
       await school.refresh();
+      onCreated?.();
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     } finally {
@@ -805,7 +805,7 @@ export function ServerTeachingPanel({
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
 
-      <div className="grid grid-2" style={{ marginTop: error || notice ? 12 : 0 }}>
+      <div className={onlyCreate ? 'stack' : 'grid grid-2'} style={{ marginTop: error || notice ? 12 : 0 }}>
         {!showForm ? (
           <Panel>
             <SectionHead title={t(language, 'Your own assignment', 'Своё задание', 'O‘z topshirig‘ingiz')} detail={t(language, 'If the textbook homework is not enough, write your own.', 'Если домашки из учебника мало, напишите своё.', 'Darslikdagi topshiriqlar yetmasa, o‘zingiz yozing.')} />
@@ -860,9 +860,9 @@ export function ServerTeachingPanel({
               </div>
               <div className="control">
                 <label htmlFor="server-assignment-due">{t(language, 'Due date', 'Срок', 'Muddat')}</label>
-                <input
+                <DateField
                   id="server-assignment-due"
-                  type="datetime-local"
+                  type="datetime"
                   value={form.dueAt}
                   onChange={(event) => setForm({ ...form, dueAt: event.target.value })}
                 />
@@ -905,7 +905,7 @@ export function ServerTeachingPanel({
         </Panel>
         )}
 
-        <Panel className="review-queue-panel">
+        {!onlyCreate && <Panel className="review-queue-panel">
           <span id="review-queue" />
           <SectionHead
             title={t(language, 'Review queue', 'Проверка работ', 'Tekshiruv')}
@@ -1004,10 +1004,10 @@ export function ServerTeachingPanel({
               )}
             </div>
           )}
-        </Panel>
+        </Panel>}
       </div>
 
-      <Panel style={{ marginTop: 16 }}>
+      {!onlyCreate && <Panel style={{ marginTop: 16 }}>
         <SectionHead
           title={t(language, 'Work to check', 'Работы на проверку', 'Tekshiriladigan ishlar')}
           detail={t(language, 'Only the tasks where pupils handed in work and it is not checked yet.', 'Только задания, где ученики сдали работу и она ещё не проверена.', 'Faqat o‘quvchilar ish topshirgan va hali tekshirilmagan vazifalar.')}
@@ -1031,7 +1031,7 @@ export function ServerTeachingPanel({
             </ul>
           );
         })()}
-      </Panel>
+      </Panel>}
     </>
   );
 }
@@ -1970,3 +1970,87 @@ function HomeworkHelpCheck({ assignmentId, studentId, language, onUseMark }: { a
   );
 }
 
+
+
+/* -------------------------------------------------------------------------- */
+/* "My class": every pupil with average mark, attendance and homework          */
+/* -------------------------------------------------------------------------- */
+
+type PupilOverview = {
+  id: string; name: string; average: number | null;
+  marks: Array<{ subject: string; date: string; mark: number | null }>;
+  attendance: { lessons: number; present: number; late: number; absent: number; excused: number };
+  homework: { given: number; handed: number };
+};
+
+const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : null);
+const attendanceShare = (pupil: PupilOverview) => percent(pupil.attendance.present + pupil.attendance.late, pupil.attendance.lessons);
+const subjectOf = (key: string, language: Language) => lessonSubjectName(key, language) || key;
+
+function ClassPupils({ classId, language }: { classId: string; language: Language }) {
+  const [data, setData] = useState<{ pupils: PupilOverview[] } | null>(null);
+  const [error, setError] = useState('');
+  const [open, setOpen] = useState<PupilOverview | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setData(null); setError('');
+    customFetch<{ pupils: PupilOverview[] }>(`/api/classes/${classId}/overview`, { method: 'GET' })
+      .then((value) => { if (!cancelled) setData(value); })
+      .catch((requestError: unknown) => { if (!cancelled) setError(friendlyError(requestError, language)); });
+    return () => { cancelled = true; };
+  }, [classId, language]);
+  if (error) return <InlineError>{error}</InlineError>;
+  if (!data) return <LoadingBlock language={language} />;
+  const pupils = data.pupils;
+  const averages = pupils.map((pupil) => pupil.average).filter((value): value is number => value !== null);
+  const classAverage = averages.length ? Math.round((averages.reduce((a, b) => a + b, 0) / averages.length) * 10) / 10 : null;
+  const lessons = pupils.reduce((sum, pupil) => sum + pupil.attendance.lessons, 0);
+  const came = pupils.reduce((sum, pupil) => sum + pupil.attendance.present + pupil.attendance.late, 0);
+  const given = pupils.reduce((sum, pupil) => sum + pupil.homework.given, 0);
+  const handed = pupils.reduce((sum, pupil) => sum + pupil.homework.handed, 0);
+  const band = (value: number | null) => (value === null ? '' : value >= 8 ? 'good' : value >= 6 ? 'mid' : 'low');
+  return (
+    <>
+      <div className="mc-stats">
+        <div><small>{t(language, 'Average mark', 'Средний балл', 'O‘rtacha baho')}</small><b className={`mc-band ${band(classAverage)}`}>{classAverage ?? '—'}</b></div>
+        <div><small>{t(language, 'Attendance', 'Посещаемость', 'Davomat')}</small><b>{percent(came, lessons) === null ? '—' : `${percent(came, lessons)}%`}</b></div>
+        <div><small>{t(language, 'Homework handed in', 'Домашки сдано', 'Uy vazifasi topshirildi')}</small><b>{percent(handed, given) === null ? '—' : `${percent(handed, given)}%`}</b></div>
+      </div>
+      <p className="muted mc-note">{t(language, 'Last 60 days. Tap a pupil for details.', 'За последние 60 дней. Нажмите на ученика — откроются подробности.', 'Oxirgi 60 kun. Tafsilot uchun o‘quvchini bosing.')}</p>
+      <ol className="mc-list">
+        {pupils.map((pupil, index) => (
+          <li key={pupil.id}>
+            <button type="button" className="mc-row" onClick={() => setOpen(pupil)}>
+              <span className="mc-num">{index + 1}</span>
+              <span className="mc-name">{pupil.name}</span>
+              <span className={`mc-avg mc-band ${band(pupil.average)}`} title={t(language, 'Average mark', 'Средний балл', 'O‘rtacha baho')}>{pupil.average ?? '—'}</span>
+              <span className="mc-meta">{attendanceShare(pupil) === null ? '—' : `${attendanceShare(pupil)}%`}</span>
+              <span className="mc-meta">{pupil.homework.given ? `${pupil.homework.handed}/${pupil.homework.given}` : '—'}</span>
+            </button>
+          </li>
+        ))}
+        {pupils.length === 0 && <li className="muted">{t(language, 'No students yet.', 'Учеников пока нет.', 'Hali o‘quvchi yo‘q.')}</li>}
+      </ol>
+      {pupils.length > 0 && <div className="mc-legend muted"><span>{t(language, 'mark', 'балл', 'baho')}</span><span>{t(language, 'came', 'был', 'keldi')}</span><span>{t(language, 'homework', 'домашки', 'uy vaz.')}</span></div>}
+      {open && (
+        <Modal title={open.name} onClose={() => setOpen(null)}>
+          <div className="myday-facts">
+            <div><small>{t(language, 'Average mark', 'Средний балл', 'O‘rtacha baho')}</small><b className={`mc-band ${band(open.average)}`}>{open.average ?? '—'}</b></div>
+            <div><small>{t(language, 'Attendance', 'Посещаемость', 'Davomat')}</small><b>{attendanceShare(open) === null ? '—' : `${attendanceShare(open)}%`}
+              {open.attendance.lessons > 0 && <span className="mc-detail">{t(language, `late ${open.attendance.late}, absent ${open.attendance.absent}, excused ${open.attendance.excused}`, `опозданий ${open.attendance.late}, пропусков ${open.attendance.absent}, по причине ${open.attendance.excused}`, `kechikdi ${open.attendance.late}, kelmadi ${open.attendance.absent}, sababli ${open.attendance.excused}`)}</span>}</b>
+            </div>
+            <div><small>{t(language, 'Homework', 'Домашние задания', 'Uy vazifalari')}</small><b>{open.homework.given ? t(language, `${open.homework.handed} of ${open.homework.given} handed in`, `сдано ${open.homework.handed} из ${open.homework.given}`, `${open.homework.given} tadan ${open.homework.handed} ta topshirildi`) : '—'}</b></div>
+          </div>
+          <h3 className="mc-sub">{t(language, 'Last marks', 'Последние оценки', 'Oxirgi baholar')}</h3>
+          {open.marks.length ? (
+            <ul className="mc-marks">
+              {[...open.marks].reverse().map((mark, index) => (
+                <li key={index}><span className={`mc-mark mc-band ${band(mark.mark)}`}>{mark.mark}</span><span>{subjectOf(mark.subject, language)}</span><span className="muted">{mark.date.split('-').reverse().slice(0, 2).join('.')}</span></li>
+              ))}
+            </ul>
+          ) : <p className="muted">{t(language, 'No marks yet.', 'Оценок пока нет.', 'Hali baho yo‘q.')}</p>}
+        </Modal>
+      )}
+    </>
+  );
+}

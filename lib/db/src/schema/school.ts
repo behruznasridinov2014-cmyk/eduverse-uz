@@ -31,6 +31,8 @@ export const schoolsTable = pgTable("schools", {
   plan: text("plan").notNull().default("free"),
   /** A demo school made by the owner for showing EDUVERSE; it can be deleted with everyone in it. */
   isDemo: boolean("is_demo").notNull().default(false),
+  /** Test mode set by the owner: today's lessons are open at any time (for trying the lesson). */
+  lessonsAnyTime: boolean("lessons_any_time").notNull().default(false),
   planUntil: timestamp("plan_until", { withTimezone: true }),
   /** What the school pays the owner each month (sum, cash). 0 = not set. */
   monthlyFee: integer("monthly_fee").notNull().default(0),

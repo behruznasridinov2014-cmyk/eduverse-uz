@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, inArray, isNull, ne } from "drizzle-orm";
-import { randomBytes, scrypt as scryptCallback } from "node:crypto";
+import { createHash, randomBytes, randomInt, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { Router, type IRouter, type Response } from "express";
 import {
   classMembersTable,
@@ -13,7 +13,7 @@ import {
   usersTable,
   type AccountRole,
 } from "@workspace/db";
-import { createRateLimiter, normalizeUsername, requireAuthenticatedRole } from "./auth";
+import { createRateLimiter, normalizeLogin, normalizeUsername, requireAuthenticatedRole } from "./auth";
 import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
 import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
@@ -562,6 +562,70 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
   const closed = await db.delete(sessionsTable).where(and(eq(sessionsTable.userId, viewer.id), ne(sessionsTable.tokenHash, currentHash))).returning({ id: sessionsTable.id });
   await writeAudit(null, viewer.id, "password-change", viewer.id, { otherSessionsClosed: closed.length });
   res.json({ changed: true, otherSessionsClosed: closed.length });
+});
+
+/* -------------------------------------------------------------------------- */
+/* 5b. Forgot password: the bot sends a code to the Telegram linked before     */
+/* -------------------------------------------------------------------------- */
+
+const forgotLimiter = createRateLimiter(8, 15 * 60 * 1000, "Too many attempts. Try again later.", "password-reset");
+const resetCodeHash = (code: string, userId: string) => createHash("sha256").update(`${userId}:${code}`).digest("hex");
+/** Same answer whether the login exists or not: nobody learns which logins are real. */
+const RESET_SENT = { sent: true };
+
+router.post("/auth/password-reset/request", forgotLimiter, async (req, res) => {
+  const login = isRecord(req.body) && typeof req.body.login === "string" ? normalizeLogin(req.body.login.trim()).slice(0, 64) : "";
+  if (!login) { res.status(400).json({ error: "Enter a valid login and password." }); return; }
+  if (!telegramBotConfigured()) { res.status(503).json({ error: "Telegram notifications are not configured." }); return; }
+  const [account] = await db.select({ id: usersTable.id, role: usersTable.role, status: usersTable.status, chatId: telegramNotifyTable.chatId, lang: telegramNotifyTable.lang })
+    .from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id))
+    .where(eq(usersTable.loginNormalized, login)).limit(1);
+  // The owner's account and closed accounts are never reset this way.
+  if (!account?.chatId || account.role === "platform_superadmin" || (account.status && account.status !== "active")) { res.json(RESET_SENT); return; }
+  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  await db.update(telegramNotifyTable).set({ resetCodeHash: resetCodeHash(code, account.id), resetExpiresAt: new Date(Date.now() + 10 * 60 * 1000), resetTries: 0 })
+    .where(eq(telegramNotifyTable.userId, account.id));
+  const L = account.lang === "uz" || account.lang === "en" ? account.lang : "ru";
+  const text = L === "uz"
+    ? `🔑 EDUVERSE parolini tiklash kodi: <b>${code}</b>\n10 daqiqa ishlaydi. Agar siz so‘ramagan bo‘lsangiz — hech kimga bermang.`
+    : L === "en"
+    ? `🔑 EDUVERSE password reset code: <b>${code}</b>\nValid for 10 minutes. If you did not ask for it, do not share it.`
+    : `🔑 Код для нового пароля EDUVERSE: <b>${code}</b>\nДействует 10 минут. Если вы не просили — никому не сообщайте.`;
+  const sent = await sendTelegramMessage(account.chatId, text);
+  if (!sent.ok) logger.warn({ errorCode: sent.errorCode }, "password reset code not delivered");
+  res.json(RESET_SENT);
+});
+
+router.post("/auth/password-reset/confirm", forgotLimiter, async (req, res) => {
+  const body = isRecord(req.body) ? req.body : {};
+  const login = typeof body.login === "string" ? normalizeLogin(body.login.trim()).slice(0, 64) : "";
+  const code = typeof body.code === "string" ? body.code.replace(/\D/g, "") : "";
+  const next = typeof body.password === "string" ? body.password : "";
+  if (!login || code.length !== 6) { res.status(400).json({ error: "That code is not valid." }); return; }
+  if (next.length < 10 || next.length > 128) { res.status(400).json({ error: "The new password must be 10 to 128 characters." }); return; }
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
+    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
+    return;
+  }
+  const [account] = await db.select({ id: usersTable.id, login: usersTable.login, role: usersTable.role, hash: telegramNotifyTable.resetCodeHash, until: telegramNotifyTable.resetExpiresAt, tries: telegramNotifyTable.resetTries })
+    .from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id))
+    .where(eq(usersTable.loginNormalized, login)).limit(1);
+  const fresh = account?.hash && account.until && account.until.getTime() > Date.now() && account.tries < 5;
+  if (!account || !fresh || account.role === "platform_superadmin") { res.status(400).json({ error: "The confirmation code is invalid or expired." }); return; }
+  const given = Buffer.from(resetCodeHash(code, account.id));
+  const stored = Buffer.from(account.hash!);
+  if (given.length !== stored.length || !timingSafeEqual(given, stored)) {
+    await db.update(telegramNotifyTable).set({ resetTries: account.tries + 1 }).where(eq(telegramNotifyTable.userId, account.id));
+    res.status(400).json({ error: "The confirmation code is invalid or expired." });
+    return;
+  }
+  if (next.toLowerCase() === account.login.toLowerCase()) { res.status(400).json({ error: "The password must not equal the login." }); return; }
+  await db.update(usersTable).set({ passwordHash: await hashAccountPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: new Date() }).where(eq(usersTable.id, account.id));
+  await db.update(telegramNotifyTable).set({ resetCodeHash: null, resetExpiresAt: null, resetTries: 0 }).where(eq(telegramNotifyTable.userId, account.id));
+  // Every sign-in with the old password stops working.
+  const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, account.id)).returning({ id: sessionsTable.id });
+  await writeAudit(null, account.id, "password-reset-telegram", account.id, { sessionsClosed: closed.length });
+  res.json({ changed: true });
 });
 
 /* -------------------------------------------------------------------------- */

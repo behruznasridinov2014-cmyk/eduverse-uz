@@ -136,7 +136,7 @@ export function normalizeUsername(username: string): string {
   return username.normalize("NFKC").toLowerCase();
 }
 
-function normalizeLogin(login: string): string {
+export function normalizeLogin(login: string): string {
   return login.toLowerCase();
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DateField } from './ui/date-field';
 import { customFetch } from '@workspace/api-client-react';
 import { CalendarDays, ClipboardPaste, Clock3, RefreshCw, Save, Sparkles } from 'lucide-react';
 import type { Language } from './school-data';
@@ -157,8 +158,8 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
                     <b>{period}</b>
                     {editable ? (
                       <span className="tt-bell">
-                        <input className="input" type="time" value={bells[period - 1]?.start ?? ''} aria-label={t(language, 'Boshlanishi', 'Начало', 'Start')} onChange={(event) => { setDirty(true); setBells((current) => current.map((bell, i) => (i === period - 1 ? { ...bell, start: event.target.value } : bell))); }} />
-                        <input className="input" type="time" value={bells[period - 1]?.end ?? ''} aria-label={t(language, 'Tugashi', 'Конец', 'End')} onChange={(event) => { setDirty(true); setBells((current) => current.map((bell, i) => (i === period - 1 ? { ...bell, end: event.target.value } : bell))); }} />
+                        <DateField className="input" type="time" value={bells[period - 1]?.start ?? ''} aria-label={t(language, 'Boshlanishi', 'Начало', 'Start')} onChange={(event) => { setDirty(true); setBells((current) => current.map((bell, i) => (i === period - 1 ? { ...bell, start: event.target.value } : bell))); }} />
+                        <DateField className="input" type="time" value={bells[period - 1]?.end ?? ''} aria-label={t(language, 'Tugashi', 'Конец', 'End')} onChange={(event) => { setDirty(true); setBells((current) => current.map((bell, i) => (i === period - 1 ? { ...bell, end: event.target.value } : bell))); }} />
                       </span>
                     ) : <small>{bells[period - 1]?.start}–{bells[period - 1]?.end}</small>}
                   </th>

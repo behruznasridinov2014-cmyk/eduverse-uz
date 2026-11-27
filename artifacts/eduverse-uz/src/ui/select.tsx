@@ -23,6 +23,8 @@ type Props = {
   className?: string;
   style?: CSSProperties;
   disabled?: boolean;
+  /** Accepted for drop-in use; the list always has a value. */
+  required?: boolean;
   'aria-label'?: string;
   title?: string;
 };
@@ -55,7 +57,7 @@ function optionsFromChildren(children: ReactNode): SelectOption[] {
   return list;
 }
 
-export function Select({ value, onChange, options, children, placeholder, id, className = '', style, disabled, title, ...rest }: Props) {
+export function Select({ value, onChange, options, children, placeholder, id, className = '', style, disabled, title, required: _required, ...rest }: Props) {
   const items = useMemo(() => options ?? optionsFromChildren(children), [options, children]);
   const current = value === null || value === undefined ? '' : String(value);
   const selectedIndex = items.findIndex((item) => item.value === current);

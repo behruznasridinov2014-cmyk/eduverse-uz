@@ -1,5 +1,6 @@
 import { ApiError } from '@workspace/api-client-react';
 import type { Language } from './school-data';
+import { translateServerError } from './lib/error-text';
 
 const pick = (language: Language, en: string, ru: string, uz: string) =>
   language === 'Русский' ? ru : language === 'Uzbek' ? uz : en;
@@ -35,7 +36,7 @@ export function friendlyError(error: unknown, language: Language, fallback?: { e
       if (typeof message === 'string' && message.startsWith('The deadline has passed')) {
         return pick(language, 'Too late: homework is accepted until 00:00 on the lesson day.', 'Поздно: домашку принимают до 00:00 в день урока. Эта работа уже не засчитается.', 'Kech qoldi: uy vazifasi dars kuni soat 00:00 gacha qabul qilinadi.');
       }
-      if (typeof message === 'string' && message.trim()) return message;
+      if (typeof message === 'string' && message.trim()) return translateServerError(message, language === 'Русский' ? 'ru' : language === 'Uzbek' ? 'uz' : 'en');
     }
   }
   if (fallback) return pick(language, fallback.en, fallback.ru, fallback.uz);
