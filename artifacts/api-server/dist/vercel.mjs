@@ -57244,6 +57244,48 @@ router12.get("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), asyn
     absences: absences.map((row) => ({ studentId: row.studentId, date: String(row.date).slice(0, 10) }))
   });
 });
+router12.get("/classes/:classId/overview", requireAuthenticatedRole(...STAFF), async (req, res) => {
+  const classId = String(req.params.classId);
+  if (!isValidUuid(classId)) {
+    res.status(400).json({ error: "Invalid class." });
+    return;
+  }
+  const viewer = viewerOf7(res);
+  const allowed = await access(viewer, classId);
+  if (!allowed) {
+    res.status(403).json({ error: "Not your class." });
+    return;
+  }
+  const { subjects } = await subjectsFor(viewer, classId, allowed.manager);
+  const today2 = tashkentNow().date;
+  const from = new Date(Date.parse(`${today2}T12:00:00Z`) - 60 * 864e5).toISOString().slice(0, 10);
+  const students = (await db.select({ id: usersTable.id, name: usersTable.username, status: usersTable.status }).from(classMembersTable).innerJoin(usersTable, eq(usersTable.id, classMembersTable.userId)).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student"))).orderBy(asc(usersTable.username))).filter((row) => !row.status || row.status === "active");
+  const markRows = () => db.select({ studentId: journalMarksTable.studentId, subject: journalMarksTable.subject, date: journalMarksTable.date, mark: journalMarksTable.mark, absent: journalMarksTable.absent }).from(journalMarksTable).where(and(eq(journalMarksTable.classId, classId), inArray(journalMarksTable.subject, subjects), gte(journalMarksTable.date, from))).orderBy(asc(journalMarksTable.date));
+  const [marks, visits, tasks] = await Promise.all([
+    subjects.length ? markRows() : Promise.resolve([]),
+    db.select({ studentId: attendanceTable.studentId, status: attendanceTable.status }).from(attendanceTable).where(and(eq(attendanceTable.classId, classId), gte(attendanceTable.attendanceDate, from), lte(attendanceTable.attendanceDate, today2))),
+    db.select({ id: assignmentsTable.id, dueAt: assignmentsTable.dueAt }).from(assignmentsTable).where(and(eq(assignmentsTable.classId, classId), gte(assignmentsTable.createdAt, /* @__PURE__ */ new Date(`${from}T00:00:00+05:00`))))
+  ]);
+  const handed = tasks.length ? await db.select({ studentId: assignmentSubmissionsTable.studentId, score: assignmentSubmissionsTable.score }).from(assignmentSubmissionsTable).where(inArray(assignmentSubmissionsTable.assignmentId, tasks.map((task) => task.id))) : [];
+  const due = tasks.filter((task) => !task.dueAt || task.dueAt.getTime() < Date.now()).length;
+  const pupils = students.map((student) => {
+    const own = marks.filter((mark) => mark.studentId === student.id && mark.mark !== null);
+    const sum = own.reduce((total, mark) => total + (mark.mark ?? 0), 0);
+    const seen = visits.filter((visit) => visit.studentId === student.id);
+    const count = (status) => seen.filter((visit) => visit.status === status).length;
+    const work = handed.filter((row) => row.studentId === student.id);
+    return {
+      id: student.id,
+      name: student.name,
+      average: own.length ? Math.round(sum / own.length * 10) / 10 : null,
+      marks: own.slice(-8).map((mark) => ({ subject: mark.subject, date: mark.date, mark: mark.mark })),
+      attendance: { lessons: seen.length, present: count("present"), late: count("late"), absent: count("absent"), excused: count("excused") },
+      homework: { given: Math.max(due, work.length), handed: work.length }
+    };
+  });
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ from, today: today2, subjects, pupils });
+});
 router12.put("/classes/:classId/marks", requireAuthenticatedRole(...STAFF), limiter, async (req, res) => {
   const classId = String(req.params.classId);
   if (!isValidUuid(classId)) {
