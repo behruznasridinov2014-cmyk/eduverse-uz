@@ -7,7 +7,6 @@ import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
 import { lessonSubjectName } from './today';
 import { MARKS, markBand } from './marks';
-import { GradeJournal } from './extras';
 
 /*
  * Class journal like the electronic school journal: columns are the lesson dates of one subject
@@ -137,8 +136,6 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
         </div>
       </div>
       <div className="row journal-legend">
-        <span><span className="journal-kind-dot" /> {t(language, 'dars', 'за урок', 'lesson')}</span>
-        <span><span className="journal-kind-dot hw" /> {t(language, 'uy vazifasi', 'домашка', 'homework')}</span>
         {data?.dates.includes(data.today) && (
           <label className="journal-hide-asked"><input type="checkbox" checked={hideAsked} onChange={(event) => setHideAsked(event.target.checked)} /> {t(language, 'Bugun so‘ralganlarni yashirish', 'Скрыть уже спрошенных сегодня', 'Hide pupils already asked today')}</label>
         )}
@@ -161,7 +158,7 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
             <tbody>
               {data.students.filter((student) => !hideAsked || !cells.get(`class:${student.id}:${data.today}`)).map((student, index) => {
                 const asked = Boolean(cells.get(`class:${student.id}:${data.today}`));
-                const marks = data.marks.filter((mark) => mark.studentId === student.id && typeof mark.mark === 'number').map((mark) => mark.mark as number);
+                const marks = data.marks.filter((mark) => mark.studentId === student.id && mark.kind === 'class' && typeof mark.mark === 'number').map((mark) => mark.mark as number);
                 const average = marks.length ? marks.reduce((sum, mark) => sum + mark, 0) / marks.length : null;
                 return (
                   <tr key={student.id}>
@@ -169,14 +166,12 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
                     {data.dates.map((date) => {
                       const key = `${student.id}:${date}`;
                       const lessonCell = cells.get(`class:${key}`);
-                      const homeCell = cells.get(`homework:${key}`);
                       const absent = lessonCell?.absent || (!lessonCell && absentAt.has(key));
-                      const note = lessonCell?.comment || homeCell?.comment || '';
+                      const note = lessonCell?.comment || '';
                       return (
                         <td key={date} className={`journal-cell ${date === data.today ? 'is-today' : ''}`}>
-                          <button type="button" className="journal-cell-btn journal-two" onClick={() => open(student.id, date)} title={note || undefined}>
+                          <button type="button" className="journal-cell-btn" onClick={() => open(student.id, date)} title={note || undefined}>
                             <span className="journal-half">{typeof lessonCell?.mark === 'number' ? <span className={`grade-mark ${markBand(lessonCell.mark)}`}>{lessonCell.mark}</span> : absent ? <span className="journal-nb">{t(language, 'nb', 'нб', 'ab')}</span> : <span className="journal-empty">·</span>}</span>
-                            <span className="journal-half hw">{typeof homeCell?.mark === 'number' ? <span className={`grade-mark ${markBand(homeCell.mark)}`}>{homeCell.mark}</span> : <span className="journal-empty">·</span>}</span>
                             {note && <span className="journal-note-dot" aria-label={note} />}
                           </button>
                         </td>
@@ -198,7 +193,6 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
             <section className="modal journal-editor" role="dialog" aria-modal="true" aria-label={who}>
               <div className="row-between"><b>{who}</b><span className="muted">{dateLabel(date)}</span></div>
               {picker('class', studentId, date)}
-              {picker('homework', studentId, date)}
               <input className="input" value={comment} maxLength={200} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveComment(studentId, date); }} placeholder={t(language, 'Izoh: nima uchun (ixtiyoriy)', 'Комментарий: за что (по желанию)', 'Comment: what for (optional)')} />
               <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
                 <button type="button" className="btn primary" disabled={saving} onClick={() => void saveComment(studentId, date)}>{t(language, 'Tayyor', 'Готово', 'Done')}</button>
@@ -207,10 +201,6 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
           </div>
         );
       })()}
-      <details className="journal-assignments">
-        <summary>{t(language, 'Topshirilgan vazifalar baholari', 'Оценки за сданные задания', 'Marks for handed-in work')}</summary>
-        <GradeJournal school={school} language={language} />
-      </details>
     </section>
   );
 }

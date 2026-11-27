@@ -199,3 +199,29 @@
 .eco-mark-subject { font-weight: 600; }
 .eco-mark-list { display: flex; flex-wrap: wrap; gap: 4px; }
 @media (max-width: 480px) { .eco-mark-line { grid-template-columns: 1fr 44px; } .eco-mark-list { grid-column: 1 / -1; grid-row: 2; } .eco-mark-line.head > span:nth-child(2) { display: none; } }
+
+/* ---------- My day: lessons only, details in a window ---------- */
+.myday { display: grid; gap: 14px; }
+.myday-now {
+  display: grid; gap: 4px; text-align: left; width: 100%; padding: 18px 20px; border-radius: 22px; cursor: pointer; font: inherit; color: var(--text);
+  background: var(--lg-bg), rgba(255, 251, 244, .9); border: 1px solid var(--lg-rim, rgba(255,255,255,.9)); box-shadow: var(--lg-shadow);
+  transition: transform .45s var(--spring, ease);
+}
+.myday-now:active { transform: scale(.98); }
+.myday-now.current { box-shadow: inset 4px 0 0 #3aa368, var(--lg-shadow); }
+.myday-now-tag { font-size: 12px; font-weight: 700; letter-spacing: .02em; color: var(--tab-active, #a9813f); }
+.myday-now b { font-size: 20px; }
+.myday-now-topic { font-size: 15px; font-weight: 600; }
+.myday-list li { padding: 0 !important; }
+.myday-row { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 0; border-radius: 14px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background .25s, transform .4s var(--spring, ease); }
+.myday-row:hover { background: rgba(255, 255, 255, .55); }
+.myday-row:active { transform: scale(.98); }
+.myday-row-main { display: grid; gap: 2px; min-width: 0; }
+.myday-row-main .eco-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.myday-row-go { color: var(--text-3); }
+.myday-facts { display: grid; gap: 8px; margin: 0; }
+.myday-facts > div { display: grid; grid-template-columns: 90px 1fr; gap: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .55); }
+.myday-facts dt { color: var(--text-3); font-size: 13px; }
+.myday-facts dd { margin: 0; font-weight: 600; }
+.myday-essence { margin: 0; color: var(--text-2); line-height: 1.5; }
+html[data-theme="night"] .myday-row:hover, html[data-theme="night"] .myday-facts > div { background: rgba(255, 255, 255, .06); }

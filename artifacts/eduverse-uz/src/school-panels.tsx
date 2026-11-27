@@ -622,12 +622,17 @@ type ReviewDraft = {
 export function ServerTeachingPanel({
   school,
   language,
+  onlyCreate = false,
+  onCreated,
 }: {
   school: SchoolData;
   language: Language;
+  /** Only the "write your own task" form (used in a window on the homework page). */
+  onlyCreate?: boolean;
+  onCreated?: () => void;
 }) {
   const [selectedClassId, setSelectedClassId] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(onlyCreate);
   const [form, setForm] = useState({ title: '', subject: 'Mathematics', description: '', dueAt: '', topicId: '' });
   const [topics, setTopics] = useState<LessonTopic[]>([]);
   const [creating, setCreating] = useState(false);
@@ -717,6 +722,7 @@ export function ServerTeachingPanel({
         t(language, 'Assignment published.', 'Задание опубликовано.', 'Topshiriq joylandi.'),
       );
       await school.refresh();
+      onCreated?.();
     } catch (requestError) {
       setError(friendlyError(requestError, language));
     } finally {
@@ -806,7 +812,7 @@ export function ServerTeachingPanel({
       {error && <InlineError>{error}</InlineError>}
       {notice && <div className="notice school-inline-success" role="status"><CheckCircle2 size={15} /><span>{notice}</span></div>}
 
-      <div className="grid grid-2" style={{ marginTop: error || notice ? 12 : 0 }}>
+      <div className={onlyCreate ? 'stack' : 'grid grid-2'} style={{ marginTop: error || notice ? 12 : 0 }}>
         {!showForm ? (
           <Panel>
             <SectionHead title={t(language, 'Your own assignment', 'Своё задание', 'O‘z topshirig‘ingiz')} detail={t(language, 'If the textbook homework is not enough, write your own.', 'Если домашки из учебника мало, напишите своё.', 'Darslikdagi topshiriqlar yetmasa, o‘zingiz yozing.')} />
@@ -906,7 +912,7 @@ export function ServerTeachingPanel({
         </Panel>
         )}
 
-        <Panel className="review-queue-panel">
+        {!onlyCreate && <Panel className="review-queue-panel">
           <span id="review-queue" />
           <SectionHead
             title={t(language, 'Review queue', 'Проверка работ', 'Tekshiruv')}
@@ -1005,10 +1011,10 @@ export function ServerTeachingPanel({
               )}
             </div>
           )}
-        </Panel>
+        </Panel>}
       </div>
 
-      <Panel style={{ marginTop: 16 }}>
+      {!onlyCreate && <Panel style={{ marginTop: 16 }}>
         <SectionHead
           title={t(language, 'Work to check', 'Работы на проверку', 'Tekshiriladigan ishlar')}
           detail={t(language, 'Only the tasks where pupils handed in work and it is not checked yet.', 'Только задания, где ученики сдали работу и она ещё не проверена.', 'Faqat o‘quvchilar ish topshirgan va hali tekshirilmagan vazifalar.')}
@@ -1032,7 +1038,7 @@ export function ServerTeachingPanel({
             </ul>
           );
         })()}
-      </Panel>
+      </Panel>}
     </>
   );
 }
