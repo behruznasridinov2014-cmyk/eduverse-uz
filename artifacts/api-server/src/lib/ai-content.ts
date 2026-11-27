@@ -859,6 +859,25 @@ export async function analyzeHomework(input: {
   };
 }
 
+
+/**
+ * Rules that make a task clear for a 7th-grade pupil (the owner's teachers said the tasks were unclear).
+ * Added to every prompt that writes questions or exercises.
+ */
+const CLEAR_TASK_RULES = `Правила понятного задания:
+1) Каждое задание самодостаточно: все числа, единицы измерения и условия написаны в тексте. Нельзя ссылаться на рисунок, график, таблицу, учебник или «предыдущую задачу».
+2) Одно задание — одно действие. В конце прямой вопрос: что найти или что выбрать («Найдите …», «Какое …?»).
+3) Короткие предложения (до 20 слов), слова, понятные ученику 7 класса; термин из темы — только если он объяснён в теме.
+4) Данные реалистичные, ответ однозначный и проверяемый; числа удобные для счёта без калькулятора.
+5) Без формулировок «что НЕ…», «все ответы верны», «нет верного ответа», без двусмысленности.
+6) Неверные варианты правдоподобны (типичные ошибки), но точно неверны; варианты одной длины и формы.
+7) Не ставь ответ или его подсказку в само условие.`;
+
+/** Drops questions that point at a picture or a table the pupil cannot see. */
+function mentionsMissingPicture(text: string): boolean {
+  return /рисун|график|таблиц|схем[аеуы]|изображ|по фото|figure|picture|diagram|graph|table|rasm|jadval|grafik|chizma/i.test(text);
+}
+
 export async function generateTopicTest(
   subject: string,
   grade: number,
@@ -872,7 +891,7 @@ export async function generateTopicTest(
     {
       role: "system",
       content:
-        "Ты — учитель. Создай тест из нескольких вопросов по теме. Отвечай только JSON: {\"questions\":[{\"prompt\":\"...\",\"choices\":[\"...\",\"...\",\"...\",\"...\"],\"correct\":\"...\",\"explanation\":\"...\"}]}. Ровно один верный вариант в каждом вопросе.",
+        `Ты — опытный учитель в Узбекистане. Создай тест по теме урока, от лёгкого вопроса к сложному. Ровно один верный вариант в каждом вопросе; explanation — 1-2 предложения, почему ответ верный.\n${CLEAR_TASK_RULES}\nОтвечай только JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":"...","explanation":"..."}]}`,
     },
     {
       role: "user",
@@ -881,7 +900,7 @@ export async function generateTopicTest(
   ]);
   const parsed = raw ? safeJsonObject(raw) : null;
   const questions = Array.isArray(parsed?.questions)
-    ? (parsed.questions as unknown[]).map(parseQuiz).filter((q): q is GeneratedQuizQuestion => Boolean(q))
+    ? (parsed.questions as unknown[]).map(parseQuiz).filter((q): q is GeneratedQuizQuestion => Boolean(q) && !mentionsMissingPicture(q!.prompt))
     : [];
   return questions.length > 0 ? questions.slice(0, questionCount) : localTestQuestions(subject, grade, title, questionCount);
 }
@@ -930,7 +949,7 @@ export async function generateStudentQuestion(
     {
       role: "system",
       content:
-        "Ты — учитель. Составь ОДИН индивидуальный проверочный вопрос по теме для конкретного ученика. Отвечай только JSON: {prompt, choices[4], correct, explanation, focus}. Один правильный вариант.",
+        `Ты — учитель. Составь ОДИН индивидуальный проверочный вопрос по теме для конкретного ученика: уровень support — самый простой шаг темы, core — обычная задача, challenge — задача в два шага. Один правильный вариант.\n${CLEAR_TASK_RULES}\nОтвечай только JSON: {"prompt":"...","choices":["...","...","...","..."],"correct":"...","explanation":"...","focus":"что проверяет вопрос"}`,
     },
     {
       role: "user",
@@ -941,7 +960,7 @@ export async function generateStudentQuestion(
   const parsed = safeJsonObject(raw);
   if (!parsed) return fallback;
   const quiz = parseQuiz(parsed);
-  if (!quiz) return fallback;
+  if (!quiz || mentionsMissingPicture(quiz.prompt)) return fallback;
   return { ...quiz, focus: str(parsed.focus) || fallback.focus };
 }
 
@@ -1082,7 +1101,7 @@ export async function generatePracticeTest(topics: Array<{ subject: string; titl
   const raw = await callModel([
     {
       role: "system",
-      content: `Ты учитель 7 класса. Составь короткий тренировочный тест для ученика по темам, которые ему трудно даются. 5 вопросов, от лёгкого к сложному, ${lang}. В каждом 4 варианта, ровно один верный. Подсказка — одно короткое предложение, как решать, без ответа. Ответ строго JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`,
+      content: `Ты учитель 7 класса. Составь короткий тренировочный тест для ученика по темам, которые ему трудно даются. 5 вопросов, от лёгкого к сложному, ${lang}. В каждом 4 варианта, ровно один верный. Подсказка — одно короткое предложение, как решать, без ответа.\n${CLEAR_TASK_RULES}\nОтвет строго JSON: {"questions":[{"prompt":"...","choices":["...","...","...","..."],"correct":0,"hint":"..."}]}`,
     },
     { role: "user", content: topics.slice(0, 3).map((topic, index) => `${index + 1}) ${topic.subject}: ${topic.title}. Суть: ${topic.essence.slice(0, 400)}`).join("\n") },
   ]);
@@ -1094,7 +1113,7 @@ export async function generatePracticeTest(topics: Array<{ subject: string; titl
     const row = item as Record<string, unknown>;
     const choices = Array.isArray(row.choices) ? row.choices.map((choice) => str(choice)).filter(Boolean).slice(0, 4) : [];
     const correct = Number(row.correct);
-    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3) continue;
+    if (!str(row.prompt) || choices.length !== 4 || !Number.isInteger(correct) || correct < 0 || correct > 3 || mentionsMissingPicture(str(row.prompt))) continue;
     out.push({ prompt: str(row.prompt).slice(0, 400), choices: choices.map((choice) => choice.slice(0, 200)), correct, hint: str(row.hint).slice(0, 240) });
   }
   return out.length ? out.slice(0, 5) : null;
@@ -1175,7 +1194,7 @@ export async function lessonHelp(input: {
     detail: "Объясни тему подробнее: 2-3 абзаца, по шагам, с одной формулой или правилом, если есть.",
     example: "Дай один пример из жизни ученика в Узбекистане (дом, улица, базар, кухня, спорт), не из учебника. Строго 3 коротких строки: «Ситуация: …», «Где тут тема: …», «Проверь себя: …» (вопрос без ответа). Без сложных слов.",
     word: "Объясни это слово или выражение очень просто и дай пример.",
-    practice: "Дай дополнительное домашнее задание: 3 новых упражнения по теме от лёгкого к сложному, пронумеруй. Ответы НЕ пиши, к каждому одна короткая подсказка. В конце одна строка: «Сделай в тетради».",
+    practice: `Дай дополнительное домашнее задание: 3 новых упражнения по теме от лёгкого к сложному, пронумеруй. Каждое упражнение: условие со всеми данными и прямой вопрос «Найдите …» / «Объясните …», затем строка «Подсказка: …» (как начать, без ответа). Ответы НЕ пиши. В конце одна строка: «Сделай в тетради».\n${CLEAR_TASK_RULES}`,
     mistake: "Ученик ошибся в этих вопросах. Помоги понять, где обычно ошибаются и как рассуждать, но не называй готовый ответ — задай наводящий вопрос.",
     review: "По ошибкам ученика скажи, что именно повторить (2-3 пункта) и в каком порядке.",
     ask: "Ответь на вопрос ученика по теме. Если он просит готовый ответ на задачу — не давай его, а объясни путь решения и задай наводящий вопрос.",
