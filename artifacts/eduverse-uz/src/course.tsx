@@ -270,7 +270,7 @@ function useClassCourse(classId: string | null) {
  * `lesson` (from today's timetable) locks the page to that lesson: its class, its subject and the
  * topic the class is on. Without it, the page is the full textbook course (schools with no timetable).
  */
-export function CoursePage({ user, school, language, onOpen, lesson }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void; lesson?: TodayLesson }) {
+export function CoursePage({ user, school, language, onOpen, lesson, lessonActions }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void; lesson?: TodayLesson; lessonActions?: ReactNode }) {
   const isStudent = user.role === 'student';
   const isTeacher = !isStudent;
   const grades = useMemo(() => [...new Set(COURSE.map((book) => book.grade))].sort((a, b) => a - b), []);
@@ -498,7 +498,7 @@ export function CoursePage({ user, school, language, onOpen, lesson }: { user: U
           )}
 
 
-          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} onFinished={reload} />}
+          {lesson && <LessonStages user={user} school={school} book={book} topic={topic} classId={activeClassId} language={language} onOpen={onOpen} onFinished={reload} actions={lessonActions} />}
 
           {!lesson && <>
           <section className="panel course-essence" id="step-topic">

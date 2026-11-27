@@ -482,7 +482,7 @@ html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 
 .trainer-test.done:hover { transform: none; box-shadow: none; }
 .trainer-test.done .btn { justify-self: start; }
 .trainer-score { display: inline-flex; align-items: center; gap: 4px; color: var(--success, #2f8f5b); font-weight: 600; }
-.trainer-all-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: var(--muted); }
+.trainer-all-done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: #77828b; }
 .trainer-result-actions { gap: 8px; justify-content: center; flex-wrap: wrap; }
 .trainer-explain { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, rgba(120,100,60,.08)); white-space: pre-wrap; line-height: 1.5; }
 .trainer-explain p { margin: 0; }

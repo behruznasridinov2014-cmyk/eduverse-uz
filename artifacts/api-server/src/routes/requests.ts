@@ -365,9 +365,20 @@ router.put("/admin/schools/:schoolId/plan", requireAuthenticatedRole(...OWNER_RO
   res.json({ plan, until });
 });
 
+/** The owner turns test mode on or off: today's lessons of the school open at any time. */
+router.put("/admin/schools/:schoolId/lessons-any-time", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) { res.status(400).json({ error: "Invalid school." }); return; }
+  const on = isRecord(req.body) && req.body.on === true;
+  const [row] = await db.update(schoolsTable).set({ lessonsAnyTime: on, updatedAt: new Date() }).where(eq(schoolsTable.id, schoolId)).returning({ id: schoolsTable.id });
+  if (!row) { res.status(404).json({ error: "School not found." }); return; }
+  await writeAudit(schoolId, viewerOf(res).id, "lessons-any-time", null, { on });
+  res.json({ on });
+});
+
 /** The owner's overview of plans: which schools end their trial / paid period soon, who is on free. */
 router.get("/admin/plans", requireAuthenticatedRole(...OWNER_ROLES), async (_req, res) => {
-  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart, billingCurrency: schoolsTable.billingCurrency, billingDay: schoolsTable.billingDay, billingContact: schoolsTable.billingContact, billingPhone: schoolsTable.billingPhone }).from(schoolsTable);
+  const schools = await db.select({ id: schoolsTable.id, name: schoolsTable.name, region: schoolsTable.region, plan: schoolsTable.plan, planUntil: schoolsTable.planUntil, isDemo: schoolsTable.isDemo, lessonsAnyTime: schoolsTable.lessonsAnyTime, monthlyFee: schoolsTable.monthlyFee, billingStart: schoolsTable.billingStart, billingCurrency: schoolsTable.billingCurrency, billingDay: schoolsTable.billingDay, billingContact: schoolsTable.billingContact, billingPhone: schoolsTable.billingPhone }).from(schoolsTable);
   const paid = schools.length
     ? await db.select({ schoolId: schoolBillingPaymentsTable.schoolId, amount: schoolBillingPaymentsTable.amount, month: schoolBillingPaymentsTable.month }).from(schoolBillingPaymentsTable).where(inArray(schoolBillingPaymentsTable.schoolId, schools.map((school) => school.id)))
     : [];

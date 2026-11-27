@@ -317,11 +317,11 @@ export function lessonReader(where: SQL, substituteFor?: string) {
   };
 }
 
-/** True when the viewer belongs to a demo school (made by the owner for showing EDUVERSE). */
+/** True when the viewer belongs to a demo school, or to a school the owner put in test mode. */
 async function inDemoSchool(userId: string): Promise<boolean> {
   const [row] = await db.select({ id: schoolsTable.id }).from(schoolMembersTable)
     .innerJoin(schoolsTable, eq(schoolsTable.id, schoolMembersTable.schoolId))
-    .where(and(eq(schoolMembersTable.userId, userId), eq(schoolsTable.isDemo, true))).limit(1);
+    .where(and(eq(schoolMembersTable.userId, userId), or(eq(schoolsTable.isDemo, true), eq(schoolsTable.lessonsAnyTime, true)))).limit(1);
   return Boolean(row);
 }
 

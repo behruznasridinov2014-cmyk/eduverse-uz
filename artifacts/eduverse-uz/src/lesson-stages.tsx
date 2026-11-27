@@ -16,6 +16,7 @@ import {
 import { PhotoPicker } from './homework';
 import { friendlyError } from './errors';
 import { LoadingBlock } from './ui/loading';
+import { Modal } from './ui/modal';
 import { LessonBuilder, ClassProgressPanel, BoardControls, OnlineAndAsks, StudentBoard, useLive, type LessonContent, type LiveHook, type LiveState } from './lesson-teacher';
 
 /*
@@ -71,8 +72,8 @@ function useLessonContent(topicKey: string, classId: string | null) {
   return { content, author, reload: () => setRevision((value) => value + 1) };
 }
 
-export function LessonStages({ user, school, book, topic, classId, language, onOpen, onFinished }: {
-  user: User; school: SchoolData; book: CourseBook; topic: CourseTopic; classId: string | null; language: Language; onOpen: (path: string) => void; onFinished?: () => void;
+export function LessonStages({ user, school, book, topic, classId, language, onOpen, onFinished, actions }: {
+  user: User; school: SchoolData; book: CourseBook; topic: CourseTopic; classId: string | null; language: Language; onOpen: (path: string) => void; onFinished?: () => void; actions?: ReactNode;
 }) {
   const isStudent = user.role === 'student';
   const isTeacher = !isStudent && user.role !== 'parent';
@@ -110,18 +111,16 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
 
   return (
     <div className="ls" ref={top}>
-      {isTeacher && (
-        <div className="ls-teacher-tabs" role="tablist">
-          {([['lesson', t(language, 'Dars', 'Урок', 'Lesson'), Play], ['builder', t(language, 'Tayyorlash', 'Подготовить', 'Prepare'), Plus], ['class', t(language, 'Natijalar', 'Результаты', 'Results'), Target]] as const).map(([key, label, Icon]) => (
-            <button key={key} type="button" role="tab" aria-selected={view === key} className={`studio-tab ${view === key ? 'active' : ''}`} onClick={() => setView(key)} disabled={key === 'class' && !classId}>
-              <Icon size={14} /> {label}
-            </button>
-          ))}
+      {(isTeacher || actions) && (
+        <div className="ls-toolbar">
+          {actions}
+          {isTeacher && <button type="button" className="btn small" onClick={() => setView('builder')}><Plus size={14} /> {t(language, 'Tayyorlash', 'Подготовить', 'Prepare')}</button>}
+          {isTeacher && classId && <button type="button" className="btn small" onClick={() => setView('class')}><Target size={14} /> {t(language, 'Natijalar', 'Результаты', 'Results')}</button>}
         </div>
       )}
-      {view === 'builder' && isTeacher && <LessonBuilder topic={topic} language={language} initial={content} onSaved={reload} />}
-      {view === 'class' && isTeacher && classId && <ClassProgressPanel classId={classId} topic={topic} language={language} />}
-      {view === 'lesson' && <>
+      {view === 'builder' && isTeacher && <Modal wide title={t(language, 'Darsni tayyorlash', 'Подготовить урок', 'Prepare the lesson')} onClose={() => setView('lesson')}><LessonBuilder topic={topic} language={language} initial={content} onSaved={reload} /></Modal>}
+      {view === 'class' && isTeacher && classId && <Modal wide title={t(language, 'Sinf natijalari', 'Результаты класса', 'Class results')} onClose={() => setView('lesson')}><ClassProgressPanel classId={classId} topic={topic} language={language} /></Modal>}
+      {<>
         <nav className="ls-steps" aria-label={t(language, 'Dars bosqichlari', 'Этапы урока', 'Lesson stages')}>
           {FLOW.map((item) => {
             const result = progress.stages[item.n];
@@ -142,7 +141,6 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
             <header className="ls-stage-head">
               <h2>{tx(language, STAGES[stage - 1]!.title)}</h2>
               <span className="ls-stage-time"><Clock3 size={13} /> {minuteOf(stage)} {t(language, 'daq', 'мин', 'min')}</span>
-              <button type="button" className="btn small ls-helper-inline" onClick={() => { setHelperSeed(null); setHelperOpen((value) => !value); setAskOpen(false); }} aria-label={t(language, 'Yordamchi', 'Помощник', 'Helper')}><Sparkles size={16} /></button>
               {canAskTeacher && <button type="button" className="btn small ls-ask-inline" onClick={() => { setAskOpen((value) => !value); setHelperOpen(false); }} aria-expanded={askOpen}><Hand size={15} /> {t(language, 'Savol', 'Вопрос', 'Ask')}</button>}
             </header>
             {stage === 2 && <BookStage {...props} />}

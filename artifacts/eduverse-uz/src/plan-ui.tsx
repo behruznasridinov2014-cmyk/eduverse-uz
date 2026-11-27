@@ -50,6 +50,20 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
   const [until, setUntil] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [anyTime, setAnyTime] = useState<boolean | null>(null);
+  useEffect(() => {
+    void customFetch<{ schools: Array<{ id: string; lessonsAnyTime?: boolean }> }>('/api/admin/plans', { method: 'GET' })
+      .then((data) => setAnyTime(Boolean(data.schools.find((item) => item.id === schoolId)?.lessonsAnyTime))).catch(() => {});
+  }, [schoolId]);
+  async function toggleAnyTime(on: boolean) {
+    setMessage(''); setError('');
+    try {
+      await customFetch(`/api/admin/schools/${schoolId}/lessons-any-time`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on }) });
+      setAnyTime(on);
+    } catch (requestError) {
+      setError(friendlyError(requestError, language));
+    }
+  }
   useEffect(() => {
     void customFetch<{ schools: Array<{ id: string; plan?: string; planUntil?: string | null }> }>('/api/schools', { method: 'GET' })
       .then((data) => {
@@ -87,6 +101,12 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
         <DateField className="input" type="date" value={until} onChange={(event) => setUntil(event.target.value)} aria-label={t(language, 'Gacha', 'До', 'Until')} />
         <button type="button" className="btn primary" onClick={() => void save()}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
       </div>
+      {anyTime !== null && (
+        <label className="plan-anytime">
+          <input type="checkbox" checked={anyTime} onChange={(event) => void toggleAnyTime(event.target.checked)} />
+          <span><b>{t(language, 'Sinov rejimi', 'Тестовый режим', 'Test mode')}</b> · {t(language, 'bugungi darslar istalgan vaqtda ochiq (tekshirish uchun)', 'уроки на сегодня открыты в любое время (чтобы проверить урок)', 'today’s lessons are open at any time (to try a lesson)')}</span>
+        </label>
+      )}
       {message && <div className="notice success">{message}</div>}
       {error && <div className="notice">{error}</div>}
     </section>
