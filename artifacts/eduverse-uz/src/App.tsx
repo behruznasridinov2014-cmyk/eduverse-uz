@@ -7,14 +7,13 @@ import './ui/ui.css';
 import './phone.css';
 import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useLocaleDom } from './localization';
 import { Link, Redirect, useLocation } from 'wouter';
 import { authCopy, AuthLoadingPage, AuthStatusPage, getRoleLabel, LoginPage, ProfilePage } from './auth-pages';
 import { useAuth } from './auth-context';
 import { LessonRoomPage } from './lesson-room';
 import { TopicLibraryPage } from './topic-library';
-import { PdfViewer } from "./pdf-viewer";
 import { AttendancePage } from './attendance-page';
 import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
@@ -59,6 +58,7 @@ import {
   Wifi, X, ZoomIn, ZoomOut,
   Atom, BarChart3, BookMarked, CalendarClock, FlaskConical, ListChecks, MessageCircle, Wallet, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
+const PdfViewer = lazy(() => import("./pdf-viewer").then((m) => ({ default: m.PdfViewer })));
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
@@ -445,7 +445,7 @@ function ReaderPage({language,book,page,setPage,saved,setSaved,note,setNote}:{la
  const RL:Record<string,[string,string]>={Mathematics:['Математика','Matematika'],Physics:['Физика','Fizika'],Biology:['Биология','Biologiya'],Chemistry:['Химия','Kimyo'],Russian:['на русском','rus tilida'],Uzbek:['на узбекском','o‘zbek tilida'],English:['на английском','ingliz tilida']};const rl=(v:string)=>language==='Русский'?(RL[v]?.[0]??v):language==='Uzbek'?(RL[v]?.[1]??v):v;
  return <><PageHeading eyebrow={`${rl(book.subject)} · ${language==='Русский'?'7 класс':language==='Uzbek'?'7-sinf':'Grade 7'} · ${rl(book.language)}`} title={book.title} subtitle={`${book.author} · ${book.year}`}><button className="btn" onClick={()=>setFullscreen(!fullscreen)}><Monitor/> {fullscreen?(language==='Русский'?'Выйти из полного экрана':language==='Uzbek'?'To‘liq ekrandan chiqish':'Exit full screen'):(language==='Русский'?'Во весь экран':language==='Uzbek'?'To‘liq ekran':'Full screen')}</button></PageHeading>
  {book.pdf?(
-    <div className="reader-pdf">{pdfRange&&(()=>{const pages=pdfRange.from===pdfRange.to?String(pdfRange.from):`${pdfRange.from}–${pdfRange.to}`;return <div className="notice" style={{marginBottom:10}}><Info/>{language==='Русский'?`Открыта только сегодняшняя тема, стр. ${pages}`:language==='Uzbek'?`Faqat bugungi mavzu ochiq, ${pages}-bet`:`Only today’s topic is open, p. ${pages}`}</div>})()}<PdfViewer url={book.pdf} title={book.title} language={language} range={pdfRange}/></div>
+    <div className="reader-pdf">{pdfRange&&(()=>{const pages=pdfRange.from===pdfRange.to?String(pdfRange.from):`${pdfRange.from}–${pdfRange.to}`;return <div className="notice" style={{marginBottom:10}}><Info/>{language==='Русский'?`Открыта только сегодняшняя тема, стр. ${pages}`:language==='Uzbek'?`Faqat bugungi mavzu ochiq, ${pages}-bet`:`Only today’s topic is open, p. ${pages}`}</div>})()}<Suspense fallback={<LoadingBlock language={language}/>}><PdfViewer url={book.pdf} title={book.title} language={language} range={pdfRange}/></Suspense></div>
   ):(
   <>
    <div className="notice" style={{marginBottom:12}}><Info/>Sample page content is original demonstration material, not an official textbook excerpt.</div>

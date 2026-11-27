@@ -39,3 +39,4 @@
   .auth-page .auth-layout { margin-top: 10px; }
   .auth-page .auth-panel { padding: 22px 18px 20px; }
 }
+.pdfv-page input{width:64px!important;padding:0 4px!important;-moz-appearance:textfield}.pdfv-page input::-webkit-outer-spin-button,.pdfv-page input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}

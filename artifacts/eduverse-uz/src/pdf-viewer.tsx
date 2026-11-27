@@ -95,7 +95,9 @@ export function PdfViewer({ url, title, language = 'English', range }: { url: st
   useEffect(() => {
     let cancelled = false;
     setState('loading');
-    const loading = pdfjs.getDocument({ url, withCredentials: false });
+    // Only the pages that are shown are downloaded (the books are saved "optimized for the web"),
+    // so a 150-page book opens on the topic page without waiting for the whole file.
+    const loading = pdfjs.getDocument({ url, withCredentials: false, disableAutoFetch: true, disableStream: true, rangeChunkSize: 131072 });
     loading.promise
       .then((loaded) => {
         if (cancelled) {
