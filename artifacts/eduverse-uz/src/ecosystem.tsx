@@ -238,17 +238,22 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
           </Section>
         </div>
 
-        <Section icon={<School size={16} />} title={t(language, 'Sinflar', 'Классы', 'Classes')}>
+        <Section icon={<School size={16} />} title={t(language, 'Sinflar qanday o‘qiyapti', 'Как учатся классы', 'How the classes are doing')}>
           {fresh.perClass.length === 0 ? <p className="muted">{t(language, 'Sinflar yo‘q.', 'Классов нет.', 'No classes.')}</p> : (
+            <>
+            <p className="muted eco-hint">{t(language,
+              'Tanlangan davr uchun. Qizil qator — yordam kerak bo‘lgan sinf. Sinfni bosing — o‘quvchilar ochiladi.',
+              'За выбранный период. Красная строка — классу нужна помощь. Нажмите на класс, чтобы увидеть учеников.',
+              'For the chosen period. A red row needs help. Press a class to see its pupils.')}</p>
             <div className="journal-scroll">
               <table className="grade-table eco-table">
                 <thead><tr>
                   <th>{t(language, 'Sinf', 'Класс', 'Class')}</th>
-                  <th>{t(language, 'O‘quvchi', 'Учеников', 'Pupils')}</th>
+                  <th>{t(language, 'O‘quvchilar', 'Учеников', 'Pupils')}</th>
                   <th>{t(language, 'Davomat', 'Посещаемость', 'Attendance')}</th>
-                  <th>{t(language, 'Qoldirish', 'Пропусков', 'Absences')}</th>
-                  <th>{t(language, 'O‘rtacha', 'Средняя', 'Average')}</th>
-                  <th>{t(language, 'Tekshirilmagan', 'Не проверено', 'Unchecked')}</th>
+                  <th>{t(language, 'Qoldirilgan darslar', 'Пропущено уроков', 'Missed lessons')}</th>
+                  <th>{t(language, 'O‘rtacha baho', 'Средняя оценка', 'Average mark')}</th>
+                  <th>{t(language, 'Tekshirilmagan ishlar', 'Не проверено работ', 'Unchecked work')}</th>
                 </tr></thead>
                 <tbody>
                   {fresh.perClass.map((item) => (
@@ -264,6 +269,7 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Section>
 
@@ -559,12 +565,15 @@ type WeekReport = {
 };
 type Payments = { plan: { monthlyFee: number; discountPercent: number; due: number; startMonth: string } | null; debt: number; payments: Array<{ id: string; amount: number; month: string; paidOn: string; receiptNo: number; method: string }> };
 
+/** Parents do not pay through the platform any more, so the tuition block is hidden (code kept). */
+const SHOW_TUITION = false as boolean;
+
 export function ParentWeekPanel({ language, onOpen }: { language: Language; onOpen: (path: string) => void }) {
   const children = useLoad<{ children: Array<{ id: string; name: string }> }>('/api/me/children');
   const [active, setActive] = useState(0);
   const child = children.data?.children[Math.min(active, (children.data?.children.length ?? 1) - 1)];
   const report = useLoad<WeekReport>(child ? `/api/me/children/${child.id}/report` : null);
-  const payments = useLoad<Payments>(child ? `/api/students/${child.id}/payments` : null);
+  const payments = useLoad<Payments>(SHOW_TUITION && child ? `/api/students/${child.id}/payments` : null);
   if (!children.data || !child) return null;
   const r = report.data;
   return (
@@ -589,7 +598,7 @@ export function ParentWeekPanel({ language, onOpen }: { language: Language; onOp
           {r.subjects.length === 0 && r.absences.length === 0 && <p className="muted">{t(language, 'Bu haftada jurnalda yozuv yo‘q.', 'За эту неделю в журнале нет записей.', 'No journal entries this week.')}</p>}
         </>}
       </Section>
-      {payments.data?.plan && (
+      {SHOW_TUITION && payments.data?.plan && (
         <Section icon={<Wallet size={16} />} title={t(language, 'O‘qish to‘lovi', 'Оплата обучения', 'Tuition')}>
           <div className="eco-stats compact">
             <Stat icon={<Receipt size={16} />} label={t(language, 'Oyiga', 'В месяц', 'Per month')} value={sum(payments.data.plan.due)} note={payments.data.plan.discountPercent ? <span className="muted">{t(language, 'chegirma', 'скидка', 'discount')} {payments.data.plan.discountPercent}%</span> : undefined} />
@@ -626,7 +635,32 @@ function printReceipt(school: string, payment: { receiptNo: number; name: string
   win.document.close();
 }
 
+/* Pupils do not pay through EDUVERSE: the school pays for the platform. The page shows only what the school owes. */
+type MyBill = { monthlyFee: number; currency: string; debt: number; monthsOwed: number; nextDue: string | null; daysToDue: number | null };
+const billMoney = (value: number, currency: string) => `${value.toLocaleString('ru-RU')} ${currency === 'UZS' || !currency ? 'сум' : currency}`;
+
 export function FinancePage({ schoolId, language }: { schoolId: string; language: Language }) {
+  const { data, error, reload } = useLoad<MyBill>(`/api/schools/${schoolId}/my-bill`);
+  return (
+    <div className="eco">
+      {error ? <ErrorNote error={error} language={language} /> : !data ? <LoadingBlock language={language} /> : (
+        <div className={`my-bill ${data.debt > 0 ? 'owe' : 'clear'}`}>
+          <span className="my-bill-label">{data.debt > 0 ? t(language, 'Qarz', 'Долг', 'Debt') : t(language, 'Qarz yo‘q', 'Долга нет', 'No debt')}</span>
+          <b className="my-bill-sum">{billMoney(data.debt, data.currency)}</b>
+          {data.debt > 0 && data.monthsOwed > 0 && <span className="muted">{t(language, `${data.monthsOwed} oy uchun`, `за ${data.monthsOwed} мес.`, `for ${data.monthsOwed} month(s)`)}</span>}
+          <div className="my-bill-rows">
+            <span>{t(language, 'Oyiga', 'В месяц', 'Per month')}<b>{data.monthlyFee ? billMoney(data.monthlyFee, data.currency) : '—'}</b></span>
+            <span>{t(language, 'Keyingi to‘lov', 'Следующая оплата', 'Next payment')}<b>{data.nextDue ? shortDate(data.nextDue) : '—'}{data.daysToDue !== null && data.daysToDue >= 0 ? ` · ${t(language, `${data.daysToDue} kun`, `через ${data.daysToDue} дн.`, `in ${data.daysToDue} d`)}` : ''}</b></span>
+          </div>
+          <button type="button" className="btn small" onClick={reload}><RefreshCw size={14} /> {t(language, 'Yangilash', 'Обновить', 'Refresh')}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The old pupil-tuition journal. Kept (not shown in the menu) in case a school asks for it again. */
+export function PupilTuitionPage({ schoolId, language }: { schoolId: string; language: Language }) {
   const [month, setMonth] = useState(thisMonth());
   const { data, error, reload } = useLoad<Finance>(`/api/schools/${schoolId}/finance?month=${month}`);
   const [filter, setFilter] = useState<'all' | 'debt' | 'noplan'>('all');

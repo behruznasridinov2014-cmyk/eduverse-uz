@@ -506,3 +506,8 @@ export function LessonChangeTag({ change, language }: { change: NonNullable<Toda
       : t(language, 'Boshqa xona', 'Другой кабинет', 'Room changed');
   return <span className={`lesson-change is-${change.kind}`}>{label}{change.note ? ` · ${change.note}` : ''}</span>;
 }
+
+/** The 3D studio opens on this lesson's topic (used by the lesson bar and the lesson pages). */
+export function rememberLessonFor3D(lesson: TodayLesson) {
+  try { sessionStorage.setItem('eduverse:3d-lesson', lesson.id); } catch { /* private mode */ }
+}

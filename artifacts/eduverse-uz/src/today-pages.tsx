@@ -6,7 +6,7 @@ import { CoursePage, CourseScene3D, openTextbook } from './course';
 import { AttendancePage } from './attendance-page';
 import {
   LessonDayHeader, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
-  lessonSubjectName, useLessonCourses, useToday, type TodayLesson,
+  lessonSubjectName, rememberLessonFor3D, useLessonCourses, useToday, type TodayLesson,
 } from './today';
 import { LoadingBlock } from './ui/loading';
 import { Modal } from './ui/modal';
@@ -20,9 +20,7 @@ function Loading({ language }: { language?: Language }) {
 }
 
 /** Remembers which lesson the 3D studio should open on. */
-export function rememberLessonFor3D(lesson: TodayLesson) {
-  try { sessionStorage.setItem('eduverse:3d-lesson', lesson.id); } catch { /* private mode */ }
-}
+export { rememberLessonFor3D };
 
 function UpNext({ lessons, now, current, language }: { lessons: TodayLesson[]; now: number; current?: TodayLesson; language: Language }) {
   const later = lessons.filter((lesson) => lesson.id !== current?.id && statusOf(lesson, now) === 'upcoming');

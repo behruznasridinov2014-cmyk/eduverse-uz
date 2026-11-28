@@ -57283,6 +57283,25 @@ router10.get("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWN
   res.setHeader("Cache-Control", "private, no-store");
   res.json(billing);
 });
+router10.get("/schools/:schoolId/my-bill", requireAuthenticatedRole("school_director", "school_admin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const role = await schoolRoleOf2(viewerOf5(res).id, schoolId);
+  if (role !== "school_director" && role !== "school_admin") {
+    res.status(403).json({ error: "Only the school administration sees payments." });
+    return;
+  }
+  const billing = await loadBilling(schoolId);
+  if (!billing) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ monthlyFee: billing.monthlyFee, currency: billing.currency, debt: billing.debt, monthsOwed: billing.monthsOwed, nextDue: billing.monthlyFee > 0 ? billing.nextDue : null, daysToDue: billing.daysToDue });
+});
 router10.put("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const schoolId = String(req.params.schoolId);
   if (!isValidUuid(schoolId)) {

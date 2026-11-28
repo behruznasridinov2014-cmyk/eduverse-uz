@@ -13,17 +13,11 @@ import { useLocaleDom } from './localization';
 import { Link, Redirect, useLocation } from 'wouter';
 import { authCopy, AuthLoadingPage, AuthStatusPage, getRoleLabel, LoginPage, ProfilePage } from './auth-pages';
 import { useAuth } from './auth-context';
-import { LessonRoomPage } from './lesson-room';
-import { TopicLibraryPage } from './topic-library';
 import { AttendancePage } from './attendance-page';
-import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
 import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { SchoolCalendarPanel } from './school-calendar';
 import { GradesPage } from './grades';
-import { WorksheetBuilder } from './worksheet';
-import { SchoolSetupWizard } from './setup-wizard';
-import { TrainerPage } from './trainer';
 import { PlansOverview, SchoolBillingPanel, ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, EnrollRequestPanel, MyRequestsPanel, OwnerRequestsPanel, SchoolPeoplePanel } from './school-requests';
 import { LoadingBlock } from './ui/loading';
@@ -35,9 +29,9 @@ import { LessonNowBar } from './lesson-now-bar';
 import { StudentPulse } from './student-home';
 import { RepeatToday } from './lesson-roles';
 import { TodayLessons } from './today';
+import { HomeStats } from './home-stats';
 import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, TeacherDayPage, TimetableChangesPage } from './ecosystem';
 import { TimetableEditor } from './timetable-editor';
-import { LabPage, LessonDayPage, LessonPreviewPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell, StatsSection } from './account';
@@ -63,6 +57,15 @@ import {
   Atom, BarChart3, BookMarked, CalendarClock, FlaskConical, ListChecks, MessageCircle, Wallet, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
 const PdfViewer = lazy(() => import("./pdf-viewer").then((m) => ({ default: m.PdfViewer })));
+// Big pages load only when opened, so the first screen (sign-in, overview) appears faster.
+const LessonRoomPage = lazy(() => import('./lesson-room').then((m) => ({ default: m.LessonRoomPage })));
+const ChemLabPage = lazy(() => import('./chem-lab').then((m) => ({ default: m.ChemLabPage })));
+const TrainerPage = lazy(() => import('./trainer').then((m) => ({ default: m.TrainerPage })));
+const SchoolSetupWizard = lazy(() => import('./setup-wizard').then((m) => ({ default: m.SchoolSetupWizard })));
+const LabPage = lazy(() => import('./today-pages').then((m) => ({ default: m.LabPage })));
+const LessonDayPage = lazy(() => import('./today-pages').then((m) => ({ default: m.LessonDayPage })));
+const LessonPreviewPage = lazy(() => import('./today-pages').then((m) => ({ default: m.LessonPreviewPage })));
+const TodayCoursePage = lazy(() => import('./today-pages').then((m) => ({ default: m.TodayCoursePage })));
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
@@ -221,6 +224,7 @@ function App(){
       </div>}
       {mustChangePassword&&location!=='/profile'&&<div className="account-banner password-banner" role="status"><ShieldCheck size={18}/><div><b>{lang==='Uzbek'?'Vaqtinchalik parolni almashtiring':lang==='Русский'?'Смените временный пароль':'Change your temporary password'}</b><span>{lang==='Uzbek'?'Bu sizning hisobingiz xavfsizligi uchun.':lang==='Русский'?'Это нужно для безопасности вашего аккаунта.':'This keeps your account safe.'}</span></div><button type="button" className="btn small primary" onClick={()=>navigate('/profile?tab=security')}>{lang==='Uzbek'?'Almashtirish':lang==='Русский'?'Сменить':'Change'}</button></div>}
       <div className="content" key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
+        <Suspense fallback={<LoadingBlock language={lang}/>}>
         {forbidden&&auth.user?<RoleBlocked language={lang} role={auth.user.role} goHome={()=>navigate('/dashboard')}/>
         :auth.user&&proLocked(location)?<ProLock language={lang}/>
         :location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
@@ -251,6 +255,7 @@ function App(){
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
         :location==='/support'?<Redirect to="/"/>
         :<NotFound language={lang} goHome={()=>navigate('/dashboard')}/>}
+        </Suspense>
       </div>
       {userRole&&<nav className="tabbar-dock" aria-label="Mobile navigation">
         <GlassTabs className="tabbar" ariaLabel="Mobile navigation" activeKey={MOBILE_NAV[userRole].find(label=>{const item=NAV_ITEMS.find(entry=>entry.label===label);return item&&active(item.href)})??null}
@@ -399,6 +404,7 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     <p>{getRoleLabel(language,user.role)}{membership?.schoolName?` · ${membership.schoolName}`:''}</p>
    </div>
   </div>
+  <HomeStats role={user.role} schoolId={membership?.schoolId} language={language} onOpen={onOpen}/>
   {['teacher','student','parent','school_director','school_admin'].includes(user.role)&&<TodayLessons language={language} onOpen={onOpen} role={user.role}/>}
   {rest.length>0&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Bo‘limlar':language==='Русский'?'Разделы':'Sections'}</h2>
@@ -541,7 +547,8 @@ function SchoolToolPage({school,language,page}:{school:SchoolData;language:Lang;
 type SchoolTab='overview'|'enroll'|'people'|'classes'|'calendar';
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- const [savedTab,setTab]=useSavedState<SchoolTab>('school-tab','overview');
+ // Always opens on the overview (the owner asked); the tab is not remembered between visits.
+ const [savedTab,setTab]=useState<SchoolTab>('overview');
  const tabs:Array<[SchoolTab,string,ReactNode]>=[
   ['overview',text('Overview','Обзор','Umumiy'),<LayoutDashboard size={20}/>],
   ['enroll',text('Add people','Добавить','Qo‘shish'),<Plus size={20}/>],
@@ -594,7 +601,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
    {tab==='schools'&&!setup&&<ServerAdminSchoolsPanel key={schoolsRevision} language={language} part="list" onSelect={openSchool}/>}
    {tab==='schools'&&setup&&<div className="admin-school-setup">
      <div className="row-between admin-school-setup-head"><button className="btn small" onClick={closeSchool}><ArrowLeft size={14}/>{text('All schools','Все школы','Barcha maktablar')}</button><b>{setup.name}</b></div>
-     <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>
+     <Suspense fallback={<LoadingBlock language={language}/>}><SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/></Suspense>
      <details className="panel admin-more" open><summary><b>{text('Payment','Оплата','To‘lov')}</b></summary><SchoolBillingPanel key={`billing-${setup.id}`} schoolId={setup.id} language={language}/></details>
      <details className="panel admin-more"><summary><b>{text('Plan','Тариф','Tarif')}</b></summary><SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/></details>
      <details className="panel admin-more"><summary><b>{text('People of the school','Люди школы','Maktab odamlari')}</b></summary><SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/></details>

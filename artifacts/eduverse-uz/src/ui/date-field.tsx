@@ -67,6 +67,14 @@ type Props = {
   step?: number;
 };
 
+/**
+ * Inside a <label> every click is sent again to the first button (our trigger): the list
+ * closed and opened at once. Cancelling the click here stops that second click.
+ */
+const stopLabelClick = (event: { target: EventTarget; preventDefault: () => void; currentTarget: Element }) => {
+  if ((event.currentTarget as Element).closest('label')) event.preventDefault();
+};
+
 export function DateField({ type = 'date', value, onChange, min, max, disabled, required, id, className = '', style, placeholder, step = 5, ...rest }: Props) {
   const lang = readLang();
   const words = WORDS[lang];
@@ -136,7 +144,7 @@ export function DateField({ type = 'date', value, onChange, min, max, disabled, 
 
   const Icon = type === 'time' ? Clock : CalendarDays;
   return (
-    <div ref={rootRef} className={`ev-select ev-date ${open ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className.replace(/\binput\b/g, '').trim()}`} style={style}>
+    <div ref={rootRef} className={`ev-select ev-date ${open ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className.replace(/\binput\b/g, '').trim()}`} style={style} onClick={stopLabelClick}>
       <button type="button" id={id} className="ev-select-trigger" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} aria-label={rest['aria-label']} onClick={toggle}>
         <span className={`ev-select-value ${label ? '' : 'is-placeholder'}`}>{label || placeholder || words.pick}</span>
         <Icon size={16} className="ev-select-chevron" aria-hidden="true" />

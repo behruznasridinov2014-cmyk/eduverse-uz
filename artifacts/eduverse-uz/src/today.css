@@ -528,3 +528,17 @@ html[data-theme="night"] .hw-key-answer { color: #8fd3ae; }
 .review-task { margin: 0 0 12px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface-2, rgba(255, 255, 255, 0.04)); }
 .review-task summary { cursor: pointer; font-weight: 700; }
 .review-task[open] summary { margin-bottom: 10px; }
+.plans-kpi.debt b { color: var(--danger, #c0392b); font-size: 20px; }
+
+/* Overview numbers for every role (home-stats.tsx) */
+.home-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 4px 0 22px; }
+.home-stat { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line-2, #e2dccf); background: var(--surface, #fff); color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.home-stat:hover, .home-stat:focus-visible { border-color: var(--ev-primary, #c9a35a); outline: none; transform: translateY(-1px); }
+.home-stat-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--ev-primary-soft, rgba(201,163,90,.15)); color: var(--ev-primary, #b08a43); }
+.home-stat b { font-size: 24px; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.home-stat > span:last-child { grid-column: 1 / -1; font-size: 13px; color: var(--text-2, #5b5446); }
+.home-stat.good .home-stat-icon { background: color-mix(in srgb, var(--ok, #2e8b57) 15%, transparent); color: var(--ok, #2e8b57); }
+.home-stat.warn .home-stat-icon { background: color-mix(in srgb, var(--warn, #c98a1a) 16%, transparent); color: var(--warn, #c98a1a); }
+.home-stat.bad .home-stat-icon { background: color-mix(in srgb, var(--bad, #c0392b) 14%, transparent); color: var(--bad, #c0392b); }
+.home-stat.bad b { color: var(--bad, #c0392b); }
+@media (max-width: 430px) { .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .home-stat b { font-size: 20px; } }

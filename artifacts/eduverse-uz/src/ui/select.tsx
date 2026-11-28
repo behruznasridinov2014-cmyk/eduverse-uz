@@ -57,6 +57,14 @@ function optionsFromChildren(children: ReactNode): SelectOption[] {
   return list;
 }
 
+/**
+ * Inside a <label> every click is sent again to the first button (our trigger): the list
+ * closed and opened at once. Cancelling the click here stops that second click.
+ */
+const stopLabelClick = (event: { target: EventTarget; preventDefault: () => void; currentTarget: Element }) => {
+  if ((event.currentTarget as Element).closest('label')) event.preventDefault();
+};
+
 export function Select({ value, onChange, options, children, placeholder, id, className = '', style, disabled, title, required: _required, ...rest }: Props) {
   const items = useMemo(() => options ?? optionsFromChildren(children), [options, children]);
   const current = value === null || value === undefined ? '' : String(value);
@@ -118,7 +126,7 @@ export function Select({ value, onChange, options, children, placeholder, id, cl
 
   const selected = items[selectedIndex];
   return (
-    <div ref={rootRef} className={`ev-select ${open ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className.replace(/\binput\b/g, '').trim()}`} style={style} title={title}>
+    <div ref={rootRef} className={`ev-select ${open ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''} ${className.replace(/\binput\b/g, '').trim()}`} style={style} title={title} onClick={stopLabelClick}>
       <button
         ref={buttonRef}
         id={id}
