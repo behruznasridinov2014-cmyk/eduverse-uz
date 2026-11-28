@@ -39,6 +39,7 @@ import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
 import { QrScannerButton } from './qr-scanner';
 import { UserAvatar, useMustChangePassword } from './school-tools';
 import { ProfileSections } from './account';
+import { LensGroup } from './glass-nav';
 
 type AuthCopy = {
   signIn: string;
@@ -975,14 +976,14 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           {auth.accountNotice?.kind === 'signed-out' && (
             <div className="notice" role="status">{language === 'Uzbek' ? 'Boshqa oynada hisobdan chiqildi. Qaytadan kiring.' : language === 'Русский' ? 'В другой вкладке выполнен выход. Войдите снова.' : 'You were signed out in another tab. Please sign in again.'}</div>
           )}
-          {!isPhone && <div className="auth-tabs" role="tablist" aria-label={copy.signIn}>
+          {!isPhone && <LensGroup className="auth-tabs" role="tablist" activateOnArrow aria-label={copy.signIn}>
             <button type="button" role="tab" aria-selected={tab === 'code'} className={`auth-tab ${tab === 'code' ? 'active' : ''}`} onClick={() => setTab('code')}>
               <LockKeyhole size={15} /> {qrCopy.tabCode}
             </button>
             <button type="button" role="tab" aria-selected={tab === 'qr'} className={`auth-tab ${tab === 'qr' ? 'active' : ''}`} onClick={() => setTab('qr')}>
               <Smartphone size={15} /> {qrCopy.tabQr}
             </button>
-          </div>}
+          </LensGroup>}
 
           {tab === 'code' || (isPhone && !qrCode) ? (
             <form className="auth-form" onSubmit={submit}>

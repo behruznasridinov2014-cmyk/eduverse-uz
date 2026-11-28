@@ -5,6 +5,7 @@ import type { Language, SchoolData } from './school-data';
 import { subjectLabel } from './ui/config';
 import { markBand, markOf } from './marks';
 import { LoadingBlock } from './ui/loading';
+import { LensGroup } from './glass-nav';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
@@ -55,13 +56,13 @@ export function GradesPage({ school, language }: { school: SchoolData; language:
         <div>
           <h1>{t(language, 'Mening baholarim', 'Мои оценки', 'My grades')}</h1>
         </div>
-        <div className="studio-tabs">
+        <LensGroup variant="solid" className="studio-tabs">
           {[thisYear, thisYear - 1].map((value) => (
             <button type="button" key={value} className={`studio-tab ${value === year ? 'active' : ''}`} onClick={() => setYear(value)}>
               {value === thisYear ? t(language, 'Shu yil', 'Этот год', 'This year') : t(language, 'O‘tgan yil', 'Прошлый год', 'Last year')}
             </button>
           ))}
-        </div>
+        </LensGroup>
       </div>
       {journal === null ? <LoadingBlock language={language} /> : table.length === 0 ? (
         <div className="empty-state">

@@ -11,6 +11,7 @@ import {
 import { LoadingBlock } from './ui/loading';
 import { Modal } from './ui/modal';
 import { useLive } from './lesson-teacher';
+import { LensGroup } from './glass-nav';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
@@ -164,13 +165,13 @@ export function LabTodayScene({ language, locked = false }: { language: Language
           <p className="muted">{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)} · {lessonSubjectName(lesson.subject, language)} · {lesson.start}–{lesson.end} · {timeText(lesson, now, language)}</p>
         </div>
         {!locked && open.length > 1 && (
-          <div className="lab-today-pick" role="tablist">
+          <LensGroup variant="solid" className="lab-today-pick" role="tablist" activateOnArrow>
             {open.map((item) => (
               <button type="button" role="tab" key={item.id} aria-selected={item.id === lesson.id} className={`studio-tab ${item.id === lesson.id ? 'active' : ''}`} onClick={() => { setPicked(item.id); rememberLessonFor3D(item); }}>
                 {item.start} · {item.className} · {lessonSubjectName(item.subject, language)}
               </button>
             ))}
-          </div>
+          </LensGroup>
         )}
       </div>
       {topic ? (

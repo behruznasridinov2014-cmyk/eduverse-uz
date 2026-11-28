@@ -10,6 +10,7 @@ import { Circuit, Pendulum } from './physics-lab';
 import { CollisionLab } from './collision-lab';
 import { LoadingBlock } from './ui/loading';
 import { STUDIO_TASKS, StudioTaskBanner, StudioTaskList, StudioTaskQuiz, useStudioDone, type LabState, type StudioTask } from './studio-tasks';
+import { LensGroup } from './glass-nav';
 const StudioBookTopics = lazy(() => import('./studio-book'));
 
 /**
@@ -374,13 +375,13 @@ export function ChemLabPage({ language, user }: { language: Language; user: User
     <section className="chem-lab">
       <div className="page-heading">
         <div>
-          <div className="row lab-subjects">
+          <LensGroup variant="solid" className="row lab-subjects">
             {SUBJECTS.map(([key, label, icon]) => (
               <button type="button" key={key} className={`studio-tab ${subject === key ? 'active' : ''}`} onClick={() => { setSubject(key); closeTask(); }}>
                 <span>{icon}</span>{tx(label)}
               </button>
             ))}
-          </div>
+          </LensGroup>
           <h1>{tx(L('3D studiya', '3D-студия', '3D studio'))}</h1>
           <p className="page-subtitle">{tx(L(
             'Kimyo, fizika, matematika, biologiya, geografiya — hammasini 3D da aylantiring, o‘zgartiring va tekshiring.',

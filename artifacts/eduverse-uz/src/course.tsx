@@ -18,6 +18,7 @@ import { MathLab } from './studio-labs';
 import { LessonStages } from './lesson-stages';
 import { LoadingBlock } from './ui/loading';
 import { useOptionalAuth } from './auth-context';
+import { LensGroup } from './glass-nav';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -410,13 +411,13 @@ export function CoursePage({ user, school, language, onOpen, lesson, lessonActio
         </div>
       </div>}
 
-      {!lesson && <div className="course-subjects">
+      {!lesson && <LensGroup variant="solid" className="course-subjects">
         {books.map((item) => (
           <button type="button" key={item.id} className={`studio-tab ${item.id === book.id ? 'active' : ''}`} onClick={() => { picked.current = false; setShowAll(false); setBookId(item.id); setTopicKey(item.topics[0]?.key ?? ''); }}>
             <span>●</span>{subjectName(item.subject)}
           </button>
         ))}
-      </div>}
+      </LensGroup>}
 
       {course && !lesson && (
         <section className="panel course-plan">

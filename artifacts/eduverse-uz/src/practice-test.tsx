@@ -5,6 +5,7 @@ import type { Language } from './school-data';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
 import { Protected } from './ui/protect';
+import { LensGroup } from './glass-nav';
 
 /*
  * "My test": 5 questions made for this pupil on the topics they find hard (low journal marks,
@@ -69,11 +70,11 @@ export function PracticeTest({ userId, language }: { userId: string; language: L
       </div>
       {!saved && (
         <>
-          <div className="row practice-subjects">
+          <LensGroup variant="solid" className="row practice-subjects">
             {SUBJECTS.map(([value, label]) => (
               <button type="button" key={value || 'any'} className={`studio-tab ${subject === value ? 'active' : ''}`} onClick={() => setSubject(value)}>{t(language, ...label)}</button>
             ))}
-          </div>
+          </LensGroup>
           <button type="button" className="btn primary" disabled={busy} onClick={() => void create()}>{busy ? t(language, 'Tayyorlanmoqda…', 'Готовим…', 'Preparing…') : t(language, 'Testni boshlash', 'Начать тест', 'Start the test')}</button>
           {busy && <LoadingBlock language={language} kind="inline" />}
         </>

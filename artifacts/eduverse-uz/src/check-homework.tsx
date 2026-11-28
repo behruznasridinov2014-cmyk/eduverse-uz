@@ -10,6 +10,7 @@ import { Modal } from './ui/modal';
 import { markBand } from './marks';
 import { COURSE, type CourseTopic } from './course-data';
 import { subjectLabel } from './ui/config';
+import { LensGroup } from './glass-nav';
 
 const MONTHS: Record<Language, string[]> = {
   Uzbek: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
@@ -193,7 +194,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
             return (
               <>
                 {subjects.length > 1 && (
-                  <div className="check-hw-tasks" role="tablist">
+                  <LensGroup variant="solid" className="check-hw-tasks" role="tablist" activateOnArrow>
                     {subjects.map((subject) => {
                       const list = withWork.filter(({ item }) => item.subject === subject);
                       const waiting = list.reduce((sum, { at }) => sum + waitingIn(at), 0);
@@ -205,7 +206,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
                         </button>
                       );
                     })}
-                  </div>
+                  </LensGroup>
                 )}
                 {current && (
                   <div className="check-hw-day">

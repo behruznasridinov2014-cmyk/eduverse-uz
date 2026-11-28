@@ -69,7 +69,7 @@ export function ProfileSections({ user, language, initialTab }: { user: User; la
   const swipe = useSwipeTabs<Section>(sections.map(([key]) => key), tab, setTab);
   return (
     <>
-      <GlassTabs className="cabinet-glass-tabs profile-tabs" ariaLabel={tx(language, 'Profil bo‘limlari', 'Разделы профиля', 'Profile sections')} activeKey={tab} onSelect={(key) => swipe.select(key as Section)} items={sections.map(([key, label, icon]) => ({ key, label, icon }))} />
+      <GlassTabs className="cabinet-glass-tabs profile-tabs" ariaLabel={tx(language, 'Profil bo‘limlari', 'Разделы профиля', 'Profile sections')} activeKey={tab} progress={swipe.progress} onSelect={(key) => swipe.select(key as Section)} items={sections.map(([key, label, icon]) => ({ key, label, icon }))} />
       <div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
         {tab === 'personal' && <PersonalSection user={user} language={language} teaches={teaches} />}
         {tab === 'security' && <SecuritySection language={language} />}
@@ -460,11 +460,12 @@ export function SupportPage({ user, language }: { user: User; language: Language
     ...(user.role !== 'platform_superadmin' && !staffChannel ? [['school', tx(language, 'Maktab', 'Школа', 'School'), <School key="s" size={19} />] as [Tab, string, ReactNode]] : []),
   ];
   const [tab, setTab] = useState<Tab>(tabs[0][0]);
+  const swipe = useSwipeTabs<Tab>(tabs.map(([key]) => key), tab, setTab);
   return (
     <>
       <div className="page-heading"><div><div className="eyebrow">EDUVERSE</div><h1>{tx(language, 'Yordam va chat', 'Поддержка и чат', 'Support and chat')}</h1><p className="page-subtitle">{tx(language, 'Savollar faqat ilova ichida: kurator va maktab ma’muriyati bilan yozishmalar.', 'Вопросы — только внутри приложения: переписка с куратором и администрацией школы.', 'Questions stay inside the app.')}</p></div></div>
-      {tabs.length > 1 && <GlassTabs className="cabinet-glass-tabs" ariaLabel="Support" activeKey={tab} onSelect={(key) => setTab(key as Tab)} items={tabs.map(([key, label, icon]) => ({ key, label, icon }))} />}
-      <div className="page-stack cabinet-pane" key={tab}>
+      {tabs.length > 1 && <GlassTabs className="cabinet-glass-tabs" ariaLabel="Support" activeKey={tab} progress={swipe.progress} onSelect={(key) => swipe.select(key as Tab)} items={tabs.map(([key, label, icon]) => ({ key, label, icon }))} />}
+      <div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...(tabs.length > 1 ? swipe.handlers : {})} style={swipe.style}>
         {tab === 'inbox' && staffChannel && <SupportInbox language={language} channel={staffChannel} />}
         {tab === 'curator' && (user.role === 'platform_superadmin' ? <p className="muted">{tx(language, 'Siz kuratorsiz — murojaatlar chap tabda.', 'Вы куратор — обращения во вкладке «Обращения».', 'You are the curator.')}</p> : <SupportChat channel="curator" language={language} />)}
         {tab === 'school' && <SupportChat channel="school" language={language} />}

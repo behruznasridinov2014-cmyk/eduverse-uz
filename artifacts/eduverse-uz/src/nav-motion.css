@@ -1,0 +1,123 @@
+/*
+ * EDUVERSE navigation & gestures (loaded last, after readable.css).
+ * Floating pill that springs between tabs, a soft press, a gentle "expand"
+ * of the chosen tab, swipe tracking and the side menu pill.
+ * Only transform / opacity / scale move. Reduced motion → nothing moves.
+ */
+
+:root {
+  /* calm spring: one small overshoot, then rest (sampled damped spring) */
+  --nav-spring: var(--ease-spring);
+  --nav-press: 110ms;
+  /* subtle blue-violet sheen used only on the chosen pill in night mode */
+  --nav-sheen: linear-gradient(135deg, rgba(150, 170, 255, 0.16), rgba(170, 140, 255, 0.10) 55%, rgba(120, 170, 255, 0.08));
+  --nav-sheen-rim: rgba(176, 168, 255, 0.28);
+}
+
+/* ---------- the tab bar (GlassTabs) ---------- */
+.glass-lens { transition: transform .58s var(--nav-spring), width .5s var(--nav-spring), background .3s var(--ease-out), opacity .3s; }
+.glass-tabs.is-dragging .glass-lens { transition: transform .12s var(--ease-out), width .28s var(--ease-out), background .2s; scale: 1.08; }
+.glass-tabs.is-tracking .glass-lens { transition: none; }
+.glass-tab { transition: transform var(--dur-release) var(--ease-snap), scale .5s var(--nav-spring), color .3s var(--ease-out); }
+/* the chosen tab grows a touch; a pressed tab dips — never both rubbery */
+.glass-tab.active { scale: 1.035; }
+.glass-tab.is-pressed, .glass-tab:active { transform: scale(0.93); transition-duration: var(--nav-press); transition-timing-function: ease-out; }
+.glass-tab.hover { transform: none; scale: 1.06; }
+.glass-tab-label { transition: opacity .3s var(--ease-out); }
+.glass-tab:not(.active) .glass-tab-label { opacity: 0.86; }
+.glass-tabs { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.glass-tabs::-webkit-scrollbar { display: none; }
+.tabbar.glass-tabs { overflow: visible; }
+
+/* ---------- any row / column with the sliding pill (LensGroup) ---------- */
+.lens-host { position: relative; isolation: isolate; }
+.lens-host > :not(.lens-host-lens) { position: relative; z-index: 1; }
+.lens-host-lens {
+  position: absolute; z-index: 0; left: 0; top: 0; pointer-events: none; border-radius: 999px;
+  transition: transform .58s var(--nav-spring), width .5s var(--nav-spring), height .5s var(--nav-spring), opacity .3s;
+  will-change: transform;
+}
+/* glass pill */
+.lens-glass > .lens-host-lens {
+  background: var(--lens-bg); border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: inset 2px 3px 6px rgba(255, 255, 255, 0.9), inset -3px -3px 9px rgba(140, 165, 215, 0.32), 0 6px 14px -8px rgba(40, 52, 80, 0.45);
+}
+html[data-theme="night"] .lens-glass > .lens-host-lens {
+  background: var(--nav-sheen), rgba(255, 255, 255, 0.07); border-color: var(--nav-sheen-rim);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px -8px rgba(0, 0, 0, 0.6);
+}
+/* the old LensRow pill is replaced by the shared one */
+.lens-row-lens { display: none; }
+.lens-row > [aria-selected="true"], .lens-row > [aria-pressed="true"], .lens-row > .on, .lens-row > .active { scale: 1.03; }
+.lens-row > button { transition: color .3s var(--ease-out), transform .45s var(--ease-snap), scale .5s var(--nav-spring); }
+
+/* gold pill for chip rows (the chosen chip was gold before — it still is, it just glides) */
+.lens-solid > .lens-host-lens { border-radius: 12px; background: var(--gold-fill, linear-gradient(135deg, #D2B26E, #B8955A)); box-shadow: 0 10px 24px -14px rgba(122, 90, 34, 0.75); }
+html[data-theme="night"] .lens-solid > .lens-host-lens { background: var(--accent-night, #D7A968); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 6px 16px -10px rgba(0, 0, 0, 0.7); }
+html .lens-solid > .studio-tab.active, html .lens-solid > .auth-tab.active, html[data-theme="night"] .lens-solid > .studio-tab.active {
+  background: transparent !important; border-color: transparent !important; box-shadow: none !important;
+}
+.lens-solid > .studio-tab { transition: color .3s var(--ease-out), transform var(--dur-release) var(--ease-snap), background-color .3s; }
+
+/* login: code / QR switch */
+.auth-tabs.lens-glass > .auth-tab.active { background: transparent !important; box-shadow: none !important; }
+.auth-tabs.lens-glass > .lens-host-lens { border-radius: 10px; }
+html[data-theme="night"] .auth-tabs.lens-glass > .lens-host-lens { border-radius: 10px; }
+
+/* ---------- side menu: one glass pill glides between sections ---------- */
+.nav-list.lens-host > .lens-host-lens {
+  border-radius: 14px; background: var(--lg-bg); border: 1px solid var(--lg-rim); box-shadow: var(--lg-shadow);
+}
+html[data-theme="night"] .nav-list.lens-host > .lens-host-lens {
+  background: var(--nav-sheen), rgba(30, 43, 64, 0.62); border-color: var(--nav-sheen-rim);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+}
+.nav-list.lens-host > .nav-item.active { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
+.nav-list.lens-host > .nav-item { border: 1px solid transparent; }
+.nav-list.lens-host > .nav-item:hover:not(.active) { background: rgba(127, 140, 170, 0.08); }
+
+/* ---------- swipe between tabs ---------- */
+.cabinet-pane { touch-action: pan-y pinch-zoom; }
+.cabinet-pane[style*="translateX"] { will-change: transform; }
+html.swipe-tabs-on, html.swipe-tabs-on body { overscroll-behavior-x: none; }
+/* content comes in from the side it was pushed to */
+.cabinet-pane.slide-from-right { animation: nav-from-right .46s var(--ease-out) backwards !important; }
+.cabinet-pane.slide-from-left { animation: nav-from-left .46s var(--ease-out) backwards !important; }
+@keyframes nav-from-right { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: none; } }
+@keyframes nav-from-left { from { opacity: 0; transform: translateX(-48px); } to { opacity: 1; transform: none; } }
+
+/* phone bottom bar: pages slide in from the side of the tab you came from */
+.content.nav-forward > * { animation-name: nav-from-right !important; }
+.content.nav-back > * { animation-name: nav-from-left !important; }
+
+/* ---------- keyboard focus that is visible but calm ---------- */
+.lens-host > button:focus-visible, .lens-host > a:focus-visible, .glass-tab:focus-visible {
+  outline: 2px solid var(--sky-deep); outline-offset: 2px; border-radius: inherit;
+}
+
+/* ---------- comfort ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .glass-lens, .lens-host-lens, .glass-tab, .lens-row > button { transition: none !important; }
+  .glass-tab.active, .glass-tab.hover, .lens-row > .on, .lens-row > .active, .lens-row > [aria-pressed="true"], .lens-row > [aria-selected="true"] { scale: none; }
+  .glass-tabs.is-dragging .glass-lens { scale: none; }
+  .cabinet-pane.slide-from-right, .cabinet-pane.slide-from-left, .content.nav-forward > *, .content.nav-back > * { animation: none !important; }
+}
+@media (prefers-contrast: more) {
+  .lens-glass > .lens-host-lens, .nav-list.lens-host > .lens-host-lens { background: #F1E6D2 !important; border: 2px solid #1E2633 !important; }
+  html[data-theme="night"] .lens-glass > .lens-host-lens, html[data-theme="night"] .nav-list.lens-host > .lens-host-lens { background: #26354D !important; border-color: #FFFFFF !important; }
+}
+@media (forced-colors: active) {
+  .lens-host-lens { border: 2px solid Highlight !important; background: transparent !important; }
+}
+.lab-subjects-gap { margin-bottom: 10px; }
+
+/* ---------- windows: on a phone, pull the sheet down by its header to close ---------- */
+.modal.ev-modal { transition: translate .45s var(--nav-spring); }
+@media (max-width: 760px) {
+  .ev-modal-head { position: relative; touch-action: none; padding-top: 24px; }
+  .ev-modal-head::before {
+    content: ''; position: absolute; top: 9px; left: 50%; width: 38px; height: 5px; margin-left: -19px;
+    border-radius: 3px; background: rgba(127, 140, 170, 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) { .modal.ev-modal { transition: none; } }

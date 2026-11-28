@@ -5,7 +5,7 @@ import { BellRing, Brain, Check, ChevronLeft, ChevronRight, Lightbulb, MessageCi
 import type { Language } from './school-data';
 import { COURSE, type CourseTopic } from './course-data';
 import { glossary, sentences } from './lesson-engine';
-import { LensRow } from './glass-nav';
+import { LensRow, useSwipeTabs } from './glass-nav';
 import { Modal } from './ui/modal';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
@@ -119,12 +119,14 @@ export function RememberCard({ topic, language, onLearned, inLesson = false }: {
     writeReminders(list); setReminded(true);
   }
   const tabs: Array<[typeof tab, string]> = [['learn', t(language, 'Tushunish', 'Понять', 'Understand')], ['check', t(language, 'Tekshirish', 'Проверить', 'Check')], ['remember', t(language, 'Eslab qolish', 'Запомнить', 'Remember')]];
+  const swipe = useSwipeTabs<typeof tab>(tabs.map(([key]) => key), tab, setTab);
   return (
     <section className="role-card learn">
       {!inLesson && <div className="role-card-head static"><Brain size={17} /> <b>{topic.title}</b></div>}
       <LensRow className="role-tabs">
-        {tabs.map(([key, label]) => <button key={key} type="button" className={tab === key ? 'on' : ''} aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}
+        {tabs.map(([key, label]) => <button key={key} type="button" className={tab === key ? 'on' : ''} aria-pressed={tab === key} onClick={() => swipe.select(key)}>{label}</button>)}
       </LensRow>
+      <div className={`role-swipe cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
       {tab === 'learn' && (
         <div className="role-pane">
           {parts[0] && <p className="role-idea"><Lightbulb size={15} /> {parts[0]}</p>}
@@ -172,6 +174,7 @@ export function RememberCard({ topic, language, onLearned, inLesson = false }: {
           <button type="button" className={`btn small ${reminded ? '' : 'primary'}`} disabled={reminded} onClick={remind}><BellRing size={13} /> {reminded ? t(language, 'Ertaga eslataman', 'Напомню завтра', 'I’ll remind you tomorrow') : t(language, 'Ertaga eslatish', 'Напомнить завтра', 'Remind me tomorrow')}</button>
         </div>
       )}
+      </div>
     </section>
   );
 }

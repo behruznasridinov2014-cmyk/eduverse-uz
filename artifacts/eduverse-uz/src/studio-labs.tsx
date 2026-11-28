@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import type { LessonTopic } from '@workspace/api-client-react';
 import type { Language } from './school-data';
 import { TopicModels } from './topic-library';
+import { LensGroup } from './glass-nav';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -275,11 +276,11 @@ export function WebModelsLab({ language, group: startGroup, free = false, initia
     <div className="stack">
       <section className="panel">
         {free && (
-          <div className="row lab-subjects" style={{ marginBottom: 10 }}>
+          <LensGroup variant="solid" className="row lab-subjects lab-subjects-gap">
             {GROUP_LABEL.map(([key, label]) => (
               <button type="button" key={key} className={`studio-tab ${group === key ? 'active' : ''}`} onClick={() => setGroup(key)}>{t(language, ...label)}</button>
             ))}
-          </div>
+          </LensGroup>
         )}
         <div className="chem-presets">
           {presets.map((preset) => (

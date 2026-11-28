@@ -6,6 +6,7 @@ import './motion.css';
 import './ui/ui.css';
 import './phone.css';
 import './readable.css';
+import './nav-motion.css';
 import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -39,7 +40,7 @@ import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, Teache
 import { TimetableEditor } from './timetable-editor';
 import { LabPage, LessonDayPage, LessonPreviewPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
-import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
+import { GlassTabs, LensGroup, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell, StatsSection } from './account';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import { customFetch, type User } from '@workspace/api-client-react';
@@ -114,6 +115,10 @@ function App(){
   const openRoom=useOpenRoom(userRole==='student'&&auth.status==='authenticated');
   const visible=userRole?ROLE_NAV[userRole].filter(label=>label!=='Lesson room'||(userRole==='student'&&openRoom)).map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
+  // Phone bottom bar: a page opened from a tab to the right slides in from the right (and back from the left).
+  const bottomIndex=(path:string)=>userRole?MOBILE_NAV[userRole].findIndex(label=>{const item=NAV_ITEMS.find(entry=>entry.label===label);return Boolean(item&&(item.href==='/dashboard'?(path==='/'||path==='/dashboard'):path===item.href||path.startsWith(item.href+'/')))}):-1;
+  const navTrack=useRef({path:location,dir:''});
+  if(navTrack.current.path!==location){const from=bottomIndex(navTrack.current.path),to=bottomIndex(location);navTrack.current={path:location,dir:from>=0&&to>=0&&from!==to?(to>from?'nav-forward':'nav-back'):''};}
   const [langChanging,setLangChanging]=useState(false);
   function changeLang(value:Lang){
     if(value===lang)return;
@@ -180,9 +185,9 @@ function App(){
         <span className="brand-mark">E</span>
         <span><span className="brand-title">EDUVERSE</span><span className="brand-sub">{membership?.schoolName??'UZ'}</span></span>
       </Link>
-      <nav className="nav-list" aria-label="Main navigation">
-        {visible.map(item=><Link key={item.href} href={item.href} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon">{(()=>{const Icon=NAV_ICON[item.label];return Icon?<Icon size={18}/>:<item.icon/>})()}</span><span>{navLabel(lang,item.label)}</span></Link>)}
-      </nav>
+      <LensGroup as="nav" vertical className="nav-list" aria-label="Main navigation">
+        {visible.map(item=><Link key={item.href} href={item.href} aria-current={active(item.href)?'page':undefined} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon">{(()=>{const Icon=NAV_ICON[item.label];return Icon?<Icon size={18}/>:<item.icon/>})()}</span><span>{navLabel(lang,item.label)}</span></Link>)}
+      </LensGroup>
       {auth.user&&<Link href="/profile" className={`side-user ${location==='/profile'?'active':''}`} onClick={()=>setMobileOpen(false)} data-locale-preserve="true">
         <UserAvatar userId={auth.user.id} name={auth.user.username}/>
         <span className="side-user-text"><b>{auth.user.username}</b><small>{getRoleLabel(lang,auth.user.role)}</small></span>
@@ -220,7 +225,7 @@ function App(){
         <button type="button" className="btn small" onClick={auth.dismissAccountNotice} aria-label="Close"><X size={14}/></button>
       </div>}
       {mustChangePassword&&location!=='/profile'&&<div className="account-banner password-banner" role="status"><ShieldCheck size={18}/><div><b>{lang==='Uzbek'?'Vaqtinchalik parolni almashtiring':lang==='Русский'?'Смените временный пароль':'Change your temporary password'}</b><span>{lang==='Uzbek'?'Bu sizning hisobingiz xavfsizligi uchun.':lang==='Русский'?'Это нужно для безопасности вашего аккаунта.':'This keeps your account safe.'}</span></div><button type="button" className="btn small primary" onClick={()=>navigate('/profile?tab=security')}>{lang==='Uzbek'?'Almashtirish':lang==='Русский'?'Сменить':'Change'}</button></div>}
-      <div className="content" key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
+      <div className={`content ${navTrack.current.dir}`} key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
         {forbidden&&auth.user?<RoleBlocked language={lang} role={auth.user.role} goHome={()=>navigate('/dashboard')}/>
         :auth.user&&proLocked(location)?<ProLock language={lang}/>
         :location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
@@ -517,7 +522,7 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
  const ready=school.status==='ready'&&school.hasServerClasses;
  return <>
   <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""></PageHeading>
-  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} progress={swipe.progress} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {!ready
    ?(school.status==='loading'?<LoadingBlock language={language}/>:<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>)
    :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
@@ -554,7 +559,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  const schoolId=school.memberships[0]?.schoolId;
  const [revision,setRevision]=useState(0);
  return <><PageHeading eyebrow={school.memberships[0]?.schoolName??text('School','Школа','Maktab')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
-  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('School','Школа','Maktab')} activeKey={tab} onSelect={key=>swipe.select(key as SchoolTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('School','Школа','Maktab')} activeKey={tab} progress={swipe.progress} onSelect={key=>swipe.select(key as SchoolTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {school.status==='ready'&&school.hasMembership&&schoolId
    ?<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
      {tab==='overview'&&<DirectorDashboard schoolId={schoolId} language={language}/>}
@@ -586,7 +591,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  useEffect(()=>{window.scrollTo({top:0})},[tab,setup?.id]);
  void role;
  return <><PageHeading eyebrow="EDUVERSE" title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
-  <GlassTabs className="cabinet-glass-tabs" ariaLabel="EDUVERSE" activeKey={tab} onSelect={key=>swipe.select(key as AdminTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel="EDUVERSE" activeKey={tab} progress={swipe.progress} onSelect={key=>swipe.select(key as AdminTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   <div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
    {tab==='overview'&&<PlansOverview language={language} onOpenSchool={openSchool}/>}
    {tab==='requests'&&<OwnerRequestsPanel language={language}/>}
