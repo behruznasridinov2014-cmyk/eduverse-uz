@@ -6,10 +6,12 @@ import { CoursePage, CourseScene3D, openTextbook } from './course';
 import { AttendancePage } from './attendance-page';
 import {
   LessonDayHeader, UpcomingDays, bookForLesson, currentOrNext, statusOf, timeText, topicForLesson,
-  lessonSubjectName, useLessonCourses, useToday, type TodayLesson,
+  lessonSubjectName, rememberLessonFor3D, useLessonCourses, useToday, type TodayLesson,
 } from './today';
 import { LoadingBlock } from './ui/loading';
 import { Modal } from './ui/modal';
+import { useLive } from './lesson-teacher';
+import { LensGroup } from './glass-nav';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
@@ -19,9 +21,7 @@ function Loading({ language }: { language?: Language }) {
 }
 
 /** Remembers which lesson the 3D studio should open on. */
-export function rememberLessonFor3D(lesson: TodayLesson) {
-  try { sessionStorage.setItem('eduverse:3d-lesson', lesson.id); } catch { /* private mode */ }
-}
+export { rememberLessonFor3D };
 
 function UpNext({ lessons, now, current, language }: { lessons: TodayLesson[]; now: number; current?: TodayLesson; language: Language }) {
   const later = lessons.filter((lesson) => lesson.id !== current?.id && statusOf(lesson, now) === 'upcoming');
@@ -65,10 +65,17 @@ function LessonActions({ lesson, topic, user, language, onOpen }: { lesson: Toda
 export function TodayCoursePage({ user, school, language, onOpen }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const { data, failed, now } = useToday();
   const courses = useLessonCourses(data?.lessons, data?.next);
+  // «Together with the class»: when the teacher runs a lesson on the board, the pupil lands on
+  // exactly that lesson (in test mode every lesson is "now", so the first one could be another).
+  const isStudent = user.role === 'student';
+  const live = useLive(isStudent ? data?.lessons[0]?.classId ?? null : null, isStudent);
   if (!data && !failed) return <Loading language={language} />;
   const lessons = data?.lessons ?? [];
+  const liveLesson = live.state && data
+    ? lessons.find((item) => statusOf(item, now) !== 'done' && topicForLesson(item, courses[item.classId], data.date)?.key === live.state!.topicKey)
+    : undefined;
   // Only the lesson of today: no lessons today → nothing to open, only the plan for the next days.
-  const lesson = currentOrNext(lessons, now);
+  const lesson = liveLesson ?? currentOrNext(lessons, now);
   if (!data || !lesson) {
     const none = lessons.length === 0;
     return (
@@ -156,13 +163,13 @@ export function LabTodayScene({ language, locked = false }: { language: Language
           <p className="muted">{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)} · {lessonSubjectName(lesson.subject, language)} · {lesson.start}–{lesson.end} · {timeText(lesson, now, language)}</p>
         </div>
         {!locked && open.length > 1 && (
-          <div className="lab-today-pick" role="tablist">
+          <LensGroup variant="solid" className="lab-today-pick" role="tablist" activateOnArrow>
             {open.map((item) => (
               <button type="button" role="tab" key={item.id} aria-selected={item.id === lesson.id} className={`studio-tab ${item.id === lesson.id ? 'active' : ''}`} onClick={() => { setPicked(item.id); rememberLessonFor3D(item); }}>
                 {item.start} · {item.className} · {lessonSubjectName(item.subject, language)}
               </button>
             ))}
-          </div>
+          </LensGroup>
         )}
       </div>
       {topic ? (
@@ -211,7 +218,8 @@ export function LabPage({ user, language, children }: { user: User; language: La
 
 export function LessonPreviewPage({ user, school, language, onOpen }: { user: User; school: SchoolData; language: Language; onOpen: (path: string) => void }) {
   const [lesson] = useState<TodayLesson | null>(() => { try { const raw = sessionStorage.getItem('eduverse:preview-lesson'); return raw ? JSON.parse(raw) as TodayLesson : null; } catch { return null; } });
-  if (!lesson) {
+  // A pupil opens only the lesson that is going on now; the teacher prepares ahead.
+  if (!lesson || user.role !== 'teacher') {
     return (
       <div className="empty-state">
         <h2>{t(language, 'Dars tanlanmagan', 'Урок не выбран', 'No lesson chosen')}</h2>

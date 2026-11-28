@@ -298,7 +298,7 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
           })}
         </div>
       )}
-      {(lessons.length === 0 || finished) && (role === 'teacher' || isStudent) && nextBookLesson(data) && (
+      {(lessons.length === 0 || finished) && role === 'teacher' && nextBookLesson(data) && (
         <button type="button" className="btn today-preview-btn" onClick={() => openLessonPreview(nextBookLesson(data)!, onOpen)}>
           <Sparkles size={15} /> {t(language, 'Dars qanday ko‘rinishini ko‘rish', 'Посмотреть, как будет выглядеть урок', 'See how a lesson will look')}
         </button>
@@ -505,4 +505,9 @@ export function LessonChangeTag({ change, language }: { change: NonNullable<Toda
       ? t(language, 'Almashtirish', 'Замена учителя', 'Substitute teacher')
       : t(language, 'Boshqa xona', 'Другой кабинет', 'Room changed');
   return <span className={`lesson-change is-${change.kind}`}>{label}{change.note ? ` · ${change.note}` : ''}</span>;
+}
+
+/** The 3D studio opens on this lesson's topic (used by the lesson bar and the lesson pages). */
+export function rememberLessonFor3D(lesson: TodayLesson) {
+  try { sessionStorage.setItem('eduverse:3d-lesson', lesson.id); } catch { /* private mode */ }
 }

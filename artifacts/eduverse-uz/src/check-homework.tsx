@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { CheckCircle2, Clock3, Plus, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Clock3, Plus, RefreshCw, XCircle } from 'lucide-react';
 import type { Language, SchoolData } from './school-data';
 import { Select } from './ui/select';
 import { LoadingBlock } from './ui/loading';
@@ -8,6 +8,58 @@ import { friendlyError } from './errors';
 import { ServerTeachingPanel, SubmissionReviewDialog } from './school-panels';
 import { Modal } from './ui/modal';
 import { markBand } from './marks';
+import { COURSE, type CourseTopic } from './course-data';
+import { subjectLabel } from './ui/config';
+import { LensGroup } from './glass-nav';
+
+const MONTHS: Record<Language, string[]> = {
+  Uzbek: ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
+  Русский: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
+  English: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+};
+
+/** The textbook topic of a homework ("Физика · §1.6 …"), for the teacher's answer key. */
+export function topicOfHomework(title: string): CourseTopic | undefined {
+  const code = /§\s*([\d.]+)/.exec(title)?.[1];
+  if (!code) return undefined;
+  for (const book of COURSE) {
+    const found = book.topics.find((topic) => topic.code === code && title.includes(topic.title));
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** Task lines of a homework without "Из учебника:" prefixes. */
+export const homeworkLines = (description?: string) => (description ?? '').split('\n').map((line) => line.trim().replace(/^Из учебника:\s*/, '').replace(/^[-•*]\s*/, '')).filter((line) => line.length > 1);
+
+/** What the teacher checks for: the task and the main points of the topic. */
+export function HomeworkKey({ title, description, language }: { title: string; description?: string; language: Language }) {
+  const lines = homeworkLines(description);
+  const topic = topicOfHomework(title);
+  const points = topic ? [topic.essence, ...topic.facts].filter(Boolean).slice(0, 5) : [];
+  return (
+    <div className="hw-key">
+      {lines.length > 0 && (
+        <section>
+          <b>{t(language, 'Vazifa', 'Задание', 'Task')}</b>
+          <ol>{lines.map((line, at) => <li key={at}>{line}</li>)}</ol>
+        </section>
+      )}
+      {points.length > 0 && (
+        <section>
+          <b>{t(language, 'Javobda bo‘lishi kerak', 'Что должно быть в ответе', 'The answer should have')}</b>
+          <ul>{points.map((line, at) => <li key={at}>{line}</li>)}</ul>
+        </section>
+      )}
+      {topic?.tasks?.length ? (
+        <section>
+          <b>{t(language, 'Savollar va javoblar', 'Вопросы и ответы', 'Questions and answers')}</b>
+          <ul>{topic.tasks.slice(0, 4).map((task, at) => <li key={at}>{task.q} <span className="hw-key-answer">→ {task.a}</span></li>)}</ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
 
 /*
  * Teacher → "Check homework": choose a class and a subject (today's homework first), see every pupil:
@@ -29,7 +81,7 @@ function dayLabel(item: { createdAt?: string; dueAt?: string | null }, language:
   const days = Math.round((startOf(new Date()) - startOf(date)) / 86_400_000);
   if (days === 0) return t(language, 'Bugun berilgan', 'Задано сегодня', 'Given today');
   if (days === 1) return t(language, 'Kecha berilgan', 'Задано вчера', 'Given yesterday');
-  return date.toLocaleDateString(language === 'English' ? 'en-GB' : language === 'Uzbek' ? 'uz-UZ' : 'ru-RU', { day: 'numeric', month: 'long' });
+  return `${date.getDate()} ${MONTHS[language][date.getMonth()]}`;
 }
 
 export function CheckHomeworkPage({ school, language }: { school: SchoolData; language: Language }) {
@@ -43,6 +95,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const [open, setOpen] = useState<{ studentId: string; studentName: string } | null>(null);
   const [filter, setFilter] = useState<'all' | 'review' | 'graded'>('review');
   const [writing, setWriting] = useState(false);
+  const [showTask, setShowTask] = useState(false);
   // The class list arrives after the page opens: pick the first class then.
   useEffect(() => { if (!classId && school.classes[0]) setClassId(school.classes[0].id); }, [classId, school.classes]);
 
@@ -99,8 +152,8 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
   const counts = { review: handedIn.filter((row) => row.cell.state === 'review').length, graded: handedIn.filter((row) => row.cell.state === 'graded').length };
   const shown = handedIn.filter((row) => filter === 'all' || row.cell.state === filter);
   const sentIn = (at: number) => journal?.rows.some((row) => row.cells[at]?.state !== 'missing') ?? false;
-  const exercises = (assignment?.description ?? '').split('\n').map((line) => line.trim()).filter(Boolean);
   const waitingIn = (at: number) => journal?.rows.filter((row) => row.cells[at]?.state === 'review').length ?? 0;
+  const totalWaiting = journal ? journal.assignments.reduce((sum, _item, at) => sum + waitingIn(at), 0) : 0;
 
   if (!school.classes.length && school.status === 'loading') return <LoadingBlock language={language} />;
   if (!school.classes.length) return <div className="notice">{t(language, 'Sizga hali sinf biriktirilmagan.', 'К вам ещё не привязан класс.', 'No class is linked to you yet.')}</div>;
@@ -123,37 +176,53 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
       {journal && !journal.assignments.some((_, at) => sentIn(at)) && <div className="notice">{t(language, 'Hali hech kim ish yubormadi.', 'Пока никто не прислал работу.', 'Nobody has sent work yet.')}</div>}
       {journal && journal.assignments.some((_, at) => sentIn(at)) && (
         <>
+          <div className={`check-hw-total ${totalWaiting ? '' : 'is-done'}`}>
+            {totalWaiting
+              ? <><b>{totalWaiting}</b><span>{t(language, 'ta ish tekshirishni kutmoqda', totalWaiting === 1 ? 'работа ждёт проверки' : 'работ ждут проверки', totalWaiting === 1 ? 'work to check' : 'works to check')}</span></>
+              : <><CheckCircle2 size={20} /><span>{t(language, 'Hammasi tekshirildi', 'Всё проверено', 'Everything is checked')}</span></>}
+          </div>
           {(() => {
-            // One tab per subject: its newest homework with work handed in ("today's"), older days in a list.
+            // One tab per subject that has work to check (or any work once everything is checked).
             const withWork = journal.assignments.map((item, at) => ({ item, at })).filter(({ at }) => sentIn(at)).reverse();
-            const subjects = [...new Set(withWork.map(({ item }) => item.subject))];
+            const pending = withWork.filter(({ at }) => waitingIn(at) > 0);
+            const pool = filter === 'review' && pending.length ? pending : withWork;
+            const subjects = [...new Set(pool.map(({ item }) => item.subject))];
             const current = journal.assignments[index];
             const activeSubject = current?.subject ?? subjects[0];
             const days = withWork.filter(({ item }) => item.subject === activeSubject);
+            const lines = homeworkLines(current?.description);
             return (
               <>
-                <div className="check-hw-tasks" role="tablist">
-                  {subjects.map((subject) => {
-                    const list = withWork.filter(({ item }) => item.subject === subject);
-                    const waiting = list.reduce((sum, { at }) => sum + waitingIn(at), 0);
-                    return (
-                      <button type="button" role="tab" key={subject} aria-selected={subject === activeSubject} className={`studio-tab ${subject === activeSubject ? 'active' : ''}`}
-                        onClick={() => setAssignmentId((list.find(({ at }) => waitingIn(at) > 0) ?? list[0])!.item.id)}>
-                        <span>{subject}</span>
-                        {waiting > 0 && <b className="check-hw-badge">{waiting}</b>}
-                      </button>
-                    );
-                  })}
-                </div>
+                {subjects.length > 1 && (
+                  <LensGroup variant="solid" className="check-hw-tasks" role="tablist" activateOnArrow>
+                    {subjects.map((subject) => {
+                      const list = withWork.filter(({ item }) => item.subject === subject);
+                      const waiting = list.reduce((sum, { at }) => sum + waitingIn(at), 0);
+                      return (
+                        <button type="button" role="tab" key={subject} aria-selected={subject === activeSubject} className={`studio-tab ${subject === activeSubject ? 'active' : ''}`}
+                          onClick={() => setAssignmentId((list.find(({ at }) => waitingIn(at) > 0) ?? list[0])!.item.id)}>
+                          <span>{subjectLabel(subject, language)}</span>
+                          {waiting > 0 && <b className="check-hw-badge">{waiting}</b>}
+                        </button>
+                      );
+                    })}
+                  </LensGroup>
+                )}
                 {current && (
                   <div className="check-hw-day">
-                    <b>{dayLabel(current, language)}</b>
-                    <span className="muted">{(() => { const title = current.title.startsWith(current.subject) ? current.title.slice(current.subject.length).replace(/^\s*[·:-]\s*/, '') : current.title; return title; })()}</span>
-                    {days.length > 1 && (
-                      <Select value={current.id} onChange={(_event, value) => setAssignmentId(value)} aria-label={t(language, 'Kun', 'День', 'Day')} style={{ width: 210 }}
-                        options={days.map(({ item, at }) => ({ value: item.id, label: `${dayLabel(item, language)}${waitingIn(at) ? ` · ${waitingIn(at)}` : ''}` }))} />
-                    )}
+                    {days.length > 1
+                      ? <Select value={current.id} onChange={(_event, value) => setAssignmentId(value)} aria-label={t(language, 'Kun', 'День', 'Day')} style={{ width: 210 }}
+                          options={days.map(({ item, at }) => ({ value: item.id, label: `${dayLabel(item, language)}${waitingIn(at) ? ` · ${waitingIn(at)}` : ''}` }))} />
+                      : <b>{dayLabel(current, language)}</b>}
+                    <button type="button" className="btn small" onClick={() => setShowTask(true)}>
+                      <ClipboardList size={14} /> {t(language, 'Vazifa va javob', 'Задание и ответ', 'Task and answer')}{lines.length ? ` · ${lines.length}` : ''}
+                    </button>
                   </div>
+                )}
+                {showTask && current && (
+                  <Modal title={`${subjectLabel(current.subject, language)} · ${current.title.replace(/^[^§]*·\s*/, '')}`} onClose={() => setShowTask(false)}>
+                    <HomeworkKey title={current.title} description={current.description} language={language} />
+                  </Modal>
                 )}
               </>
             );
@@ -164,14 +233,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
               <div className="check-hw-counts">
                 <button type="button" className={`people-stat ${filter === 'review' ? 'on' : ''}`} onClick={() => setFilter(filter === 'review' ? 'all' : 'review')}><b>{counts.review}</b><span>{t(language, 'Tekshirish kerak', 'Ждут проверки', 'To check')}</span></button>
                 <button type="button" className={`people-stat ${filter === 'graded' ? 'on' : ''}`} onClick={() => setFilter(filter === 'graded' ? 'all' : 'graded')}><b>{counts.graded}</b><span>{t(language, 'Tekshirildi', 'Проверено', 'Checked')}</span></button>
-                
               </div>
-              {exercises.length > 0 && (
-                <div className="check-hw-exercises">
-                  <b>{t(language, 'Tekshiriladigan mashqlar', 'Упражнения для проверки', 'Exercises to check')}</b>
-                  <ul>{exercises.map((line, at) => <li key={at}>{line.replace(/^Из учебника:\s*/, '')}</li>)}</ul>
-                </div>
-              )}
               <ul className="check-hw-list">
                 {shown.map((row, number) => (
                   <li key={row.studentId} className={`is-${row.cell.state}`}>
@@ -194,7 +256,7 @@ export function CheckHomeworkPage({ school, language }: { school: SchoolData; la
         </>
       )}
       {open && assignment && (
-        <SubmissionReviewDialog assignmentId={assignment.id} assignmentTitle={`${assignment.subject} · ${assignment.title}`} studentId={open.studentId} studentName={open.studentName} language={language} onClose={() => setOpen(null)} onSaved={() => { goNext.current = open.studentId; setSavedAll(false); void load(); }} />
+        <SubmissionReviewDialog assignmentId={assignment.id} assignmentTitle={assignment.title.startsWith(assignment.subject) ? `${subjectLabel(assignment.subject, language)}${assignment.title.slice(assignment.subject.length)}` : assignment.title} taskKey={<HomeworkKey title={assignment.title} description={assignment.description} language={language} />} studentId={open.studentId} studentName={open.studentName} language={language} onClose={() => setOpen(null)} onSaved={() => { goNext.current = open.studentId; setSavedAll(false); void load(); }} />
       )}
     </section>
   );

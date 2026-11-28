@@ -455,7 +455,6 @@ export function CollisionLab({ language, compact = false }: { language: Language
           {slider(t(language, '2-mashina tezligi (− = qarshi)', 'Скорость машины 2 (− = навстречу)', 'Car 2 speed (− = towards)'), v2, -30, 10, 1, ' m/s', setV2)}
           {slider(t(language, 'Zarba elastikligi e', 'Упругость удара e', 'Elasticity e'), e, 0, 1, 0.05, '', setE)}
           {slider(t(language, 'Yo‘l ishqalanishi μ', 'Трение дороги μ', 'Road friction μ'), mu, 0.1, 0.9, 0.05, '', setMu)}
-          {result && <p className="muted" style={{ margin: '8px 0 0' }}>{t(language, 'Yangi qiymatlar bilan ko‘rish uchun «Qaytadan» ni bosing.', 'Чтобы увидеть удар с новыми значениями, нажмите «Заново».', 'Press “Replay” to see the crash with the new values.')}</p>}
         </section>
         <section className="panel lab-result">
           <div className="lab-formula">p = m·v · E = m·v²/2</div>

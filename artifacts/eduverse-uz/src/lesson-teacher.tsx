@@ -105,9 +105,6 @@ export function BoardControls({ classId, topic, stage, language, live, content }
           <MonitorPlay size={16} />
           <span>
             {t(language, 'Sinf bilan birga', 'Урок вместе с классом', 'Together with the class')}{on && <span className="ls-live-dot">{t(language, 'yoqilgan', 'идёт', 'on')}</span>}
-            <small className="ls-board-sub">{on
-              ? t(language, 'O‘quvchilar ekranida siz turgan qadam. Savol bering — javoblar shu yerda.', 'У учеников на экране ваш шаг. Задайте вопрос — ответы появятся здесь.', 'Pupils see your step. Ask a question — answers show here.')
-              : t(language, 'Yoqsangiz, o‘quvchilar telefonida siz bilan bir xil qadam ochiladi.', 'Включите — у учеников откроется тот же шаг, что у вас.', 'Turn on — pupils see the same step as you.')}</small>
           </span>
         </span>
         {on

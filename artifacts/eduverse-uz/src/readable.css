@@ -58,3 +58,6 @@ html:not([data-theme="night"]) .home-primary-icon {
 :root:not([data-theme="night"]) :is(.home-stat b, .kpi b, .metric-value, .test-done > b, .lab-value b, .grade-mark, .labwork-time, .journal-average, .attendance-percent, .chem-formula, .studio-title, .open-room-code, .lesson-room-code b) { color: #7A5A22 !important; }
 :root:not([data-theme="night"]) .grade-mark.low { color: var(--bad) !important; }
 :root:not([data-theme="night"]) .grade-mark.good { color: var(--ok) !important; }
+
+/* Names on the attendance list were dark-on-dark in the night theme. */
+.attendance-person b { color: var(--text) !important; }

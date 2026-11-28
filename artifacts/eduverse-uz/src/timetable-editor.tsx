@@ -156,8 +156,6 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
             : <button type="button" className="btn small primary" onClick={() => { setUnlocked(true); setMessage(''); }}><LockOpen size={13} /> {t(language, 'O‘zgartirish', 'Изменить', 'Edit')}</button>)}
         </div>
       </div>
-      {data.canEdit && !editable && <p className="tt-locked muted"><Lock size={13} /> {t(language, 'Jadval qulflangan — tasodifan o‘zgarmaydi. O‘zgartirish uchun «O‘zgartirish»ni bosing.', 'Расписание закреплено — случайно не изменится. Чтобы поменять, нажмите «Изменить».', 'The timetable is locked. Press “Edit” to change it.')}</p>}
-      <p className="muted">{t(language, 'Har bir katakda fan, o‘qituvchi va xona. Saqlangandan keyin har kim o‘z jadvalini ko‘radi.', 'В каждой клетке — предмет, учитель и кабинет. После сохранения каждый видит своё расписание.', 'Each cell has a subject, a teacher and a room. After saving, everyone sees their own timetable.')}</p>
       {data.classes.length === 0 ? <div className="notice">{t(language, 'Avval sinflarni qo‘shing.', 'Сначала добавьте классы.', 'Add classes first.')}</div> : (
         <div className="tt-scroll">
           <table className="tt-grid">

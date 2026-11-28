@@ -16,7 +16,8 @@ import {
 import { createRateLimiter, normalizeLogin, normalizeUsername, requireAuthenticatedRole } from "./auth";
 import { hashPassword as hashAccountPassword, hashSessionToken, verifyPassword } from "../lib/auth-crypto";
 import { cleanText, isGlobalAdminRole, isValidUuid } from "../lib/school-access";
-import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret } from "../lib/telegram";
+import { sendTelegramMessage, telegramBotConfigured, telegramBotUsername, telegramChatUsername, telegramWebhookSecret } from "../lib/telegram";
+import { mailConfigured, maskEmail, maskUsername, sendMail } from "../lib/mailer";
 import { answerCommand, chooseLang, CONNECT_KEYBOARD, LANG_KEYBOARD, langFromTelegram, type BotLang } from "../lib/bot-commands";
 import { answerTelegramCallback } from "../lib/telegram";
 import { matchesTelegramWebhookSecret } from "../lib/telegram-security";
@@ -411,6 +412,7 @@ router.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
     const sender = isRecord(message?.from) ? message.from : null;
     // The bot starts in the language of the person's Telegram; /lang changes it.
     const lang = langFromTelegram(sender?.language_code);
+    if (typeof sender?.username === "string" && /^[A-Za-z0-9_]{3,32}$/.test(sender.username)) await db.update(telegramNotifyTable).set({ username: sender.username }).where(eq(telegramNotifyTable.userId, row.userId));
     await db.update(telegramNotifyTable).set({ lang }).where(and(eq(telegramNotifyTable.userId, row.userId), isNull(telegramNotifyTable.lang)));
     const welcome = await answerCommand(chatId, "/help", sender?.language_code);
     const done = lang === "uz" ? "✅ <b>Tayyor! Telegram ulandi.</b>\nBaholar, «nb», uy vazifalari va onlayn darslar haqida xabarlar shu yerga keladi." : lang === "en" ? "✅ <b>Done! Telegram is connected.</b>\nMarks, absences, homework and online lessons will come here." : "✅ <b>Готово! Telegram подключён.</b>\nСюда будут приходить оценки, «нб», домашние задания и онлайн-уроки.";
@@ -539,7 +541,13 @@ router.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "scho
 /* 5. Password change (the name is set by the school and cannot be changed)    */
 /* -------------------------------------------------------------------------- */
 
-const WEAK_PASSWORDS = new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
+const WEAK_PASSWORDS = new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "12345678", "123456789", "87654321", "qwerty12", "qwerty123", "password1", "password12", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
+/** At least 8 characters, letters and digits, not a well-known password. */
+function passwordProblem(next: string): string {
+  if (next.length < 8 || next.length > 128) return "The new password must be 8 to 128 characters.";
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) return "This password is too simple.";
+  return "";
+}
 const passwordLimiter = createRateLimiter(10, 15 * 60 * 1000, "Too many attempts. Try again later.", "password-change", perSession);
 
 router.get("/me/security", requireAuthenticatedRole(...everyRole), async (_req, res) => {
@@ -552,12 +560,9 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
   const viewer = viewerOf(res);
   const current = isRecord(req.body) && typeof req.body.current === "string" ? req.body.current : "";
   const next = isRecord(req.body) && typeof req.body.next === "string" ? req.body.next : "";
-  if (next.length < 10 || next.length > 128) {
-    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
-    return;
-  }
-  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
-    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
+  const weak = passwordProblem(next);
+  if (weak) {
+    res.status(400).json({ error: weak });
     return;
   }
   const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
@@ -585,62 +590,95 @@ router.post("/me/password", requireAuthenticatedRole(...everyRole), passwordLimi
 /* -------------------------------------------------------------------------- */
 
 const forgotLimiter = createRateLimiter(8, 15 * 60 * 1000, "Too many attempts. Try again later.", "password-reset");
+const optionsLimiter = createRateLimiter(20, 15 * 60 * 1000, "Too many attempts. Try again later.", "password-reset-options");
 const resetCodeHash = (code: string, userId: string) => createHash("sha256").update(`${userId}:${code}`).digest("hex");
-/** Same answer whether the login exists or not: nobody learns which logins are real. */
-const RESET_SENT = { sent: true };
+/** The code lives two minutes. */
+const RESET_SECONDS = 120;
+const loginOf = (body: unknown) => (isRecord(body) && typeof body.login === "string" ? normalizeLogin(body.login.trim()).slice(0, 64) : "");
+
+async function resetAccount(login: string) {
+  const [account] = await db.select({
+    id: usersTable.id, login: usersTable.login, role: usersTable.role, status: usersTable.status,
+    email: usersTable.email, googleEmail: usersTable.googleEmail,
+    hash: usersTable.resetCodeHash, until: usersTable.resetExpiresAt, tries: usersTable.resetTries,
+  }).from(usersTable).where(eq(usersTable.loginNormalized, login)).limit(1);
+  // The owner's account and closed accounts are never reset this way.
+  if (!account || account.role === "platform_superadmin" || (account.status && account.status !== "active")) return null;
+  const [tg] = await db.select({ chatId: telegramNotifyTable.chatId, username: telegramNotifyTable.username, lang: telegramNotifyTable.lang })
+    .from(telegramNotifyTable).where(eq(telegramNotifyTable.userId, account.id)).limit(1);
+  const mail = (account.googleEmail || account.email || "").trim();
+  return { ...account, chatId: tg?.chatId ?? null, username: tg?.username ?? null, lang: tg?.lang ?? null, mail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail) ? mail : "" };
+}
+
+/** Which ways this login can get a code: Telegram (@half***) and/or e-mail (be***14@gmail.com). */
+router.post("/auth/password-reset/options", optionsLimiter, async (req, res) => {
+  const login = loginOf(req.body);
+  if (!login) { res.status(400).json({ error: "Enter a valid login and password." }); return; }
+  const account = await resetAccount(login);
+  let telegram: string | null = null;
+  if (account?.chatId && telegramBotConfigured()) {
+    let username = account.username ?? "";
+    if (!username) {
+      username = await telegramChatUsername(account.chatId);
+      if (username) await db.update(telegramNotifyTable).set({ username }).where(eq(telegramNotifyTable.userId, account.id));
+    }
+    telegram = username ? maskUsername(username) : "Telegram";
+  }
+  const email = account?.mail && mailConfigured() ? maskEmail(account.mail) : null;
+  res.json({ telegram, email });
+});
 
 router.post("/auth/password-reset/request", forgotLimiter, async (req, res) => {
-  const login = isRecord(req.body) && typeof req.body.login === "string" ? normalizeLogin(req.body.login.trim()).slice(0, 64) : "";
+  const login = loginOf(req.body);
+  const via = isRecord(req.body) && req.body.via === "email" ? "email" : "telegram";
   if (!login) { res.status(400).json({ error: "Enter a valid login and password." }); return; }
-  if (!telegramBotConfigured()) { res.status(503).json({ error: "Telegram notifications are not configured." }); return; }
-  const [account] = await db.select({ id: usersTable.id, role: usersTable.role, status: usersTable.status, chatId: telegramNotifyTable.chatId, lang: telegramNotifyTable.lang })
-    .from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id))
-    .where(eq(usersTable.loginNormalized, login)).limit(1);
-  // The owner's account and closed accounts are never reset this way.
-  if (!account?.chatId || account.role === "platform_superadmin" || (account.status && account.status !== "active")) { res.json(RESET_SENT); return; }
+  const account = await resetAccount(login);
+  const canTelegram = Boolean(account?.chatId && telegramBotConfigured());
+  const canMail = Boolean(account?.mail && mailConfigured());
+  if (!account || (via === "telegram" ? !canTelegram : !canMail)) { res.status(400).json({ error: "No way to send a code." }); return; }
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
-  await db.update(telegramNotifyTable).set({ resetCodeHash: resetCodeHash(code, account.id), resetExpiresAt: new Date(Date.now() + 10 * 60 * 1000), resetTries: 0 })
-    .where(eq(telegramNotifyTable.userId, account.id));
+  await db.update(usersTable).set({ resetCodeHash: resetCodeHash(code, account.id), resetExpiresAt: new Date(Date.now() + RESET_SECONDS * 1000), resetTries: 0 })
+    .where(eq(usersTable.id, account.id));
   const L = account.lang === "uz" || account.lang === "en" ? account.lang : "ru";
-  const text = L === "uz"
-    ? `🔑 EDUVERSE parolini tiklash kodi: <b>${code}</b>\n10 daqiqa ishlaydi. Agar siz so‘ramagan bo‘lsangiz — hech kimga bermang.`
+  const line = L === "uz"
+    ? `EDUVERSE parolini tiklash kodi: <b>${code}</b><br>2 daqiqa ishlaydi. Agar siz so‘ramagan bo‘lsangiz — hech kimga bermang.`
     : L === "en"
-    ? `🔑 EDUVERSE password reset code: <b>${code}</b>\nValid for 10 minutes. If you did not ask for it, do not share it.`
-    : `🔑 Код для нового пароля EDUVERSE: <b>${code}</b>\nДействует 10 минут. Если вы не просили — никому не сообщайте.`;
-  const sent = await sendTelegramMessage(account.chatId, text);
-  if (!sent.ok) logger.warn({ errorCode: sent.errorCode }, "password reset code not delivered");
-  res.json(RESET_SENT);
+    ? `EDUVERSE password reset code: <b>${code}</b><br>Valid for 2 minutes. If you did not ask for it, do not share it.`
+    : `Код для нового пароля EDUVERSE: <b>${code}</b><br>Действует 2 минуты. Если вы не просили — никому не сообщайте.`;
+  let ok: boolean;
+  if (via === "telegram") {
+    const sent = await sendTelegramMessage(account.chatId!, `🔑 ${line.replace("<br>", "\n")}`);
+    ok = sent.ok;
+  } else {
+    ok = await sendMail(account.mail, L === "uz" ? "EDUVERSE: parol kodi" : L === "en" ? "EDUVERSE: password code" : "EDUVERSE: код для пароля", `<p style="font-family:sans-serif;font-size:16px">${line}</p>`);
+  }
+  if (!ok) { logger.warn({ via }, "password reset code not delivered"); res.status(502).json({ error: "The code was not delivered. Try again." }); return; }
+  res.json({ sent: true, seconds: RESET_SECONDS });
 });
 
 router.post("/auth/password-reset/confirm", forgotLimiter, async (req, res) => {
   const body = isRecord(req.body) ? req.body : {};
-  const login = typeof body.login === "string" ? normalizeLogin(body.login.trim()).slice(0, 64) : "";
+  const login = loginOf(body);
   const code = typeof body.code === "string" ? body.code.replace(/\D/g, "") : "";
   const next = typeof body.password === "string" ? body.password : "";
   if (!login || code.length !== 6) { res.status(400).json({ error: "That code is not valid." }); return; }
-  if (next.length < 10 || next.length > 128) { res.status(400).json({ error: "The new password must be 10 to 128 characters." }); return; }
-  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
-    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
-    return;
-  }
-  const [account] = await db.select({ id: usersTable.id, login: usersTable.login, role: usersTable.role, hash: telegramNotifyTable.resetCodeHash, until: telegramNotifyTable.resetExpiresAt, tries: telegramNotifyTable.resetTries })
-    .from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id))
-    .where(eq(usersTable.loginNormalized, login)).limit(1);
+  const weak = passwordProblem(next);
+  if (weak) { res.status(400).json({ error: weak }); return; }
+  const account = await resetAccount(login);
   const fresh = account?.hash && account.until && account.until.getTime() > Date.now() && account.tries < 5;
-  if (!account || !fresh || account.role === "platform_superadmin") { res.status(400).json({ error: "The confirmation code is invalid or expired." }); return; }
+  if (!account || !fresh) { res.status(400).json({ error: "The confirmation code is invalid or expired." }); return; }
   const given = Buffer.from(resetCodeHash(code, account.id));
   const stored = Buffer.from(account.hash!);
   if (given.length !== stored.length || !timingSafeEqual(given, stored)) {
-    await db.update(telegramNotifyTable).set({ resetTries: account.tries + 1 }).where(eq(telegramNotifyTable.userId, account.id));
+    await db.update(usersTable).set({ resetTries: account.tries + 1 }).where(eq(usersTable.id, account.id));
     res.status(400).json({ error: "The confirmation code is invalid or expired." });
     return;
   }
   if (next.toLowerCase() === account.login.toLowerCase()) { res.status(400).json({ error: "The password must not equal the login." }); return; }
-  await db.update(usersTable).set({ passwordHash: await hashAccountPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: new Date() }).where(eq(usersTable.id, account.id));
-  await db.update(telegramNotifyTable).set({ resetCodeHash: null, resetExpiresAt: null, resetTries: 0 }).where(eq(telegramNotifyTable.userId, account.id));
+  await db.update(usersTable).set({ passwordHash: await hashAccountPassword(next), mustChangePassword: false, recoveryUntil: null, resetCodeHash: null, resetExpiresAt: null, resetTries: 0, updatedAt: new Date() }).where(eq(usersTable.id, account.id));
   // Every sign-in with the old password stops working.
   const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, account.id)).returning({ id: sessionsTable.id });
-  await writeAudit(null, account.id, "password-reset-telegram", account.id, { sessionsClosed: closed.length });
+  await writeAudit(null, account.id, "password-reset-code", account.id, { sessionsClosed: closed.length });
   res.json({ changed: true });
 });
 

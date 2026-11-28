@@ -8,6 +8,7 @@ import type { Language, SchoolData } from './school-data';
 import { friendlyError } from './errors';
 import { dayLabel, lessonSubjectName, topicForLesson, upcomingTopics, useLessonCourses, useToday, bookForLesson } from './today';
 import type { CourseTopic } from './course-data';
+import { LensGroup } from './glass-nav';
 
 /*
  * Worksheet builder: the teacher ticks ready tasks from any textbook topic
@@ -125,13 +126,13 @@ export function WorksheetBuilder({ school, language }: { school: SchoolData; lan
         : t(language, 'Istalgan mavzudan tayyor topshiriqlarni belgilang va sinfga uy vazifasi qilib yuboring.', 'Отметьте готовые задания из темы и отправьте классу как домашку.', 'Tick ready tasks from any topic and send them as homework.')}</p>
       {slots && (slots.length === 0
         ? <div className="notice">{t(language, 'Bugun darslik bo‘yicha dars yo‘q.', 'Сегодня нет уроков по учебнику.', 'No textbook lessons today.')}</div>
-        : <div className="worksheet-slots" role="tablist">
+        : <LensGroup variant="solid" className="worksheet-slots" role="tablist" activateOnArrow>
             {slots.map((item) => (
               <button type="button" role="tab" key={item.id} aria-selected={slot?.id === item.id} className={`studio-tab ${slot?.id === item.id ? 'active' : ''} ${item.open ? '' : 'is-locked'}`} onClick={() => { setSlotId(item.id); setPicked([]); }}>
                 <span>{item.label}</span><small>§{item.topic.code} {item.topic.title}</small>
               </button>
             ))}
-          </div>)}
+          </LensGroup>)}
       {slots && slot && !slot.open && <div className="notice">{t(language, 'Bu mavzu ertaga, dars kuni ochiladi.', 'Эта тема откроется завтра, в день урока.', 'This topic opens tomorrow, on the lesson day.')}</div>}
       {!slots && <div className="people-filters">
         <Select className="input" value={bookId} onChange={(event) => setBookId(event.target.value)}>

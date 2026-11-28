@@ -6,6 +6,7 @@ import './motion.css';
 import './ui/ui.css';
 import './phone.css';
 import './readable.css';
+import './nav-motion.css';
 import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
@@ -13,17 +14,11 @@ import { useLocaleDom } from './localization';
 import { Link, Redirect, useLocation } from 'wouter';
 import { authCopy, AuthLoadingPage, AuthStatusPage, getRoleLabel, LoginPage, ProfilePage } from './auth-pages';
 import { useAuth } from './auth-context';
-import { LessonRoomPage } from './lesson-room';
-import { TopicLibraryPage } from './topic-library';
 import { AttendancePage } from './attendance-page';
-import { ChemLabPage } from './chem-lab';
 import { DirectorDashboard, ParentCabinet } from './cabinets';
 import { LessonPlanner, SchoolImport, UserAvatar, useMustChangePassword } from './school-tools';
 import { SchoolCalendarPanel } from './school-calendar';
 import { GradesPage } from './grades';
-import { WorksheetBuilder } from './worksheet';
-import { SchoolSetupWizard } from './setup-wizard';
-import { TrainerPage } from './trainer';
 import { PlansOverview, SchoolBillingPanel, ProLock, SchoolPlanPanel, usePlan } from './plan-ui';
 import { AuditPanel, EnrollRequestPanel, MyRequestsPanel, OwnerRequestsPanel, SchoolPeoplePanel } from './school-requests';
 import { LoadingBlock } from './ui/loading';
@@ -33,12 +28,13 @@ import { CheckHomeworkPage } from './check-homework';
 import { UpdateBanner } from './update-check';
 import { LessonNowBar } from './lesson-now-bar';
 import { StudentPulse } from './student-home';
+import { RepeatToday } from './lesson-roles';
 import { TodayLessons } from './today';
+import { HomeStats } from './home-stats';
 import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, TeacherDayPage, TimetableChangesPage } from './ecosystem';
 import { TimetableEditor } from './timetable-editor';
-import { LabPage, LessonDayPage, LessonPreviewPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
-import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
+import { GlassTabs, LensGroup, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
 import { NotificationsBell, StatsSection } from './account';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import { customFetch, type User } from '@workspace/api-client-react';
@@ -62,6 +58,15 @@ import {
   Atom, BarChart3, BookMarked, CalendarClock, FlaskConical, ListChecks, MessageCircle, Wallet, CalendarCheck2, LayoutDashboard, MonitorPlay, NotebookPen, PenTool, School, UserRound,
 } from 'lucide-react';
 const PdfViewer = lazy(() => import("./pdf-viewer").then((m) => ({ default: m.PdfViewer })));
+// Big pages load only when opened, so the first screen (sign-in, overview) appears faster.
+const LessonRoomPage = lazy(() => import('./lesson-room').then((m) => ({ default: m.LessonRoomPage })));
+const ChemLabPage = lazy(() => import('./chem-lab').then((m) => ({ default: m.ChemLabPage })));
+const TrainerPage = lazy(() => import('./trainer').then((m) => ({ default: m.TrainerPage })));
+const SchoolSetupWizard = lazy(() => import('./setup-wizard').then((m) => ({ default: m.SchoolSetupWizard })));
+const LabPage = lazy(() => import('./today-pages').then((m) => ({ default: m.LabPage })));
+const LessonDayPage = lazy(() => import('./today-pages').then((m) => ({ default: m.LessonDayPage })));
+const LessonPreviewPage = lazy(() => import('./today-pages').then((m) => ({ default: m.LessonPreviewPage })));
+const TodayCoursePage = lazy(() => import('./today-pages').then((m) => ({ default: m.TodayCoursePage })));
 
 type Lang = 'Uzbek' | 'Русский' | 'English';
 type Book = { id:string; title:string; subject:string; language:string; author:string; year:string; chapters:string[]; tone:string; pdf?:string; pdfUrl?:string };
@@ -113,6 +118,10 @@ function App(){
   const openRoom=useOpenRoom(userRole==='student'&&auth.status==='authenticated');
   const visible=userRole?ROLE_NAV[userRole].filter(label=>label!=='Lesson room'||(userRole==='student'&&openRoom)).map(label=>NAV_ITEMS.find(item=>item.label===label)).filter((item):item is NavItem=>Boolean(item)):[];
   const active=(href:string)=>href==='/dashboard'?(location==='/'||location==='/dashboard'):location===href||location.startsWith(href+'/');
+  // Phone bottom bar: a page opened from a tab to the right slides in from the right (and back from the left).
+  const bottomIndex=(path:string)=>userRole?MOBILE_NAV[userRole].findIndex(label=>{const item=NAV_ITEMS.find(entry=>entry.label===label);return Boolean(item&&(item.href==='/dashboard'?(path==='/'||path==='/dashboard'):path===item.href||path.startsWith(item.href+'/')))}):-1;
+  const navTrack=useRef({path:location,dir:''});
+  if(navTrack.current.path!==location){const from=bottomIndex(navTrack.current.path),to=bottomIndex(location);navTrack.current={path:location,dir:from>=0&&to>=0&&from!==to?(to>from?'nav-forward':'nav-back'):''};}
   const [langChanging,setLangChanging]=useState(false);
   function changeLang(value:Lang){
     if(value===lang)return;
@@ -179,9 +188,9 @@ function App(){
         <span className="brand-mark">E</span>
         <span><span className="brand-title">EDUVERSE</span><span className="brand-sub">{membership?.schoolName??'UZ'}</span></span>
       </Link>
-      <nav className="nav-list" aria-label="Main navigation">
-        {visible.map(item=><Link key={item.href} href={item.href} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon">{(()=>{const Icon=NAV_ICON[item.label];return Icon?<Icon size={18}/>:<item.icon/>})()}</span><span>{navLabel(lang,item.label)}</span></Link>)}
-      </nav>
+      <LensGroup as="nav" vertical className="nav-list" aria-label="Main navigation">
+        {visible.map(item=><Link key={item.href} href={item.href} aria-current={active(item.href)?'page':undefined} className={`nav-item tone-${item.tone} ${active(item.href)?'active':''}`} onClick={()=>setMobileOpen(false)}><span className="nav-icon">{(()=>{const Icon=NAV_ICON[item.label];return Icon?<Icon size={18}/>:<item.icon/>})()}</span><span>{navLabel(lang,item.label)}</span></Link>)}
+      </LensGroup>
       {auth.user&&<Link href="/profile" className={`side-user ${location==='/profile'?'active':''}`} onClick={()=>setMobileOpen(false)} data-locale-preserve="true">
         <UserAvatar userId={auth.user.id} name={auth.user.username}/>
         <span className="side-user-text"><b>{auth.user.username}</b><small>{getRoleLabel(lang,auth.user.role)}</small></span>
@@ -219,7 +228,8 @@ function App(){
         <button type="button" className="btn small" onClick={auth.dismissAccountNotice} aria-label="Close"><X size={14}/></button>
       </div>}
       {mustChangePassword&&location!=='/profile'&&<div className="account-banner password-banner" role="status"><ShieldCheck size={18}/><div><b>{lang==='Uzbek'?'Vaqtinchalik parolni almashtiring':lang==='Русский'?'Смените временный пароль':'Change your temporary password'}</b><span>{lang==='Uzbek'?'Bu sizning hisobingiz xavfsizligi uchun.':lang==='Русский'?'Это нужно для безопасности вашего аккаунта.':'This keeps your account safe.'}</span></div><button type="button" className="btn small primary" onClick={()=>navigate('/profile?tab=security')}>{lang==='Uzbek'?'Almashtirish':lang==='Русский'?'Сменить':'Change'}</button></div>}
-      <div className="content" key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
+      <div className={`content ${navTrack.current.dir}`} key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
+        <Suspense fallback={<LoadingBlock language={lang}/>}>
         {forbidden&&auth.user?<RoleBlocked language={lang} role={auth.user.role} goHome={()=>navigate('/dashboard')}/>
         :auth.user&&proLocked(location)?<ProLock language={lang}/>
         :location==='/profile'&&auth.user?<ProfilePage user={auth.user} language={lang} onSignedOut={()=>navigate('/')}/>
@@ -250,6 +260,7 @@ function App(){
         :location==='/attendance'&&auth.user?<AttendancePage user={auth.user} language={lang}/>
         :location==='/support'?<Redirect to="/"/>
         :<NotFound language={lang} goHome={()=>navigate('/dashboard')}/>}
+        </Suspense>
       </div>
       {userRole&&<nav className="tabbar-dock" aria-label="Mobile navigation">
         <GlassTabs className="tabbar" ariaLabel="Mobile navigation" activeKey={MOBILE_NAV[userRole].find(label=>{const item=NAV_ITEMS.find(entry=>entry.label===label);return item&&active(item.href)})??null}
@@ -398,6 +409,7 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
     <p>{getRoleLabel(language,user.role)}{membership?.schoolName?` · ${membership.schoolName}`:''}</p>
    </div>
   </div>
+  <HomeStats role={user.role} schoolId={membership?.schoolId} language={language} onOpen={onOpen}/>
   {['teacher','student','parent','school_director','school_admin'].includes(user.role)&&<TodayLessons language={language} onOpen={onOpen} role={user.role}/>}
   {rest.length>0&&<>
    <h2 className="home-section-title">{language==='Uzbek'?'Bo‘limlar':language==='Русский'?'Разделы':'Sections'}</h2>
@@ -412,6 +424,7 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   </>}
   {['platform_superadmin','education_admin','ministry_admin'].includes(user.role)&&<PlansOverview language={language} onOpenSchool={()=>onOpen('/admin')}/>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
+  {user.role==='student'&&<RepeatToday language={language}/>}
   {user.role==='student'&&<StudentPulse language={language} onOpen={onOpen}/>}
   {user.role==='teacher'&&<><h2 className="home-section-title">{language==='Uzbek'?'Mening statistikam':language==='Русский'?'Моя статистика':'My statistics'}</h2><StatsSection language={language}/></>}
   {school.status==='ready'&&!school.hasMembership&&<div className="notice"><Info size={16}/><span>{language==='Uzbek'?'Hisobingiz hali maktabga biriktirilmagan. Maktab administratoriga murojaat qiling.':language==='Русский'?'Аккаунт ещё не привязан к школе. Обратитесь к администратору школы.':'Your account is not linked to a school yet. Contact the school administrator.'}</span></div>}
@@ -515,7 +528,7 @@ function TeacherPage({school,user,language,onOpen}:{school:SchoolData;user:User;
  const ready=school.status==='ready'&&school.hasServerClasses;
  return <>
   <PageHeading eyebrow={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""></PageHeading>
-  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('Teacher workspace','Кабинет учителя','O‘qituvchi kabineti')} activeKey={tab} progress={swipe.progress} onSelect={key=>swipe.select(key as TeacherTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {!ready
    ?(school.status==='loading'?<LoadingBlock language={language}/>:<div className="notice"><Info/><span>{school.status==='unavailable'?text('No connection. Try again in a minute.','Нет связи. Попробуйте через минуту.','Aloqa yo‘q. Bir daqiqadan so‘ng urinib ko‘ring.'):text('No class is linked to your account yet.','К вашему аккаунту ещё не привязан класс.','Hisobingizga hali sinf biriktirilmagan.')}</span></div>)
    :<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
@@ -539,7 +552,8 @@ function SchoolToolPage({school,language,page}:{school:SchoolData;language:Lang;
 type SchoolTab='overview'|'enroll'|'people'|'classes'|'calendar';
 function SchoolPage({school,user,language}:{school:SchoolData;user:User;language:Lang}){
  const text=(en:string,ru:string,uz:string)=>language==='Русский'?ru:language==='Uzbek'?uz:en;
- const [savedTab,setTab]=useSavedState<SchoolTab>('school-tab','overview');
+ // Always opens on the overview (the owner asked); the tab is not remembered between visits.
+ const [savedTab,setTab]=useState<SchoolTab>('overview');
  const tabs:Array<[SchoolTab,string,ReactNode]>=[
   ['overview',text('Overview','Обзор','Umumiy'),<LayoutDashboard size={20}/>],
   ['enroll',text('Add people','Добавить','Qo‘shish'),<Plus size={20}/>],
@@ -552,7 +566,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  const schoolId=school.memberships[0]?.schoolId;
  const [revision,setRevision]=useState(0);
  return <><PageHeading eyebrow={school.memberships[0]?.schoolName??text('School','Школа','Maktab')} title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
-  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('School','Школа','Maktab')} activeKey={tab} onSelect={key=>swipe.select(key as SchoolTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel={text('School','Школа','Maktab')} activeKey={tab} progress={swipe.progress} onSelect={key=>swipe.select(key as SchoolTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   {school.status==='ready'&&school.hasMembership&&schoolId
    ?<div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
      {tab==='overview'&&<DirectorDashboard schoolId={schoolId} language={language}/>}
@@ -584,7 +598,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
  useEffect(()=>{window.scrollTo({top:0})},[tab,setup?.id]);
  void role;
  return <><PageHeading eyebrow="EDUVERSE" title={tabs.find(([key])=>key===tab)?.[1]??''} subtitle=""/>
-  <GlassTabs className="cabinet-glass-tabs" ariaLabel="EDUVERSE" activeKey={tab} onSelect={key=>swipe.select(key as AdminTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
+  <GlassTabs className="cabinet-glass-tabs" ariaLabel="EDUVERSE" activeKey={tab} progress={swipe.progress} onSelect={key=>swipe.select(key as AdminTab)} items={tabs.map(([key,label,icon])=>({key,label,icon}))}/>
   <div className={`page-stack cabinet-pane ${swipe.slideClass}`} key={tab} {...swipe.handlers} style={swipe.style}>
    {tab==='overview'&&<PlansOverview language={language} onOpenSchool={openSchool}/>}
    {tab==='requests'&&<OwnerRequestsPanel language={language}/>}
@@ -592,7 +606,7 @@ function AdminPage({role,language}:{role:User['role'];language:Lang}){
    {tab==='schools'&&!setup&&<ServerAdminSchoolsPanel key={schoolsRevision} language={language} part="list" onSelect={openSchool}/>}
    {tab==='schools'&&setup&&<div className="admin-school-setup">
      <div className="row-between admin-school-setup-head"><button className="btn small" onClick={closeSchool}><ArrowLeft size={14}/>{text('All schools','Все школы','Barcha maktablar')}</button><b>{setup.name}</b></div>
-     <SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/>
+     <Suspense fallback={<LoadingBlock language={language}/>}><SchoolSetupWizard key={`wizard-${setup.id}`} schoolId={setup.id} schoolName={setup.name} language={language}/></Suspense>
      <details className="panel admin-more" open><summary><b>{text('Payment','Оплата','To‘lov')}</b></summary><SchoolBillingPanel key={`billing-${setup.id}`} schoolId={setup.id} language={language}/></details>
      <details className="panel admin-more"><summary><b>{text('Plan','Тариф','Tarif')}</b></summary><SchoolPlanPanel key={`plan-${setup.id}`} schoolId={setup.id} language={language}/></details>
      <details className="panel admin-more"><summary><b>{text('People of the school','Люди школы','Maktab odamlari')}</b></summary><SchoolPeoplePanel key={setup.id} schoolId={setup.id} language={language} mode="owner"/></details>

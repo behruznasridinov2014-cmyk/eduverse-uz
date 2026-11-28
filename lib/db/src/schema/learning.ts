@@ -285,6 +285,8 @@ export const telegramNotifyTable = pgTable("telegram_notify", {
   chatId: text("chat_id"),
   nonce: text("nonce"),
   nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+  /** Telegram @username of the linked chat (shown half-hidden on "forgot password"). */
+  username: text("username"),
   /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
   lang: text("lang"),
   /** "Forgot password": a 6-digit code sent to this chat (stored hashed), its end time and wrong tries. */
