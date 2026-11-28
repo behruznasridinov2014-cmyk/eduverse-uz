@@ -67,6 +67,7 @@ import {
 import { HomeworkAiCheck, PhotoPicker, SignaturePad, SignatureStamp, SubmissionPhotos, honestCode, photoMetaFor } from './homework';
 import { MARKS, markBand, markOf, scoreOf } from './marks';
 import { COURSE, pdfPageOf } from './course-data';
+import { CredentialCard } from './ui/credentials';
 
 const ASSIGNMENT_STATUSES = [
   'assigned',
@@ -1196,9 +1197,9 @@ export function ServerSchoolOverview({
                   )}
                   {resetError && <InlineError>{resetError}</InlineError>}
                   {resetCard && (
-                    <div className="notice school-inline-success reset-card" role="status">
-                      <KeyRound size={15} />
-                      <span>{resetCard.name} · {t(language, 'login', 'логин', 'login')}: <b>{resetCard.login}</b> · {t(language, 'new password', 'новый пароль', 'yangi parol')}: <b>{resetCard.password}</b><br /><small>{t(language, 'Shown once. They set their own password at the next sign-in.', 'Показывается один раз. При входе человек поставит свой пароль.', 'Bir marta ko‘rsatiladi. Keyingi kirishda o‘z parolini qo‘yadi.')}</small></span>
+                    <div className="reset-card">
+                      <CredentialCard person={{ name: resetCard.name, login: resetCard.login, password: resetCard.password }} language={language} />
+                      <small className="muted">{t(language, 'Shown once. They set their own password at the next sign-in.', 'Показывается один раз. При входе человек поставит свой пароль.', 'Bir marta ko‘rsatiladi. Keyingi kirishda o‘z parolini qo‘yadi.')}</small>
                       <button type="button" className="btn small" onClick={() => setResetCard(null)}>{t(language, 'Done', 'Готово', 'Tayyor')}</button>
                     </div>
                   )}
@@ -1612,25 +1613,8 @@ export function ServerAccountsPanel({
               {copied ? t(language, 'Copied', 'Скопировано', 'Nusxalandi') : t(language, 'Copy all', 'Копировать все', 'Hammasini nusxalash')}
             </button>
           </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t(language, 'Name', 'Имя', 'Ism')}</th>
-                  <th>{t(language, 'Login', 'Логин', 'Login')}</th>
-                  <th>{t(language, 'Temporary password', 'Временный пароль', 'Vaqtinchalik parol')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {created.map((row) => (
-                  <tr key={row.login}>
-                    <td>{row.username}</td>
-                    <td><code>{row.login}</code></td>
-                    <td><code>{row.password}</code></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="cred-grid">
+            {created.map((row) => <CredentialCard key={row.login} person={{ name: row.username, login: row.login, password: row.password }} language={language} />)}
           </div>
         </div>
       )}

@@ -4,6 +4,7 @@ import { Lightbulb, RotateCcw, Sparkles } from 'lucide-react';
 import type { Language } from './school-data';
 import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
+import { Protected } from './ui/protect';
 
 /*
  * "My test": 5 questions made for this pupil on the topics they find hard (low journal marks,
@@ -61,7 +62,7 @@ export function PracticeTest({ userId, language }: { userId: string; language: L
   const next = () => { if (!saved) return; setHint(false); setSaved({ ...saved, revealed: false }); };
 
   return (
-    <section className="panel practice-test">
+    <Protected className="panel practice-test">
       <div className="section-head">
         <h2><Sparkles size={16} /> {t(language, 'Mening testim', 'Мой тест', 'My test')}</h2>
         {saved && <button type="button" className="btn small" onClick={() => setSaved(null)} aria-label={t(language, 'Yangi test', 'Новый тест', 'New test')}><RotateCcw size={14} /></button>}
@@ -119,6 +120,6 @@ export function PracticeTest({ userId, language }: { userId: string; language: L
         </div>
       )}
       {error && <div className="notice" role="alert">{error}</div>}
-    </section>
+    </Protected>
   );
 }

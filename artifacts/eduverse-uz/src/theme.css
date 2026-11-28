@@ -854,6 +854,8 @@ body {
 /* headings, text on light */
 h1, h2, h3, .auth-panel h2, .auth-page-login .auth-panel h2, .profile-head h1, .cabinet-hero h2, .book-title, .list-title { color: var(--text) !important; }
 .account-banner { background: rgba(255, 244, 220, 0.85); border-color: rgba(201, 138, 30, 0.35); color: #6B4E12; }
+.account-banner b { color: #5a410f; }
+.account-banner span { color: #7a5c1e; }
 .account-banner b, .school-connected-notice b { color: var(--text); }
 .notice { background: rgba(255, 255, 255, 0.72); border-color: rgba(143, 200, 238, 0.6); color: var(--text-2); }
 .notice svg { color: var(--sky-deep); }

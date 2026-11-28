@@ -18,6 +18,7 @@ import { friendlyError } from './errors';
 import { LoadingBlock } from './ui/loading';
 import { Modal } from './ui/modal';
 import { LessonBuilder, ClassProgressPanel, BoardControls, OnlineAndAsks, StudentBoard, useLive, type LessonContent, type LiveHook, type LiveState } from './lesson-teacher';
+import { Protected } from './ui/protect';
 
 /*
  * The 40-minute lesson of a textbook topic (one main button per screen):
@@ -680,7 +681,7 @@ function TestStage({ topic, book, language, save, result, ask, content, goTo }: 
     return <TestSummary topic={topic} book={book} language={language} answers={answers} score={answers.filter((entry) => entry.ok).length} total={items.length} onRetry={restart} goTo={goTo} ask={ask} />;
   }
   return (
-    <div className="ls-test">
+    <Protected className="ls-test">
       <div className="ls-test-head">
         <span><b>{index + 1}</b> / {items.length}</span>
         <span className={`ls-timer ${left <= 60 ? 'low' : ''}`}><Timer size={14} /> {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>
@@ -729,7 +730,7 @@ function TestStage({ topic, book, language, save, result, ask, content, goTo }: 
           </div>
         )}
       </div>
-    </div>
+    </Protected>
   );
 }
 

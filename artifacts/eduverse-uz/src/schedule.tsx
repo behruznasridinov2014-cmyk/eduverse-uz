@@ -148,7 +148,7 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
                               {teacher ? <span>{t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)}</span> : lesson.teacherName ? <span><UserRound size={12} /> {lesson.teacherName}</span> : null}
                               {lesson.room && <span><DoorOpen size={12} /> {t(language, `${lesson.room}-xona`, `каб. ${lesson.room}`, `room ${lesson.room}`)}</span>}
                             </span>
-                            {info?.topic && <span className="schedule-topic">{past ? <CheckCircle2 size={13} /> : <BookOpen size={13} />} §{info.topic.code} {info.topic.title}{info.plan && <small className="muted"> · {t(language, 'reja', 'по плану', 'planned')}</small>}</span>}
+                            {info?.topic && user.role !== 'parent' && <span className="schedule-topic">{past ? <CheckCircle2 size={13} /> : <BookOpen size={13} />} §{info.topic.code} {info.topic.title}{info.plan && <small className="muted"> · {t(language, 'reja', 'по плану', 'planned')}</small>}</span>}
                             {status === 'current' && <span className="tag green schedule-now">{t(language, 'Hozir', 'Сейчас идёт', 'Now')}</span>}
                           </div>
                           {!open && (info?.topic || bookForLesson(lesson)) && (user.role === 'teacher' || user.role === 'student') && (
@@ -156,7 +156,7 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
                               <button type="button" className="btn small" onClick={() => openLessonPreview(lesson, onOpen)}>{past ? t(language, 'Darsni ko‘rish', 'Посмотреть урок', 'View lesson') : t(language, 'Oldindan ko‘rish', 'Предпросмотр урока', 'Preview the lesson')} <ArrowRight size={14} /></button>
                             </div>
                           )}
-                          {open && (
+                          {open && user.role !== 'parent' && (
                             <div className="schedule-lesson-actions">
                               <button type="button" className="btn small primary" onClick={() => onOpen(`/today/${lesson.id}`)}>{t(language, 'Darsni ochish', 'Открыть урок', 'Open lesson')} <ArrowRight size={14} /></button>
                               {teacher && info?.topic && <button type="button" className="btn small" onClick={() => onOpen(`/lesson/course:${info.topic!.key}`)}><MonitorPlay size={14} /> {t(language, 'Onlayn', 'Онлайн', 'Online')}</button>}

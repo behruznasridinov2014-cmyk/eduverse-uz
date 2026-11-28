@@ -526,3 +526,58 @@ html[data-theme="night"] .live-lesson-banner { background: rgba(30, 60, 45, .9);
 .tg-onetap small{color:#5f6b75;font-size:12.5px;line-height:1.35}
 .tg-onetap-icon{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;background:#2aabee}
 @media (max-width:520px){.tg-onetap{flex-wrap:wrap}.tg-onetap .btn{width:100%}}
+
+/* Lesson strip at the top while a lesson is on (or starts within 10 minutes). */
+.lesson-now {
+  display: flex; align-items: center; gap: 12px; margin: 14px 28px 0; padding: 8px 8px 8px 16px; border-radius: 20px;
+  background: var(--lg-bg), rgba(255, 250, 240, .9); border: 1px solid rgba(201, 160, 90, .35);
+  box-shadow: 0 12px 28px -22px rgba(120, 80, 20, .55); animation: ev-glass-pop .5s var(--spring) both;
+}
+.lesson-now.is-live { background: var(--lg-bg), rgba(236, 250, 241, .92); border-color: rgba(58, 163, 104, .35); }
+.lesson-now-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 4px 0; border: 0; background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.lesson-now .live-dot { flex: none; background: #d99a2b; animation: none; }
+.lesson-now.is-live .live-dot { background: #2fa463; animation: live-pulse-green 1.6s infinite; }
+.lesson-now-text { display: grid; gap: 1px; min-width: 0; }
+.lesson-now-text b, .lesson-now-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lesson-now-text b { font-size: 14.5px; }
+.lesson-now-text small { font-size: 12.5px; color: #77828b; }
+.lesson-now-actions { display: flex; gap: 6px; flex: none; }
+.lesson-now-actions .btn { white-space: nowrap; }
+@keyframes live-pulse-green { 0% { box-shadow: 0 0 0 0 rgba(47, 164, 99, .5); } 70% { box-shadow: 0 0 0 9px rgba(47, 164, 99, 0); } 100% { box-shadow: 0 0 0 0 rgba(47, 164, 99, 0); } }
+html[data-theme="night"] .lesson-now { background: rgba(255, 255, 255, .05); border-color: rgba(227, 173, 108, .3); }
+html[data-theme="night"] .lesson-now.is-live { background: rgba(30, 60, 45, .85); border-color: rgba(58, 163, 104, .4); }
+html[data-theme="night"] .lesson-now-text small { color: #a9b3bb; }
+@media (max-width: 1100px) { .lesson-now { margin: 12px 18px 0; } }
+@media (max-width: 760px) {
+  .lesson-now { margin: 10px 16px 0; flex-wrap: wrap; padding: 10px 10px 10px 14px; gap: 8px; }
+  .lesson-now-main { flex-basis: 100%; }
+  .lesson-now-actions { width: 100%; }
+  .lesson-now-actions .btn { flex: 1; justify-content: center; }
+}
+
+/* Test questions can't be selected or copied; hidden while the pupil is in another window. */
+.protected { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: filter .2s var(--ease); }
+.protected.is-away { filter: blur(14px); }
+@media print { .protected { display: none !important; } }
+.protected input, .protected textarea { -webkit-user-select: text; user-select: text; }
+
+/* New logins and passwords: copy, show with the eye, share. */
+.cred-list { display: grid; gap: 10px; margin-top: 10px; }
+.cred-list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.cred-list-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cred-note { margin: 0; font-size: 13px; }
+.cred-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.cred-card { display: grid; gap: 6px; padding: 12px 12px 10px 14px; border-radius: 16px; background: var(--surface, #fff); border: 1px solid var(--line); }
+.cred-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cred-head > span { display: grid; gap: 1px; min-width: 0; }
+.cred-head b { overflow-wrap: anywhere; }
+.cred-head small { font-size: 12px; }
+.cred-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto auto; align-items: center; gap: 4px; }
+.cred-row > small { color: #77828b; font-size: 12px; }
+.cred-row > code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; letter-spacing: .02em; }
+.cred-row > :nth-child(3):last-child { grid-column: 3 / 5; justify-self: end; }
+.cred-icon { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--text-2, #4b5560); cursor: pointer; font: inherit; font-size: 13px; transition: background .2s var(--ease); }
+.cred-icon:hover { background: rgba(184, 149, 90, .12); }
+.cred-icon.has-label { border-color: var(--line); background: var(--surface, #fff); border-radius: 999px; padding: 0 12px; }
+@media print { .cred-list { display: none !important; } }
+.practice-test + .trainer-card, .practice-test + .panel { margin-top: 14px; }

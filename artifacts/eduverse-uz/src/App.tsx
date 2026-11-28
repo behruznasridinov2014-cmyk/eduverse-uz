@@ -30,6 +30,7 @@ import { ClassJournal } from './journal';
 import { SchedulePage } from './schedule';
 import { CheckHomeworkPage } from './check-homework';
 import { UpdateBanner } from './update-check';
+import { LessonNowBar } from './lesson-now-bar';
 import { TodayLessons } from './today';
 import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, TeacherDayPage, TimetableChangesPage } from './ecosystem';
 import { TimetableEditor } from './timetable-editor';
@@ -205,6 +206,7 @@ function App(){
         </div>
       </header>
       <UpdateBanner language={lang}/>
+      {auth.user&&<LessonNowBar user={auth.user} language={lang} path={location} onOpen={navigate}/>}
       {openRoom&&userRole==='student'&&!location.startsWith('/lesson')&&<button type="button" className="live-lesson-banner" onClick={()=>navigate('/lesson')}><span className="live-dot" aria-hidden="true"/><b>{lang==='Uzbek'?'O‘qituvchi onlayn darsni ochdi':lang==='Русский'?'Учитель открыл онлайн-урок':'Your teacher opened an online lesson'}</b><span>{lang==='Uzbek'?'Kirish':lang==='Русский'?'Войти':'Join'} →</span></button>}
       {notice?.kind==='switched'&&<div className="account-banner" role="alert">
         <Info size={18}/>
@@ -214,7 +216,7 @@ function App(){
         </div>
         <button type="button" className="btn small" onClick={auth.dismissAccountNotice} aria-label="Close"><X size={14}/></button>
       </div>}
-      {mustChangePassword&&location!=='/profile'&&<div className="account-banner password-banner" role="status"><ShieldCheck size={18}/><div><b>{lang==='Uzbek'?'Vaqtinchalik parolni almashtiring':lang==='Русский'?'Смените временный пароль':'Change your temporary password'}</b><span>{lang==='Uzbek'?'Bu sizning hisobingiz xavfsizligi uchun.':lang==='Русский'?'Это нужно для безопасности вашего аккаунта.':'This keeps your account safe.'}</span></div><button type="button" className="btn small primary" onClick={()=>navigate('/profile')}>{lang==='Uzbek'?'Almashtirish':lang==='Русский'?'Сменить':'Change'}</button></div>}
+      {mustChangePassword&&location!=='/profile'&&<div className="account-banner password-banner" role="status"><ShieldCheck size={18}/><div><b>{lang==='Uzbek'?'Vaqtinchalik parolni almashtiring':lang==='Русский'?'Смените временный пароль':'Change your temporary password'}</b><span>{lang==='Uzbek'?'Bu sizning hisobingiz xavfsizligi uchun.':lang==='Русский'?'Это нужно для безопасности вашего аккаунта.':'This keeps your account safe.'}</span></div><button type="button" className="btn small primary" onClick={()=>navigate('/profile?tab=security')}>{lang==='Uzbek'?'Almashtirish':lang==='Русский'?'Сменить':'Change'}</button></div>}
       <div className="content" key={`${location.split('/')[1]}:${auth.user?.id??''}`}>
         {forbidden&&auth.user?<RoleBlocked language={lang} role={auth.user.role} goHome={()=>navigate('/dashboard')}/>
         :auth.user&&proLocked(location)?<ProLock language={lang}/>
@@ -280,8 +282,8 @@ const NAV_ITEMS:NavItem[]=[
   {label:'Changes',href:'/changes',icon:CalendarClock,tone:'pink'},
 ];
 const ROLE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Schedule','Lesson room','Topics & 3D','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
-  teacher:['Overview','My day','Schedule','Topics & 3D','Chemistry lab','Attendance','Check homework','Messages','Teacher workspace','Textbook library'],
+  student:['Overview','Schedule','Lesson room','Trainer','Chemistry lab','Homework','My grades','Textbook library'],
+  teacher:['Overview','My day','Schedule','Check homework','Messages','Teacher workspace','Textbook library'],
   parent:['Overview','Schedule','Family view','Messages','Textbook library'],
   school_director:['Overview','Analytics','Schedule','Changes','School insights','Classes','Attendance','Finance'],
   school_admin:['Overview','Analytics','Schedule','Changes','School insights','Classes','Attendance','Finance'],
@@ -291,8 +293,8 @@ const ROLE_NAV:Record<User['role'],string[]>={
 };
 /** Phone bottom bar: the five most used sections of each role (the rest are in the ☰ menu). */
 const MOBILE_NAV:Record<User['role'],string[]>={
-  student:['Overview','Topics & 3D','Trainer','Homework','Chemistry lab'],
-  teacher:['Overview','My day','Topics & 3D','Attendance','Check homework'],
+  student:['Overview','Trainer','Homework','My grades','Chemistry lab'],
+  teacher:['Overview','My day','Check homework','Teacher workspace','Messages'],
   parent:['Overview','Family view','Messages','Textbook library'],
   school_director:['Overview','Analytics','Schedule','School insights','Finance'],
   school_admin:['Overview','Analytics','Schedule','School insights','Finance'],
@@ -318,16 +320,13 @@ type HomeAction={label:Record<Lang,string>;description:Record<Lang,string>;path:
 const L=(uz:string,ru:string,en:string):Record<Lang,string>=>({Uzbek:uz,Русский:ru,English:en});
 const HOME_ACTIONS:Record<User['role'],HomeAction[]>={
  student:[
-  {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('3D modelni aylantiring, faktlar va test.','Крутите 3D-модель, факты и тест.','Rotate the 3D model, facts and a quiz.'),path:'/course',icon:Atom,tone:'violet'},
   {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmini yuboring va bahoni ko‘ring.','Отправьте фото тетради и смотрите оценку.','Send notebook photos and see your grade.'),path:'/classes',icon:NotebookPen,tone:'orange'},
   {label:L('3D studiya','3D-студия','3D studio'),description:L('Kimyo, fizika, matematika, biologiya, geografiya — hammasi 3D da.','Химия, физика, математика, биология, география — всё в 3D.','Chemistry, physics, maths, biology, geography — all in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
   {label:L('Darsliklar','Учебники','Textbooks'),description:L('7-sinf darsliklari va daftarlar.','Учебники и тетради 7 класса.','Grade 7 textbooks and workbooks.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  teacher:[
-  {label:L('Dars mavzusi','Тема урока','Lesson topic'),description:L('Darslik bo‘yicha bugungi mavzu: 3D, topshiriqlar, uy vazifasi.','Сегодняшняя тема по учебнику: суть, 3D, задания, домашка.','Today’s textbook topic: 3D, tasks, homework.'),path:'/course',icon:Atom,tone:'violet'},
-  {label:L('Davomat','Давомат','Attendance'),description:L('Kim kelganini bir bosishda belgilang.','Отметьте присутствие в один клик.','Mark attendance in one click.'),path:'/attendance',icon:CalendarCheck2,tone:'green'},
+  {label:L('Mening kunim','Мой день','My day'),description:L('Bugungi darslar: xona va mavzu.','Уроки на сегодня: кабинет и тема.','Today’s lessons: room and topic.'),path:'/workspace',icon:CalendarCheck2,tone:'green'},
   {label:L('Uy vazifalari','Домашние задания','Homework'),description:L('Daftar rasmlarini tekshiring yoki o‘z topshirig‘ingizni bering.','Проверьте фото тетрадей или дайте своё задание.','Check notebook photos or give your own task.'),path:'/check',icon:NotebookPen,tone:'orange'},
-  {label:L('3D studiya','3D-студия','3D studio'),description:L('Har qanday fanni sinfga 3D da ko‘rsating.','Показывайте классу любой предмет в 3D.','Show any subject to the class in 3D.'),path:'/lab',icon:FlaskConical,tone:'pink'},
   {label:L('Darsliklar','Учебники','Textbooks'),description:L('Darslikni ochib, sinfga ko‘rsating.','Откройте учебник и покажите классу.','Open a textbook and show the class.'),path:'/library',icon:BookMarked,tone:'teal'},
  ],
  parent:[

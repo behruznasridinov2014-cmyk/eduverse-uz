@@ -28,10 +28,11 @@ import {
   Sun,
   Target,
   Users,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import type { User } from '@workspace/api-client-react';
 import type { AppLanguage } from './localization';
-import { GoogleSignInButton } from './google-auth';
 import { ForgotPassword } from './forgot-password';
 import { getAuthErrorMessage, useAuth } from './auth-context';
 import { QrApprovePanel, QrSignInPanel, QR_COPY } from './qr-login';
@@ -882,6 +883,7 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'code' | 'qr'>(() => {
     const qr = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('qr');
@@ -990,13 +992,15 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
               </label>
               <label className="auth-field" htmlFor="account-password">
                 <span>{copy.password}</span>
-                <input id="account-password" type="password" name="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} maxLength={128} required/>
+                <span className="auth-pass-wrap">
+                  <input id="account-password" type={showPass ? 'text' : 'password'} name="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" minLength={8} maxLength={128} required/>
+                  <button type="button" className="auth-pass-eye" onClick={() => setShowPass((value) => !value)} aria-label={showPass ? (language === 'Русский' ? 'Скрыть пароль' : language === 'English' ? 'Hide password' : 'Parolni yashirish') : (language === 'Русский' ? 'Показать пароль' : language === 'English' ? 'Show password' : 'Parolni ko‘rsatish')}>{showPass ? <EyeOff size={17}/> : <Eye size={17}/>}</button>
+                </span>
               </label>
               <label className="auth-remember">
                 <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)}/>
                 <span>
                   <b>{language === 'Uzbek' ? 'Meni eslab qol' : language === 'English' ? 'Remember me' : 'Запомнить меня'}</b>
-                  <small>{language === 'Uzbek' ? 'Faqat o‘z qurilmangizda. Belgilanmasa, brauzer yopilganda hisobdan chiqiladi.' : language === 'English' ? 'Only on your own device. Otherwise you are signed out when the browser closes.' : 'Только на своём устройстве. Без галочки выход произойдёт, когда закроете браузер.'}</small>
                 </span>
               </label>
               {error && <FormError>{error}</FormError>}
@@ -1010,11 +1014,9 @@ export function LoginPage({ language, onLanguageChange, onSuccess }: AuthPagePro
           ) : (
             <QrSignInPanel language={language} onSuccess={() => onSuccess()} />
           )}
-          {(tab === 'code' || (isPhone && !qrCode)) && <GoogleSignInButton language={language} />}
-          <div className="auth-switch">{copy.noAccount}</div>
+          {(tab === 'code' || (isPhone && !qrCode)) && <ForgotPassword language={language} defaultLogin={login} />}
         </>
       )}
-      <ForgotPassword language={language} defaultLogin={login} />
     </AuthFrame>
   );
 }

@@ -72,7 +72,7 @@ router.put("/me/account", requireAuthenticatedRole(...everyRole), changeLimiter,
     changes.email = email || null;
   }
   if ("subjects" in body) {
-    if (!Array.isArray(body.subjects) || body.subjects.length > 8) { res.status(400).json({ error: "Up to 8 subjects." }); return; }
+    if (!Array.isArray(body.subjects) || body.subjects.length > 20) { res.status(400).json({ error: "Up to 20 subjects." }); return; }
     changes.subjects = [...new Set(body.subjects.filter((s): s is string => typeof s === "string").map((s) => s.trim().slice(0, 40)).filter(Boolean))];
   }
   await db.update(usersTable).set(changes).where(eq(usersTable.id, viewer.id));

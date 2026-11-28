@@ -7,6 +7,7 @@ import { LoadingBlock } from './ui/loading';
 import { friendlyError } from './errors';
 import { lessonSubjectName } from './today';
 import { MARKS, markBand } from './marks';
+import { Modal } from './ui/modal';
 
 /*
  * Class journal like the electronic school journal: columns are the lesson dates of one subject
@@ -36,6 +37,8 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
   const [error, setError] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [comment, setComment] = useState('');
+  /** The mark chosen in the window; saved only on «Сохранить», ✕ closes without saving. */
+  const [draft, setDraft] = useState<{ mark: number | null; absent: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState('');
   const [hideAsked, setHideAsked] = useState(false);
@@ -103,24 +106,31 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
     const lessonCell = cells.get(`class:${studentId}:${date}`);
     const homeCell = cells.get(`homework:${studentId}:${date}`);
     setComment(lessonCell?.comment ?? homeCell?.comment ?? '');
+    setDraft({ mark: typeof lessonCell?.mark === 'number' ? lessonCell.mark : null, absent: Boolean(lessonCell?.absent) });
     setEditing(`${studentId}:${date}`);
   };
 
   if (!school.classes.length) return null;
   const dateLabel = (date: string) => { const [, m, d] = date.split('-').map(Number); return `${d} ${MONTHS_SHORT[language][(m ?? 1) - 1]}`; };
-  const picker = (kind: Kind, studentId: string, date: string) => {
-    const cell = cells.get(`${kind}:${studentId}:${date}`);
-    return (
-      <div className="journal-pick-row">
-        <span className="journal-pick-label">{kind === 'homework' ? t(language, 'Uy vazifasi', 'Домашка', 'Homework') : t(language, 'Dars', 'За урок', 'Lesson')}</span>
-        <span className="journal-marks">
-          {MARKS.map((mark) => <button type="button" key={mark} className={`grade-pick ${markBand(mark)} ${cell?.mark === mark ? 'on' : ''}`} disabled={saving} onClick={() => void put(kind, studentId, date, mark)}>{mark}</button>)}
-          {kind === 'class' && <button type="button" className={`grade-pick nb ${cell?.absent ? 'on' : ''}`} disabled={saving} onClick={() => void put(kind, studentId, date, null, true)}>{t(language, 'nb', 'нб', 'ab')}</button>}
-          {cell && <button type="button" className="grade-pick cancel" disabled={saving} onClick={() => void put(kind, studentId, date, null)} aria-label={t(language, 'O‘chirish', 'Стереть', 'Clear')}>⌫</button>}
-        </span>
-      </div>
-    );
-  };
+  const picker = () => (
+    <div className="journal-pick-row">
+      <span className="journal-marks">
+        {MARKS.map((mark) => <button type="button" key={mark} className={`grade-pick ${markBand(mark)} ${draft?.mark === mark ? 'on' : ''}`} disabled={saving} onClick={() => setDraft({ mark, absent: false })}>{mark}</button>)}
+        <button type="button" className={`grade-pick nb ${draft?.absent ? 'on' : ''}`} disabled={saving} onClick={() => setDraft({ mark: null, absent: true })}>{t(language, 'nb', 'нб', 'ab')}</button>
+        {(draft?.mark !== null || draft?.absent) && <button type="button" className="grade-pick cancel" disabled={saving} onClick={() => setDraft({ mark: null, absent: false })} aria-label={t(language, 'O‘chirish', 'Стереть', 'Clear')}>⌫</button>}
+      </span>
+    </div>
+  );
+  async function saveCell(studentId: string, date: string) {
+    const cell = cells.get(`class:${studentId}:${date}`);
+    const before = { mark: typeof cell?.mark === 'number' ? cell.mark : null, absent: Boolean(cell?.absent) };
+    if (draft && (draft.mark !== before.mark || draft.absent !== before.absent || (cell?.comment ?? '') !== comment.trim())) {
+      await put('class', studentId, date, draft.mark, draft.absent, comment);
+    } else {
+      await saveComment(studentId, date);
+    }
+    setEditing(null);
+  }
   return (
     <section className="panel journal class-journal">
       <div className="section-head">
@@ -189,16 +199,14 @@ export function ClassJournal({ school, language }: { school: SchoolData; languag
         const [studentId, date] = [editing.slice(0, editing.lastIndexOf(':')), editing.slice(editing.lastIndexOf(':') + 1)];
         const who = data.students.find((item) => item.id === studentId)?.name ?? '';
         return (
-          <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditing(null); }}>
-            <section className="modal journal-editor" role="dialog" aria-modal="true" aria-label={who}>
-              <div className="row-between"><b>{who}</b><span className="muted">{dateLabel(date)}</span></div>
-              {picker('class', studentId, date)}
-              <input className="input" value={comment} maxLength={200} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveComment(studentId, date); }} placeholder={t(language, 'Izoh: nima uchun (ixtiyoriy)', 'Комментарий: за что (по желанию)', 'Comment: what for (optional)')} />
-              <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}>
-                <button type="button" className="btn primary" disabled={saving} onClick={() => void saveComment(studentId, date)}>{t(language, 'Tayyor', 'Готово', 'Done')}</button>
-              </div>
-            </section>
-          </div>
+          <Modal title={who} onClose={() => setEditing(null)} footer={<>
+            <button type="button" className="btn" onClick={() => setEditing(null)}>{t(language, 'Bekor qilish', 'Отмена', 'Cancel')}</button>
+            <button type="button" className="btn primary" disabled={saving} onClick={() => void saveCell(studentId, date)}>{t(language, 'Saqlash', 'Сохранить', 'Save')}</button>
+          </>}>
+            <p className="muted journal-editor-date">{dateLabel(date)}</p>
+            {picker()}
+            <input className="input" value={comment} maxLength={200} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') void saveCell(studentId, date); }} placeholder={t(language, 'Izoh: nima uchun (ixtiyoriy)', 'Комментарий: за что (по желанию)', 'Comment: what for (optional)')} />
+          </Modal>
         );
       })()}
     </section>

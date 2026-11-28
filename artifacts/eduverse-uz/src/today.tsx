@@ -1,7 +1,7 @@
 import './today.css';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { ArrowRight, BookOpen, CalendarCheck2, Clock3, DoorOpen, MonitorPlay, Sparkles, UserRound } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, CalendarCheck2, Clock3, DoorOpen, MonitorPlay, Sparkles, UserRound } from 'lucide-react';
 import { COURSE, SUBJECT_LABEL, type CourseBook, type CourseTopic } from './course-data';
 import type { Language } from './school-data';
 import { subjectLabel } from './ui/config';
@@ -204,12 +204,35 @@ export function currentOrNext(lessons: TodayLesson[], now: number): TodayLesson 
 /* Big lesson cards (overview)                                          */
 /* ------------------------------------------------------------------ */
 
+/** A row of cards that scrolls sideways; arrows show only when there is more to see. */
+function useLessonRow(count: number) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [edges, setEdges] = useState({ canBack: false, canForward: false });
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const next = { canBack: el.scrollLeft > 4, canForward: el.scrollLeft + el.clientWidth < el.scrollWidth - 4 };
+    setEdges((prev) => (prev.canBack === next.canBack && prev.canForward === next.canForward ? prev : next));
+  }, []);
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [update, count]);
+  const scroll = (direction: 1 | -1) => ref.current?.scrollBy({ left: direction * ref.current.clientWidth * 0.8, behavior: 'smooth' });
+  return { ref, update, scroll, ...edges };
+}
+
 export function TodayLessons({ language, onOpen, role }: { language: Language; onOpen: (path: string) => void; role: string }) {
   const { data, failed, now } = useToday();
   const courses = useLessonCourses(data?.lessons);
   const isManager = role === 'school_director' || role === 'school_admin';
   const isFamily = role === 'parent';
   const isStudent = role === 'student';
+  const row = useLessonRow(data?.lessons.length ?? 0);
   if (failed && !data) return null;
   if (!data) return <section className="today-block"><LoadingBlock language={language} /></section>;
   if (isManager) return <SchoolToday data={data} now={now} language={language} />;
@@ -221,6 +244,12 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
     <section className="today-block" aria-label={t(language, 'Bugungi darslar', 'Уроки сегодня', 'Today’s lessons')}>
       <div className="today-head">
         <div><h2>{t(language, 'Bugungi darslar', 'Уроки сегодня', 'Today’s lessons')}</h2></div>
+        {(row.canBack || row.canForward) && !finished && (
+          <span className="today-scroll">
+            <button type="button" className="today-scroll-btn" disabled={!row.canBack} onClick={() => row.scroll(-1)} aria-label={t(language, 'Oldingi', 'Назад', 'Back')}><ChevronLeft size={17} /></button>
+            <button type="button" className="today-scroll-btn" disabled={!row.canForward} onClick={() => row.scroll(1)} aria-label={t(language, 'Keyingi', 'Дальше', 'Next')}><ChevronRight size={17} /></button>
+          </span>
+        )}
         {lessons.length > 0 && !finished && <span className="today-count">{t(language, `Qoldi: ${left} / ${lessons.length} · ${lastEnd} da tugaydi`, `Осталось ${left} из ${lessons.length} · до ${lastEnd}`, `${left} of ${lessons.length} left · until ${lastEnd}`)}</span>}
       </div>
       {lessons.length === 0 || finished ? (
@@ -236,19 +265,19 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
           </div>
         </div>
       ) : (
-        <div className="today-grid">
+        <div className="today-grid" ref={row.ref} onScroll={row.update}>
           {lessons.map((lesson, index) => {
             const status = statusOf(lesson, now);
             const topic = topicForLesson(lesson, courses[lesson.classId], data.date);
             const open = status !== 'done';
+            // A parent only follows the lessons: the card is information, it does not open the topic.
+            const Card = isFamily ? 'div' : 'button';
             return (
-              <button
-                type="button"
+              <Card
+                {...(isFamily ? {} : { type: 'button' as const, disabled: !open, onClick: () => open && onOpen(`/today/${lesson.id}`) })}
                 key={lesson.id}
-                className={`today-card is-${status}`}
+                className={`today-card is-${status}${isFamily ? ' is-info' : ''}`}
                 style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
-                disabled={!open}
-                onClick={() => open && onOpen(`/today/${lesson.id}`)}
               >
                 <span className="today-card-top">
                   <span className="today-class">{isStudent || isFamily ? lessonSubjectName(lesson.subject, language) : t(language, `${lesson.className} sinf`, `${lesson.className} класс`, `Class ${lesson.className}`)}</span>
@@ -257,14 +286,14 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
                 <span className="today-time"><Clock3 size={15} /> {lesson.start}–{lesson.end} <small>· {t(language, `${lesson.period}-dars`, `${lesson.period}-й урок`, `Period ${lesson.period}`)}</small></span>
                 {lesson.change && <LessonChangeTag change={lesson.change} language={language} />}
                 {!(isStudent || isFamily) && <span className="today-subject">{lessonSubjectName(lesson.subject, language)}</span>}
-                {open && topic && <span className="today-topic"><b>§{topic.code}</b> {topic.title}</span>}
+                {open && topic && !isFamily && <span className="today-topic"><b>§{topic.code}</b> {topic.title}</span>}
                 <span className="today-card-foot">
                   <span className={`today-left is-${status}`}>{status === 'done' ? t(language, 'Dars tugadi', 'Урок закончился', 'Lesson over') : timeText(lesson, now, language)}</span>
                   {isFamily && lesson.teacherName && <span className="muted today-teacher"><UserRound size={13} /> {lesson.teacherName}</span>}
-                  {lesson.room && <span className="muted today-room"><DoorOpen size={13} /> {lesson.room}</span>}
-                  {open && <ArrowRight size={16} className="today-arrow" />}
+                  {lesson.room && !isFamily && <span className="muted today-room"><DoorOpen size={13} /> {lesson.room}</span>}
+                  {open && !isFamily && <ArrowRight size={16} className="today-arrow" />}
                 </span>
-              </button>
+              </Card>
             );
           })}
         </div>
