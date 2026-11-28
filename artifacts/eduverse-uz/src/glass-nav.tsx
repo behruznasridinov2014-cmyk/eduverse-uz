@@ -274,7 +274,9 @@ export function LensRow({ className = '', children, role = 'tablist', ...rest }:
   const measure = useCallback(() => {
     const row = rowRef.current;
     const chosen = row?.querySelector<HTMLElement>(':scope > [aria-selected="true"], :scope > [aria-pressed="true"], :scope > .on, :scope > .active');
-    setLens(chosen ? { left: chosen.offsetLeft, width: chosen.offsetWidth } : null);
+    const next = chosen ? { left: chosen.offsetLeft, width: chosen.offsetWidth } : null;
+    // Only a real change updates state: a new object on every render would loop forever.
+    setLens((prev) => (prev?.left === next?.left && prev?.width === next?.width ? prev : next));
   }, []);
   useLayoutEffect(() => { measure(); });
   useEffect(() => {
