@@ -5,6 +5,7 @@ import './glass.css';
 import './motion.css';
 import './ui/ui.css';
 import './phone.css';
+import './readable.css';
 import { useDismiss } from './ui/dismiss';
 import { useClosable } from './motion';
 import { Suspense, lazy, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
