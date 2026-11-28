@@ -138,6 +138,8 @@ type Analytics = {
   attentionClasses: string[];
 };
 
+const PAGE_ROWS = 8;
+
 /** The first few rows on the page; the whole list opens in a window, so the page stays short. */
 function ShortList<T>({ items, row, title, language, limit = 5 }: { items: T[]; row: (item: T) => ReactNode; title: string; language: Language; limit?: number }) {
   const [open, setOpen] = useState(false);
@@ -605,6 +607,35 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
   const [paying, setPaying] = useState<FinanceStudent | null>(null);
   const [notice, setNotice] = useState('');
   const students = (data?.students ?? []).filter((item) => (filter === 'debt' ? item.debt > 0 : filter === 'noplan' ? !item.plan : true) && `${item.name} ${item.className}`.toLowerCase().includes(query.toLowerCase()));
+  const [showAll, setShowAll] = useState(false);
+  // The page shows the first rows; the whole list (or a search) opens the rest, so the page stays short.
+  const studentTable = (rows: FinanceStudent[]) => (
+            <div className="journal-scroll">
+              <table className="grade-table eco-table">
+                <thead><tr>
+                  <th>{t(language, 'O‘quvchi', 'Ученик', 'Pupil')}</th>
+                  <th>{t(language, 'Oyiga', 'В месяц', 'Monthly')}</th>
+                  <th>{t(language, 'Shu oy', 'За месяц', 'This month')}</th>
+                  <th>{t(language, 'Qarz', 'Долг', 'Debt')}</th>
+                  <th />
+                </tr></thead>
+                <tbody>
+                  {rows.map((item) => (
+                    <tr key={item.id} className={item.debt > 0 ? 'row-warn' : ''}>
+                      <td><b>{item.name}</b><br /><span className="muted">{item.className || '—'}{item.status !== 'active' ? ` · ${item.status}` : ''}</span></td>
+                      <td>{item.plan ? <>{sum(item.due)}{item.plan.discountPercent ? <span className="tag green eco-tag">−{item.plan.discountPercent}%</span> : null}</> : <button type="button" className="btn small" onClick={() => { setShowAll(false); setEditing(item); }}><Plus size={13} /> {t(language, 'Belgilash', 'Назначить', 'Set')}</button>}</td>
+                      <td>{item.paidThisMonth ? sum(item.paidThisMonth) : '—'}</td>
+                      <td>{item.debt ? <b className="eco-debt">{sum(item.debt)}</b> : item.advance ? <span className="muted">+{sum(item.advance)}</span> : '—'}</td>
+                      <td className="eco-row-actions">
+                        {item.plan && <button type="button" className="btn small" onClick={() => { setShowAll(false); setEditing(item); }}>{t(language, 'Tarif', 'Тариф', 'Fee')}</button>}
+                        <button type="button" className="btn small primary" onClick={() => { setShowAll(false); setPaying(item); }}><Wallet size={13} /> {t(language, 'To‘lov', 'Оплата', 'Pay')}</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+  );
   async function cancel(payment: FinancePayment) {
     const reason = window.prompt(t(language, 'Nega bekor qilinmoqda?', 'Почему отменяете оплату?', 'Why cancel this payment?'));
     if (!reason || reason.trim().length < 3) return;
@@ -642,38 +673,15 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
           </LensRow>
           <div className="eco-search small"><Search size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t(language, 'Qidirish', 'Поиск', 'Search')} /></div>
         </>}>
-          {students.length === 0 ? <p className="muted">{t(language, 'Hech kim topilmadi.', 'Никого не найдено.', 'Nobody found.')}</p> : (
-            <div className="journal-scroll">
-              <table className="grade-table eco-table">
-                <thead><tr>
-                  <th>{t(language, 'O‘quvchi', 'Ученик', 'Pupil')}</th>
-                  <th>{t(language, 'Oyiga', 'В месяц', 'Monthly')}</th>
-                  <th>{t(language, 'Shu oy', 'За месяц', 'This month')}</th>
-                  <th>{t(language, 'Qarz', 'Долг', 'Debt')}</th>
-                  <th />
-                </tr></thead>
-                <tbody>
-                  {students.map((item) => (
-                    <tr key={item.id} className={item.debt > 0 ? 'row-warn' : ''}>
-                      <td><b>{item.name}</b><br /><span className="muted">{item.className || '—'}{item.status !== 'active' ? ` · ${item.status}` : ''}</span></td>
-                      <td>{item.plan ? <>{sum(item.due)}{item.plan.discountPercent ? <span className="tag green eco-tag">−{item.plan.discountPercent}%</span> : null}</> : <button type="button" className="btn small" onClick={() => setEditing(item)}><Plus size={13} /> {t(language, 'Belgilash', 'Назначить', 'Set')}</button>}</td>
-                      <td>{item.paidThisMonth ? sum(item.paidThisMonth) : '—'}</td>
-                      <td>{item.debt ? <b className="eco-debt">{sum(item.debt)}</b> : item.advance ? <span className="muted">+{sum(item.advance)}</span> : '—'}</td>
-                      <td className="eco-row-actions">
-                        {item.plan && <button type="button" className="btn small" onClick={() => setEditing(item)}>{t(language, 'Tarif', 'Тариф', 'Fee')}</button>}
-                        <button type="button" className="btn small primary" onClick={() => setPaying(item)}><Wallet size={13} /> {t(language, 'To‘lov', 'Оплата', 'Pay')}</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {students.length === 0 ? <p className="muted">{t(language, 'Hech kim topilmadi.', 'Никого не найдено.', 'Nobody found.')}</p> : <>
+            {studentTable(query ? students : students.slice(0, PAGE_ROWS))}
+            {!query && students.length > PAGE_ROWS && <button type="button" className="btn small eco-more" onClick={() => setShowAll(true)}>{t(language, `Hammasi (${students.length})`, `Показать всех (${students.length})`, `Show all (${students.length})`)}</button>}
+            {showAll && <Modal title={t(language, 'O‘quvchilar', 'Ученики', 'Pupils')} wide onClose={() => setShowAll(false)}>{studentTable(students)}</Modal>}
+          </>}
         </Section>
         <Section icon={<Receipt size={16} />} title={t(language, 'Shu oy to‘lovlari', 'Оплаты за месяц', 'Payments this month')}>
           {data.payments.length === 0 ? <p className="muted">{t(language, 'Hali to‘lov yo‘q.', 'Оплат пока нет.', 'No payments yet.')}</p> : (
-            <ul className="eco-list">
-              {data.payments.map((item) => (
+            <ShortList items={data.payments} title={t(language, 'Shu oy to‘lovlari', 'Оплаты за месяц', 'Payments this month')} language={language} row={(item) => (
                 <li key={item.id} className={item.cancelledAt ? 'cancelled' : ''}>
                   <span className="eco-date">№ {item.receiptNo}</span>
                   <span><b>{item.name}</b> · {shortDate(item.paidOn)} · {t(language, ...(METHOD[item.method] ?? METHOD.cash!))}{item.cancelledAt ? ` · ${t(language, 'bekor qilingan', 'отменена', 'cancelled')}: ${item.cancelReason}` : ''}</span>
@@ -683,8 +691,7 @@ export function FinancePage({ schoolId, language }: { schoolId: string; language
                     <button type="button" className="btn small danger" onClick={() => void cancel(item)} aria-label={t(language, 'Bekor qilish', 'Отменить', 'Cancel')}><X size={13} /></button>
                   </span>}
                 </li>
-              ))}
-            </ul>
+            )} />
           )}
         </Section>
       </>}

@@ -1,0 +1,60 @@
+/* ==========================================================================
+   Readability layer (loaded last).
+   Small text needs 4.5:1 contrast, large or bold text 3:1; tap targets at
+   least 28px; no text under 11px. The light theme keeps its gold, only
+   deeper, so white labels on gold buttons stay readable.
+   ========================================================================== */
+:root:not([data-theme="night"]) {
+  --text-3: #646C7A;          /* was #7D8696: 3.3:1 → 4.7:1 on the page */
+  --gold: #8C6A2E;            /* gold used as text and icons */
+  --ev-primary: #8C6A2E;
+  --ev-primary-hover: #7A5A22;
+  --tab-active: #7A5A22;
+  --ok: #237A55;              /* was #2E9E6E: 3.0:1 → 4.7:1 */
+  --warn: #9A660C;            /* was #C98A1E: 2.6:1 → 4.3:1 */
+  --bad: #B8344A;             /* was #D2475A: 3.9:1 → 5.1:1 */
+  --gold-fill: linear-gradient(135deg, #8E6D30, #7A5A22);
+}
+
+html:not([data-theme="night"]) .btn.primary,
+html:not([data-theme="night"]) .auth-submit,
+html:not([data-theme="night"]) .auth-page-login .auth-submit,
+html:not([data-theme="night"]) .studio-tab.active,
+html:not([data-theme="night"]) .ctrl.on,
+html:not([data-theme="night"]) .tool-btn.selected,
+html:not([data-theme="night"]) .ai-q,
+html:not([data-theme="night"]) .pdfv-write.on,
+html:not([data-theme="night"]) .ink-tool.on,
+html:not([data-theme="night"]) .pdfv-notes button.on,
+html:not([data-theme="night"]) .pen-toggle.on,
+html:not([data-theme="night"]) .home-primary-icon {
+  background: var(--gold-fill) !important;
+  box-shadow: 0 10px 24px -14px rgba(122, 90, 34, 0.75);
+}
+
+/* Small grey and gold texts that sat under 4.5:1 */
+:root:not([data-theme="night"]) .muted { color: var(--text-3); }
+.home-date, .eyebrow, .today-room, .topics-ahead-date { color: var(--text-3); }
+:root:not([data-theme="night"]) .brand-sub { color: var(--text-2); }
+
+/* No text under 11px */
+.glass-tab-label, .tabbar .glass-tab { font-size: max(11px, 1em); }
+@media (max-width: 760px) {
+  .tabbar .glass-tab { font-size: 11px; }
+  .cabinet-glass-tabs .glass-tab-label { font-size: 11px; }
+}
+.bell-badge { font: 800 11px var(--font) !important; background: #B8344A !important; }
+.course-date { font-size: 11px; }
+
+/* Tap targets: at least 28px high */
+.lens-row > button, .lens-row > a { min-height: 30px; }
+.role-card-head { min-height: 32px; }
+
+/* Light theme: hard-coded greys and gold numbers that were too pale */
+:root:not([data-theme="night"]) .lesson-now-text small,
+:root:not([data-theme="night"]) .ls-board-sub,
+:root:not([data-theme="night"]) .pulse-ring small { color: var(--text-3); }
+:root:not([data-theme="night"]) .today-status.is-current { color: #17633F; }
+:root:not([data-theme="night"]) :is(.home-stat b, .kpi b, .metric-value, .test-done > b, .lab-value b, .grade-mark, .labwork-time, .journal-average, .attendance-percent, .chem-formula, .studio-title, .open-room-code, .lesson-room-code b) { color: #7A5A22 !important; }
+:root:not([data-theme="night"]) .grade-mark.low { color: var(--bad) !important; }
+:root:not([data-theme="night"]) .grade-mark.good { color: var(--ok) !important; }
