@@ -1,8 +1,7 @@
 import { BookOpen, Box, CalendarCheck2 } from 'lucide-react';
 import type { User } from '@workspace/api-client-react';
 import type { Language } from './school-data';
-import { bookForLesson, lessonSubjectName, statusOf, timeText, topicForLesson, useLessonCourses, useToday } from './today';
-import { rememberLessonFor3D } from './today-pages';
+import { bookForLesson, lessonSubjectName, rememberLessonFor3D, statusOf, timeText, topicForLesson, useLessonCourses, useToday } from './today';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Русский' ? ru : language === 'English' ? en : uz;
