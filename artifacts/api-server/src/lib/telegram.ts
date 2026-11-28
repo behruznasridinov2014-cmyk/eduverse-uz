@@ -117,3 +117,16 @@ export async function answerTelegramCallback(callbackId: string, text = ""): Pro
     await fetch(`${API_BASE}/bot${token}/answerCallbackQuery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callback_query_id: callbackId, text }), signal: AbortSignal.timeout(5_000) });
   } catch { /* the button just stops spinning later */ }
 }
+
+/** @username of a private chat (or "" when it has none or Telegram is not reachable). */
+export async function telegramChatUsername(chatId: string | number): Promise<string> {
+  const token = botToken();
+  if (!token) return "";
+  try {
+    const response = await fetch(`${API_BASE}/bot${token}/getChat?chat_id=${encodeURIComponent(String(chatId))}`, { signal: AbortSignal.timeout(4000) });
+    const data = (await response.json()) as { ok?: boolean; result?: { username?: unknown } };
+    return data.ok && typeof data.result?.username === "string" ? data.result.username : "";
+  } catch {
+    return "";
+  }
+}

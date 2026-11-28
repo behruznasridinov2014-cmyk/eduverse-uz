@@ -85,7 +85,6 @@ export function StudentPulse({ language, onOpen }: { language: Language; onOpen:
           </ul>
         </Modal>
       )}
-      <TopicsAhead language={language} onOpen={onOpen} />
     </section>
   );
 }

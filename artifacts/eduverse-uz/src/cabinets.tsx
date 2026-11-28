@@ -157,7 +157,6 @@ export function DirectorDashboard({ schoolId, language }: { schoolId: string; la
             </table>
           </div>
         )}
-        {weak.length > 0 && <p className="muted">{t(language, 'Belgilangan sinflarga e’tibor bering: davomat 85% dan past yoki o‘rtacha baho 7 dan past.', 'Обратите внимание на отмеченные классы: посещаемость ниже 85% или средняя ниже 7.', 'Watch the highlighted classes: attendance below 85% or average below 7.')}</p>}
       </section>
     </section>
   );
@@ -198,7 +197,6 @@ export function ParentLinkForm({ language }: { language: Language }) {
   return (
     <section className="panel">
       <div className="section-head"><h2><Link2 size={16} /> {t(language, 'Ota-onani biriktirish', 'Привязать родителя', 'Link a parent')}</h2></div>
-      <p className="muted">{t(language, 'Ota-ona o‘z kabinetida farzandining baholari, davomati va vazifalarini ko‘radi.', 'Родитель увидит в своём кабинете оценки, посещаемость и задания ребёнка.', 'The parent sees the child’s grades, attendance and homework.')}</p>
       <form className="announce-form" onSubmit={submit}>
         <input className="input" value={parentLogin} onChange={(event) => setParentLogin(event.target.value)} placeholder={t(language, 'Ota-ona logini', 'Логин родителя', 'Parent login')} required />
         <input className="input" value={studentLogin} onChange={(event) => setStudentLogin(event.target.value)} placeholder={t(language, 'O‘quvchi logini', 'Логин ученика', 'Student login')} required />

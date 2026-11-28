@@ -42559,6 +42559,10 @@ var init_auth = __esm({
         /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
         googleSub: text("google_sub"),
         googleEmail: text("google_email"),
+        /** "Forgot password": a 6-digit code (stored hashed) sent to Telegram or e-mail, its end time, wrong tries. */
+        resetCodeHash: text("reset_code_hash"),
+        resetExpiresAt: timestamp("reset_expires_at", { withTimezone: true }),
+        resetTries: integer("reset_tries").notNull().default(0),
         /** After recovery through Google: until this moment a new password can be set without the old one. */
         recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
         twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
@@ -43090,6 +43094,8 @@ var init_learning = __esm({
       chatId: text("chat_id"),
       nonce: text("nonce"),
       nonceExpiresAt: timestamp("nonce_expires_at", { withTimezone: true }),
+      /** Telegram @username of the linked chat (shown half-hidden on "forgot password"). */
+      username: text("username"),
       /** Language of the bot for this person: uz | ru | en (chosen with /lang). */
       lang: text("lang"),
       /** "Forgot password": a 6-digit code sent to this chat (stored hashed), its end time and wrong tries. */
@@ -43698,6 +43704,17 @@ async function answerTelegramCallback(callbackId, text2 = "") {
   try {
     await fetch(`${API_BASE}/bot${token}/answerCallbackQuery`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callback_query_id: callbackId, text: text2 }), signal: AbortSignal.timeout(5e3) });
   } catch {
+  }
+}
+async function telegramChatUsername(chatId) {
+  const token = botToken();
+  if (!token) return "";
+  try {
+    const response = await fetch(`${API_BASE}/bot${token}/getChat?chat_id=${encodeURIComponent(String(chatId))}`, { signal: AbortSignal.timeout(4e3) });
+    const data = await response.json();
+    return data.ok && typeof data.result?.username === "string" ? data.result.username : "";
+  } catch {
+    return "";
   }
 }
 var API_BASE, botToken, telegramBotConfigured, telegramBotUsername, telegramWebhookSecret, devEchoCodes;
@@ -54839,6 +54856,38 @@ init_src();
 import { createHash as createHash4, randomBytes as randomBytes6, randomInt, scrypt as scryptCallback3, timingSafeEqual as timingSafeEqual4 } from "node:crypto";
 init_telegram();
 
+// src/lib/mailer.ts
+var fromAddress = () => (process.env.MAIL_FROM ?? "").trim();
+var apiKey = () => (process.env.BREVO_API_KEY ?? "").trim();
+var mailConfigured = () => apiKey().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddress());
+async function sendMail(to, subject, html) {
+  if (!mailConfigured()) return false;
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", "api-key": apiKey() },
+      body: JSON.stringify({ sender: { name: "EDUVERSE", email: fromAddress() }, to: [{ email: to }], subject, htmlContent: html }),
+      signal: AbortSignal.timeout(8e3)
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+function maskEmail(email) {
+  const [local = "", domain = ""] = email.split("@");
+  if (!domain) return "";
+  const head = local.slice(0, Math.min(2, Math.max(1, local.length - 2)));
+  const tail = local.length > 4 ? local.slice(-2) : "";
+  return `${head}****${tail}@${domain}`;
+}
+function maskUsername(username) {
+  const clean = username.replace(/^@/, "");
+  if (!clean) return "";
+  const keep = Math.max(1, Math.ceil(clean.length / 2));
+  return `@${clean.slice(0, keep)}****`;
+}
+
 // src/lib/bot-commands.ts
 init_drizzle_orm();
 init_src();
@@ -56218,6 +56267,7 @@ router8.post("/auth/2fa/telegram/webhook", async (req, res, next) => {
   if (row) {
     const sender = isRecord7(message?.from) ? message.from : null;
     const lang = langFromTelegram(sender?.language_code);
+    if (typeof sender?.username === "string" && /^[A-Za-z0-9_]{3,32}$/.test(sender.username)) await db.update(telegramNotifyTable).set({ username: sender.username }).where(eq(telegramNotifyTable.userId, row.userId));
     await db.update(telegramNotifyTable).set({ lang }).where(and(eq(telegramNotifyTable.userId, row.userId), isNull(telegramNotifyTable.lang)));
     const welcome = await answerCommand(chatId, "/help", sender?.language_code);
     const done = lang === "uz" ? "\u2705 <b>Tayyor! Telegram ulandi.</b>\nBaholar, \xABnb\xBB, uy vazifalari va onlayn darslar haqida xabarlar shu yerga keladi." : lang === "en" ? "\u2705 <b>Done! Telegram is connected.</b>\nMarks, absences, homework and online lessons will come here." : "\u2705 <b>\u0413\u043E\u0442\u043E\u0432\u043E! Telegram \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0451\u043D.</b>\n\u0421\u044E\u0434\u0430 \u0431\u0443\u0434\u0443\u0442 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u044C \u043E\u0446\u0435\u043D\u043A\u0438, \xAB\u043D\u0431\xBB, \u0434\u043E\u043C\u0430\u0448\u043D\u0438\u0435 \u0437\u0430\u0434\u0430\u043D\u0438\u044F \u0438 \u043E\u043D\u043B\u0430\u0439\u043D-\u0443\u0440\u043E\u043A\u0438.";
@@ -56311,7 +56361,12 @@ router8.get("/labs/reports", requireAuthenticatedRole("student", "teacher", "sch
   const reports = await db.select({ id: labReportsTable.id, lab: labReportsTable.lab, result: labReportsTable.result, errorPercent: labReportsTable.errorPercent, grade: labReportsTable.grade, data: labReportsTable.data, createdAt: labReportsTable.createdAt, studentName: usersTable.username }).from(labReportsTable).innerJoin(usersTable, eq(labReportsTable.studentId, usersTable.id)).where(inArray(labReportsTable.studentId, studentIds)).orderBy(desc(labReportsTable.createdAt)).limit(100);
   res.json({ reports });
 });
-var WEAK_PASSWORDS = /* @__PURE__ */ new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
+var WEAK_PASSWORDS = /* @__PURE__ */ new Set(["1234567890", "0123456789", "qwerty1234", "qwerty123456", "12345678", "123456789", "87654321", "qwerty12", "qwerty123", "password1", "password12", "password123", "password1234", "parol12345", "abcdef12345", "1q2w3e4r5t", "1qaz2wsx3edc", "eduverse123", "eduverse2026", "maktab12345", "shkola12345"]);
+function passwordProblem(next) {
+  if (next.length < 8 || next.length > 128) return "The new password must be 8 to 128 characters.";
+  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) return "This password is too simple.";
+  return "";
+}
 var passwordLimiter = createRateLimiter(10, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-change", perSession3);
 router8.get("/me/security", requireAuthenticatedRole(...everyRole4), async (_req, res) => {
   const viewer = viewerOf3(res);
@@ -56322,12 +56377,9 @@ router8.post("/me/password", requireAuthenticatedRole(...everyRole4), passwordLi
   const viewer = viewerOf3(res);
   const current = isRecord7(req.body) && typeof req.body.current === "string" ? req.body.current : "";
   const next = isRecord7(req.body) && typeof req.body.next === "string" ? req.body.next : "";
-  if (next.length < 10 || next.length > 128) {
-    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
-    return;
-  }
-  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
-    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
+  const weak = passwordProblem(next);
+  if (weak) {
+    res.status(400).json({ error: weak });
     return;
   }
   const [account] = await db.select({ hash: usersTable.passwordHash, login: usersTable.login, recoveryUntil: usersTable.recoveryUntil }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
@@ -56348,61 +56400,102 @@ router8.post("/me/password", requireAuthenticatedRole(...everyRole4), passwordLi
   res.json({ changed: true, otherSessionsClosed: closed.length });
 });
 var forgotLimiter = createRateLimiter(8, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-reset");
+var optionsLimiter = createRateLimiter(20, 15 * 60 * 1e3, "Too many attempts. Try again later.", "password-reset-options");
 var resetCodeHash = (code, userId) => createHash4("sha256").update(`${userId}:${code}`).digest("hex");
-var RESET_SENT = { sent: true };
-router8.post("/auth/password-reset/request", forgotLimiter, async (req, res) => {
-  const login = isRecord7(req.body) && typeof req.body.login === "string" ? normalizeLogin(req.body.login.trim()).slice(0, 64) : "";
+var RESET_SECONDS = 120;
+var loginOf = (body) => isRecord7(body) && typeof body.login === "string" ? normalizeLogin(body.login.trim()).slice(0, 64) : "";
+async function resetAccount(login) {
+  const [account] = await db.select({
+    id: usersTable.id,
+    login: usersTable.login,
+    role: usersTable.role,
+    status: usersTable.status,
+    email: usersTable.email,
+    googleEmail: usersTable.googleEmail,
+    hash: usersTable.resetCodeHash,
+    until: usersTable.resetExpiresAt,
+    tries: usersTable.resetTries
+  }).from(usersTable).where(eq(usersTable.loginNormalized, login)).limit(1);
+  if (!account || account.role === "platform_superadmin" || account.status && account.status !== "active") return null;
+  const [tg] = await db.select({ chatId: telegramNotifyTable.chatId, username: telegramNotifyTable.username, lang: telegramNotifyTable.lang }).from(telegramNotifyTable).where(eq(telegramNotifyTable.userId, account.id)).limit(1);
+  const mail = (account.googleEmail || account.email || "").trim();
+  return { ...account, chatId: tg?.chatId ?? null, username: tg?.username ?? null, lang: tg?.lang ?? null, mail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail) ? mail : "" };
+}
+router8.post("/auth/password-reset/options", optionsLimiter, async (req, res) => {
+  const login = loginOf(req.body);
   if (!login) {
     res.status(400).json({ error: "Enter a valid login and password." });
     return;
   }
-  if (!telegramBotConfigured()) {
-    res.status(503).json({ error: "Telegram notifications are not configured." });
+  const account = await resetAccount(login);
+  let telegram = null;
+  if (account?.chatId && telegramBotConfigured()) {
+    let username = account.username ?? "";
+    if (!username) {
+      username = await telegramChatUsername(account.chatId);
+      if (username) await db.update(telegramNotifyTable).set({ username }).where(eq(telegramNotifyTable.userId, account.id));
+    }
+    telegram = username ? maskUsername(username) : "Telegram";
+  }
+  const email = account?.mail && mailConfigured() ? maskEmail(account.mail) : null;
+  res.json({ telegram, email });
+});
+router8.post("/auth/password-reset/request", forgotLimiter, async (req, res) => {
+  const login = loginOf(req.body);
+  const via = isRecord7(req.body) && req.body.via === "email" ? "email" : "telegram";
+  if (!login) {
+    res.status(400).json({ error: "Enter a valid login and password." });
     return;
   }
-  const [account] = await db.select({ id: usersTable.id, role: usersTable.role, status: usersTable.status, chatId: telegramNotifyTable.chatId, lang: telegramNotifyTable.lang }).from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id)).where(eq(usersTable.loginNormalized, login)).limit(1);
-  if (!account?.chatId || account.role === "platform_superadmin" || account.status && account.status !== "active") {
-    res.json(RESET_SENT);
+  const account = await resetAccount(login);
+  const canTelegram = Boolean(account?.chatId && telegramBotConfigured());
+  const canMail = Boolean(account?.mail && mailConfigured());
+  if (!account || (via === "telegram" ? !canTelegram : !canMail)) {
+    res.status(400).json({ error: "No way to send a code." });
     return;
   }
   const code = String(randomInt(0, 1e6)).padStart(6, "0");
-  await db.update(telegramNotifyTable).set({ resetCodeHash: resetCodeHash(code, account.id), resetExpiresAt: new Date(Date.now() + 10 * 60 * 1e3), resetTries: 0 }).where(eq(telegramNotifyTable.userId, account.id));
+  await db.update(usersTable).set({ resetCodeHash: resetCodeHash(code, account.id), resetExpiresAt: new Date(Date.now() + RESET_SECONDS * 1e3), resetTries: 0 }).where(eq(usersTable.id, account.id));
   const L = account.lang === "uz" || account.lang === "en" ? account.lang : "ru";
-  const text2 = L === "uz" ? `\u{1F511} EDUVERSE parolini tiklash kodi: <b>${code}</b>
-10 daqiqa ishlaydi. Agar siz so\u2018ramagan bo\u2018lsangiz \u2014 hech kimga bermang.` : L === "en" ? `\u{1F511} EDUVERSE password reset code: <b>${code}</b>
-Valid for 10 minutes. If you did not ask for it, do not share it.` : `\u{1F511} \u041A\u043E\u0434 \u0434\u043B\u044F \u043D\u043E\u0432\u043E\u0433\u043E \u043F\u0430\u0440\u043E\u043B\u044F EDUVERSE: <b>${code}</b>
-\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 10 \u043C\u0438\u043D\u0443\u0442. \u0415\u0441\u043B\u0438 \u0432\u044B \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u043B\u0438 \u2014 \u043D\u0438\u043A\u043E\u043C\u0443 \u043D\u0435 \u0441\u043E\u043E\u0431\u0449\u0430\u0439\u0442\u0435.`;
-  const sent = await sendTelegramMessage(account.chatId, text2);
-  if (!sent.ok) logger.warn({ errorCode: sent.errorCode }, "password reset code not delivered");
-  res.json(RESET_SENT);
+  const line2 = L === "uz" ? `EDUVERSE parolini tiklash kodi: <b>${code}</b><br>2 daqiqa ishlaydi. Agar siz so\u2018ramagan bo\u2018lsangiz \u2014 hech kimga bermang.` : L === "en" ? `EDUVERSE password reset code: <b>${code}</b><br>Valid for 2 minutes. If you did not ask for it, do not share it.` : `\u041A\u043E\u0434 \u0434\u043B\u044F \u043D\u043E\u0432\u043E\u0433\u043E \u043F\u0430\u0440\u043E\u043B\u044F EDUVERSE: <b>${code}</b><br>\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 2 \u043C\u0438\u043D\u0443\u0442\u044B. \u0415\u0441\u043B\u0438 \u0432\u044B \u043D\u0435 \u043F\u0440\u043E\u0441\u0438\u043B\u0438 \u2014 \u043D\u0438\u043A\u043E\u043C\u0443 \u043D\u0435 \u0441\u043E\u043E\u0431\u0449\u0430\u0439\u0442\u0435.`;
+  let ok;
+  if (via === "telegram") {
+    const sent = await sendTelegramMessage(account.chatId, `\u{1F511} ${line2.replace("<br>", "\n")}`);
+    ok = sent.ok;
+  } else {
+    ok = await sendMail(account.mail, L === "uz" ? "EDUVERSE: parol kodi" : L === "en" ? "EDUVERSE: password code" : "EDUVERSE: \u043A\u043E\u0434 \u0434\u043B\u044F \u043F\u0430\u0440\u043E\u043B\u044F", `<p style="font-family:sans-serif;font-size:16px">${line2}</p>`);
+  }
+  if (!ok) {
+    logger.warn({ via }, "password reset code not delivered");
+    res.status(502).json({ error: "The code was not delivered. Try again." });
+    return;
+  }
+  res.json({ sent: true, seconds: RESET_SECONDS });
 });
 router8.post("/auth/password-reset/confirm", forgotLimiter, async (req, res) => {
   const body = isRecord7(req.body) ? req.body : {};
-  const login = typeof body.login === "string" ? normalizeLogin(body.login.trim()).slice(0, 64) : "";
+  const login = loginOf(body);
   const code = typeof body.code === "string" ? body.code.replace(/\D/g, "") : "";
   const next = typeof body.password === "string" ? body.password : "";
   if (!login || code.length !== 6) {
     res.status(400).json({ error: "That code is not valid." });
     return;
   }
-  if (next.length < 10 || next.length > 128) {
-    res.status(400).json({ error: "The new password must be 10 to 128 characters." });
+  const weak = passwordProblem(next);
+  if (weak) {
+    res.status(400).json({ error: weak });
     return;
   }
-  if (!/\p{L}/u.test(next) || !/\d/.test(next) || WEAK_PASSWORDS.has(next.toLowerCase()) || /^(.)\1+$/.test(next)) {
-    res.status(400).json({ error: "Use letters and digits, and avoid simple passwords like 1234567890 or qwerty123." });
-    return;
-  }
-  const [account] = await db.select({ id: usersTable.id, login: usersTable.login, role: usersTable.role, hash: telegramNotifyTable.resetCodeHash, until: telegramNotifyTable.resetExpiresAt, tries: telegramNotifyTable.resetTries }).from(usersTable).innerJoin(telegramNotifyTable, eq(telegramNotifyTable.userId, usersTable.id)).where(eq(usersTable.loginNormalized, login)).limit(1);
+  const account = await resetAccount(login);
   const fresh = account?.hash && account.until && account.until.getTime() > Date.now() && account.tries < 5;
-  if (!account || !fresh || account.role === "platform_superadmin") {
+  if (!account || !fresh) {
     res.status(400).json({ error: "The confirmation code is invalid or expired." });
     return;
   }
   const given = Buffer.from(resetCodeHash(code, account.id));
   const stored = Buffer.from(account.hash);
   if (given.length !== stored.length || !timingSafeEqual4(given, stored)) {
-    await db.update(telegramNotifyTable).set({ resetTries: account.tries + 1 }).where(eq(telegramNotifyTable.userId, account.id));
+    await db.update(usersTable).set({ resetTries: account.tries + 1 }).where(eq(usersTable.id, account.id));
     res.status(400).json({ error: "The confirmation code is invalid or expired." });
     return;
   }
@@ -56410,10 +56503,9 @@ router8.post("/auth/password-reset/confirm", forgotLimiter, async (req, res) => 
     res.status(400).json({ error: "The password must not equal the login." });
     return;
   }
-  await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, recoveryUntil: null, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, account.id));
-  await db.update(telegramNotifyTable).set({ resetCodeHash: null, resetExpiresAt: null, resetTries: 0 }).where(eq(telegramNotifyTable.userId, account.id));
+  await db.update(usersTable).set({ passwordHash: await hashPassword(next), mustChangePassword: false, recoveryUntil: null, resetCodeHash: null, resetExpiresAt: null, resetTries: 0, updatedAt: /* @__PURE__ */ new Date() }).where(eq(usersTable.id, account.id));
   const closed = await db.delete(sessionsTable).where(eq(sessionsTable.userId, account.id)).returning({ id: sessionsTable.id });
-  await writeAudit(null, account.id, "password-reset-telegram", account.id, { sessionsClosed: closed.length });
+  await writeAudit(null, account.id, "password-reset-code", account.id, { sessionsClosed: closed.length });
   res.json({ changed: true });
 });
 var AVATAR_MAX = 80 * 1024;
@@ -57190,6 +57282,25 @@ router10.get("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWN
   }
   res.setHeader("Cache-Control", "private, no-store");
   res.json(billing);
+});
+router10.get("/schools/:schoolId/my-bill", requireAuthenticatedRole("school_director", "school_admin"), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  if (!isValidUuid(schoolId)) {
+    res.status(400).json({ error: "Invalid school." });
+    return;
+  }
+  const role = await schoolRoleOf2(viewerOf5(res).id, schoolId);
+  if (role !== "school_director" && role !== "school_admin") {
+    res.status(403).json({ error: "Only the school administration sees payments." });
+    return;
+  }
+  const billing = await loadBilling(schoolId);
+  if (!billing) {
+    res.status(404).json({ error: "School not found." });
+    return;
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ monthlyFee: billing.monthlyFee, currency: billing.currency, debt: billing.debt, monthsOwed: billing.monthsOwed, nextDue: billing.monthlyFee > 0 ? billing.nextDue : null, daysToDue: billing.daysToDue });
 });
 router10.put("/admin/schools/:schoolId/billing", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const schoolId = String(req.params.schoolId);

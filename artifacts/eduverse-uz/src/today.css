@@ -504,3 +504,41 @@ html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 
 .today-card.is-info .today-card-foot { flex-wrap: wrap; row-gap: 6px; }
 .today-card.is-info .today-teacher { order: -1; flex-basis: 100%; display: inline-flex; align-items: center; gap: 5px; }
 .today-card.is-info .today-teacher svg { flex: none; }
+/* edit mode: the fields are the frame, the cell itself draws none (no box in a box) */
+.tt-bell .ev-select { min-width: 0; }
+.tt-bell .ev-select-trigger { min-height: 32px; padding: 0 8px 0 10px; font-size: 12.5px; border-radius: 10px; }
+.tt-bell .ev-select-chevron { width: 14px; height: 14px; }
+.tt-grid td:has(.tt-cell), html[data-theme="night"] .tt-grid td:has(.tt-cell) { padding: 0; border-color: transparent; background: none; }
+.tt-grid td.is-clash:has(.tt-cell) { padding: 4px; border-color: rgba(210, 71, 90, 0.55); }
+.tt-cell .input { min-height: 34px; font-size: 13px; border-radius: 10px; }
+.trainer { display: grid; gap: 16px; }
+.trainer > .page-heading { margin-bottom: 0; }
+/* homework check: the total first, the task and answer in a window */
+.check-hw-total { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; padding: 14px 18px; border-radius: 16px; background: var(--ev-primary-soft, rgba(214, 162, 58, 0.12)); border: 1px solid var(--ev-primary-line, rgba(214, 162, 58, 0.35)); }
+.check-hw-total b { font-size: 30px; line-height: 1; color: var(--ev-primary, #b08a43); font-variant-numeric: tabular-nums; }
+.check-hw-total span { font-weight: 600; color: var(--text); }
+.check-hw-total.is-done { align-items: center; background: rgba(31, 122, 69, 0.1); border-color: rgba(31, 122, 69, 0.3); color: #1f7a45; }
+html[data-theme="night"] .check-hw-total.is-done { color: #8fd3ae; }
+.check-hw-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 420px; }
+.hw-key { display: grid; gap: 14px; }
+.hw-key b { display: block; margin-bottom: 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+.hw-key ol, .hw-key ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.5; }
+.hw-key-answer { color: var(--good, #1f7a45); font-weight: 600; }
+html[data-theme="night"] .hw-key-answer { color: #8fd3ae; }
+.review-task { margin: 0 0 12px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface-2, rgba(255, 255, 255, 0.04)); }
+.review-task summary { cursor: pointer; font-weight: 700; }
+.review-task[open] summary { margin-bottom: 10px; }
+.plans-kpi.debt b { color: var(--danger, #c0392b); font-size: 20px; }
+
+/* Overview numbers for every role (home-stats.tsx) */
+.home-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 4px 0 22px; }
+.home-stat { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line-2, #e2dccf); background: var(--surface, #fff); color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
+.home-stat:hover, .home-stat:focus-visible { border-color: var(--ev-primary, #c9a35a); outline: none; transform: translateY(-1px); }
+.home-stat-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--ev-primary-soft, rgba(201,163,90,.15)); color: var(--ev-primary, #b08a43); }
+.home-stat b { font-size: 24px; line-height: 1.1; font-weight: 800; font-variant-numeric: tabular-nums; }
+.home-stat > span:last-child { grid-column: 1 / -1; font-size: 13px; color: var(--text-2, #5b5446); }
+.home-stat.good .home-stat-icon { background: color-mix(in srgb, var(--ok, #2e8b57) 15%, transparent); color: var(--ok, #2e8b57); }
+.home-stat.warn .home-stat-icon { background: color-mix(in srgb, var(--warn, #c98a1a) 16%, transparent); color: var(--warn, #c98a1a); }
+.home-stat.bad .home-stat-icon { background: color-mix(in srgb, var(--bad, #c0392b) 14%, transparent); color: var(--bad, #c0392b); }
+.home-stat.bad b { color: var(--bad, #c0392b); }
+@media (max-width: 430px) { .home-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .home-stat b { font-size: 20px; } }

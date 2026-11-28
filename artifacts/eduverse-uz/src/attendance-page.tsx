@@ -49,6 +49,7 @@ const subjectLabel = (language: Language, value: string) => {
 };
 import { friendlyError } from './errors';
 import { LoadingBlock } from './ui/loading';
+import { PupilModal } from './school-panels';
 
 type MarkStatus = Exclude<AttendanceStatus, 'unmarked'>;
 
@@ -151,6 +152,7 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
   const editable = user.role === 'teacher' && (lessonIsNow || (!hasTimetable && Boolean(today.data)));
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [classId, setClassId] = useState(lesson?.classId ?? '');
+  const [openPupil, setOpenPupil] = useState<{ studentId: string; studentName: string; login?: string } | null>(null);
   const [date, setDate] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; });
   const [, navigate] = useLocation();
   const [subject, setSubject] = useState<string>(() => {
@@ -378,15 +380,15 @@ export function AttendancePage({ user, language, lesson }: { user: User; languag
           <p className="muted">{copy.noStudents}</p>
         ) : (
           <div className="attendance-list">
+            {openPupil && classId && <PupilModal classId={classId} pupilId={openPupil.studentId} name={openPupil.studentName} language={language} onClose={() => setOpenPupil(null)}>{openPupil.login && <p className="muted">@{openPupil.login}</p>}</PupilModal>}
             {records.map((record) => (
               <div className="attendance-row" key={record.studentId}>
-                <div className="attendance-person">
+                <button type="button" className="attendance-person is-clickable" onClick={() => setOpenPupil(record)}>
                   <span className="avatar">{record.studentName.slice(0, 1).toUpperCase()}</span>
                   <span>
                     <b>{record.studentName}</b>
-                    <small className="muted">@{record.login}</small>
                   </span>
-                </div>
+                </button>
                 {!editable ? (record.status !== 'unmarked' ? <StatusTag status={record.status as MarkStatus} copy={copy} /> : <span className="muted">—</span>) : <div className="attendance-actions">
                   {STATUS_ORDER.map((status) => (
                     <button

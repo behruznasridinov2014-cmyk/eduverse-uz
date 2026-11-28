@@ -94,6 +94,13 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
   const nextStage = FLOW[at + 1];
   const prevStage = FLOW[at - 1];
 
+  // A teacher who comes back to a lesson already running with the class continues where the class is.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (!isTeacher || resumed.current || !liveHere) return;
+    resumed.current = true;
+    if (FLOW.some((item) => item.n === liveHere.stage)) setStage(liveHere.stage);
+  }, [isTeacher, liveHere]);
   // The pupil follows the stage the teacher shows on the board (can be switched off).
   useEffect(() => { if (isStudent && follow && liveHere && liveHere.stage !== stage && FLOW.some((item) => item.n === liveHere.stage)) setStage(liveHere.stage); }, [isStudent, follow, liveHere?.stage]); // eslint-disable-line react-hooks/exhaustive-deps
   const go = (next: number) => {
@@ -102,6 +109,8 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
     if (isStudent && liveHere) setFollow(target === liveHere.stage);
     window.setTimeout(() => top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
   };
+  // For the pupil the first step is "understand", for the teacher "explain".
+  const titleOf = (n: number) => (isStudent && n === 2 ? t(language, 'Tushunish', 'Понять', 'Understand') : tx(language, STAGES[n - 1]!.title));
   const minuteOf = (n: number) => content?.minutes?.[n - 1] || STAGES[n - 1]!.minutes;
   const doneCount = FLOW.filter((item) => progress.stages[item.n]?.done).length;
   const mistakes = useMemo(() => Object.values(progress.stages).flatMap((item) => (item.answers ?? []).filter((answer) => !answer.ok && answer.q).map((answer) => answer.q!)).slice(0, 8), [progress.stages]);
@@ -127,9 +136,9 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
           {FLOW.map((item) => {
             const result = progress.stages[item.n];
             return (
-              <button key={item.n} type="button" className={`ls-step ${stage === item.n ? 'on' : ''} ${result?.done ? 'done' : ''} ${liveHere?.stage === item.n ? 'live' : ''}`} onClick={() => go(item.n)} disabled={locked(item.n)} aria-current={stage === item.n ? 'step' : undefined} title={`${tx(language, item.title)} · ${minuteOf(item.n)} ${t(language, 'daq', 'мин', 'min')}`}>
+              <button key={item.n} type="button" className={`ls-step ${stage === item.n ? 'on' : ''} ${result?.done ? 'done' : ''} ${liveHere?.stage === item.n ? 'live' : ''}`} onClick={() => go(item.n)} disabled={locked(item.n)} aria-current={stage === item.n ? 'step' : undefined} title={`${titleOf(item.n)} · ${minuteOf(item.n)} ${t(language, 'daq', 'мин', 'min')}`}>
                 <span className="ls-step-dot">{result?.done ? <CheckCircle2 size={14} /> : stepOf(item.n)}</span>
-                <span className="ls-step-name">{tx(language, item.title)}</span>
+                <span className="ls-step-name">{titleOf(item.n)}</span>
               </button>
             );
           })}
@@ -141,13 +150,14 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
         {!progress.loaded ? <LoadingBlock language={language} /> : (
           <section className={`ls-stage ls-stage-${stage}`} key={stage}>
             <header className="ls-stage-head">
-              <h2>{tx(language, STAGES[stage - 1]!.title)}</h2>
+              <h2>{titleOf(stage)}</h2>
               <span className="ls-stage-time"><Clock3 size={13} /> {minuteOf(stage)} {t(language, 'daq', 'мин', 'min')}</span>
               {canAskTeacher && <button type="button" className="btn small ls-ask-inline" onClick={() => { setAskOpen((value) => !value); setHelperOpen(false); }} aria-expanded={askOpen}><Hand size={15} /> {t(language, 'Savol', 'Вопрос', 'Ask')}</button>}
             </header>
             {stage === 2 && isTeacher && <TeachPlan topic={topic} language={language} />}
-            {stage === 2 && <BookStage {...props} />}
-            {stage === 2 && isStudent && <RememberCard topic={topic} language={language} />}
+            {/* The pupil goes one way: understand → check → remember, then 3D. No second copy of the text. */}
+            {stage === 2 && !isStudent && <BookStage {...props} />}
+            {stage === 2 && isStudent && <RememberCard topic={topic} language={language} inLesson onLearned={() => { if (!progress.stages[2]?.done) void progress.save(2, { score: 1, total: 1, done: true, answers: [] }); }} />}
             {stage === 3 && <VisualStage {...props} canSwitch={isTeacher} />}
             {stage === 4 && <PracticeStage {...props} />}
             {stage === 5 && <TestStage {...props} goTo={go} />}

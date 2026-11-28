@@ -17,6 +17,7 @@ import { CollisionLab } from './collision-lab';
 import { MathLab } from './studio-labs';
 import { LessonStages } from './lesson-stages';
 import { LoadingBlock } from './ui/loading';
+import { useOptionalAuth } from './auth-context';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -54,6 +55,8 @@ const OWN: Record<OwnSceneId, ComponentType<SceneProps>> = {
  */
 function SceneShell({ language, children }: { language: Language; children: ReactNode }) {
   const shell = useRef<HTMLDivElement | null>(null);
+  // Only the teacher shows a scene to the class; a pupil just opens it full screen.
+  const isTeacher = useOptionalAuth()?.user?.role !== 'student';
   // "native": the browser's real full screen; "overlay": the scene covers the window
   // (iPhone Safari and embedded views cannot put one block full screen).
   // In full screen the stage itself grows (no page zoom), so dragging and clicks stay exact.
@@ -92,7 +95,7 @@ function SceneShell({ language, children }: { language: Language; children: Reac
   const full = mode !== 'off';
   const button = (
     <button type="button" className="btn small scene-full-btn" onClick={toggle}>
-      {full ? <Minimize2 size={14} /> : <Maximize2 size={14} />} {full ? t(language, 'Chiqish', 'Выйти', 'Exit') : t(language, 'Sinfga ko‘rsatish', 'На весь экран', 'Full screen')}
+      {full ? <Minimize2 size={14} /> : <Maximize2 size={14} />} {full ? t(language, 'Chiqish', 'Выйти', 'Exit') : isTeacher ? t(language, 'Sinfga ko‘rsatish', 'Показать классу', 'Show the class') : t(language, 'To‘liq ekran', 'Во весь экран', 'Full screen')}
     </button>
   );
   const fullStyle = { ['--full-scale' as string]: String(scale) } as React.CSSProperties;

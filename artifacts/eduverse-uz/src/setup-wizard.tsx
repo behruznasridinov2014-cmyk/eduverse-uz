@@ -107,7 +107,6 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
   return (
     <section className="panel setup-wizard">
       <h2><UserPlus size={16} /> {t(language, 'Maktabni tayyorlash', 'Подготовка школы', 'Prepare the school')}: {schoolName}</h2>
-      <p className="muted">{t(language, 'Direktor va zavuchni qo‘shing. Qolganlarni maktab o‘zi qo‘shadi.', 'Добавьте директора и завуча. Остальных школа добавит сама.', 'Add the director and deputy. The school adds everyone else.')}</p>
       <div className="setup-steps-tabs">
         {steps.map(([key, label]) => <button key={key} type="button" className={`btn small ${step === key ? 'primary' : ''}`} onClick={() => go(key)}>{label}</button>)}
       </div>

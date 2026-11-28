@@ -466,3 +466,76 @@
 html[data-theme="night"] .role-card.teach, html[data-theme="night"] .role-card.learn { background: rgba(255, 255, 255, .05); }
 html[data-theme="night"] .role-terms div { background: rgba(255, 255, 255, .06); }
 html[data-theme="night"] .role-terms dd { color: #a9b3bb; }
+
+/* ---- Teacher presentation: full screen, one thought per slide ---- */
+body.pres-open { overflow: hidden; }
+.pres { position: fixed; inset: 0; z-index: 2000; display: grid; grid-template-rows: 1fr auto; background: #FBFBFD; color: #1D1D1F; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", var(--font), sans-serif; }
+.pres-close { position: absolute; top: 18px; right: 18px; z-index: 2; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .06); color: #1D1D1F; cursor: pointer; }
+.pres-close:hover { background: rgba(0, 0, 0, .1); }
+.pres-slide { align-self: center; justify-self: center; width: min(1100px, 100% - 48px); display: grid; justify-items: center; gap: 22px; text-align: center; animation: pres-in .45s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes pres-in { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+.pres-label { font-size: 15px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #8C6A2E; }
+.pres-slide h1 { margin: 0; font-size: clamp(40px, 7vw, 88px); line-height: 1.05; font-weight: 700; letter-spacing: -.02em; }
+.pres-big { margin: 0; font-size: clamp(28px, 4.6vw, 56px); line-height: 1.15; font-weight: 600; letter-spacing: -.01em; }
+.pres-mid { margin: 0; font-size: clamp(22px, 3.2vw, 40px); line-height: 1.3; font-weight: 500; color: #1D1D1F; }
+.pres-slide.is-title h1 { background: linear-gradient(135deg, #1D1D1F, #8C6A2E); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pres-slide.is-hook .pres-big { color: #3A3A3C; }
+.pres-terms { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 0; text-align: left; }
+.pres-terms div { padding: 18px 20px; border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 12px 30px -18px rgba(0, 0, 0, .25); }
+.pres-terms dt { font-size: clamp(18px, 2vw, 24px); font-weight: 700; }
+.pres-terms dd { margin: 6px 0 0; font-size: clamp(15px, 1.5vw, 19px); line-height: 1.4; color: #515154; }
+.pres-reveal { min-height: 48px; padding: 0 26px; border-radius: 999px; font-size: 17px; }
+.pres-answer { display: inline-flex; align-items: center; gap: 10px; margin: 0; padding: 14px 24px; border-radius: 999px; background: #E8F5EE; color: #17633F; font-size: clamp(18px, 2.2vw, 26px); font-weight: 600; animation: pres-in .35s ease both; }
+.pres-bar { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 18px 18px max(22px, env(safe-area-inset-bottom)); }
+.pres-nav { width: 52px; height: 52px; display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .06); color: #1D1D1F; cursor: pointer; transition: transform .15s ease, background .2s ease; }
+.pres-nav:hover:not(:disabled) { background: rgba(0, 0, 0, .1); }
+.pres-nav:active:not(:disabled) { transform: scale(.92); }
+.pres-nav:disabled { opacity: .3; cursor: default; }
+.pres-dots { display: flex; gap: 6px; }
+.pres-dots i { width: 7px; height: 7px; border-radius: 4px; background: rgba(0, 0, 0, .16); transition: width .3s ease, background .3s ease; }
+.pres-dots i.done { background: rgba(140, 106, 46, .45); }
+.pres-dots i.on { width: 22px; background: #8C6A2E; }
+.pres-count { min-width: 52px; font-size: 14px; font-variant-numeric: tabular-nums; color: #6E6E73; text-align: center; }
+html[data-theme="night"] .pres { background: #000; color: #F5F5F7; }
+html[data-theme="night"] .pres-mid, html[data-theme="night"] .pres-slide.is-hook .pres-big { color: #F5F5F7; }
+html[data-theme="night"] .pres-slide.is-title h1 { background: linear-gradient(135deg, #F5F5F7, #D9B46A); -webkit-background-clip: text; background-clip: text; }
+html[data-theme="night"] .pres-label, html[data-theme="night"] .pres-dots i.on { color: #D9B46A; }
+html[data-theme="night"] .pres-dots i.on { background: #D9B46A; }
+html[data-theme="night"] :is(.pres-close, .pres-nav) { background: rgba(255, 255, 255, .12); color: #F5F5F7; }
+html[data-theme="night"] .pres-terms div { background: #1C1C1E; box-shadow: none; }
+html[data-theme="night"] .pres-terms dd, html[data-theme="night"] .pres-count { color: #A1A1A6; }
+html[data-theme="night"] .pres-answer { background: rgba(48, 209, 88, .16); color: #6EE7A0; }
+@media (max-width: 600px) { .pres-bar { gap: 10px; } .pres-dots { display: none; } .pres-slide { gap: 16px; } }
+@media (prefers-reduced-motion: reduce) { .pres-slide, .pres-answer { animation: none; } }
+
+.role-play { justify-self: start; min-height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15px; gap: 8px; }
+
+/* ---- Pupil: understand → check → remember ---- */
+.role-tabs { justify-self: start; }
+.role-pane { display: grid; gap: 12px; animation: pres-in .3s ease both; }
+.role-pane > .btn { justify-self: start; border-radius: 999px; }
+.role-points { margin: 0; padding-left: 22px; display: grid; gap: 8px; font-size: 15px; line-height: 1.5; }
+.role-life { margin: 0; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, .7); font-size: 14.5px; line-height: 1.45; }
+.role-self { display: inline-flex; gap: 6px; }
+.role-mark { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.role-mark.good { background: #E8F5EE; color: #17633F; }
+.role-mark.bad { background: #FBEAEC; color: #9E2B3E; }
+.role-result { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, .8); }
+.role-result b { margin-right: auto; font-size: 18px; }
+.role-flash { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.role-flash-card { min-height: 84px; display: grid; place-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: #fff; color: var(--text); font: inherit; text-align: center; cursor: pointer; transition: transform .3s cubic-bezier(.2, .8, .2, 1), background .2s ease; box-shadow: 0 8px 20px -16px rgba(0, 0, 0, .35); }
+.role-flash-card b { font-size: 16px; }
+.role-flash-card span { font-size: 13.5px; line-height: 1.4; color: var(--text-2); }
+.role-flash-card:active { transform: scale(.96); }
+.role-flash-card.is-flipped { background: #FFF8EA; border-color: rgba(140, 106, 46, .35); animation: flash-flip .35s ease; }
+@keyframes flash-flip { from { transform: rotateY(90deg); } to { transform: none; } }
+.repeat-today { display: grid; gap: 8px; margin-bottom: 14px; }
+.repeat-today .eco-list li { padding: 10px 12px; border-radius: 12px; }
+html[data-theme="night"] :is(.role-life, .role-result) { background: rgba(255, 255, 255, .06); }
+html[data-theme="night"] .role-flash-card { background: rgba(255, 255, 255, .06); }
+html[data-theme="night"] .role-flash-card.is-flipped { background: rgba(217, 180, 106, .14); }
+.role-check span svg { flex: none; margin-top: 3px; }
+.role-flash-card.is-flipped { align-content: center; gap: 4px; }
+.role-flash-card small { font-size: 12px; font-weight: 700; color: #8C6A2E; }
+.pres-slide { cursor: default; }
+.pres-slide:not(.is-check) { cursor: pointer; }

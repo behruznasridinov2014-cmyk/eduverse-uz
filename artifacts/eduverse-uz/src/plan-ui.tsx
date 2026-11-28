@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { DateField } from './ui/date-field';
 import { Select } from './ui/select';
 import { customFetch } from '@workspace/api-client-react';
-import { AlarmClock, BadgeCheck, Lock, School, Users } from 'lucide-react';
+import { AlarmClock, BadgeCheck, Lock, School, Users, Wallet } from 'lucide-react';
 import { LoadingBlock } from './ui/loading';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
@@ -91,7 +91,6 @@ export function SchoolPlanPanel({ schoolId, language }: { schoolId: string; lang
   return (
     <section className="panel">
       <h2><BadgeCheck size={16} /> {t(language, 'Maktab tarifi', 'Тариф школы', 'School plan')}</h2>
-      <p className="muted">{t(language, 'Bepul: jurnal, davomat, vazifalar. Pro: 3D, onlayn dars, trenajyor. Sinov: Pro sana tugaguncha bepul.', 'Бесплатный: журнал, давомат, домашки, оценки. Pro: 3D-темы, 3D-студия, онлайн-уроки, тренажёр. Пилот: всё как в Pro, бесплатно до даты.', 'Free: journal. Pro: 3D, lessons, trainer. Pilot: Pro until a date.')}</p>
       <div className="people-filters">
         <Select className="input" value={plan} onChange={(event) => { const value = event.target.value as typeof plan; setPlan(value); if (value === 'pilot' && !until) setUntil(quarterEnd()); }}>
           <option value="free">{t(language, 'Bepul', 'Бесплатный (журнал)', 'Free')}</option>
@@ -138,6 +137,11 @@ export function PlansOverview({ language, onOpenSchool }: { language: Language; 
   // Who to call about money: schools that owe, then schools whose payment day is within a week.
   const toCall = rows.filter((row) => (row.monthlyFee ?? 0) > 0 && ((row.monthsOwed ?? 0) > 0 || (row.daysToDue ?? 99) <= 7))
     .sort((a, b) => ((b.monthsOwed ?? 0) > 0 ? 1 : 0) - ((a.monthsOwed ?? 0) > 0 ? 1 : 0) || (b.debt ?? 0) - (a.debt ?? 0) || (a.daysToDue ?? 99) - (b.daysToDue ?? 99));
+  // Total the schools owe EDUVERSE (one currency in practice: the first school that owes sets it).
+  const owing = rows.filter((row) => (row.debt ?? 0) > 0);
+  const totalDebt = owing.reduce((total, row) => total + (row.debt ?? 0), 0);
+  const debtors = owing.length;
+  const debtCurrency = owing[0]?.billingCurrency;
   const planName = (plan: string) => plan === 'pro' ? 'Pro' : plan === 'pilot' ? t('Sinov', 'Пилот', 'Pilot') : t('Bepul', 'Бесплатно', 'Free');
   const date = (value: string | null) => value ? value.slice(0, 10).split('-').reverse().join('.') : '';
   const List = ({ title, items, tone, empty, note }: { title: string; items: PlanRow[]; tone: string; empty: string; note: (row: PlanRow) => string }) => (
@@ -163,6 +167,7 @@ export function PlansOverview({ language, onOpenSchool }: { language: Language; 
         <div className="plans-kpi"><Users size={18} /><b>{pupils}</b><span>{t('O‘quvchilar', 'Учеников', 'Pupils')}</span></div>
         <div className="plans-kpi"><BadgeCheck size={18} /><b>{rows.filter((row) => row.plan === 'pro').length}</b><span>Pro</span></div>
         <div className="plans-kpi"><AlarmClock size={18} /><b>{toCall.length}</b><span>{t('Qo‘ng‘iroq qilish', 'Позвонить', 'To call')}</span></div>
+        <div className={`plans-kpi ${totalDebt ? 'debt' : ''}`}><Wallet size={18} /><b>{money(totalDebt, debtCurrency)}</b><span>{t(`Umumiy qarz · ${debtors} maktab`, `Общий долг · ${debtors} шк.`, `Total debt · ${debtors} schools`)}</span></div>
       </div>
       <section className="panel plans-list tone-red call-list">
         <h3>{t('Kimga qo‘ng‘iroq qilish — to‘lov', 'Кому звонить — оплата', 'Who to call — payment')} <span className="tag">{toCall.length}</span></h3>
