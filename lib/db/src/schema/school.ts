@@ -157,3 +157,13 @@ export const lessonsTable = pgTable("lessons", {
   endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("lessons_class_time_idx").on(table.classId, table.startsAt), index("lessons_teacher_time_idx").on(table.teacherId, table.startsAt)]);
+
+/** A photo of a person's document (birth certificate, passport), seen only by the school management. */
+export const personDocumentsTable = pgTable("person_documents", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  data: text("data").notNull(),
+  createdBy: uuid("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("person_documents_user_idx").on(table.userId)]);

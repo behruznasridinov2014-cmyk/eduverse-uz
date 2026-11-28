@@ -82,9 +82,8 @@ export const usersTable = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("users_username_normalized_unique").on(
-      table.usernameNormalized,
-    ),
+    // Not unique: two pupils may have the same full name; the login tells them apart.
+    index("users_username_normalized_idx").on(table.usernameNormalized),
     uniqueIndex("users_login_normalized_unique").on(table.loginNormalized),
     uniqueIndex("users_two_factor_pending_nonce_unique")
       .on(table.twoFactorPendingNonce)

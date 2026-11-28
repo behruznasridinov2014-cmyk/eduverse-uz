@@ -199,6 +199,8 @@ export function ensureSchema(): Promise<void> {
       // Indexes the code no longer uses and that would block new rows.
       // attendance: one mark per day became one mark per lesson (subject).
       await pool.query('DROP INDEX IF EXISTS "attendance_class_student_date_unique"');
+      // Users: the same full name is allowed (the login is unique, not the name).
+      await pool.query('DROP INDEX IF EXISTS "users_username_normalized_unique"');
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
       pending = null;

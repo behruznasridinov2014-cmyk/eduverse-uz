@@ -42573,9 +42573,8 @@ var init_auth = __esm({
         updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
       },
       (table) => [
-        uniqueIndex("users_username_normalized_unique").on(
-          table.usernameNormalized
-        ),
+        // Not unique: two pupils may have the same full name; the login tells them apart.
+        index("users_username_normalized_idx").on(table.usernameNormalized),
         uniqueIndex("users_login_normalized_unique").on(table.loginNormalized),
         uniqueIndex("users_two_factor_pending_nonce_unique").on(table.twoFactorPendingNonce).where(sql`${table.twoFactorPendingNonce} is not null`),
         uniqueIndex("users_two_factor_telegram_id_unique").on(table.twoFactorTelegramId).where(sql`${table.twoFactorTelegramId} is not null`),
@@ -42678,7 +42677,7 @@ var init_auth = __esm({
 });
 
 // ../../lib/db/src/schema/school.ts
-var schoolMemberRoleEnum, classMemberRoleEnum, assignmentStatusEnum, lessonModeEnum, schoolsTable, schoolBillingPaymentsTable, schoolMembersTable, classesTable, classMembersTable, assignmentsTable, assignmentSubmissionsTable, submissionFilesTable, lessonsTable;
+var schoolMemberRoleEnum, classMemberRoleEnum, assignmentStatusEnum, lessonModeEnum, schoolsTable, schoolBillingPaymentsTable, schoolMembersTable, classesTable, classMembersTable, assignmentsTable, assignmentSubmissionsTable, submissionFilesTable, lessonsTable, personDocumentsTable;
 var init_school = __esm({
   "../../lib/db/src/schema/school.ts"() {
     "use strict";
@@ -42818,6 +42817,14 @@ var init_school = __esm({
       endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
       createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
     }, (table) => [index("lessons_class_time_idx").on(table.classId, table.startsAt), index("lessons_teacher_time_idx").on(table.teacherId, table.startsAt)]);
+    personDocumentsTable = pgTable("person_documents", {
+      id: uuid("id").defaultRandom().primaryKey(),
+      schoolId: uuid("school_id").notNull().references(() => schoolsTable.id, { onDelete: "cascade" }),
+      userId: uuid("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+      data: text("data").notNull(),
+      createdBy: uuid("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+      createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+    }, (table) => [index("person_documents_user_idx").on(table.userId)]);
   }
 });
 
@@ -43454,6 +43461,7 @@ __export(schema_exports, {
   lessonsTable: () => lessonsTable,
   noticeMarksTable: () => noticeMarksTable,
   parentLinksTable: () => parentLinksTable,
+  personDocumentsTable: () => personDocumentsTable,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
   quizAttemptsTable: () => quizAttemptsTable,
@@ -43531,6 +43539,7 @@ __export(src_exports, {
   lessonsTable: () => lessonsTable,
   noticeMarksTable: () => noticeMarksTable,
   parentLinksTable: () => parentLinksTable,
+  personDocumentsTable: () => personDocumentsTable,
   pool: () => pool,
   qrLoginSessionsTable: () => qrLoginSessionsTable,
   qrLoginStatusEnum: () => qrLoginStatusEnum,
@@ -44632,8 +44641,9 @@ function mergePrefs(value) {
 async function usersWanting(userIds, kind) {
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return [];
-  const rows = await db.select({ id: usersTable.id, prefs: usersTable.notifyPrefs }).from(usersTable).where(inArray(usersTable.id, ids));
-  return rows.filter((row) => mergePrefs(row.prefs)[kind]).map((row) => row.id);
+  const rows = await db.select({ id: usersTable.id, prefs: usersTable.notifyPrefs, role: usersTable.role }).from(usersTable).where(inArray(usersTable.id, ids));
+  const managementSkips = kind === "grades" || kind === "homework" || kind === "lessons";
+  return rows.filter((row) => !(managementSkips && (row.role === "school_director" || row.role === "school_admin" || row.role === "platform_superadmin"))).filter((row) => mergePrefs(row.prefs)[kind]).map((row) => row.id);
 }
 async function pushNotice(userIds, kind, title, body = "", link) {
   try {
@@ -55873,10 +55883,13 @@ var TRANSLIT = {
   \u0493: "g",
   \u04B3: "h"
 };
-function loginCandidate2(name) {
-  const latin = name.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("");
-  const base = latin.normalize("NFKD").replace(/[^a-z0-9]/g, "").slice(0, 14);
-  return `${base || "user"}_${randomBytes6(2).toString("hex")}`;
+var latinOf = (word) => word.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("").normalize("NFKD").replace(/[^a-z0-9]/g, "");
+function loginCandidate2(name, attempt = 0) {
+  const [surname = "", first = ""] = name.trim().split(/\s+/);
+  const base = latinOf(surname).slice(0, 14) || latinOf(name).slice(0, 14) || "user";
+  const letter = latinOf(first).slice(0, 1);
+  const number = randomInt(attempt < 3 ? 10 : 100, attempt < 3 ? 100 : 1e3);
+  return `${base}${letter ? `.${letter}` : ""}${number}`;
 }
 async function canManageSchool2(viewer, schoolId) {
   if (isGlobalAdminRole(viewer.role)) return true;
@@ -55923,7 +55936,7 @@ router8.post(
 );
 function readSubjects(value) {
   if (!Array.isArray(value)) return void 0;
-  return [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+  return [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 20);
 }
 function normalizePhone(value) {
   if (typeof value !== "string") return void 0;
@@ -55980,10 +55993,9 @@ async function importPeople(schoolId, rows, actorId) {
     const password = readablePassword2();
     const passwordHash = await hashPassword2(password);
     let account = null;
-    for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
-      const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
-      const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
-      const login = loginCandidate2(row.name);
+    const shownName = row.name;
+    for (let attempt = 0; attempt < 10 && !account; attempt += 1) {
+      const login = loginCandidate2(row.name, attempt);
       try {
         const [inserted] = await db.insert(usersTable).values({
           username: shownName,
@@ -56039,6 +56051,13 @@ router8.post(
     if (rows.length === 0) {
       res.status(400).json({ error: "No valid rows to import." });
       return;
+    }
+    if (rows.some((row) => row.role === "school_director")) {
+      const [director] = await db.select({ id: schoolMembersTable.userId }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId)).where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "school_director"), eq(usersTable.status, "active"))).limit(1);
+      if (director) {
+        res.status(409).json({ error: "This school already has a director." });
+        return;
+      }
     }
     const result = await importPeople(schoolId, rows, viewer.id);
     await writeAudit(schoolId, viewer.id, "import", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
@@ -56403,8 +56422,8 @@ router9.put("/me/account", requireAuthenticatedRole(...everyRole5), changeLimite
     changes.email = email || null;
   }
   if ("subjects" in body) {
-    if (!Array.isArray(body.subjects) || body.subjects.length > 8) {
-      res.status(400).json({ error: "Up to 8 subjects." });
+    if (!Array.isArray(body.subjects) || body.subjects.length > 20) {
+      res.status(400).json({ error: "Up to 20 subjects." });
       return;
     }
     changes.subjects = [...new Set(body.subjects.filter((s) => typeof s === "string").map((s) => s.trim().slice(0, 40)).filter(Boolean))];
@@ -56670,7 +56689,7 @@ async function applyChange(schoolId, kind, targetUserId, payload, reason, actorI
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
     const result = await importPeople(schoolId, rows, actorId);
     await writeAudit(schoolId, actorId, "enroll", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
-    return { created: result.created.map(({ userId: _id, ...rest }) => rest), skipped: result.skipped };
+    return { created: result.created, skipped: result.skipped };
   }
   if (!targetUserId) throw new Error("No person.");
   const [person] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.id, targetUserId)).limit(1);
@@ -56833,11 +56852,68 @@ router10.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STA
   const classIds = await db.select({ id: classesTable.id, name: classesTable.name }).from(classesTable).where(eq(classesTable.schoolId, schoolId));
   const memberships = classIds.length ? await db.select({ userId: classMembersTable.userId, classId: classMembersTable.classId }).from(classMembersTable).where(inArray(classMembersTable.classId, classIds.map((row) => row.id))) : [];
   const className = new Map(classIds.map((row) => [row.id, row.name]));
+  const ids = people.map((person) => person.id);
+  const documents = ids.length ? await db.select({ userId: personDocumentsTable.userId }).from(personDocumentsTable).where(and(eq(personDocumentsTable.schoolId, schoolId), inArray(personDocumentsTable.userId, ids))) : [];
+  const withDocument = new Set(documents.map((row) => row.userId));
+  const links = ids.length ? await db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId }).from(parentLinksTable).where(inArray(parentLinksTable.parentId, ids)) : [];
+  const nameOf = new Map(people.map((person) => [person.id, person.name]));
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
-    people: people.map((person) => ({ ...person, classes: memberships.filter((m) => m.userId === person.id).map((m) => className.get(m.classId) ?? "").filter(Boolean) })),
+    people: people.map((person) => ({
+      ...person,
+      classes: memberships.filter((m) => m.userId === person.id).map((m) => className.get(m.classId) ?? "").filter(Boolean),
+      hasDocument: withDocument.has(person.id),
+      children: links.filter((link) => link.parentId === person.id).map((link) => nameOf.get(link.studentId) ?? "").filter(Boolean)
+    })),
     classes: classIds.map((row) => row.name).sort()
   });
+});
+var DOC_LIMIT = 9e5;
+async function canSeeDocuments(viewer, schoolId, userId) {
+  if (!await isSchoolStaff(viewer, schoolId)) return false;
+  return Boolean(await schoolRoleOf2(userId, schoolId));
+}
+router10.put("/schools/:schoolId/people/:userId/document", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const userId = String(req.params.userId);
+  const viewer = viewerOf5(res);
+  if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
+    res.status(400).json({ error: "Invalid request." });
+    return;
+  }
+  if (!await canSeeDocuments(viewer, schoolId, userId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  const data = isRecord9(req.body) && typeof req.body.data === "string" ? req.body.data : "";
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > DOC_LIMIT) {
+    res.status(400).json({ error: "Send a photo (up to about 600 KB)." });
+    return;
+  }
+  await db.delete(personDocumentsTable).where(and(eq(personDocumentsTable.schoolId, schoolId), eq(personDocumentsTable.userId, userId)));
+  await db.insert(personDocumentsTable).values({ schoolId, userId, data, createdBy: viewer.id });
+  await writeAudit(schoolId, viewer.id, "document", userId, {});
+  res.json({ ok: true });
+});
+router10.get("/schools/:schoolId/people/:userId/document", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const userId = String(req.params.userId);
+  const viewer = viewerOf5(res);
+  if (!isValidUuid(schoolId) || !isValidUuid(userId)) {
+    res.status(400).json({ error: "Invalid request." });
+    return;
+  }
+  if (!await canSeeDocuments(viewer, schoolId, userId)) {
+    res.status(403).json({ error: "Not your school." });
+    return;
+  }
+  const [row] = await db.select({ data: personDocumentsTable.data, createdAt: personDocumentsTable.createdAt }).from(personDocumentsTable).where(and(eq(personDocumentsTable.schoolId, schoolId), eq(personDocumentsTable.userId, userId))).orderBy(desc(personDocumentsTable.createdAt)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!row) {
+    res.status(404).json({ error: "No document." });
+    return;
+  }
+  res.json(row);
 });
 router10.get("/admin/requests", requireAuthenticatedRole(...OWNER_ROLES), async (req, res) => {
   const status = typeof req.query.status === "string" && ["pending", "approved", "rejected"].includes(req.query.status) ? req.query.status : null;
@@ -58795,6 +58871,7 @@ function ensureSchema() {
       await syncIdentities();
       await syncConstraints();
       await pool.query('DROP INDEX IF EXISTS "attendance_class_student_date_unique"');
+      await pool.query('DROP INDEX IF EXISTS "users_username_normalized_unique"');
       if (created.length) logger.info({ tables: created }, "schema sync created missing tables");
     })().catch((error) => {
       pending = null;

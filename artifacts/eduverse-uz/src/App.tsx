@@ -539,7 +539,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  const [savedTab,setTab]=useSavedState<SchoolTab>('school-tab','overview');
  const tabs:Array<[SchoolTab,string,ReactNode]>=[
   ['overview',text('Overview','Обзор','Umumiy'),<LayoutDashboard size={20}/>],
-  ['enroll',text('Admit pupils','Приём учеников','O‘quvchi qabul'),<Plus size={20}/>],
+  ['enroll',text('Add people','Добавить','Qo‘shish'),<Plus size={20}/>],
   ['people',text('People','Люди школы','Odamlar'),<Users size={20}/>],
   ['classes',text('Classes','Классы','Sinflar'),<IconClasses size={20}/>],
   ['calendar',text('Calendar','Календарь','Taqvim'),<CalendarCheck2 size={20}/>],

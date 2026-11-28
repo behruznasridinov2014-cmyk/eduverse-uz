@@ -64,10 +64,18 @@ const TRANSLIT: Record<string, string> = {
   а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "j", з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o", п: "p",
   р: "r", с: "s", т: "t", у: "u", ф: "f", х: "x", ц: "ts", ч: "ch", ш: "sh", щ: "sh", ъ: "", ы: "i", ь: "", э: "e", ю: "yu", я: "ya", ў: "o", қ: "q", ғ: "g", ҳ: "h",
 };
-function loginCandidate(name: string): string {
-  const latin = name.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("");
-  const base = latin.normalize("NFKD").replace(/[^a-z0-9]/g, "").slice(0, 14);
-  return `${base || "user"}_${randomBytes(2).toString("hex")}`;
+const latinOf = (word: string) => word.toLowerCase().split("").map((ch) => TRANSLIT[ch] ?? ch).join("").normalize("NFKD").replace(/[^a-z0-9]/g, "");
+
+/**
+ * A plain login from the full name: surname + first letter of the name + a number,
+ * e.g. «Каримов Азиз» → karimov.a27. The person's name itself is never changed.
+ */
+function loginCandidate(name: string, attempt = 0): string {
+  const [surname = "", first = ""] = name.trim().split(/\s+/);
+  const base = latinOf(surname).slice(0, 14) || latinOf(name).slice(0, 14) || "user";
+  const letter = latinOf(first).slice(0, 1);
+  const number = randomInt(attempt < 3 ? 10 : 100, attempt < 3 ? 100 : 1000);
+  return `${base}${letter ? `.${letter}` : ""}${number}`;
 }
 
 async function canManageSchool(viewer: RequestUser, schoolId: string): Promise<boolean> {
@@ -206,10 +214,10 @@ export async function importPeople(schoolId: string, rows: ImportRow[], actorId:
     const password = readablePassword();
     const passwordHash = await hashPassword(password);
     let account: { id: string; username: string; login: string } | null = null;
-    for (let attempt = 0; attempt < 8 && !account; attempt += 1) {
-      const displayName = attempt < 2 ? row.name : `${row.name} ${attempt}`;
-      const shownName = attempt === 1 && row.className ? `${row.name} (${row.className})` : displayName;
-      const login = loginCandidate(row.name);
+    // Only the login changes on a clash; the full name stays exactly as written.
+    const shownName = row.name;
+    for (let attempt = 0; attempt < 10 && !account; attempt += 1) {
+      const login = loginCandidate(row.name, attempt);
       try {
         const [inserted] = await db
           .insert(usersTable)
@@ -275,6 +283,14 @@ router.post(
     if (rows.length === 0) {
       res.status(400).json({ error: "No valid rows to import." });
       return;
+    }
+    if (rows.some((row) => row.role === "school_director")) {
+      const [director] = await db.select({ id: schoolMembersTable.userId }).from(schoolMembersTable).innerJoin(usersTable, eq(usersTable.id, schoolMembersTable.userId))
+        .where(and(eq(schoolMembersTable.schoolId, schoolId), eq(schoolMembersTable.role, "school_director"), eq(usersTable.status, "active"))).limit(1);
+      if (director) {
+        res.status(409).json({ error: "This school already has a director." });
+        return;
+      }
     }
     const result = await importPeople(schoolId, rows, viewer.id);
     await writeAudit(schoolId, viewer.id, "import", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
