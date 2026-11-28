@@ -973,7 +973,7 @@ router.post(
       })
       .returning();
 
-    await pushNotice(await studentsOfClasses([classId]), "homework", `Новое задание: ${title}`, `${subject}${dueAtResult.value ? ` · до ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes");
+    await pushNotice(await studentsOfClasses([classId]), "homework", `Новое задание: ${title}`, `${subject}${dueAtResult.value ? ` · до ${dueAtResult.value.toLocaleDateString("ru-RU")}` : ""}`, "/classes", { telegram: true });
     res.status(201).json({ assignment });
   },
 );

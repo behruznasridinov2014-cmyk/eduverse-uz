@@ -440,3 +440,29 @@
 /* One short row of lesson buttons instead of layered tabs */
 .ls-toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
 .ls-toolbar .btn.small { border-radius: 999px; }
+
+/* Teacher: how to explain. Pupil: what to remember. */
+.role-card { display: grid; gap: 10px; padding: 14px 16px; margin-bottom: 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); }
+.role-card.teach { background: linear-gradient(135deg, rgba(232, 242, 252, .8), rgba(255, 250, 240, .9)); border-color: rgba(120, 170, 220, .35); }
+.role-card.learn { background: linear-gradient(135deg, rgba(236, 250, 241, .85), rgba(255, 250, 240, .9)); border-color: rgba(58, 163, 104, .3); margin-top: 12px; }
+.role-card-head { display: flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; font: inherit; color: var(--text); text-align: left; cursor: pointer; }
+.role-card-head.static { cursor: default; }
+.role-card-head small { font-size: 12px; }
+.role-card-chevron { margin-left: auto; transition: transform .3s var(--ease); }
+.role-card.is-open .role-card-chevron { transform: rotate(180deg); }
+.role-steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.role-steps li { display: grid; gap: 2px; }
+.role-steps li b { font-size: 13px; color: #3d6a96; }
+.role-steps li span { font-size: 14.5px; line-height: 1.45; }
+.role-idea { display: flex; gap: 8px; margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; }
+.role-idea svg { flex: none; margin-top: 3px; color: #b8955a; }
+.role-terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 0; }
+.role-terms div { padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .7); }
+.role-terms dt { font-weight: 700; font-size: 13.5px; }
+.role-terms dd { margin: 2px 0 0; font-size: 13px; color: #5d6770; }
+.role-check { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px dashed rgba(58, 163, 104, .3); }
+.role-check span { display: inline-flex; gap: 6px; align-items: flex-start; font-size: 14px; }
+.role-answer { color: #1f7a48; }
+html[data-theme="night"] .role-card.teach, html[data-theme="night"] .role-card.learn { background: rgba(255, 255, 255, .05); }
+html[data-theme="night"] .role-terms div { background: rgba(255, 255, 255, .06); }
+html[data-theme="night"] .role-terms dd { color: #a9b3bb; }

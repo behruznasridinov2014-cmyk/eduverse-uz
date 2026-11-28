@@ -16,9 +16,11 @@ import { LessonChangeTag, bookForLesson, lessonSubjectName, openLessonPreview, s
 
 const t = (language: Language, uz: string, ru: string, en: string) => (language === 'Русский' ? ru : language === 'English' ? en : uz);
 
-type WeekDay = { date: string; weekday: number; lessons: TodayLesson[] };
-type Week = { today: string; now: string; offset: number; days: WeekDay[] };
-type ClassCourse = { progress: Array<{ topicKey: string; doneOn: string }> };
+export type WeekDay = { date: string; weekday: number; lessons: TodayLesson[] };
+/** A pupil sees lesson topics 3 days back and 3 days ahead. */
+export const withinDays = (date: string, today: string, days: number) => Math.abs(Date.parse(`${date}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) <= days * 86_400_000;
+export type Week = { today: string; now: string; offset: number; days: WeekDay[] };
+export type ClassCourse = { progress: Array<{ topicKey: string; doneOn: string }> };
 
 const DAY_NAMES: Record<Language, string[]> = {
   Uzbek: ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'],
@@ -36,7 +38,7 @@ const dayText = (date: string, language: Language) => { const [, m, d] = date.sp
  * The textbook topic of every lesson of the week: a past lesson shows what the class covered that
  * day, today's lesson today's topic, the next days the following topics in order (the plan).
  */
-function weekTopics(week: Week, courses: Record<string, ClassCourse>): Map<string, { topic?: CourseTopic; plan: boolean }> {
+export function weekTopics(week: Week, courses: Record<string, ClassCourse>): Map<string, { topic?: CourseTopic; plan: boolean }> {
   const out = new Map<string, { topic?: CourseTopic; plan: boolean }>();
   const steps = new Map<string, { last: string; step: number }>();
   const all = week.days.flatMap((day) => day.lessons.map((lesson) => ({ day, lesson })));
@@ -151,7 +153,7 @@ function MyWeek({ user, language, onOpen }: { user: User; language: Language; on
                             {info?.topic && user.role !== 'parent' && <span className="schedule-topic">{past ? <CheckCircle2 size={13} /> : <BookOpen size={13} />} §{info.topic.code} {info.topic.title}{info.plan && <small className="muted"> · {t(language, 'reja', 'по плану', 'planned')}</small>}</span>}
                             {status === 'current' && <span className="tag green schedule-now">{t(language, 'Hozir', 'Сейчас идёт', 'Now')}</span>}
                           </div>
-                          {!open && (info?.topic || bookForLesson(lesson)) && (user.role === 'teacher' || user.role === 'student') && (
+                          {!open && (info?.topic || bookForLesson(lesson)) && (user.role === 'teacher' || (user.role === 'student' && withinDays(day.date, week.today, 3))) && (
                             <div className="schedule-lesson-actions">
                               <button type="button" className="btn small" onClick={() => openLessonPreview(lesson, onOpen)}>{past ? t(language, 'Darsni ko‘rish', 'Посмотреть урок', 'View lesson') : t(language, 'Oldindan ko‘rish', 'Предпросмотр урока', 'Preview the lesson')} <ArrowRight size={14} /></button>
                             </div>

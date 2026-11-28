@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DateField } from './ui/date-field';
 import { customFetch } from '@workspace/api-client-react';
-import { CalendarDays, ClipboardPaste, Clock3, RefreshCw, Save, Sparkles } from 'lucide-react';
+import { CalendarDays, ClipboardPaste, Clock3, Lock, LockOpen, RefreshCw, Save, Sparkles } from 'lucide-react';
 import type { Language } from './school-data';
 import { Select } from './ui/select';
 import { friendlyError } from './errors';
@@ -44,6 +44,8 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
   const [error, setError] = useState('');
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
+  // The timetable is locked by default, so a stray tap changes nothing; «Изменить» opens it.
+  const [unlocked, setUnlocked] = useState(false);
 
   const apply = useCallback((next: Timetable) => {
     setData(next); setSlots(next.slots); setBells(next.bells); setDirty(false);
@@ -120,6 +122,7 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
     try {
       const next = await customFetch<Timetable>(`/api/schools/${schoolId}/timetable`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slots, bells }) });
       apply(next);
+      setUnlocked(false);
       setMessage(t(language, 'Jadval saqlandi. O‘qituvchi va o‘quvchilar bugungi darslarni ko‘radi.', 'Расписание сохранено. Учителя и ученики сразу видят свои уроки на сегодня.', 'Saved. Teachers and students now see today’s lessons.'));
     } catch (requestError) { setError(friendlyError(requestError, language)); } finally { setBusy(false); }
   }
@@ -133,7 +136,13 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
   }
 
   if (!data) return <section className="panel"><h2><CalendarDays size={16} /> {t(language, 'Dars jadvali', 'Расписание уроков', 'Timetable')}</h2>{error ? <div className="notice" role="alert">{error}</div> : <LoadingBlock language={language} kind="inline" />}</section>;
-  const editable = data.canEdit;
+  const empty = slots.length === 0;
+  const editable = data.canEdit && (unlocked || empty);
+  function lock() {
+    if (dirty && !window.confirm(t(language, 'Saqlanmagan o‘zgarishlar bekor qilinsinmi?', 'Отменить несохранённые изменения?', 'Discard unsaved changes?'))) return;
+    if (dirty) load();
+    setUnlocked(false); setPasteOpen(false);
+  }
   const periods = bells.length;
   return (
     <section className="panel tt-panel">
@@ -142,8 +151,12 @@ export function TimetableEditor({ schoolId, language }: { schoolId: string; lang
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           {data.classes.length > 0 && <Select value={classId} onChange={(_event, value) => setClassId(value)} options={data.classes.map((item) => ({ value: item.id, label: t(language, `${item.name} sinf`, `${item.name} класс`, `Class ${item.name}`) }))} aria-label={t(language, 'Sinf', 'Класс', 'Class')} style={{ width: 170 }} />}
           <button type="button" className="btn small" onClick={load} aria-label={t(language, 'Yangilash', 'Обновить', 'Reload')}><RefreshCw size={13} /></button>
+          {data.canEdit && !empty && (unlocked
+            ? <button type="button" className="btn small" onClick={lock}><Lock size={13} /> {t(language, 'Qulflash', 'Закрепить', 'Lock')}</button>
+            : <button type="button" className="btn small primary" onClick={() => { setUnlocked(true); setMessage(''); }}><LockOpen size={13} /> {t(language, 'O‘zgartirish', 'Изменить', 'Edit')}</button>)}
         </div>
       </div>
+      {data.canEdit && !editable && <p className="tt-locked muted"><Lock size={13} /> {t(language, 'Jadval qulflangan — tasodifan o‘zgarmaydi. O‘zgartirish uchun «O‘zgartirish»ni bosing.', 'Расписание закреплено — случайно не изменится. Чтобы поменять, нажмите «Изменить».', 'The timetable is locked. Press “Edit” to change it.')}</p>}
       <p className="muted">{t(language, 'Har bir katakda fan, o‘qituvchi va xona. Saqlangandan keyin har kim o‘z jadvalini ko‘radi.', 'В каждой клетке — предмет, учитель и кабинет. После сохранения каждый видит своё расписание.', 'Each cell has a subject, a teacher and a room. After saving, everyone sees their own timetable.')}</p>
       {data.classes.length === 0 ? <div className="notice">{t(language, 'Avval sinflarni qo‘shing.', 'Сначала добавьте классы.', 'Add classes first.')}</div> : (
         <div className="tt-scroll">

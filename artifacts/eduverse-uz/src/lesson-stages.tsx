@@ -19,6 +19,7 @@ import { LoadingBlock } from './ui/loading';
 import { Modal } from './ui/modal';
 import { LessonBuilder, ClassProgressPanel, BoardControls, OnlineAndAsks, StudentBoard, useLive, type LessonContent, type LiveHook, type LiveState } from './lesson-teacher';
 import { Protected } from './ui/protect';
+import { RememberCard, TeachPlan } from './lesson-roles';
 
 /*
  * The 40-minute lesson of a textbook topic (one main button per screen):
@@ -144,8 +145,10 @@ export function LessonStages({ user, school, book, topic, classId, language, onO
               <span className="ls-stage-time"><Clock3 size={13} /> {minuteOf(stage)} {t(language, 'daq', 'мин', 'min')}</span>
               {canAskTeacher && <button type="button" className="btn small ls-ask-inline" onClick={() => { setAskOpen((value) => !value); setHelperOpen(false); }} aria-expanded={askOpen}><Hand size={15} /> {t(language, 'Savol', 'Вопрос', 'Ask')}</button>}
             </header>
+            {stage === 2 && isTeacher && <TeachPlan topic={topic} language={language} />}
             {stage === 2 && <BookStage {...props} />}
-            {stage === 3 && <VisualStage {...props} />}
+            {stage === 2 && isStudent && <RememberCard topic={topic} language={language} />}
+            {stage === 3 && <VisualStage {...props} canSwitch={isTeacher} />}
             {stage === 4 && <PracticeStage {...props} />}
             {stage === 5 && <TestStage {...props} goTo={go} />}
             {stage === 6 && <AchievementsStage {...props} stages={progress.stages} autoNext={!(isStudent && liveHere && follow)} />}
@@ -439,9 +442,9 @@ function modelEmbed(url: string): string | null {
   return null;
 }
 
-function VisualStage({ topic, book, language, save, result, ask, content }: StageProps) {
+function VisualStage({ topic, book, language, save, result, ask, content, canSwitch }: StageProps & { canSwitch: boolean }) {
   const [touched, setTouched] = useState(false);
-  // Any other topic of the book can be looked at in 3D too; the lesson's own topic stays the default.
+  // The teacher may show another topic of the book in 3D; a student stays on the lesson's topic.
   const [otherKey, setOtherKey] = useState(topic.key);
   const shown = book.topics.find((item) => item.key === otherKey) ?? topic;
   const done = Boolean(result(3)?.done);
@@ -452,12 +455,12 @@ function VisualStage({ topic, book, language, save, result, ask, content }: Stag
       <div onPointerDown={() => setTouched(true)}>
         <CourseScene3D key={shown.key} scene={shown.scene} language={language} />
       </div>
-      <label className="ls-other-3d">
+      {canSwitch && <label className="ls-other-3d">
         <span className="muted">{t(language, 'Boshqa mavzu', 'Другая тема', 'Another topic')}</span>
         <Select className="input" value={otherKey} onChange={(event) => setOtherKey(event.target.value)}>
           {book.topics.map((item) => <option key={item.key} value={item.key}>{item.key === topic.key ? `★ ${item.title}` : item.title}</option>)}
         </Select>
-      </label>
+      </label>}
       <div className="ls-visual-actions">
         <span className="muted">{t(language, 'Barmoq bilan aylantiring', 'Крутите пальцем', 'Rotate with a finger')}</span>
         <button type="button" className={`btn small ${done ? '' : 'primary'}`} disabled={!touched && !done} onClick={finish}>

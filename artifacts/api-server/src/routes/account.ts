@@ -241,7 +241,7 @@ router.post("/support/thread", requireAuthenticatedRole(...everyRole), supportLi
   if (channel === "school" && !schoolId) { res.status(400).json({ error: "You are not linked to a school yet." }); return; }
   const [created] = await db.insert(supportMessagesTable).values({ threadUserId: viewer.id, channel, schoolId, authorId: viewer.id, fromStaff: false, body, readByOwner: true }).returning();
   const [me] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
-  await pushNotice(await staffOf(channel, schoolId), "messages", `Новое сообщение: ${me?.name ?? ""}`, body.slice(0, 140), channel === "curator" ? "/admin" : "/school");
+  await pushNotice(await staffOf(channel, schoolId), "messages", `Новое сообщение: ${me?.name ?? ""}`, body.slice(0, 140), channel === "curator" ? "/admin" : "/school", { telegram: true });
   res.status(201).json({ message: messageView(created!) });
 });
 
@@ -294,7 +294,7 @@ router.post("/support/inbox/:userId", requireAuthenticatedRole("platform_superad
   if (!isValidUuid(userId) || !(await canStaff(viewer, channel, userId))) { res.status(403).json({ error: "Not your inbox." }); return; }
   const [created] = await db.insert(supportMessagesTable).values({ threadUserId: userId, channel, schoolId: await schoolOf(userId), authorId: viewer.id, fromStaff: true, body, readByStaff: true }).returning();
   await db.update(supportMessagesTable).set({ readByStaff: true }).where(and(eq(supportMessagesTable.threadUserId, userId), eq(supportMessagesTable.channel, channel), eq(supportMessagesTable.readByStaff, false)));
-  await pushNotice([userId], "messages", channel === "curator" ? "Ответ куратора EDUVERSE" : "Ответ администрации школы", body.slice(0, 140), "/support");
+  await pushNotice([userId], "messages", channel === "curator" ? "Ответ куратора EDUVERSE" : "Ответ администрации школы", body.slice(0, 140), "/support", { telegram: true });
   res.status(201).json({ message: messageView(created!) });
 });
 
