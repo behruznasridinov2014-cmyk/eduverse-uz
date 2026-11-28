@@ -252,3 +252,9 @@ html[data-theme="night"] .myday-row:hover, html[data-theme="night"] .myday-facts
 .mc-mark{font-weight:700;text-align:center;border-radius:10px;padding:4px 0;background:rgba(0,0,0,.04)}
 @media (max-width:520px){.mc-stats b{font-size:18px}.mc-row,.mc-legend{grid-template-columns:20px minmax(0,1fr) 40px 44px 40px;gap:6px;padding-left:8px;padding-right:8px}}
 .mc-detail{display:block;font-weight:400;font-size:12px;color:#77828b;margin-top:2px}
+
+/* Rows that open details in a window */
+.is-clickable { cursor: pointer; transition: background .2s ease; }
+tr.is-clickable:hover td, li.is-clickable:hover { background: var(--ev-primary-soft); }
+.is-clickable:focus-visible { outline: 2px solid var(--ev-primary); outline-offset: -2px; }
+.eco-reasons-modal { margin: 0 0 12px; align-items: center; gap: 6px; }

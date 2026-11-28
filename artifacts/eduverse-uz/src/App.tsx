@@ -33,6 +33,7 @@ import { CheckHomeworkPage } from './check-homework';
 import { UpdateBanner } from './update-check';
 import { LessonNowBar } from './lesson-now-bar';
 import { StudentPulse } from './student-home';
+import { RepeatToday } from './lesson-roles';
 import { TodayLessons } from './today';
 import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, TeacherDayPage, TimetableChangesPage } from './ecosystem';
 import { TimetableEditor } from './timetable-editor';
@@ -412,6 +413,7 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   </>}
   {['platform_superadmin','education_admin','ministry_admin'].includes(user.role)&&<PlansOverview language={language} onOpenSchool={()=>onOpen('/admin')}/>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
+  {user.role==='student'&&<RepeatToday language={language}/>}
   {user.role==='student'&&<StudentPulse language={language} onOpen={onOpen}/>}
   {user.role==='teacher'&&<><h2 className="home-section-title">{language==='Uzbek'?'Mening statistikam':language==='Русский'?'Моя статистика':'My statistics'}</h2><StatsSection language={language}/></>}
   {school.status==='ready'&&!school.hasMembership&&<div className="notice"><Info size={16}/><span>{language==='Uzbek'?'Hisobingiz hali maktabga biriktirilmagan. Maktab administratoriga murojaat qiling.':language==='Русский'?'Аккаунт ещё не привязан к школе. Обратитесь к администратору школы.':'Your account is not linked to a school yet. Contact the school administrator.'}</span></div>}

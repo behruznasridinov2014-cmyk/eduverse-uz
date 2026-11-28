@@ -107,7 +107,6 @@ function PersonalSection({ user, language, teaches }: { user: User; language: La
           <AvatarPicker userId={user.id} name={user.username} language={language} />
           <div>
             <h2>{user.username}</h2>
-            <p className="muted">{tx(language, 'Ism va familiyani maktab belgilaydi. Rasmni o‘zingiz qo‘yasiz — ixtiyoriy.', 'Имя и фамилию задаёт школа. Фото — по желанию, ставите сами.', 'The school sets your name. A photo is optional.')}</p>
           </div>
         </div>
         <div className="profile-rows">
