@@ -189,10 +189,11 @@ export function LabPage({ user, language, children }: { user: User; language: La
   const firstStart = lessons.length ? Math.min(...lessons.map((lesson) => Date.parse(lesson.startsAt))) : 0;
   const lastEnd = lessons.length ? Math.max(...lessons.map((lesson) => Date.parse(lesson.endsAt))) : 0;
   const schoolDay = lessons.length > 0 && now >= firstStart && now < lastEnd;
-  // In the demo school lessons are always going on, so the studio stays open there.
+  // In the demo school lessons go on all day, so there only the lesson that is on right now locks the studio.
   const demo = Boolean((data as { demo?: boolean } | undefined)?.demo);
-  if (!schoolDay || demo) return <><LabTodayScene language={language} />{children}</>;
-  const end = new Date(lastEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
+  const current = lessons.find((lesson) => now >= Date.parse(lesson.startsAt) && now < Date.parse(lesson.endsAt));
+  if (demo ? !current : !schoolDay) return <><LabTodayScene language={language} />{children}</>;
+  const end = new Date(demo && current ? Date.parse(current.endsAt) : lastEnd).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
   return (
     <>
       <div className="notice lab-locked"><Lock size={16} /><span>{t(language,

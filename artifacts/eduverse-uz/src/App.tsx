@@ -31,13 +31,14 @@ import { SchedulePage } from './schedule';
 import { CheckHomeworkPage } from './check-homework';
 import { UpdateBanner } from './update-check';
 import { LessonNowBar } from './lesson-now-bar';
+import { StudentPulse } from './student-home';
 import { TodayLessons } from './today';
 import { FinancePage, MessagesPage, ParentWeekPanel, SchoolAnalyticsPage, TeacherDayPage, TimetableChangesPage } from './ecosystem';
 import { TimetableEditor } from './timetable-editor';
 import { LabPage, LessonDayPage, LessonPreviewPage, TodayCoursePage } from './today-pages';
 import { NAV_ICON, IconJournal, IconPlan, IconHomework, IconClasses, IconTopic } from './nav-icons';
 import { GlassTabs, ThemeSwitch, useSwipeTabs, useTheme } from './glass-nav';
-import { NotificationsBell } from './account';
+import { NotificationsBell, StatsSection } from './account';
 import { AnnouncementsPanel, AttendanceSummary, GradeJournal } from './extras';
 import { customFetch, type User } from '@workspace/api-client-react';
 import { useSchoolData, type SchoolData } from './school-data';
@@ -410,7 +411,8 @@ function RoleOverviewPage({user,school,language,onOpen}:{user:User;school:School
   </>}
   {['platform_superadmin','education_admin','ministry_admin'].includes(user.role)&&<PlansOverview language={language} onOpenSchool={()=>onOpen('/admin')}/>}
   {school.status==='ready'&&<AnnouncementsPanel school={school} user={user} language={language}/>}
-  {user.role==='student'&&<AttendanceSummary language={language}/>}
+  {user.role==='student'&&<StudentPulse language={language} onOpen={onOpen}/>}
+  {user.role==='teacher'&&<><h2 className="home-section-title">{language==='Uzbek'?'Mening statistikam':language==='Русский'?'Моя статистика':'My statistics'}</h2><StatsSection language={language}/></>}
   {school.status==='ready'&&!school.hasMembership&&<div className="notice"><Info size={16}/><span>{language==='Uzbek'?'Hisobingiz hali maktabga biriktirilmagan. Maktab administratoriga murojaat qiling.':language==='Русский'?'Аккаунт ещё не привязан к школе. Обратитесь к администратору школы.':'Your account is not linked to a school yet. Contact the school administrator.'}</span></div>}
  </section>
 }
@@ -539,7 +541,7 @@ function SchoolPage({school,user,language}:{school:SchoolData;user:User;language
  const [savedTab,setTab]=useSavedState<SchoolTab>('school-tab','overview');
  const tabs:Array<[SchoolTab,string,ReactNode]>=[
   ['overview',text('Overview','Обзор','Umumiy'),<LayoutDashboard size={20}/>],
-  ['enroll',text('Admit pupils','Приём учеников','O‘quvchi qabul'),<Plus size={20}/>],
+  ['enroll',text('Add people','Добавить','Qo‘shish'),<Plus size={20}/>],
   ['people',text('People','Люди школы','Odamlar'),<Users size={20}/>],
   ['classes',text('Classes','Классы','Sinflar'),<IconClasses size={20}/>],
   ['calendar',text('Calendar','Календарь','Taqvim'),<CalendarCheck2 size={20}/>],

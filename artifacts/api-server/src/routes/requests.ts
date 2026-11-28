@@ -5,6 +5,8 @@ import {
   classMembersTable,
   classesTable,
   db,
+  parentLinksTable,
+  personDocumentsTable,
   schoolMembersTable,
   schoolBillingPaymentsTable,
   schoolRequestsTable,
@@ -111,7 +113,8 @@ async function applyChange(schoolId: string, kind: Kind, targetUserId: string | 
     const rows = (Array.isArray(payload.rows) ? payload.rows : []) as ImportRow[];
     const result = await importPeople(schoolId, rows, actorId);
     await writeAudit(schoolId, actorId, "enroll", null, { created: result.created.map(({ role, name, login, className }) => ({ role, name, login, className })), skipped: result.skipped });
-    return { created: result.created.map(({ userId: _id, ...rest }) => rest), skipped: result.skipped };
+    // The id lets the school attach a document photo right after adding the person.
+    return { created: result.created, skipped: result.skipped };
   }
   if (!targetUserId) throw new Error("No person.");
   const [person] = await db.select({ id: usersTable.id, role: usersTable.role, name: usersTable.username }).from(usersTable).where(eq(usersTable.id, targetUserId)).limit(1);
@@ -258,11 +261,53 @@ router.get("/schools/:schoolId/people", requireAuthenticatedRole(...SCHOOL_STAFF
     ? await db.select({ userId: classMembersTable.userId, classId: classMembersTable.classId }).from(classMembersTable).where(inArray(classMembersTable.classId, classIds.map((row) => row.id)))
     : [];
   const className = new Map(classIds.map((row) => [row.id, row.name]));
+  const ids = people.map((person) => person.id);
+  const documents = ids.length ? await db.select({ userId: personDocumentsTable.userId }).from(personDocumentsTable).where(and(eq(personDocumentsTable.schoolId, schoolId), inArray(personDocumentsTable.userId, ids))) : [];
+  const withDocument = new Set(documents.map((row) => row.userId));
+  const links = ids.length ? await db.select({ parentId: parentLinksTable.parentId, studentId: parentLinksTable.studentId }).from(parentLinksTable).where(inArray(parentLinksTable.parentId, ids)) : [];
+  const nameOf = new Map(people.map((person) => [person.id, person.name]));
   res.setHeader("Cache-Control", "private, no-store");
   res.json({
-    people: people.map((person) => ({ ...person, classes: memberships.filter((m) => m.userId === person.id).map((m) => className.get(m.classId) ?? "").filter(Boolean) })),
+    people: people.map((person) => ({
+      ...person,
+      classes: memberships.filter((m) => m.userId === person.id).map((m) => className.get(m.classId) ?? "").filter(Boolean),
+      hasDocument: withDocument.has(person.id),
+      children: links.filter((link) => link.parentId === person.id).map((link) => nameOf.get(link.studentId) ?? "").filter(Boolean),
+    })),
     classes: classIds.map((row) => row.name).sort(),
   });
+});
+
+/* A document photo (birth certificate, passport): the school management only. */
+const DOC_LIMIT = 900_000;
+async function canSeeDocuments(viewer: { id: string; role: string }, schoolId: string, userId: string): Promise<boolean> {
+  if (!(await isSchoolStaff(viewer as Viewer, schoolId))) return false;
+  return Boolean(await schoolRoleOf(userId, schoolId));
+}
+router.put("/schools/:schoolId/people/:userId/document", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const userId = String(req.params.userId);
+  const viewer = viewerOf(res);
+  if (!isValidUuid(schoolId) || !isValidUuid(userId)) { res.status(400).json({ error: "Invalid request." }); return; }
+  if (!(await canSeeDocuments(viewer, schoolId, userId))) { res.status(403).json({ error: "Not your school." }); return; }
+  const data = isRecord(req.body) && typeof req.body.data === "string" ? req.body.data : "";
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > DOC_LIMIT) { res.status(400).json({ error: "Send a photo (up to about 600 KB)." }); return; }
+  await db.delete(personDocumentsTable).where(and(eq(personDocumentsTable.schoolId, schoolId), eq(personDocumentsTable.userId, userId)));
+  await db.insert(personDocumentsTable).values({ schoolId, userId, data, createdBy: viewer.id });
+  await writeAudit(schoolId, viewer.id, "document", userId, {});
+  res.json({ ok: true });
+});
+router.get("/schools/:schoolId/people/:userId/document", requireAuthenticatedRole(...SCHOOL_STAFF), async (req, res) => {
+  const schoolId = String(req.params.schoolId);
+  const userId = String(req.params.userId);
+  const viewer = viewerOf(res);
+  if (!isValidUuid(schoolId) || !isValidUuid(userId)) { res.status(400).json({ error: "Invalid request." }); return; }
+  if (!(await canSeeDocuments(viewer, schoolId, userId))) { res.status(403).json({ error: "Not your school." }); return; }
+  const [row] = await db.select({ data: personDocumentsTable.data, createdAt: personDocumentsTable.createdAt }).from(personDocumentsTable)
+    .where(and(eq(personDocumentsTable.schoolId, schoolId), eq(personDocumentsTable.userId, userId))).orderBy(desc(personDocumentsTable.createdAt)).limit(1);
+  res.setHeader("Cache-Control", "private, no-store");
+  if (!row) { res.status(404).json({ error: "No document." }); return; }
+  res.json(row);
 });
 
 /* ------------------------------------------------------------------ */

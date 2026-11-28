@@ -18,7 +18,7 @@ export function LessonNowBar({ user, language, path, onOpen }: { user: User; lan
   const current = lessons.find((lesson) => statusOf(lesson, now) === 'current')
     ?? lessons.find((lesson) => statusOf(lesson, now) === 'upcoming' && Date.parse(lesson.startsAt) - now <= 10 * 60 * 1000);
   const courses = useLessonCourses(current ? [current] : undefined);
-  if (!enabled || !current || path.startsWith('/lesson') || path.startsWith('/today/')) return null;
+  if (!enabled || !current || path.startsWith('/lesson') || path.startsWith('/today/') || path.startsWith('/course')) return null;
   const live = statusOf(current, now) === 'current';
   const topic = topicForLesson(current, courses[current.classId], data?.date ?? '');
   const teacher = user.role === 'teacher';

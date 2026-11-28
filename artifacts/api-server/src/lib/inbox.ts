@@ -66,11 +66,16 @@ export async function usersWanting(userIds: string[], kind: NotifyKind): Promise
  * Put a notification in the bell of each user who wants this kind.
  * Never throws: a notification must not break the action that caused it.
  */
-export async function pushNotice(userIds: string[], kind: Exclude<NotifyKind, "telegram" | "push">, title: string, body = "", link?: string): Promise<void> {
+export async function pushNotice(userIds: string[], kind: Exclude<NotifyKind, "telegram" | "push">, title: string, body = "", link?: string, options: { telegram?: boolean } = {}): Promise<void> {
   try {
     const targets = await usersWanting(userIds, kind);
     if (targets.length === 0) return;
     await db.insert(userNotificationsTable).values(targets.map((userId) => ({ userId, kind, title: title.slice(0, 160), body: body.slice(0, 400), link: link ?? null })));
+    // The same notice in Telegram, for those who connected the bot (callers that send their own Telegram text leave this off).
+    if (options.telegram) {
+      const { escapeHtml, notifyUsers } = await import("./notify");
+      await notifyUsers(targets, `🔔 <b>${escapeHtml(title)}</b>${body ? `\n${escapeHtml(body)}` : ""}`);
+    }
   } catch (error) {
     logger.error({ err: error }, "in-app notification failed");
   }

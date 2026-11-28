@@ -439,7 +439,7 @@ router.post("/family-threads/:studentId/:otherId", requireAuthenticatedRole("par
   if (!allowed) { res.status(403).json({ error: "This conversation is not available." }); return; }
   const [row] = await db.insert(familyMessagesTable).values({ schoolId: allowed.schoolId, studentId, parentId, teacherId, fromId: viewer.id, body }).returning();
   const [me] = await db.select({ name: usersTable.username }).from(usersTable).where(eq(usersTable.id, viewer.id)).limit(1);
-  await pushNotice([otherId], "messages", `Сообщение · ${me?.name ?? ""}`, body.slice(0, 200), "/messages");
+  await pushNotice([otherId], "messages", `Сообщение · ${me?.name ?? ""}`, body.slice(0, 200), "/messages", { telegram: true });
   res.status(201).json({ message: { id: row!.id, body: row!.body, fromId: row!.fromId, createdAt: row!.createdAt, mine: true } });
 });
 
@@ -609,7 +609,7 @@ router.post("/schools/:schoolId/finance/payments", requireAuthenticatedRole(...M
       const [row] = await db.insert(tuitionPaymentsTable).values({ schoolId, studentId, amount, month, method, paidOn, receiptNo, note: str(body.note, 300), createdBy: viewer.id }).returning();
       await writeAudit(schoolId, viewer.id, "tuition.payment", studentId, { amount, month, receiptNo });
       const parents = await db.select({ id: parentLinksTable.parentId }).from(parentLinksTable).where(eq(parentLinksTable.studentId, studentId));
-      await pushNotice(parents.map((item) => item.id), "announcements", `Оплата получена · № ${receiptNo}`, `${amount.toLocaleString("ru-RU")} сум за ${month}`, "/parent");
+      await pushNotice(parents.map((item) => item.id), "announcements", `Оплата получена · № ${receiptNo}`, `${amount.toLocaleString("ru-RU")} сум за ${month}`, "/parent", { telegram: true });
       res.status(201).json({ payment: row });
       return;
     } catch (error) {
@@ -717,8 +717,15 @@ router.put("/schools/:schoolId/timetable-changes", requireAuthenticatedRole(...M
   const pupils = await db.select({ id: classMembersTable.userId }).from(classMembersTable).where(and(eq(classMembersTable.classId, classId), eq(classMembersTable.role, "student")));
   const parents = pupils.length ? await db.select({ id: parentLinksTable.parentId }).from(parentLinksTable).where(inArray(parentLinksTable.studentId, pupils.map((item) => item.id))) : [];
   const text = kind === "cancelled" ? "урок отменён" : kind === "room" ? `урок в кабинете ${room}` : "замена учителя";
-  await pushNotice([...pupils.map((item) => item.id), ...parents.map((item) => item.id), ...(slot?.teacherId ? [slot.teacherId] : []), ...(teacherId ? [teacherId] : [])],
-    "lessons", `Изменение расписания · ${klass.name}`, `${date}, ${period}-й урок${slot?.subject ? ` (${slot.subject})` : ""}: ${text}${values.note ? `. ${values.note}` : ""}`, "/schedule");
+  const day = date.split("-").reverse().join(".");
+  const what = `${day}, ${period}-й урок${slot?.subject ? ` (${slot.subject})` : ""}`;
+  const note = values.note ? `. ${values.note}` : "";
+  await pushNotice([...pupils.map((item) => item.id), ...parents.map((item) => item.id), ...(slot?.teacherId && slot.teacherId !== teacherId ? [slot.teacherId] : [])],
+    "lessons", `Изменение расписания · ${klass.name}`, `${what}: ${text}${note}`, "/schedule", { telegram: true });
+  // The substitute gets a message of their own: which class, day and lesson they take.
+  if (kind === "substitute" && teacherId) {
+    await pushNotice([teacherId], "lessons", `Вы заменяете урок · ${klass.name}`, `${what}${room ? `, каб. ${room}` : ""}${note}`, "/schedule", { telegram: true });
+  }
   res.json({ change: row });
 });
 

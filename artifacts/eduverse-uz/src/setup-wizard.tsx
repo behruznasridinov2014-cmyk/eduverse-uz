@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { customFetch } from '@workspace/api-client-react';
-import { Download, Plus, Printer, Trash2, UserPlus } from 'lucide-react';
+import { Download, Plus, Trash2, UserPlus } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
 import { CredentialList } from './ui/credentials';
@@ -29,6 +29,23 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Who is already there: the director is added once; deputies show as done.
+  const [staff, setStaff] = useState<{ director: string[]; deputies: string[] } | null>(null);
+  const [moreDeputies, setMoreDeputies] = useState(false);
+  const loadStaff = useCallback(() => {
+    void customFetch<{ people: Array<{ name: string; role: string; status: string }> }>(`/api/schools/${schoolId}/people`, { method: 'GET' })
+      .then((data) => {
+        const active = data.people.filter((person) => person.status === 'active');
+        const next = { director: active.filter((person) => person.role === 'school_director').map((person) => person.name), deputies: active.filter((person) => person.role === 'school_admin').map((person) => person.name) };
+        setStaff(next);
+        if (next.director.length) setStep((current) => (current === 'director' ? 'deputy' : current));
+      })
+      .catch(() => setStaff({ director: [], deputies: [] }));
+  }, [schoolId]);
+  useEffect(() => { loadStaff(); }, [loadStaff]);
+  const hasDirector = Boolean(staff?.director.length);
+  const formHidden = (step === 'director' && hasDirector) || (step === 'deputy' && Boolean(staff?.deputies.length) && !moreDeputies);
 
   const steps: Array<[Step, string]> = [
     ['director', t(language, '1. Direktor', '1. Директор', '1. Director')],
@@ -64,6 +81,8 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
       setCreated((current) => [...current, ...response.created]);
       setRows([{ ...EMPTY }]);
       if (step === 'director' && response.created.length > 0) setStep('deputy');
+      setMoreDeputies(false);
+      loadStaff();
       setMessage(t(language, `Yaratildi: ${response.created.length}. Kartochkalar pastda.`, `Создано: ${response.created.length}. Карточки с логинами — внизу.`, `Created: ${response.created.length}. Cards are below.`) + (response.skipped.length ? ` ${t(language, 'O‘tkazib yuborildi', 'Пропущено', 'Skipped')}: ${response.skipped.map((item) => item.name).join(', ')}` : ''));
     } catch (requestError) {
       setError(friendlyError(requestError, language));
@@ -101,6 +120,17 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
         </div>
       )}
 
+      {staff && (staff.director.length > 0 || staff.deputies.length > 0) && (
+        <div className="setup-done">
+          {staff.director.map((name) => <span key={name} className="tag green">✓ {t(language, 'Direktor', 'Директор', 'Director')}: {name}</span>)}
+          {staff.deputies.map((name) => <span key={name} className="tag green">✓ {t(language, 'Zavuch', 'Завуч', 'Deputy')}: {name}</span>)}
+        </div>
+      )}
+      {formHidden ? (
+        step === 'deputy'
+          ? <button type="button" className="btn small" onClick={() => setMoreDeputies(true)}><Plus size={13} /> {t(language, 'Yana zavuch qo‘shish', 'Добавить ещё завуча', 'Add another deputy')}</button>
+          : <p className="muted">{t(language, 'Direktor allaqachon bor.', 'Директор уже добавлен.', 'The director is already added.')}</p>
+      ) : <>
       <div className="setup-rows">
         <div className={`setup-row head ${step}`}>
           <span>{step === 'pupil' ? t(language, 'O‘quvchi F.I.Sh.', 'ФИО ученика', 'Pupil name') : t(language, 'F.I.Sh.', 'Фамилия Имя Отчество', 'Full name')}</span>
@@ -127,6 +157,7 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
         {!single && <button type="button" className="btn small" onClick={() => setRows((current) => [...current, { ...EMPTY }])}><Plus size={13} /> {t(language, 'Qator qo‘shish', 'Ещё строка', 'Add a row')}</button>}
         <button type="button" className="btn primary" disabled={busy} onClick={() => void submit()}><UserPlus size={14} /> {t(language, 'Hisoblarni yaratish', 'Создать аккаунты', 'Create accounts')}</button>
       </div>
+      </>}
       {message && <div className="notice success" style={{ marginTop: 10 }}>{message}</div>}
       {error && <div className="notice" style={{ marginTop: 10 }}>{error}</div>}
 
