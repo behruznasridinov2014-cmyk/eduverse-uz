@@ -138,6 +138,18 @@ type Analytics = {
   attentionClasses: string[];
 };
 
+/** The first few rows on the page; the whole list opens in a window, so the page stays short. */
+function ShortList<T>({ items, row, title, language, limit = 5 }: { items: T[]; row: (item: T) => ReactNode; title: string; language: Language; limit?: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <ul className="eco-list">{items.slice(0, limit).map(row)}</ul>
+      {items.length > limit && <button type="button" className="btn small eco-more" onClick={() => setOpen(true)}>{t(language, `Hammasi (${items.length})`, `Показать все (${items.length})`, `Show all (${items.length})`)}</button>}
+      {open && <Modal title={title} wide onClose={() => setOpen(false)}><ul className="eco-list">{items.map(row)}</ul></Modal>}
+    </>
+  );
+}
+
 export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; language: Language }) {
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const { data, error, reload } = useLoad<Analytics>(`/api/schools/${schoolId}/analytics?period=${period}`);
@@ -272,15 +284,18 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
 
         <Section icon={<NotebookPen size={16} />} title={t(language, 'Jurnal to‘ldirilmagan darslar', 'Уроки без отметок в журнале', 'Lessons with an empty journal')}>
           {fresh.emptyJournals.length === 0 ? <p className="muted eco-empty"><CheckCircle2 size={15} /> {t(language, 'Barcha jurnallar to‘ldirilgan.', 'Все журналы заполнены.', 'All journals are filled.')}</p> : (
-            <ul className="eco-list">
-              {fresh.emptyJournals.map((item) => (
+            <ShortList
+              items={fresh.emptyJournals}
+              title={t(language, 'Jurnal to‘ldirilmagan darslar', 'Уроки без отметок в журнале', 'Lessons with an empty journal')}
+              language={language}
+              row={(item) => (
                 <li key={`${item.date}:${item.classId}:${item.period}`}>
                   <span className="eco-date">{shortDate(item.date)}</span>
                   <span><b>{item.className}</b> · {subj(item.subject, language)} · {t(language, `${item.period}-dars`, `${item.period}-й урок`, `lesson ${item.period}`)}</span>
                   <span className="muted">{teacherName(item.teacherId)}</span>
                 </li>
-              ))}
-            </ul>
+              )}
+            />
           )}
         </Section>
       </>}

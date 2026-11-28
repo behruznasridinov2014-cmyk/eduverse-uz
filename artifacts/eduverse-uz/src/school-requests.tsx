@@ -6,6 +6,7 @@ import type { Language } from './school-data';
 import { parseTable } from './school-tools';
 import { friendlyError } from './errors';
 import { TEACHER_SUBJECTS, subjectLabel } from './ui/config';
+import { CredentialList } from './ui/credentials';
 
 /*
  * People of a school:
@@ -27,7 +28,7 @@ export function SubjectPicker({ value, onChange, language }: { value: string[]; 
       {TEACHER_SUBJECTS.map((item) => {
         const on = value.includes(item[1]);
         return (
-          <button type="button" key={item[1]} className={`chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onChange(on ? value.filter((name) => name !== item[1]) : [...value, item[1]].slice(0, 8))}>
+          <button type="button" key={item[1]} className={`chip ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => onChange(on ? value.filter((name) => name !== item[1]) : [...value, item[1]].slice(0, 20))}>
             {on && <Check size={12} />} {t(language, item[0], item[1], item[2])}
           </button>
         );
@@ -321,16 +322,7 @@ export function EnrollRequestPanel({ schoolId, language, onSent }: { schoolId: s
       </div>
       {message && <div className="notice success" style={{ marginTop: 8 }}>{message}</div>}
       {created.length > 0 && (
-        <div className="notice success owner-created" style={{ marginTop: 8 }}>
-          <small>{t(language, 'Parollar faqat hozir ko‘rinadi — chop eting yoki saqlang.', 'Пароли видны только сейчас — распечатайте или сохраните.', 'Passwords are shown only now.')}</small>
-          <div className="owner-created-list">
-            {created.map((person) => <div key={person.login}><b>{person.name}</b> {person.className && `· ${person.className}`} · {label(language, ROLE_TEXT[person.role], person.role)} · {t(language, 'login', 'логин', 'login')}: <code>{person.login}</code> · {t(language, 'parol', 'пароль', 'password')}: <code>{person.password}</code></div>)}
-          </div>
-          <div className="row" style={{ gap: 8 }}>
-            <button type="button" className="btn small" onClick={() => window.print()}>{t(language, 'Chop etish', 'Распечатать', 'Print')}</button>
-            <button type="button" className="btn small" onClick={() => setCreated([])}>{t(language, 'Yopish', 'Закрыть', 'Close')}</button>
-          </div>
-        </div>
+        <CredentialList people={created.map((person) => ({ name: person.name, login: person.login, password: person.password, sub: [person.className, label(language, ROLE_TEXT[person.role], person.role)].filter(Boolean).join(' · ') }))} language={language} onClose={() => setCreated([])} />
       )}
       {error && <div className="notice" style={{ marginTop: 8 }}>{error}</div>}
     </section>
@@ -415,16 +407,9 @@ export function OwnerRequestsPanel({ language }: { language: Language }) {
       </div>
       {error && <div className="notice">{error}</div>}
       {created && (
-        <div className="notice success owner-created">
+        <div className="owner-created">
           <b>{created.school}: {t(language, 'yaratildi', 'созданы аккаунты', 'accounts created')} · {created.people.length}</b>
-          <small>{t(language, 'Parollar faqat hozir ko‘rinadi — chop eting yoki saqlang.', 'Пароли видны только сейчас — распечатайте или сохраните и передайте школе.', 'Passwords are shown only now.')}</small>
-          <div className="owner-created-list">
-            {created.people.map((person) => <div key={person.login}><b>{person.name}</b> {person.className && `· ${person.className}`} · {label(language, ROLE_TEXT[person.role], person.role)} · {t(language, 'login', 'логин', 'login')}: <code>{person.login}</code> · {t(language, 'parol', 'пароль', 'password')}: <code>{person.password}</code></div>)}
-          </div>
-          <div className="row" style={{ gap: 8 }}>
-            <button type="button" className="btn small" onClick={() => window.print()}>{t(language, 'Chop etish', 'Распечатать', 'Print')}</button>
-            <button type="button" className="btn small" onClick={() => setCreated(null)}>{t(language, 'Yopish', 'Закрыть', 'Close')}</button>
-          </div>
+          <CredentialList people={created.people.map((person) => ({ name: person.name, login: person.login, password: person.password, sub: [person.className, label(language, ROLE_TEXT[person.role], person.role)].filter(Boolean).join(' · ') }))} language={language} onClose={() => setCreated(null)} />
         </div>
       )}
       {requests.length === 0 ? <p className="muted">{filter === 'pending' ? t(language, 'Yangi ariza yo‘q.', 'Новых заявок нет.', 'No new requests.') : t(language, 'Arizalar yo‘q.', 'Заявок нет.', 'No requests.')}</p> : (

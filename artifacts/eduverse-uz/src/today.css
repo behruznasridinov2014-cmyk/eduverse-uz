@@ -4,7 +4,8 @@
 .today-head h2 { margin: 4px 0 0; font-size: 22px; }
 .today-head .eyebrow { display: inline-flex; align-items: center; gap: 6px; }
 .today-count { font-size: 13px; color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; white-space: nowrap; }
-.today-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+.today-grid { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(240px, calc((100% - 42px) / 4), 340px); gap: 14px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 20px; padding: 10px 20px 34px; margin: -10px -20px -28px; scrollbar-width: thin; }
+.today-grid > * { scroll-snap-align: start; }
 .today-grid.is-compact { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .today-grid > * { min-width: 0; }
 .is-compact .today-card { padding: 14px 14px 12px; gap: 6px; }
@@ -88,7 +89,7 @@ html[data-theme="night"] .lesson-day-head { background: rgba(255, 255, 255, 0.05
 html[data-theme="night"] .lesson-day-head.is-current { background: linear-gradient(135deg, rgba(227, 173, 108, 0.16), rgba(255, 255, 255, 0.04)); }
 @media (max-width: 640px) {
   .today-head { align-items: flex-start; flex-direction: column; }
-  .today-grid { grid-template-columns: 1fr; }
+  .today-grid { grid-auto-columns: 84%; padding: 10px 16px 30px; margin: -10px -16px -24px; scroll-padding: 0 16px; }
   .lesson-day-status { justify-items: start; }
 }
 @media (prefers-reduced-motion: reduce) { .today-card, .lesson-day-head { animation: none; } .today-pulse { animation: none; } }
@@ -486,3 +487,20 @@ html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 
 .trainer-result-actions { gap: 8px; justify-content: center; flex-wrap: wrap; }
 .trainer-explain { margin: 8px 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2, rgba(120,100,60,.08)); white-space: pre-wrap; line-height: 1.5; }
 .trainer-explain p { margin: 0; }
+/* Lessons row: arrows when more than fits; parent cards are information only. */
+.today-head { flex-wrap: wrap; }
+.today-scroll { display: inline-flex; gap: 6px; margin-left: auto; }
+.today-scroll-btn { width: 32px; height: 32px; border-radius: 999px; display: inline-grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; transition: transform 180ms var(--spring, ease), opacity 180ms; }
+.today-scroll-btn:hover:not(:disabled) { transform: scale(1.06); }
+.today-scroll-btn:disabled { opacity: 0.35; cursor: default; }
+.today-card.is-info { cursor: default; }
+.today-card.is-info:hover { transform: none; }
+@media (max-width: 640px) { .today-scroll { display: none; } }
+.today-grid > .today-card { box-shadow: 0 12px 24px -18px rgba(110, 75, 20, .45); -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (max-width: 1100px) { .today-grid { padding: 10px 16px 30px; margin: -10px -16px -24px; scroll-padding: 0 16px; } }
+.today-card.is-info > * { min-width: 0; }
+.today-card.is-info .today-teacher { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-card.is-info .today-left { white-space: nowrap; flex: none; }
+.today-card.is-info .today-card-foot { flex-wrap: wrap; row-gap: 6px; }
+.today-card.is-info .today-teacher { order: -1; flex-basis: 100%; display: inline-flex; align-items: center; gap: 5px; }
+.today-card.is-info .today-teacher svg { flex: none; }

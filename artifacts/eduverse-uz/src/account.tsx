@@ -62,7 +62,6 @@ export function ProfileSections({ user, language, initialTab }: { user: User; la
     ['personal', tx(language, 'Ma’lumotlar', 'Профиль', 'Profile'), <GraduationCap key="p" size={19} />],
     ['security', tx(language, 'Xavfsizlik', 'Безопасность', 'Security'), <ShieldCheck key="s" size={19} />],
     ['notifications', tx(language, 'Bildirishnoma', 'Уведомления', 'Alerts'), <Bell key="n" size={19} />],
-    ...(teaches ? [['stats', tx(language, 'Statistika', 'Статистика', 'Stats'), <BookOpenCheck key="t" size={19} />]] : []),
     ['help', tx(language, 'Yordam', 'Помощь', 'Help'), <LifeBuoy key="h" size={19} />],
   ] as Array<[Section, string, ReactNode]>), [language, teaches]);
   // Back from Google (?google=linked) → open the section where Google is shown.
@@ -114,36 +113,7 @@ function PersonalSection({ user, language, teaches }: { user: User; language: La
         <div className="profile-rows">
           <div className="profile-row"><span>{tx(language, 'Login', 'Логин', 'Login')}</span><b>{user.login}</b></div>
           {account?.phone && <div className="profile-row"><span>{tx(language, 'Telefon', 'Телефон', 'Phone')}</span><b>{account.phone}</b></div>}
-          <div className="profile-row"><span><School size={14} /> {tx(language, 'Maktab', 'Школа', 'School')}</span><b>{school ? `${school.name}${school.number && !school.name.includes('№') ? ` · № ${school.number}` : ''}` : '—'}</b></div>
-          {school && <div className="profile-row"><span>{tx(language, 'Hudud', 'Регион', 'Region')}</span><b>{school.region}</b></div>}
-          <div className="profile-row"><span><Users size={14} /> {tx(language, 'Sinflar', 'Классы', 'Classes')}</span><b className="chip-row">{account?.classes.length ? account.classes.map((item) => <span key={item.id} className="tag">{item.name}</span>) : '—'}</b></div>
         </div>
-      </section>
-      <section className="panel">
-        <h2><Mail size={16} /> {teaches ? tx(language, 'Aloqa va fanlar', 'Контакты и предметы', 'Contacts and subjects') : tx(language, 'Aloqa', 'Контакты', 'Contacts')}</h2>
-        <div className="control"><label htmlFor="profile-email">Email</label><input id="profile-email" className="input" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="name@school.uz" /></div>
-        {teaches && (
-          <div className="control">
-            <label htmlFor="profile-subject">{tx(language, 'Dars beradigan fanlar', 'Предметы преподавания', 'Subjects you teach')}</label>
-            <div className="chip-row">{subjects.map((item) => <span key={item} className="tag gold">{subjectLabel(item, language)}<button type="button" className="chip-x" onClick={() => setSubjects(subjects.filter((s) => s !== item))} aria-label={`× ${item}`}><X size={11} /></button></span>)}</div>
-            <div className="ev-addrow">
-              <input id="profile-subject" className="input" value={subject} onChange={(event) => setSubject(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addSubject(); } }} placeholder={tx(language, 'Fan nomini yozing', 'Впишите предмет', 'Type a subject')} />
-              <button type="button" className="ev-icon-btn" onClick={addSubject} disabled={!subject.trim()} aria-label={tx(language, 'Qo‘shish', 'Добавить', 'Add')}><Plus size={18} /></button>
-            </div>
-            {subjects.length < 8 && TEACHER_SUBJECTS.some((item) => !subjects.includes(item[1])) && (
-              <div className="ev-suggest">
-                {TEACHER_SUBJECTS.filter((item) => !subjects.includes(item[1])).map((item) => (
-                  <button type="button" key={item[1]} onClick={() => setSubjects([...subjects, item[1]])}>+ {tx(language, item[0], item[1], item[2])}</button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        <div className="row" style={{ gap: 10 }}>
-          <button type="button" className="btn primary" disabled={state === 'saving'} onClick={() => void save()}>{tx(language, 'Saqlash', 'Сохранить', 'Save')}</button>
-          {state === 'saved' && <span className="ink-status saved">✓ {tx(language, 'Saqlandi', 'Сохранено', 'Saved')}</span>}
-        </div>
-        {error && <div className="notice" role="alert">{error}</div>}
       </section>
     </>
   );
@@ -266,11 +236,18 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
     ['announcements', tx(language, 'Direktor e’lonlari', 'Объявления директора и класса', 'Announcements'), tx(language, 'Sinf va maktab e’lonlari', 'Объявления школы и класса', 'School and class news')],
     ['lessons', tx(language, 'Onlayn dars boshlandi', 'Начало онлайн-урока', 'Online lesson started'), tx(language, 'O‘qituvchi darsni ochganda', 'Когда учитель открыл урок', 'When a teacher opens a lesson')],
   ];
+  // Each role sees only what can actually come to it: the director gets no grades, homework or lesson starts.
+  const forRole: Record<string, Array<keyof Prefs>> = {
+    student: ['grades', 'homework', 'messages', 'announcements', 'lessons'],
+    parent: ['grades', 'homework', 'messages', 'announcements'],
+    teacher: ['messages', 'announcements'],
+  };
+  const shown = rows.filter(([key]) => (forRole[user.role] ?? ['messages']).includes(key));
   return (
     <>
       <section className="panel switch-list">
         <h2><Bell size={16} /> {tx(language, 'Nima haqida xabar berish', 'О чём уведомлять', 'What to notify about')}</h2>
-        {rows.map(([key, label, hint]) => <GlassSwitch key={key} checked={prefs[key]} onChange={(value) => void change({ [key]: value })} label={label} hint={hint} />)}
+        {shown.map(([key, label, hint]) => <GlassSwitch key={key} checked={prefs[key]} onChange={(value) => void change({ [key]: value })} label={label} hint={hint} />)}
       </section>
       <section className="panel switch-list">
         <h2><Send size={16} /> {tx(language, 'Qayerga yuborish', 'Куда присылать', 'Where to send')}</h2>
@@ -304,7 +281,7 @@ function NotificationsSection({ user, language }: { user: User; language: Langua
   );
 }
 
-function StatsSection({ language }: { language: Language }) {
+export function StatsSection({ language }: { language: Language }) {
   const [stats, setStats] = useState<Stats | null>(null);
   useEffect(() => { void customFetch<Stats>('/api/me/teaching-stats', { method: 'GET' }).then(setStats).catch(() => {}); }, []);
   if (!stats) return <section className="panel"><LoadingBlock language={language} kind="inline" /></section>;

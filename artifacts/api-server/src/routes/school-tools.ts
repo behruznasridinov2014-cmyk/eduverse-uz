@@ -131,7 +131,7 @@ export type ImportRow = { role: ImportRole; name: string; className?: string; ch
 /** A teacher's subjects: up to 8 short names. */
 export function readSubjects(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  return [...new Set(value.filter((item): item is string => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 8);
+  return [...new Set(value.filter((item): item is string => typeof item === "string").map((item) => item.trim().slice(0, 40)).filter(Boolean))].slice(0, 20);
 }
 
 /** "+998 90 123-45-67", "90 1234567" → "+998901234567"; anything else is dropped. */

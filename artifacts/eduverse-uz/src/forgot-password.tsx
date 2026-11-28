@@ -75,6 +75,10 @@ export function ForgotPassword({ language, defaultLogin = '' }: { language: AppL
                 'Telegram recovery is not on yet. Ask the school administration to reset the password.')}</div>}
               {error && <div className="notice" role="alert">{error}</div>}
               <button type="submit" className="btn primary" disabled={busy || !login.trim()}><Send size={15} /> {t(language, 'Kod olish', 'Получить код в Telegram', 'Get a code in Telegram')}</button>
+              <a className="forgot-google" href="/api/auth/google/start?mode=recover">{t(language,
+                'Google ulangan bo‘lsa yoki hisobni o‘g‘irlashgan bo‘lsa — Google orqali tiklash',
+                'Привязан Google или аккаунт украли? Восстановить через Google',
+                'Google linked or account stolen? Recover with Google')}</a>
             </form>
           )}
           {step === 'code' && (

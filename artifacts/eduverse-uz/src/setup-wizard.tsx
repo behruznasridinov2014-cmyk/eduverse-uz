@@ -3,6 +3,7 @@ import { customFetch } from '@workspace/api-client-react';
 import { Download, Plus, Printer, Trash2, UserPlus } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
+import { CredentialList } from './ui/credentials';
 
 /*
  * The owner prepares a school before handing it over:
@@ -131,25 +132,11 @@ export function SchoolSetupWizard({ schoolId, schoolName, language }: { schoolId
 
       {created.length > 0 && (
         <div className="setup-created">
-          <div className="section-head">
-            <h3>{t(language, 'Loginlar va bir martalik parollar', 'Логины и одноразовые пароли', 'Logins and one-time passwords')} · {created.length}</h3>
-            <div className="row" style={{ gap: 6 }}>
-              <button type="button" className="btn small" onClick={() => window.print()}><Printer size={13} /> {t(language, 'Chop etish', 'Распечатать', 'Print')}</button>
-              <button type="button" className="btn small" onClick={downloadCsv}><Download size={13} /> Excel</button>
-            </div>
-          </div>
-          <p className="muted">{t(language, 'Parollar faqat hozir ko‘rinadi. Birinchi kirishda har kim o‘z parolini qo‘yadi.', 'Пароли видны только сейчас — распечатайте или скачайте. При первом входе каждый поставит свой пароль.', 'Passwords are shown only now.')}</p>
-          <div className="setup-cards">
-            {created.map((person) => (
-              <div key={person.login} className="setup-card">
-                <small>EDUVERSE · {schoolName} · {roleLabel(person.role)}{person.className ? ` · ${person.className}` : ''}</small>
-                <b>{person.name}</b>
-                <span>{t(language, 'Login', 'Логин', 'Login')}: <code>{person.login}</code></span>
-                <span>{t(language, 'Parol', 'Пароль', 'Password')}: <code>{person.password}</code></span>
-                <small>{typeof window !== 'undefined' ? window.location.host : ''}</small>
-              </div>
-            ))}
-          </div>
+          <CredentialList
+            people={created.map((person) => ({ name: person.name, login: person.login, password: person.password, sub: [roleLabel(person.role), person.className].filter(Boolean).join(' · ') }))}
+            language={language}
+            extra={<button type="button" className="btn small" onClick={downloadCsv}><Download size={13} /> Excel</button>}
+          />
         </div>
       )}
     </section>

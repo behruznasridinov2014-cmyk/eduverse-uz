@@ -5,6 +5,7 @@ import { Check, RefreshCw, Sparkles, Trophy, X } from 'lucide-react';
 import { COURSE, SUBJECT_LABEL, type CourseBook, type CourseTopic } from './course-data';
 import { bookForLesson, statusOf, topicForLesson, useLessonCourses, useToday, type TodayLesson } from './today';
 import type { Language, SchoolData } from './school-data';
+import { Protected } from './ui/protect';
 
 /* Daily trainer: tests on the topics of today's lessons, four answers to choose from. */
 
@@ -167,7 +168,6 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
   const [result, setResult] = useState<{ score: number; total: number } | null>(null);
 
   const [checked, setChecked] = useState(false);
-  const [hintOpen, setHintOpen] = useState(false);
   // A test in progress survives a closed tab: the place, the score and the open answer are kept on the device.
   const [restored, setRestored] = useState(false);
   useEffect(() => {
@@ -194,7 +194,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
     if (fresh && fresh.topic.key !== active.topic.key) setActive(fresh);
   }, [tests, active]);
 
-  function start(test: Test, nextRound = 0) { setAsking(null); setActive(test); setRound(nextRound); setStep(0); setChosen(null); setChecked(false); setHintOpen(false); setExplain(null); setScore(0); setResult(null); }
+  function start(test: Test, nextRound = 0) { setAsking(null); setActive(test); setRound(nextRound); setStep(0); setChosen(null); setChecked(false); setExplain(null); setScore(0); setResult(null); }
   /** The helper explains the question the pupil got wrong, at home, in simple words. */
   async function askHelper() {
     if (!active) return;
@@ -223,7 +223,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
   async function next() {
     if (!checked || !active) return;
     const total = score;
-    setHintOpen(false);
+   
     setExplain(null);
     if (step + 1 < questions.length) { setStep(step + 1); setChosen(null); setChecked(false); return; }
     setResult({ score: total, total: questions.length });
@@ -269,7 +269,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
             </div>
           </div>
         ) : question ? (
-          <div className="panel trainer-card trainer-pop" key={step}>
+          <Protected className="panel trainer-card trainer-pop" key={step}>
             <div className="trainer-progress"><span style={{ width: `${(step / questions.length) * 100}%` }} /></div>
             <small className="muted">{subjectName(active.subject)}{round ? ` · ${t(language, 'qo‘shimcha', 'дополнительно', 'extra')}` : ''} · {step + 1} / {questions.length} · {question.topic}</small>
             <h2>{question.q}</h2>
@@ -283,9 +283,6 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
                 );
               })}
             </div>
-            {!checked && (hintOpen
-              ? <p className="practice-hint">💡 {shortHint(active.topic)}</p>
-              : <button type="button" className="btn small" onClick={() => setHintOpen(true)}>💡 {t(language, 'Biroz maslahat', 'Немного подсказки', 'A little hint')}</button>)}
             {!checked ? (
               <button type="button" className="btn primary" disabled={chosen === null} onClick={reveal}>{t(language, 'Javobni bilish', 'Узнать ответ', 'Check the answer')}</button>
             ) : (
@@ -301,7 +298,7 @@ export function TrainerPage({ user, language }: { user: User; school: SchoolData
                 </button>
               </div>
             )}
-          </div>
+          </Protected>
         ) : (
           <div className="panel"><p className="muted">{t(language, 'Bu mavzu uchun savollar hali yo‘q.', 'Для этой темы вопросов пока нет.', 'No questions for this topic yet.')}</p><button type="button" className="btn" onClick={back}>{t(language, 'Orqaga', 'Назад', 'Back')}</button></div>
         )

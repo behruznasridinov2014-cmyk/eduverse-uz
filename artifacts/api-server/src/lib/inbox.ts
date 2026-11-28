@@ -54,8 +54,12 @@ export function mergePrefs(value: unknown): NotifyPrefs {
 export async function usersWanting(userIds: string[], kind: NotifyKind): Promise<string[]> {
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return [];
-  const rows = await db.select({ id: usersTable.id, prefs: usersTable.notifyPrefs }).from(usersTable).where(inArray(usersTable.id, ids));
-  return rows.filter((row) => mergePrefs(row.prefs)[kind]).map((row) => row.id);
+  const rows = await db.select({ id: usersTable.id, prefs: usersTable.notifyPrefs, role: usersTable.role }).from(usersTable).where(inArray(usersTable.id, ids));
+  // Grades, homework and lesson starts are for pupils and families, never for the school management.
+  const managementSkips = kind === "grades" || kind === "homework" || kind === "lessons";
+  return rows
+    .filter((row) => !(managementSkips && (row.role === "school_director" || row.role === "school_admin" || row.role === "platform_superadmin")))
+    .filter((row) => mergePrefs(row.prefs)[kind]).map((row) => row.id);
 }
 
 /**

@@ -46,3 +46,10 @@
 .forgot-form{display:flex;flex-direction:column;gap:10px}
 .forgot-form .btn{align-self:flex-start}
 .forgot-code{font-size:22px;letter-spacing:.35em;text-align:center;font-variant-numeric:tabular-nums}
+.forgot-google{font-size:13px;color:#5f6b75;text-decoration:underline;text-underline-offset:3px}
+.auth-pass-wrap{position:relative;display:block}
+.auth-pass-wrap input{width:100%;padding-right:44px!important}
+.auth-pass-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:50%;background:transparent;color:inherit;opacity:.6;display:grid;place-items:center;cursor:pointer}
+.auth-pass-eye:hover{opacity:1;background:rgba(0,0,0,.05)}
+.auth-page-login .auth-note{margin-top:10px;text-align:center}
+.journal-editor-date{margin:-4px 0 6px}

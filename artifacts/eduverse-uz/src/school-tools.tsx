@@ -4,6 +4,7 @@ import { customFetch } from '@workspace/api-client-react';
 import { Bell, Camera, ClipboardList, Download, FileSpreadsheet, KeyRound, Printer, Send, Sparkles, Trash2, Upload } from 'lucide-react';
 import type { Language } from './school-data';
 import { friendlyError } from './errors';
+import { CredentialList } from './ui/credentials';
 
 const t = (language: Language, uz: string, ru: string, en: string) =>
   language === 'Uzbek' ? uz : language === 'Русский' ? ru : en;
@@ -164,24 +165,11 @@ export function SchoolImport({ schoolId, language }: { schoolId: string; languag
       )}
       {result.length > 0 && (
         <div className="import-result">
-          <div className="row">
-            <b>{t(language, `Yaratildi: ${result.length}`, `Создано: ${result.length}`, `Created: ${result.length}`)}</b>
-            <button type="button" className="btn small" onClick={() => window.print()}><Printer size={14} /> {t(language, 'Kartochkalarni chop etish', 'Распечатать карточки', 'Print cards')}</button>
-            <button type="button" className="btn small" onClick={downloadCsv}><Download size={14} /> CSV</button>
-          </div>
-          <p className="muted">{t(language, 'Parollar faqat hozir ko‘rinadi — chop eting yoki saqlang.', 'Пароли видны только сейчас — распечатайте или сохраните.', 'Passwords are shown only now — print or save them.')}</p>
-          <div className="login-cards">
-            {result.map((row) => (
-              <div className="login-card" key={row.login}>
-                <small>EDUVERSE · {roleName(row.role)}{row.className ? ` · ${row.className}` : ''}</small>
-                <b>{row.name}</b>
-                <span>{t(language, 'Login', 'Логин', 'Login')}: <code>{row.login}</code></span>
-                <span>{t(language, 'Parol', 'Пароль', 'Password')}: <code>{row.password}</code></span>
-                {row.phone ? <span>{t(language, 'Telefon', 'Телефон', 'Phone')}: {row.phone}</span> : null}
-                <small>{window.location.host}</small>
-              </div>
-            ))}
-          </div>
+          <CredentialList
+            people={result.map((row) => ({ name: row.name, login: row.login, password: row.password, sub: [roleName(row.role), row.className, row.phone].filter(Boolean).join(' · ') }))}
+            language={language}
+            extra={<button type="button" className="btn small" onClick={downloadCsv}><Download size={14} /> CSV</button>}
+          />
         </div>
       )}
     </section>
