@@ -1971,6 +1971,55 @@ const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part /
 const attendanceShare = (pupil: PupilOverview) => percent(pupil.attendance.present + pupil.attendance.late, pupil.attendance.lessons);
 const subjectOf = (key: string, language: Language) => lessonSubjectName(key, language) || key;
 
+const pupilBand = (value: number | null) => (value === null ? '' : value >= 8 ? 'good' : value >= 6 ? 'mid' : 'low');
+
+/** One pupil's numbers: average, attendance, homework and the last marks. */
+export function PupilDetails({ pupil: open, language }: { pupil: PupilOverview; language: Language }) {
+  const band = pupilBand;
+  return (
+    <>
+      <div className="myday-facts">
+        <div><small>{t(language, 'Average mark', 'Средний балл', 'O‘rtacha baho')}</small><b className={`mc-band ${band(open.average)}`}>{open.average ?? '—'}</b></div>
+        <div><small>{t(language, 'Attendance', 'Посещаемость', 'Davomat')}</small><b>{attendanceShare(open) === null ? '—' : `${attendanceShare(open)}%`}
+          {open.attendance.lessons > 0 && <span className="mc-detail">{t(language, `late ${open.attendance.late}, absent ${open.attendance.absent}, excused ${open.attendance.excused}`, `опозданий ${open.attendance.late}, пропусков ${open.attendance.absent}, по причине ${open.attendance.excused}`, `kechikdi ${open.attendance.late}, kelmadi ${open.attendance.absent}, sababli ${open.attendance.excused}`)}</span>}</b>
+        </div>
+        <div><small>{t(language, 'Homework', 'Домашние задания', 'Uy vazifalari')}</small><b>{open.homework.given ? t(language, `${open.homework.handed} of ${open.homework.given} handed in`, `сдано ${open.homework.handed} из ${open.homework.given}`, `${open.homework.given} tadan ${open.homework.handed} ta topshirildi`) : '—'}</b></div>
+      </div>
+      <h3 className="mc-sub">{t(language, 'Last marks', 'Последние оценки', 'Oxirgi baholar')}</h3>
+      {open.marks.length ? (
+        <ul className="mc-marks">
+          {[...open.marks].reverse().map((mark, index) => (
+            <li key={index}><span className={`mc-mark mc-band ${band(mark.mark)}`}>{mark.mark}</span><span>{subjectOf(mark.subject, language)}</span><span className="muted">{mark.date.split('-').reverse().slice(0, 2).join('.')}</span></li>
+          ))}
+        </ul>
+      ) : <p className="muted">{t(language, 'No marks yet.', 'Оценок пока нет.', 'Hali baho yo‘q.')}</p>}
+    </>
+  );
+}
+
+/** Opens a pupil's numbers in a window from anywhere: loads the class overview and picks the pupil. */
+export function PupilModal({ classId, pupilId, name, language, onClose, children }: { classId: string; pupilId: string; name: string; language: Language; onClose: () => void; children?: ReactNode }) {
+  const [pupil, setPupil] = useState<PupilOverview | null | undefined>(undefined);
+  useEffect(() => {
+    let cancelled = false;
+    customFetch<{ pupils: PupilOverview[] }>(`/api/classes/${classId}/overview`, { method: 'GET' })
+      .then((value) => { if (!cancelled) setPupil(value.pupils.find((item) => item.id === pupilId) ?? null); })
+      .catch(() => { if (!cancelled) setPupil(null); });
+    return () => { cancelled = true; };
+  }, [classId, pupilId]);
+  return (
+    <Modal title={name} onClose={onClose}>
+      {children}
+      {pupil === undefined ? <LoadingBlock language={language} /> : pupil ? <PupilDetails pupil={pupil} language={language} /> : null}
+    </Modal>
+  );
+}
+
+/** A class's pupils in a window (used from analytics). */
+export function ClassPupilsModal({ classId, title, language, onClose }: { classId: string; title: string; language: Language; onClose: () => void }) {
+  return <Modal title={title} wide onClose={onClose}><ClassPupils classId={classId} language={language} /></Modal>;
+}
+
 function ClassPupils({ classId, language }: { classId: string; language: Language }) {
   const [data, setData] = useState<{ pupils: PupilOverview[] } | null>(null);
   const [error, setError] = useState('');
@@ -2000,7 +2049,6 @@ function ClassPupils({ classId, language }: { classId: string; language: Languag
         <div><small>{t(language, 'Attendance', 'Посещаемость', 'Davomat')}</small><b>{percent(came, lessons) === null ? '—' : `${percent(came, lessons)}%`}</b></div>
         <div><small>{t(language, 'Homework handed in', 'Домашки сдано', 'Uy vazifasi topshirildi')}</small><b>{percent(handed, given) === null ? '—' : `${percent(handed, given)}%`}</b></div>
       </div>
-      <p className="muted mc-note">{t(language, 'Last 60 days. Tap a pupil for details.', 'За последние 60 дней. Нажмите на ученика — откроются подробности.', 'Oxirgi 60 kun. Tafsilot uchun o‘quvchini bosing.')}</p>
       <ol className="mc-list">
         {pupils.map((pupil, index) => (
           <li key={pupil.id}>
@@ -2016,25 +2064,7 @@ function ClassPupils({ classId, language }: { classId: string; language: Languag
         {pupils.length === 0 && <li className="muted">{t(language, 'No students yet.', 'Учеников пока нет.', 'Hali o‘quvchi yo‘q.')}</li>}
       </ol>
       {pupils.length > 0 && <div className="mc-legend muted"><span>{t(language, 'mark', 'балл', 'baho')}</span><span>{t(language, 'came', 'был', 'keldi')}</span><span>{t(language, 'homework', 'домашки', 'uy vaz.')}</span></div>}
-      {open && (
-        <Modal title={open.name} onClose={() => setOpen(null)}>
-          <div className="myday-facts">
-            <div><small>{t(language, 'Average mark', 'Средний балл', 'O‘rtacha baho')}</small><b className={`mc-band ${band(open.average)}`}>{open.average ?? '—'}</b></div>
-            <div><small>{t(language, 'Attendance', 'Посещаемость', 'Davomat')}</small><b>{attendanceShare(open) === null ? '—' : `${attendanceShare(open)}%`}
-              {open.attendance.lessons > 0 && <span className="mc-detail">{t(language, `late ${open.attendance.late}, absent ${open.attendance.absent}, excused ${open.attendance.excused}`, `опозданий ${open.attendance.late}, пропусков ${open.attendance.absent}, по причине ${open.attendance.excused}`, `kechikdi ${open.attendance.late}, kelmadi ${open.attendance.absent}, sababli ${open.attendance.excused}`)}</span>}</b>
-            </div>
-            <div><small>{t(language, 'Homework', 'Домашние задания', 'Uy vazifalari')}</small><b>{open.homework.given ? t(language, `${open.homework.handed} of ${open.homework.given} handed in`, `сдано ${open.homework.handed} из ${open.homework.given}`, `${open.homework.given} tadan ${open.homework.handed} ta topshirildi`) : '—'}</b></div>
-          </div>
-          <h3 className="mc-sub">{t(language, 'Last marks', 'Последние оценки', 'Oxirgi baholar')}</h3>
-          {open.marks.length ? (
-            <ul className="mc-marks">
-              {[...open.marks].reverse().map((mark, index) => (
-                <li key={index}><span className={`mc-mark mc-band ${band(mark.mark)}`}>{mark.mark}</span><span>{subjectOf(mark.subject, language)}</span><span className="muted">{mark.date.split('-').reverse().slice(0, 2).join('.')}</span></li>
-              ))}
-            </ul>
-          ) : <p className="muted">{t(language, 'No marks yet.', 'Оценок пока нет.', 'Hali baho yo‘q.')}</p>}
-        </Modal>
-      )}
+      {open && <Modal title={open.name} onClose={() => setOpen(null)}><PupilDetails pupil={open} language={language} /></Modal>}
     </>
   );
 }
