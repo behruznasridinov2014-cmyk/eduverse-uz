@@ -1827,8 +1827,10 @@ function ReviewVerdict({ draft, language, onChange }: { draft: ReviewDraft; lang
  * One pupil's homework opened from the journal: notebook photos and their words first,
  * then «Checked» → verdict → mark 2…10. The teacher cannot grade without seeing the work.
  */
-export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentId, studentName, language, onClose, onSaved }: {
+export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentId, studentName, language, onClose, onSaved, taskKey }: {
   assignmentId: string; assignmentTitle: string; studentId: string; studentName: string; language: Language; onClose: () => void; onSaved: () => void;
+  /** The task and what a right answer has: the teacher checks without looking it up. */
+  taskKey?: ReactNode;
 }) {
   const [submission, setSubmission] = useState<SubmissionWithStudent | null | undefined>(undefined);
   const [draft, setDraft] = useState<ReviewDraft>({ status: 'checked', score: '', feedback: '', signature: null });
@@ -1872,6 +1874,12 @@ export function SubmissionReviewDialog({ assignmentId, assignmentTitle, studentI
           <div><b>{studentName}</b><div className="muted">{assignmentTitle}</div></div>
           <button type="button" className="btn small" onClick={onClose} aria-label={t(language, 'Close', 'Закрыть', 'Yopish')}>×</button>
         </div>
+        {taskKey && (
+          <details className="review-task" open>
+            <summary>{t(language, 'Task and answer', 'Задание и ответ', 'Vazifa va javob')}</summary>
+            {taskKey}
+          </details>
+        )}
         {submission === undefined && <LoadingBlock language={language} kind="inline" />}
         {submission === null && !error && <div className="callout">{t(language, 'The pupil has not handed in this work.', 'Ученик ещё не сдал эту работу.', 'O‘quvchi bu ishni hali topshirmagan.')}</div>}
         {submission && (

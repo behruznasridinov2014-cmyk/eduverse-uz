@@ -298,7 +298,7 @@ export function TodayLessons({ language, onOpen, role }: { language: Language; o
           })}
         </div>
       )}
-      {(lessons.length === 0 || finished) && (role === 'teacher' || isStudent) && nextBookLesson(data) && (
+      {(lessons.length === 0 || finished) && role === 'teacher' && nextBookLesson(data) && (
         <button type="button" className="btn today-preview-btn" onClick={() => openLessonPreview(nextBookLesson(data)!, onOpen)}>
           <Sparkles size={15} /> {t(language, 'Dars qanday ko‘rinishini ko‘rish', 'Посмотреть, как будет выглядеть урок', 'See how a lesson will look')}
         </button>

@@ -100,8 +100,10 @@ const addDays = (days: number) => new Date(Date.now() + days * 86400000).toISOSt
 function readReminders(): Reminder[] { try { return JSON.parse(localStorage.getItem(REMIND_KEY) ?? '[]') as Reminder[]; } catch { return []; } }
 function writeReminders(list: Reminder[]) { try { localStorage.setItem(REMIND_KEY, JSON.stringify(list)); } catch { /* private mode */ } }
 
-export function RememberCard({ topic, language }: { topic: CourseTopic; language: Language }) {
-  const [tab, setTab] = useState<'learn' | 'check' | 'remember'>('learn');
+export function RememberCard({ topic, language, onLearned, inLesson = false }: { topic: CourseTopic; language: Language; onLearned?: () => void; inLesson?: boolean }) {
+  const [tab, setTabState] = useState<'learn' | 'check' | 'remember'>('learn');
+  // Moving on from "understand" counts the explanation as read.
+  const setTab = (next: 'learn' | 'check' | 'remember') => { setTabState(next); if (next !== 'learn') onLearned?.(); };
   const parts = useMemo(() => sentences(topic.essence), [topic.essence]);
   const terms = useMemo(() => glossary(topic).slice(0, 4), [topic]);
   const tasks = topic.tasks.slice(0, 3);
@@ -119,7 +121,7 @@ export function RememberCard({ topic, language }: { topic: CourseTopic; language
   const tabs: Array<[typeof tab, string]> = [['learn', t(language, 'Tushunish', 'Понять', 'Understand')], ['check', t(language, 'Tekshirish', 'Проверить', 'Check')], ['remember', t(language, 'Eslab qolish', 'Запомнить', 'Remember')]];
   return (
     <section className="role-card learn">
-      <div className="role-card-head static"><Brain size={17} /> <b>{topic.title}</b></div>
+      {!inLesson && <div className="role-card-head static"><Brain size={17} /> <b>{topic.title}</b></div>}
       <LensRow className="role-tabs">
         {tabs.map(([key, label]) => <button key={key} type="button" className={tab === key ? 'on' : ''} aria-pressed={tab === key} onClick={() => setTab(key)}>{label}</button>)}
       </LensRow>

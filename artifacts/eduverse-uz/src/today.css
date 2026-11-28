@@ -513,3 +513,18 @@ html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 
 .tt-cell .input { min-height: 34px; font-size: 13px; border-radius: 10px; }
 .trainer { display: grid; gap: 16px; }
 .trainer > .page-heading { margin-bottom: 0; }
+/* homework check: the total first, the task and answer in a window */
+.check-hw-total { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; padding: 14px 18px; border-radius: 16px; background: var(--ev-primary-soft, rgba(214, 162, 58, 0.12)); border: 1px solid var(--ev-primary-line, rgba(214, 162, 58, 0.35)); }
+.check-hw-total b { font-size: 30px; line-height: 1; color: var(--ev-primary, #b08a43); font-variant-numeric: tabular-nums; }
+.check-hw-total span { font-weight: 600; color: var(--text); }
+.check-hw-total.is-done { align-items: center; background: rgba(31, 122, 69, 0.1); border-color: rgba(31, 122, 69, 0.3); color: #1f7a45; }
+html[data-theme="night"] .check-hw-total.is-done { color: #8fd3ae; }
+.check-hw-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 420px; }
+.hw-key { display: grid; gap: 14px; }
+.hw-key b { display: block; margin-bottom: 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-3); }
+.hw-key ol, .hw-key ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.5; }
+.hw-key-answer { color: var(--good, #1f7a45); font-weight: 600; }
+html[data-theme="night"] .hw-key-answer { color: #8fd3ae; }
+.review-task { margin: 0 0 12px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface-2, rgba(255, 255, 255, 0.04)); }
+.review-task summary { cursor: pointer; font-weight: 700; }
+.review-task[open] summary { margin-bottom: 10px; }
