@@ -53,3 +53,36 @@
 .auth-pass-eye:hover{opacity:1;background:rgba(0,0,0,.05)}
 .auth-page-login .auth-note{margin-top:10px;text-align:center}
 .journal-editor-date{margin:-4px 0 6px}
+.forgot-ways{display:grid;gap:8px}
+.forgot-way{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line,#ffffff1f);background:var(--surface-2,#ffffff0a);color:inherit;text-align:left;cursor:pointer;font:inherit}
+.forgot-way:hover:not(:disabled),.forgot-way:focus-visible{border-color:var(--ev-primary,#c9a35a);outline:none}
+.forgot-way:disabled{opacity:.6;cursor:wait}
+.forgot-way span{display:flex;flex-direction:column;gap:2px}
+.forgot-way small{opacity:.7;font-variant-numeric:tabular-nums}
+.forgot-timer{font-size:13px;opacity:.85}
+.forgot-timer b{font-variant-numeric:tabular-nums}
+
+/* Login fits one screen on short laptops and small phones: less air, no inner scroll. */
+@media (max-height: 820px) {
+  .auth-page .auth-panel { padding-top: 22px !important; padding-bottom: 18px !important; }
+  .auth-page .auth-panel .auth-eyebrow, .auth-page .auth-panel .auth-description { display: none; }
+  .auth-page .auth-panel h2 { margin: 0 0 12px !important; font-size: 26px !important; }
+  .auth-page .auth-tabs { margin-top: 8px; margin-bottom: 0; }
+  .auth-page .auth-form { gap: 10px !important; margin-top: 12px !important; }
+  .auth-page .auth-field { gap: 5px !important; }
+  .auth-page .auth-field input { height: 44px !important; }
+  .auth-page .auth-submit { min-height: 44px !important; }
+  .auth-page .auth-note { margin-top: 10px; padding-top: 8px; }
+  .auth-page .auth-aside { gap: 14px !important; padding-top: 26px !important; padding-bottom: 22px !important; }
+}
+@media (max-height: 640px) {
+  .auth-page .auth-aside h1 { font-size: 30px !important; }
+  .auth-page .auth-aside p { display: none; }
+  .auth-page .auth-header { margin-bottom: 4px !important; }
+  .auth-page .auth-layout { margin-top: 6px !important; }
+}
+@media (min-width: 761px) {
+  .auth-page .auth-layout { align-items: stretch; }
+  .auth-page .auth-panel { align-self: stretch; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; max-width: none; }
+  .auth-page .auth-panel > * { width: 100%; max-width: 456px; margin-left: auto; margin-right: auto; }
+}

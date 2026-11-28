@@ -64,6 +64,10 @@ export const usersTable = pgTable(
     /** Google account linked by the user (the "sub" claim). Sign-in with Google works only once linked. */
     googleSub: text("google_sub"),
     googleEmail: text("google_email"),
+    /** "Forgot password": a 6-digit code (stored hashed) sent to Telegram or e-mail, its end time, wrong tries. */
+    resetCodeHash: text("reset_code_hash"),
+    resetExpiresAt: timestamp("reset_expires_at", { withTimezone: true }),
+    resetTries: integer("reset_tries").notNull().default(0),
     /** After recovery through Google: until this moment a new password can be set without the old one. */
     recoveryUntil: timestamp("recovery_until", { withTimezone: true }),
     twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),

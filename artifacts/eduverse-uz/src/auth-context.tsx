@@ -355,6 +355,11 @@ function describeServiceError(error: unknown): string {
   return "";
 }
 
+/** Same as useAuth, but null outside the provider (public demo pages). */
+export function useOptionalAuth(): AuthContextValue | null {
+  return useContext(AuthContext);
+}
+
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {

@@ -504,3 +504,12 @@ html[data-theme="night"] .explain-word-answer { background: rgba(255, 255, 255, 
 .today-card.is-info .today-card-foot { flex-wrap: wrap; row-gap: 6px; }
 .today-card.is-info .today-teacher { order: -1; flex-basis: 100%; display: inline-flex; align-items: center; gap: 5px; }
 .today-card.is-info .today-teacher svg { flex: none; }
+/* edit mode: the fields are the frame, the cell itself draws none (no box in a box) */
+.tt-bell .ev-select { min-width: 0; }
+.tt-bell .ev-select-trigger { min-height: 32px; padding: 0 8px 0 10px; font-size: 12.5px; border-radius: 10px; }
+.tt-bell .ev-select-chevron { width: 14px; height: 14px; }
+.tt-grid td:has(.tt-cell), html[data-theme="night"] .tt-grid td:has(.tt-cell) { padding: 0; border-color: transparent; background: none; }
+.tt-grid td.is-clash:has(.tt-cell) { padding: 4px; border-color: rgba(210, 71, 90, 0.55); }
+.tt-cell .input { min-height: 34px; font-size: 13px; border-radius: 10px; }
+.trainer { display: grid; gap: 16px; }
+.trainer > .page-heading { margin-bottom: 0; }
