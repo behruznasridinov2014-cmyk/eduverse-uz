@@ -69,7 +69,6 @@ export function PracticeTest({ userId, language }: { userId: string; language: L
       </div>
       {!saved && (
         <>
-          <p className="muted">{t(language, 'Fanni tanlang — 5 ta savol qiyin mavzular bo‘yicha, faqat siz uchun.', 'Выберите предмет — 5 вопросов по темам, которые даются труднее, только для вас.', 'Pick a subject — 5 questions on the topics you find harder, just for you.')}</p>
           <div className="row practice-subjects">
             {SUBJECTS.map(([value, label]) => (
               <button type="button" key={value || 'any'} className={`studio-tab ${subject === value ? 'active' : ''}`} onClick={() => setSubject(value)}>{t(language, ...label)}</button>

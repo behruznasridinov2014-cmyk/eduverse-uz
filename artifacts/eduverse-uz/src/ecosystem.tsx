@@ -13,6 +13,7 @@ import { friendlyError } from './errors';
 import { LoadingBlock } from './ui/loading';
 import { lessonSubjectName, statusOf, topicForLesson, useLessonCourses, useToday, type TodayLesson as TodayLessonFull } from './today';
 import { Modal } from './ui/modal';
+import { ClassPupilsModal, PupilModal } from './school-panels';
 
 /*
  * EDUVERSE as one school system: the director's analytics, the teacher's day,
@@ -99,13 +100,14 @@ type AttentionPupil = { id: string; name: string; className: string; classId: st
 
 function AttentionList({ items, language, empty }: { items: AttentionPupil[]; language: Language; empty: string }) {
   const [all, setAll] = useState(false);
+  const [open, setOpen] = useState<AttentionPupil | null>(null);
   if (!items.length) return <p className="muted eco-empty"><CheckCircle2 size={15} /> {empty}</p>;
   const shown = all ? items : items.slice(0, 6);
   return (
     <>
     <ul className="eco-attention">
       {shown.map((pupil) => (
-        <li key={`${pupil.id}:${pupil.classId}`}>
+        <li key={`${pupil.id}:${pupil.classId}`} className="is-clickable" role="button" tabIndex={0} onClick={() => setOpen(pupil)} onKeyDown={(event) => { if (event.key === 'Enter') setOpen(pupil); }}>
           <span className="eco-avatar">{pupil.name.slice(0, 1).toUpperCase()}</span>
           <div>
             <b>{pupil.name}</b>
@@ -120,6 +122,14 @@ function AttentionList({ items, language, empty }: { items: AttentionPupil[]; la
       ))}
     </ul>
     {items.length > 6 && <button type="button" className="btn small eco-more" onClick={() => setAll(!all)}>{all ? t(language, 'Yig‘ish', 'Свернуть', 'Show less') : t(language, `Hammasi (${items.length})`, `Показать всех (${items.length})`, `Show all (${items.length})`)}</button>}
+    {open && (
+      <PupilModal classId={open.classId} pupilId={open.id} name={open.name} language={language} onClose={() => setOpen(null)}>
+        <div className="eco-reasons eco-reasons-modal">
+          <span className="muted">{open.className}</span>
+          {open.reasons.map((reason) => <span key={reason.kind} className={`eco-reason ${reason.kind}`}>{t(language, ...(REASON[reason.kind] ?? ['', reason.kind, reason.kind]))}: {reason.value}</span>)}
+        </div>
+      </PupilModal>
+    )}
     </>
   );
 }
@@ -157,6 +167,8 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
   const { data, error, reload } = useLoad<Analytics>(`/api/schools/${schoolId}/analytics?period=${period}`);
   const periods: Array<[typeof period, string]> = [['week', t(language, 'Hafta', 'Неделя', 'Week')], ['month', t(language, 'Oy', 'Месяц', 'Month')], ['quarter', t(language, 'Chorak', 'Четверть', 'Quarter')]];
   const fresh = data && data.period === period ? data : null;
+  const [openClass, setOpenClass] = useState<Analytics['perClass'][number] | null>(null);
+  const [openTeacher, setOpenTeacher] = useState<Analytics['teachers'][number] | null>(null);
   const teacherName = (id: string | null) => fresh?.teachers.find((item) => item.id === id)?.name ?? '—';
   function exportCsv() {
     if (!fresh) return;
@@ -240,7 +252,7 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
                 </tr></thead>
                 <tbody>
                   {fresh.perClass.map((item) => (
-                    <tr key={item.id} className={fresh.attentionClasses.includes(item.id) ? 'row-warn' : ''}>
+                    <tr key={item.id} className={`is-clickable ${fresh.attentionClasses.includes(item.id) ? 'row-warn' : ''}`} tabIndex={0} onClick={() => setOpenClass(item)} onKeyDown={(event) => { if (event.key === 'Enter') setOpenClass(item); }}>
                       <td><b>{item.name}</b></td>
                       <td>{item.students}</td>
                       <td>{item.attendancePercent !== null ? `${item.attendancePercent}%` : '—'} <Trend now={item.attendancePercent} prev={item.attendancePrev} unit="%" /></td>
@@ -269,7 +281,7 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
                 </tr></thead>
                 <tbody>
                   {fresh.teachers.map((item) => (
-                    <tr key={item.id} className={item.unchecked > 10 || item.emptyJournals > 3 ? 'row-warn' : ''}>
+                    <tr key={item.id} className={`is-clickable ${item.unchecked > 10 || item.emptyJournals > 3 ? 'row-warn' : ''}`} tabIndex={0} onClick={() => setOpenTeacher(item)} onKeyDown={(event) => { if (event.key === 'Enter') setOpenTeacher(item); }}>
                       <td><b>{item.name}</b></td>
                       <td>{item.classes}</td>
                       <td>{item.unchecked || '—'}</td>
@@ -301,6 +313,22 @@ export function SchoolAnalyticsPage({ schoolId, language }: { schoolId: string; 
           )}
         </Section>
       </>}
+      {openClass && <ClassPupilsModal classId={openClass.id} title={t(language, `${openClass.name} sinf`, `${openClass.name} класс`, `Class ${openClass.name}`)} language={language} onClose={() => setOpenClass(null)} />}
+      {openTeacher && fresh && (
+        <Modal title={openTeacher.name} onClose={() => setOpenTeacher(null)}>
+          <div className="myday-facts">
+            <div><small>{t(language, 'Sinflar', 'Классов', 'Classes')}</small><b>{openTeacher.classes}</b></div>
+            <div><small>{t(language, 'Tekshirilmagan ishlar', 'Не проверено работ', 'Unchecked work')}</small><b>{openTeacher.unchecked || '—'}{openTeacher.oldestDays !== null && <span className="mc-detail">{t(language, `eng eskisi ${openTeacher.oldestDays} kun`, `самая старая — ${openTeacher.oldestDays} дн.`, `oldest ${openTeacher.oldestDays} d`)}</span>}</b></div>
+            <div><small>{t(language, 'Vazifa berdi', 'Задал заданий', 'Homework given')}</small><b>{openTeacher.homeworkGiven}</b></div>
+          </div>
+          <h3 className="mc-sub">{t(language, 'Jurnal to‘ldirilmagan darslar', 'Уроки без отметок', 'Lessons with an empty journal')}</h3>
+          {fresh.emptyJournals.filter((item) => item.teacherId === openTeacher.id).length === 0
+            ? <p className="muted">{t(language, 'Hammasi to‘ldirilgan.', 'Всё заполнено.', 'All filled.')}</p>
+            : <ul className="eco-list">{fresh.emptyJournals.filter((item) => item.teacherId === openTeacher.id).map((item) => (
+              <li key={`${item.date}:${item.classId}:${item.period}`}><span className="eco-date">{shortDate(item.date)}</span><span><b>{item.className}</b> · {lessonSubjectName(item.subject, language) || item.subject} · {t(language, `${item.period}-dars`, `${item.period}-й урок`, `lesson ${item.period}`)}</span></li>
+            ))}</ul>}
+        </Modal>
+      )}
     </div>
   );
 }
